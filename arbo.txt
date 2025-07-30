@@ -1,0 +1,124 @@
+TransitManager/
+│
+├── 📁 TransitManager.sln
+│
+├── 📁 src/
+│   ├── 📁 TransitManager.Core/              # Logique métier et entités
+│   │   ├── 📁 Entities/
+│   │   │   ├── Client.cs
+│   │   │   ├── Colis.cs
+│   │   │   ├── Conteneur.cs
+│   │   │   ├── Paiement.cs
+│   │   │   ├── Utilisateur.cs
+│   │   │   ├── Document.cs
+│   │   │   └── BaseEntity.cs
+│   │   ├── 📁 Enums/
+│   │   │   ├── StatutColis.cs
+│   │   │   ├── TypePaiement.cs
+│   │   │   ├── RoleUtilisateur.cs
+│   │   │   └── TypeDocument.cs
+│   │   ├── 📁 Interfaces/
+│   │   │   ├── IClientService.cs
+│   │   │   ├── IColisService.cs
+│   │   │   ├── IConteneurService.cs
+│   │   │   ├── IPaiementService.cs
+│   │   │   └── INotificationService.cs
+│   │   ├── 📁 Services/
+│   │   │   ├── ClientService.cs
+│   │   │   ├── ColisService.cs
+│   │   │   ├── ConteneurService.cs
+│   │   │   ├── PaiementService.cs
+│   │   │   ├── NotificationService.cs
+│   │   │   └── BarcodeService.cs
+│   │   └── TransitManager.Core.csproj
+│   │
+│   ├── 📁 TransitManager.Infrastructure/    # Accès données et services externes
+│   │   ├── 📁 Data/
+│   │   │   ├── TransitContext.cs
+│   │   │   ├── 📁 Configurations/
+│   │   │   │   ├── ClientConfiguration.cs
+│   │   │   │   ├── ColisConfiguration.cs
+│   │   │   │   └── ConteneurConfiguration.cs
+│   │   │   └── 📁 Migrations/
+│   │   ├── 📁 Repositories/
+│   │   │   ├── GenericRepository.cs
+│   │   │   ├── ClientRepository.cs
+│   │   │   ├── ColisRepository.cs
+│   │   │   └── ConteneurRepository.cs
+│   │   ├── 📁 Services/
+│   │   │   ├── BackupService.cs
+│   │   │   ├── ExportService.cs
+│   │   │   └── SignalRHub.cs
+│   │   └── TransitManager.Infrastructure.csproj
+│   │
+│   └── 📁 TransitManager.WPF/              # Interface utilisateur
+│       ├── App.xaml
+│       ├── App.xaml.cs
+│       ├── MainWindow.xaml
+│       ├── MainWindow.xaml.cs
+│       ├── 📁 ViewModels/
+│       │   ├── BaseViewModel.cs
+│       │   ├── MainViewModel.cs
+│       │   ├── ClientViewModel.cs
+│       │   ├── ColisViewModel.cs
+│       │   ├── ConteneurViewModel.cs
+│       │   ├── DashboardViewModel.cs
+│       │   └── LoginViewModel.cs
+│       ├── 📁 Views/
+│       │   ├── 📁 Clients/
+│       │   │   ├── ClientListView.xaml
+│       │   │   ├── ClientListView.xaml.cs
+│       │   │   ├── ClientDetailView.xaml
+│       │   │   └── ClientDetailView.xaml.cs
+│       │   ├── 📁 Colis/
+│       │   │   ├── ColisListView.xaml
+│       │   │   ├── ColisListView.xaml.cs
+│       │   │   ├── ColisScanView.xaml
+│       │   │   └── ColisScanView.xaml.cs
+│       │   ├── 📁 Conteneurs/
+│       │   │   ├── ConteneurListView.xaml
+│       │   │   ├── ConteneurListView.xaml.cs
+│       │   │   ├── ConteneurDetailView.xaml
+│       │   │   └── ConteneurDetailView.xaml.cs
+│       │   ├── 📁 Dashboard/
+│       │   │   ├── DashboardView.xaml
+│       │   │   └── DashboardView.xaml.cs
+│       │   ├── 📁 Finance/
+│       │   │   ├── PaiementView.xaml
+│       │   │   ├── PaiementView.xaml.cs
+│       │   │   ├── FactureView.xaml
+│       │   │   └── FactureView.xaml.cs
+│       │   └── 📁 Auth/
+│       │       ├── LoginView.xaml
+│       │       └── LoginView.xaml.cs
+│       ├── 📁 Controls/
+│       │   ├── SearchControl.xaml
+│       │   ├── SearchControl.xaml.cs
+│       │   ├── NotificationToast.xaml
+│       │   └── NotificationToast.xaml.cs
+│       ├── 📁 Converters/
+│       │   ├── StatusToColorConverter.cs
+│       │   └── BooleanToVisibilityConverter.cs
+│       ├── 📁 Helpers/
+│       │   ├── RelayCommand.cs
+│       │   ├── NavigationService.cs
+│       │   └── DialogService.cs
+│       ├── 📁 Resources/
+│       │   ├── 📁 Styles/
+│       │   │   ├── Colors.xaml
+│       │   │   ├── Buttons.xaml
+│       │   │   └── DataGrids.xaml
+│       │   ├── 📁 Images/
+│       │   └── 📁 Fonts/
+│       └── TransitManager.WPF.csproj
+│
+├── 📁 tests/
+│   ├── 📁 TransitManager.Core.Tests/
+│   └── 📁 TransitManager.Infrastructure.Tests/
+│
+└── 📁 docs/
+    └── README.md
+
+
+
+enum

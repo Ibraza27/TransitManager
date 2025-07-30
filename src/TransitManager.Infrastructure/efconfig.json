@@ -1,0 +1,16 @@
+{
+  "ContextAssembly": "TransitManager.Infrastructure",
+  "ContextType": "TransitManager.Infrastructure.Data.TransitContext",
+  "MigrationsAssembly": "TransitManager.Infrastructure",
+  "MigrationsNamespace": "TransitManager.Infrastructure.Data.Migrations",
+  "OutputDir": "Data/Migrations",
+  "ProjectDir": ".",
+  "RootNamespace": "TransitManager.Infrastructure",
+  "StartupAssembly": "TransitManager.WPF",
+  "StartupProject": "../TransitManager.WPF/TransitManager.WPF.csproj",
+  "Language": "C#",
+  "UseDataAnnotations": false,
+  "UseDatabaseNames": true,
+  "UseNullableReferenceTypes": true,
+  "UsePluralizer": false
+}

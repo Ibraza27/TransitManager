@@ -1,0 +1,487 @@
+<UserControl x:Class="TransitManager.WPF.Views.Conteneurs.ConteneurListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1200">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- En-tête avec statistiques -->
+        <materialDesign:Card Grid.Row="0" Padding="16" Margin="16,16,16,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Titre et actions -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Gestion des Conteneurs / Dossiers" 
+                                 Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                        <TextBlock Text="{Binding StatusMessage}" 
+                                 Opacity="0.7"
+                                 Margin="0,5,0,0"/>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Column="1" 
+                              Orientation="Horizontal"
+                              VerticalAlignment="Center">
+                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                              Command="{Binding NewConteneurCommand}"
+                              Background="{StaticResource SuccessBrush}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="PlusBox" Margin="0,0,5,0"/>
+                                <TextBlock Text="Nouveau Conteneur"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+                
+                <!-- Cartes de statistiques -->
+                <Grid Grid.Row="1" Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Total conteneurs -->
+                    <materialDesign:Card Grid.Column="0" Margin="0,0,5,0" Padding="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <materialDesign:PackIcon Grid.Column="0" 
+                                                   Kind="TruckDelivery" 
+                                                   Width="40" Height="40"
+                                                   Foreground="{StaticResource PrimaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,16,0"/>
+                            
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding TotalConteneurs}" 
+                                         Style="{StaticResource MaterialDesignHeadline4TextBlock}"/>
+                                <TextBlock Text="Total actifs" 
+                                         Opacity="0.7"/>
+                            </StackPanel>
+                        </Grid>
+                    </materialDesign:Card>
+                    
+                    <!-- Conteneurs ouverts -->
+                    <materialDesign:Card Grid.Column="1" Margin="5,0" Padding="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <materialDesign:PackIcon Grid.Column="0" 
+                                                   Kind="PackageVariantOpen" 
+                                                   Width="40" Height="40"
+                                                   Foreground="{StaticResource SuccessBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,16,0"/>
+                            
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding ConteneursOuverts}" 
+                                         Style="{StaticResource MaterialDesignHeadline4TextBlock}"/>
+                                <TextBlock Text="Ouverts" 
+                                         Opacity="0.7"/>
+                            </StackPanel>
+                        </Grid>
+                    </materialDesign:Card>
+                    
+                    <!-- En transit -->
+                    <materialDesign:Card Grid.Column="2" Margin="5,0" Padding="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <materialDesign:PackIcon Grid.Column="0" 
+                                                   Kind="TruckFast" 
+                                                   Width="40" Height="40"
+                                                   Foreground="{StaticResource InfoBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,16,0"/>
+                            
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding ConteneursEnTransit}" 
+                                         Style="{StaticResource MaterialDesignHeadline4TextBlock}"/>
+                                <TextBlock Text="En transit" 
+                                         Opacity="0.7"/>
+                            </StackPanel>
+                        </Grid>
+                    </materialDesign:Card>
+                    
+                    <!-- Taux de remplissage moyen -->
+                    <materialDesign:Card Grid.Column="3" Margin="5,0,0,0" Padding="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <materialDesign:PackIcon Grid.Column="0" 
+                                                   Kind="ChartDonut" 
+                                                   Width="40" Height="40"
+                                                   Foreground="{StaticResource WarningBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,16,0"/>
+                            
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Style="{StaticResource MaterialDesignHeadline4TextBlock}">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="{}{0:F0}%">
+                                            <Binding Path="TauxRemplissageMoyen"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                                <TextBlock Text="Remplissage moyen" 
+                                         Opacity="0.7"/>
+                            </StackPanel>
+                        </Grid>
+                    </materialDesign:Card>
+                </Grid>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Filtres -->
+        <materialDesign:Card Grid.Row="1" Margin="16,8,16,0" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MaxWidth="400"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Recherche -->
+                <TextBox Grid.Column="0"
+                       materialDesign:HintAssist.Hint="Rechercher (numéro, destination, transporteur...)"
+                       materialDesign:TextFieldAssist.HasClearButton="True"
+                       materialDesign:TextFieldAssist.LeadingIcon="Magnify"
+                       Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                       Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding SearchCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
+                
+                <!-- Filtre destination -->
+                <ComboBox Grid.Column="1"
+                        materialDesign:HintAssist.Hint="Destination"
+                        Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                        Width="150"
+                        Margin="10,0"
+                        ItemsSource="{Binding Destinations}"
+                        SelectedItem="{Binding SelectedDestination}"/>
+                
+                <!-- Filtre statut -->
+                <ComboBox Grid.Column="2"
+                        materialDesign:HintAssist.Hint="Statut"
+                        Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                        Width="150"
+                        ItemsSource="{Binding StatusList}"
+                        SelectedItem="{Binding SelectedStatus}"/>
+                
+                <!-- Date départ -->
+                <DatePicker Grid.Column="3"
+                          materialDesign:HintAssist.Hint="Date départ"
+                          Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                          Width="140"
+                          Margin="10,0"
+                          SelectedDate="{Binding DateDepart}"/>
+                
+                <!-- Conteneurs ouverts seulement -->
+                <CheckBox Grid.Column="4"
+                        Content="Ouverts seulement"
+                        IsChecked="{Binding ShowOnlyOpen}"
+                        Margin="10,0"
+                        VerticalAlignment="Center"/>
+                
+                <!-- Actualiser -->
+                <Button Grid.Column="5"
+                      Style="{StaticResource MaterialDesignIconButton}"
+                      Command="{Binding RefreshCommand}"
+                      Margin="10,0,0,0"
+                      ToolTip="Actualiser">
+                    <materialDesign:PackIcon Kind="Refresh"/>
+                </Button>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Graphique de répartition -->
+        <materialDesign:Card Grid.Row="2" Margin="16,8,16,0" Padding="16"
+                           Visibility="{Binding RepartitionParDestination.Count, Converter={StaticResource CountToVisibilityConverter}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="150"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" 
+                         Text="Répartition par destination" 
+                         Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                         Margin="0,0,0,10"/>
+                
+                <lvc:PieChart Grid.Row="1"
+                            Series="{Binding RepartitionSeries}"
+                            AnimationsSpeed="00:00:00.5"/>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Liste des conteneurs -->
+        <materialDesign:Card Grid.Row="3" Margin="16,8,16,16">
+            <DataGrid ItemsSource="{Binding Conteneurs}"
+                    SelectedItem="{Binding SelectedConteneur}"
+                    AutoGenerateColumns="False"
+                    CanUserAddRows="False"
+                    IsReadOnly="True"
+                    GridLinesVisibility="Horizontal"
+                    HeadersVisibility="Column"
+                    SelectionMode="Single"
+                    SelectionUnit="FullRow"
+                    materialDesign:DataGridAssist.CellPadding="16 8 16 8"
+                    materialDesign:DataGridAssist.ColumnHeaderPadding="16 8 16 8">
+                
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+                        <Setter Property="Height" Value="60"/>
+                        <EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
+                    </Style>
+                </DataGrid.Resources>
+                
+                <DataGrid.Columns>
+                    <!-- Numéro dossier -->
+                    <DataGridTextColumn Header="N° Dossier" 
+                                      Binding="{Binding NumeroDossier}" 
+                                      Width="140">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontWeight" Value="Medium"/>
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    
+                    <!-- Destination -->
+                    <DataGridTemplateColumn Header="Destination" Width="200">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Destination}" 
+                                             FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding PaysDestination}" 
+                                             FontSize="11"
+                                             Opacity="0.7"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    
+                    <!-- Type envoi -->
+                    <DataGridTextColumn Header="Type" 
+                                      Binding="{Binding TypeEnvoi}" 
+                                      Width="120"/>
+                    
+                    <!-- Statut -->
+                    <DataGridTemplateColumn Header="Statut" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Background="{Binding Statut, Converter={StaticResource StatusToColorConverter}}"
+                                      CornerRadius="12"
+                                      Padding="12,4">
+                                    <TextBlock Text="{Binding Statut}" 
+                                             Foreground="White"
+                                             FontSize="11"
+                                             HorizontalAlignment="Center"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    
+                    <!-- Remplissage -->
+                    <DataGridTemplateColumn Header="Remplissage" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <ProgressBar Value="{Binding TauxRemplissageVolume}" 
+                                               Maximum="100"
+                                               Height="20"
+                                               materialDesign:TransitionAssist.DisableTransitions="True"/>
+                                    <TextBlock HorizontalAlignment="Center" 
+                                             VerticalAlignment="Center"
+                                             FontWeight="Medium">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="{}{0:F0}% ({1}/{2})">
+                                                <Binding Path="TauxRemplissageVolume"/>
+                                                <Binding Path="NombreColis"/>
+                                                <Binding Path="CapaciteVolume"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </Grid>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    
+                    <!-- Dates -->
+                    <DataGridTemplateColumn Header="Départ / Arrivée" Width="150">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock FontSize="11">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="Départ: {0:dd/MM/yy}">
+                                                <Binding Path="DateDepartPrevue" TargetNullValue="Non défini"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                    <TextBlock FontSize="11" Opacity="0.7">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="Arrivée: {0:dd/MM/yy}">
+                                                <Binding Path="DateArriveePrevue" TargetNullValue="Non défini"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    
+                    <!-- Clients -->
+                    <DataGridTextColumn Header="Clients" 
+                                      Binding="{Binding NombreClients}" 
+                                      Width="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    
+                    <!-- Actions -->
+                    <DataGridTemplateColumn Header="Actions" Width="200">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                          Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                          CommandParameter="{Binding}"
+                                          ToolTip="Voir détails"
+                                          Padding="4"
+                                          Height="30">
+                                        <materialDesign:PackIcon Kind="Eye" Width="18" Height="18"/>
+                                    </Button>
+                                    
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                          Command="{Binding DataContext.MarkDepartureCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                          CommandParameter="{Binding}"
+                                          ToolTip="Marquer départ"
+                                          Padding="4"
+                                          Height="30"
+                                          Visibility="{Binding DataContext.CanMarkDeparture, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <materialDesign:PackIcon Kind="TruckDeliveryOutline" Width="18" Height="18" 
+                                                               Foreground="{StaticResource SuccessBrush}"/>
+                                    </Button>
+                                    
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                          Command="{Binding DataContext.MarkArrivalCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                          CommandParameter="{Binding}"
+                                          ToolTip="Marquer arrivée"
+                                          Padding="4"
+                                          Height="30"
+                                          Visibility="{Binding DataContext.CanMarkArrival, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <materialDesign:PackIcon Kind="TruckCheck" Width="18" Height="18" 
+                                                               Foreground="{StaticResource InfoBrush}"/>
+                                    </Button>
+                                    
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                          Command="{Binding DataContext.PrintManifestCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                          CommandParameter="{Binding}"
+                                          ToolTip="Imprimer manifeste"
+                                          Padding="4"
+                                          Height="30">
+                                        <materialDesign:PackIcon Kind="Printer" Width="18" Height="18"/>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+                
+                <!-- Message si liste vide -->
+                <DataGrid.Style>
+                    <Style TargetType="DataGrid" BasedOn="{StaticResource MaterialDesignDataGrid}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Conteneurs.Count}" Value="0">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate>
+                                            <Grid>
+                                                <StackPanel HorizontalAlignment="Center" 
+                                                          VerticalAlignment="Center">
+                                                    <materialDesign:PackIcon Kind="TruckOutline" 
+                                                                           Width="80" Height="80"
+                                                                           Opacity="0.3"
+                                                                           HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="Aucun conteneur trouvé" 
+                                                             FontSize="16"
+                                                             Opacity="0.6"
+                                                             Margin="0,10,0,0"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.Style>
+            </DataGrid>
+        </materialDesign:Card>
+
+        <!-- Indicateur de chargement -->
+        <Grid Grid.Row="0" Grid.RowSpan="4"
+              Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+              Background="#80000000">
+            <materialDesign:Card HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Padding="20">
+                <StackPanel>
+                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                               Value="0"
+                               IsIndeterminate="True"
+                               Width="50"
+                               Height="50"/>
+                    <TextBlock Text="Chargement..." 
+                             Margin="0,10,0,0"
+                             HorizontalAlignment="Center"/>
+                </StackPanel>
+            </materialDesign:Card>
+        </Grid>
+    </Grid>
+</UserControl>

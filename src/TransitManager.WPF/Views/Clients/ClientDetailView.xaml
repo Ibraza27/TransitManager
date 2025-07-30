@@ -1,0 +1,234 @@
+<UserControl x:Class="TransitManager.WPF.Views.Clients.ClientDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1000">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- En-tête -->
+        <materialDesign:Card Grid.Row="0" Padding="20" Margin="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="Détails du Client" 
+                             Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                    <TextBlock Text="{Binding Client.CodeClient}" 
+                             Opacity="0.6"
+                             Style="{StaticResource MaterialDesignSubtitle1TextBlock}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" 
+                          Orientation="Horizontal" 
+                          VerticalAlignment="Center">
+                    <Button Content="Enregistrer" 
+                          Command="{Binding SaveCommand}"
+                          Style="{StaticResource MaterialDesignRaisedButton}"
+                          Margin="0,0,10,0"/>
+                    <Button Content="Annuler" 
+                          Command="{Binding CancelCommand}"
+                          Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Contenu -->
+        <ScrollViewer Grid.Row="1" 
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled">
+            <Grid Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Colonne gauche -->
+                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                    <!-- Informations personnelles -->
+                    <materialDesign:Card Padding="20" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Informations personnelles" 
+                                     Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                                     Margin="0,0,0,20"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBox Grid.Column="0" Grid.Row="0"
+                                       Text="{Binding Client.Nom}"
+                                       materialDesign:HintAssist.Hint="Nom"
+                                       Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                       Margin="0,0,5,10"/>
+
+                                <TextBox Grid.Column="1" Grid.Row="0"
+                                       Text="{Binding Client.Prenom}"
+                                       materialDesign:HintAssist.Hint="Prénom"
+                                       Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                       Margin="5,0,0,10"/>
+
+                                <TextBox Grid.Column="0" Grid.Row="1"
+                                       Text="{Binding Client.TelephonePrincipal}"
+                                       materialDesign:HintAssist.Hint="Téléphone principal"
+                                       Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                       Margin="0,0,5,10"/>
+
+                                <TextBox Grid.Column="1" Grid.Row="1"
+                                       Text="{Binding Client.TelephoneSecondaire}"
+                                       materialDesign:HintAssist.Hint="Téléphone secondaire"
+                                       Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                       Margin="5,0,0,10"/>
+
+                                <TextBox Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2"
+                                       Text="{Binding Client.Email}"
+                                       materialDesign:HintAssist.Hint="Email"
+                                       Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                       Margin="0,0,0,10"/>
+                            </Grid>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <!-- Adresse -->
+                    <materialDesign:Card Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="Adresse" 
+                                     Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                                     Margin="0,0,0,20"/>
+
+                            <TextBox Text="{Binding Client.AdressePrincipale}"
+                                   materialDesign:HintAssist.Hint="Adresse principale"
+                                   Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                   TextWrapping="Wrap"
+                                   AcceptsReturn="True"
+                                   Height="80"
+                                   Margin="0,0,0,10"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0"
+                                       Text="{Binding Client.Ville}"
+                                       materialDesign:HintAssist.Hint="Ville"
+                                       Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                       Margin="0,0,5,0"/>
+
+                                <TextBox Grid.Column="1"
+                                       Text="{Binding Client.CodePostal}"
+                                       materialDesign:HintAssist.Hint="Code postal"
+                                       Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                       Margin="5,0,5,0"/>
+
+                                <TextBox Grid.Column="2"
+                                       Text="{Binding Client.Pays}"
+                                       materialDesign:HintAssist.Hint="Pays"
+                                       Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                       Margin="5,0,0,0"/>
+                            </Grid>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+
+                <!-- Colonne droite -->
+                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <!-- Statut et fidélité -->
+                    <materialDesign:Card Padding="20" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Statut du client" 
+                                     Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                                     Margin="0,0,0,20"/>
+
+                            <CheckBox Content="Client actif"
+                                    IsChecked="{Binding Client.Actif}"
+                                    Margin="0,0,0,10"/>
+
+                            <CheckBox Content="Client fidèle"
+                                    IsChecked="{Binding Client.EstClientFidele}"
+                                    Margin="0,0,0,10"/>
+
+                            <TextBox Text="{Binding Client.PourcentageRemise}"
+                                   materialDesign:HintAssist.Hint="Pourcentage de remise"
+                                   Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <!-- Statistiques -->
+                    <materialDesign:Card Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="Statistiques" 
+                                     Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                                     Margin="0,0,0,20"/>
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Nombre d'envois :"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" 
+                                         Text="{Binding Client.NombreTotalEnvois}" 
+                                         FontWeight="Bold"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Volume total :" Margin="0,10,0,0"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" 
+                                         Text="{Binding Client.VolumeTotalExpedié, StringFormat='{}{0:N2} m³'}" 
+                                         FontWeight="Bold" Margin="0,10,0,0"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Balance :" Margin="0,10,0,0"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" 
+                                         Text="{Binding Client.BalanceTotal, StringFormat='{}{0:C}'}" 
+                                         FontWeight="Bold" Margin="0,10,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Path=Client.BalanceTotal, 
+                                                           Converter={StaticResource GreaterThanZeroConverter}}" 
+                                                           Value="True">
+                                                    <Setter Property="Foreground" Value="Red"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Inscrit depuis :" Margin="0,10,0,0"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" 
+                                         Text="{Binding Client.DateInscription, StringFormat='{}{0:dd/MM/yyyy}'}" 
+                                         FontWeight="Bold" Margin="0,10,0,0"/>
+                            </Grid>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

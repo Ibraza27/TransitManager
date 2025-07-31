@@ -5,25 +5,27 @@
              xmlns:converters="clr-namespace:TransitManager.WPF.Converters"> <!-- Ligne ajoutée pour reconnaître vos convertisseurs -->
     
     <Application.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <!-- MahApps.Metro -->
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
-                
-                <!-- Material Design -->
-                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="Blue" SecondaryColor="Teal" />
-                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
-                
-                <!-- Material Design pour MahApps -->
-                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Defaults.xaml" />
-                
-                <!-- Styles personnalisés -->
-                <ResourceDictionary Source="/Resources/Styles/Colors.xaml" />
-                <ResourceDictionary Source="/Resources/Styles/Buttons.xaml" />
-                <ResourceDictionary Source="/Resources/Styles/DataGrids.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<!-- MahApps.Metro -->
+				<ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
+				<ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
+				<ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
+				
+				<!-- Material Design -->
+				<materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="Blue" SecondaryColor="Teal" />
+				<ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
+				
+				<!-- Material Design pour MahApps -->
+				<ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Defaults.xaml" />
+				
+				<!-- === On neutralise les styles personnalisés TEMPORAIREMENT === -->
+				<!-- 
+				<ResourceDictionary Source="/Resources/Styles/Colors.xaml" />
+				<ResourceDictionary Source="/Resources/Styles/Buttons.xaml" />
+				<ResourceDictionary Source="/Resources/Styles/DataGrids.xaml" />
+				-->
+			</ResourceDictionary.MergedDictionaries>
 
             <!-- ******* SECTION CORRIGÉE ET AJOUTÉE ******* -->
             <!-- Déclaration globale des convertisseurs pour qu'ils soient trouvés partout -->

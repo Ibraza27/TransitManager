@@ -126,7 +126,7 @@ namespace TransitManager.WPF.ViewModels
         public ICommand RefreshCommand { get; }
         public ICommand ViewDetailsCommand { get; }
         public ICommand ExportDashboardCommand { get; }
-		public ICommand NavigateCommand { get; }
+		public ICommand? NavigateCommand { get; }
 
         public DashboardViewModel(
             IClientService clientService,

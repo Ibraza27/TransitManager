@@ -207,27 +207,5 @@ namespace TransitManager.Core.Entities
         public decimal PoidsFacturable => Math.Max(Poids, PoidsVolumetrique);
     }
 
-    /// <summary>
-    /// État physique du colis
-    /// </summary>
-    public enum EtatColis
-    {
-        BonEtat,
-        Endommage,
-        TresEndommage,
-        Fragile
-    }
 
-    /// <summary>
-    /// Type de colis
-    /// </summary>
-    public enum TypeColis
-    {
-        Colis,
-        Palette,
-        Conteneur,
-        Vehicule,
-        Vrac,
-        Autre
-    }
 }

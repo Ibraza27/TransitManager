@@ -20,7 +20,7 @@ namespace TransitManager.WPF.ViewModels
         private bool _rememberMe;
         private string _errorMessage = string.Empty;
         private bool _hasError;
-        private string _appVersion = string.Empty; // Ou "1.0.0" directement
+        private string? _appVersion;
 
         public string Username
         {

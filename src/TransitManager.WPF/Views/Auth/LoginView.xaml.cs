@@ -1,35 +1,33 @@
-using MahApps.Metro.Controls;
 using System.Windows;
-using System.Windows.Controls;
+using System.Windows.Controls; // <-- USING IMPORTANT pour PasswordBox
 using TransitManager.WPF.ViewModels;
 
 namespace TransitManager.WPF.Views.Auth
 {
-    /// <summary>
-    /// Logique d'interaction pour LoginView.xaml
-    /// </summary>
-    public partial class LoginView : MetroWindow
+    public partial class LoginView : MahApps.Metro.Controls.MetroWindow // Assurez-vous que c'est bien Window ou MetroWindow
     {
-        private readonly LoginViewModel _viewModel;
-
         public LoginView(LoginViewModel viewModel)
         {
             InitializeComponent();
-            _viewModel = viewModel;
-            DataContext = _viewModel;
+            DataContext = viewModel;
 
-            // Focus sur le champ nom d'utilisateur
-            Loaded += (s, e) => UsernameTextBox.Focus();
+            viewModel.CloseAction = (result) =>
+            {
+                DialogResult = result;
+                this.Close();
+            };
         }
 
+        // === MÉTHODE AJOUTÉE POUR LE MOT DE PASSE ===
         private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
         {
-            if (DataContext is LoginViewModel viewModel)
+            if (DataContext is LoginViewModel viewModel && sender is PasswordBox passwordBox)
             {
-                viewModel.Password = ((PasswordBox)sender).Password;
+                viewModel.Password = passwordBox.Password;
             }
         }
 
+        // === MÉTHODE AJOUTÉE POUR LE BOUTON FERMER ===
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;

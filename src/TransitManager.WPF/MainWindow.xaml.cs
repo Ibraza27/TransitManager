@@ -43,54 +43,29 @@ namespace TransitManager.WPF
             StartSyncAnimation();
         }
 
-        private void ToggleMenuButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_isMenuExpanded)
-            {
-                // Réduire le menu
-                var animation = FindResource("MenuCloseAnimation") as Storyboard;
-                animation?.Begin(SideMenu);
-                
-                // Masquer les textes
-                foreach (var item in SideMenu.Descendants<System.Windows.Controls.TextBlock>())
-                {
-                    if (item.Name != "VersionText")
-                        item.Visibility = Visibility.Collapsed;
-                }
-            }
-            else
-            {
-                // Agrandir le menu
-                var animation = FindResource("MenuOpenAnimation") as Storyboard;
-                animation?.Begin(SideMenu);
-                
-                // Afficher les textes après l'animation
-                var timer = new System.Windows.Threading.DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(300)
-                };
-                timer.Tick += (s, args) =>
-                {
-                    foreach (var item in SideMenu.Descendants<System.Windows.Controls.TextBlock>())
-                    {
-                        item.Visibility = Visibility.Visible;
-                    }
-                    timer.Stop();
-                };
-                timer.Start();
-            }
-            
-            _isMenuExpanded = !_isMenuExpanded;
-            
-            // Changer l'icône
-            var icon = ToggleMenuButton.Content as MaterialDesignThemes.Wpf.PackIcon;
-            if (icon != null)
-            {
-                icon.Kind = _isMenuExpanded 
-                    ? MaterialDesignThemes.Wpf.PackIconKind.MenuOpen 
-                    : MaterialDesignThemes.Wpf.PackIconKind.Menu;
-            }
-        }
+		private void ToggleMenuButton_Click(object sender, RoutedEventArgs e)
+		{
+			/*
+			if (_isMenuExpanded)
+			{
+				// ... TOUT LE CODE EXISTANT ICI ...
+			}
+			else
+			{
+				// ... TOUT LE CODE EXISTANT ICI ...
+			}
+			
+			_isMenuExpanded = !_isMenuExpanded;
+			
+			var icon = ToggleMenuButton.Content as MaterialDesignThemes.Wpf.PackIcon;
+			if (icon != null)
+			{
+				icon.Kind = _isMenuExpanded 
+					? MaterialDesignThemes.Wpf.PackIconKind.MenuOpen 
+					: MaterialDesignThemes.Wpf.PackIconKind.Menu;
+			}
+			*/
+		}
 
         private void StartSyncAnimation()
         {

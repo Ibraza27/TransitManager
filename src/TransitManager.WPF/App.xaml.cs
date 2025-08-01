@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
-using Serilog.Core;
 using System;
 using System.IO;
 using System.Windows;
@@ -22,22 +21,19 @@ using TransitManager.WPF.Views.Auth;
 
 namespace TransitManager.WPF
 {
-    /// <summary>
-    /// Logique d'interaction pour App.xaml
-    /// </summary>
     public partial class App : System.Windows.Application
     {
         private IHost? _host;
+        // La variable Notifier est conservée ici
         private Notifier? _notifier;
 
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            // Configuration de Serilog
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
-                .WriteTo.File("logs/transitmanager-.txt", 
+                .WriteTo.File("logs/transitmanager-.txt",
                     rollingInterval: RollingInterval.Day,
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .CreateLogger();
@@ -46,15 +42,11 @@ namespace TransitManager.WPF
             {
                 Log.Information("Démarrage de Transit Manager");
 
-                // Configuration du host
                 _host = Host.CreateDefaultBuilder(e.Args)
                     .ConfigureAppConfiguration((context, config) =>
                     {
                         config.SetBasePath(Directory.GetCurrentDirectory())
-                              .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                              .AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true)
-                              .AddEnvironmentVariables()
-                              .AddCommandLine(e.Args);
+                              .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
                     })
                     .ConfigureServices((context, services) => ConfigureServices(context.Configuration, services))
                     .UseSerilog()
@@ -62,23 +54,9 @@ namespace TransitManager.WPF
 
                 await _host.StartAsync();
 
-                // Configuration des notifications Toast
-                _notifier = new Notifier(cfg =>
-                {
-                    cfg.PositionProvider = new WindowPositionProvider(
-                        parentWindow: Current.MainWindow,
-                        corner: Corner.TopRight,
-                        offsetX: 10,
-                        offsetY: 10);
+                // On récupère le Notifier depuis le conteneur DI
+                _notifier = _host.Services.GetRequiredService<Notifier>();
 
-                    cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
-                        notificationLifetime: TimeSpan.FromSeconds(5),
-                        maximumNotificationCount: MaximumNotificationCount.FromCount(5));
-
-                    cfg.Dispatcher = Current.Dispatcher;
-                });
-
-                // Gestion globale des exceptions
                 Current.DispatcherUnhandledException += OnDispatcherUnhandledException;
                 AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
@@ -88,24 +66,19 @@ namespace TransitManager.WPF
 
                 if (loginResult == true)
                 {
-                    // L'utilisateur s'est connecté avec succès, afficher la fenêtre principale
                     var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+                    Current.MainWindow = mainWindow; // CORRECTION : Définir la MainWindow principale
                     mainWindow.Show();
                 }
                 else
                 {
-                    // L'utilisateur a annulé la connexion
                     Shutdown();
                 }
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "Une erreur fatale s'est produite lors du démarrage de l'application");
-                System.Windows.MessageBox.Show(
-                    $"Une erreur s'est produite lors du démarrage de l'application:\n{ex.Message}",
-                    "Erreur de démarrage",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                Log.Fatal(ex, "Une erreur fatale s'est produite lors du démarrage");
+                System.Windows.MessageBox.Show($"Une erreur critique est survenue: {ex.Message}", "Erreur de Démarrage", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown(-1);
             }
         }
@@ -125,23 +98,24 @@ namespace TransitManager.WPF
             services.AddScoped<IColisRepository, ColisRepository>();
             services.AddScoped<IConteneurRepository, ConteneurRepository>();
 
-
-			// Services métier
-			services.AddScoped<IClientService, TransitManager.Infrastructure.Services.ClientService>();
-			services.AddScoped<IColisService, TransitManager.Infrastructure.Services.ColisService>();
-			services.AddScoped<IConteneurService, TransitManager.Infrastructure.Services.ConteneurService>();
-			services.AddScoped<IPaiementService, TransitManager.Infrastructure.Services.PaiementService>();
-			services.AddScoped<INotificationService, TransitManager.Infrastructure.Services.NotificationService>();
-			services.AddScoped<IBarcodeService, TransitManager.Infrastructure.Services.BarcodeService>();
-			
-			
+            // Services métier
+            services.AddScoped<IClientService, ClientService>();
+            services.AddScoped<IColisService, ColisService>();
+            services.AddScoped<IConteneurService, ConteneurService>();
+            services.AddScoped<IPaiementService, PaiementService>();
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IBarcodeService, BarcodeService>();
+            
             // Services infrastructure
             services.AddScoped<IBackupService, BackupService>();
             services.AddScoped<IExportService, ExportService>();
-            services.AddSingleton<IAuthenticationService, AuthenticationService>();
-            services.AddSingleton<INavigationService, NavigationService>();
+            
+            // CORRECTION : Mettre AuthenticationService en Scoped car il dépend du TransitContext (Scoped)
+            services.AddScoped<IAuthenticationService, AuthenticationService>();
 
-            // SignalR Hub
+            // CORRECTION : La navigation et les dialogues sont liés à l'UI, Singleton est OK ici.
+            services.AddScoped<INavigationService, NavigationService>();
+            services.AddSingleton<IDialogService, DialogService>();
 
             // AutoMapper
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
@@ -153,54 +127,49 @@ namespace TransitManager.WPF
             services.AddTransient<ClientViewModel>();
             services.AddTransient<ColisViewModel>();
             services.AddTransient<ConteneurViewModel>();
-
+            
             // Views
             services.AddTransient<LoginView>();
-            services.AddSingleton<MainWindow>();
+            services.AddTransient<MainWindow>();
 
-            // Notification service
-            services.AddSingleton(_notifier!);
+            // CORRECTION : On enregistre le Notifier pour qu'il soit injectable partout
+            services.AddSingleton(provider => new Notifier(cfg =>
+            {
+                cfg.PositionProvider = new WindowPositionProvider(
+                    parentWindow: System.Windows.Application.Current.MainWindow,
+                    corner: Corner.TopRight,
+                    offsetX: 10,
+                    offsetY: 10);
+                cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
+                    notificationLifetime: TimeSpan.FromSeconds(5),
+                    maximumNotificationCount: MaximumNotificationCount.FromCount(5));
+                cfg.Dispatcher = System.Windows.Application.Current.Dispatcher;
+            }));
         }
 
         protected override async void OnExit(ExitEventArgs e)
         {
-            Log.Information("Arrêt de Transit Manager");
-
             _notifier?.Dispose();
-
             if (_host != null)
             {
                 await _host.StopAsync(TimeSpan.FromSeconds(5));
                 _host.Dispose();
             }
-
             Log.CloseAndFlush();
             base.OnExit(e);
         }
 
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            Log.Error(e.Exception, "Exception non gérée dans le dispatcher");
-
-            System.Windows.MessageBox.Show(
-                $"Une erreur inattendue s'est produite:\n{e.Exception.Message}\n\nL'application va continuer à fonctionner.",
-                "Erreur",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-
+            Log.Error(e.Exception, "Exception non gérée");
+            System.Windows.MessageBox.Show($"Une erreur inattendue est survenue:\n{e.Exception.Message}", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
             e.Handled = true;
         }
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             var exception = e.ExceptionObject as Exception;
-            Log.Fatal(exception, "Exception non gérée dans l'application");
-
-            System.Windows.MessageBox.Show(
-                $"Une erreur fatale s'est produite:\n{exception?.Message}\n\nL'application doit être fermée.",
-                "Erreur fatale",
-                MessageBoxButton.OK,
-                MessageBoxImage.Stop);
+            Log.Fatal(exception, "Erreur fatale");
         }
     }
 }

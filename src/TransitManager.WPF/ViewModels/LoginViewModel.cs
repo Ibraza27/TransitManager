@@ -13,7 +13,8 @@ namespace TransitManager.WPF.ViewModels
     public class LoginViewModel : BaseViewModel
     {
         private readonly IAuthenticationService _authenticationService;
-        private readonly Window _window;
+		public Action<bool?>? CloseAction { get; set; }
+        //private readonly Window _window;
 
         private string _username = string.Empty;
         private string _password = string.Empty;
@@ -21,6 +22,7 @@ namespace TransitManager.WPF.ViewModels
         private string _errorMessage = string.Empty;
         private bool _hasError;
         private string? _appVersion;
+		
 
         public string Username
         {
@@ -64,7 +66,7 @@ namespace TransitManager.WPF.ViewModels
             set => SetProperty(ref _hasError, value);
         }
 
-        public string AppVersion
+        public string? AppVersion
         {
             get => _appVersion;
             set => SetProperty(ref _appVersion, value);
@@ -74,10 +76,9 @@ namespace TransitManager.WPF.ViewModels
         public ICommand LoginCommand { get; }
         public ICommand ForgotPasswordCommand { get; }
 
-        public LoginViewModel(IAuthenticationService authenticationService, Window window)
+        public LoginViewModel(IAuthenticationService authenticationService)
         {
             _authenticationService = authenticationService;
-            _window = window;
 
             Title = "Connexion";
             AppVersion = GetAppVersion();
@@ -133,11 +134,7 @@ namespace TransitManager.WPF.ViewModels
                         }
 
                         // Fermer la fenêtre de connexion avec succès
-                        if (_window is Window loginWindow)
-                        {
-                            loginWindow.DialogResult = true;
-                            loginWindow.Close();
-                        }
+						CloseAction?.Invoke(true);
                     }
                     else
                     {
@@ -229,7 +226,8 @@ namespace TransitManager.WPF.ViewModels
 
         private void ShakeWindow()
         {
-            if (_window == null) return;
+            /*
+			if (_window == null) return;
 
             var originalLeft = _window.Left;
             var shakeAnimation = new System.Windows.Media.Animation.DoubleAnimation
@@ -251,6 +249,7 @@ namespace TransitManager.WPF.ViewModels
             };
 
             transform.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, shakeAnimation);
+			*/
         }
     }
 }

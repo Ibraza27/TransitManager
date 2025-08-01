@@ -145,7 +145,7 @@ namespace TransitManager.WPF.ViewModels
             RefreshCommand = new AsyncRelayCommand(RefreshDataAsync);
             ViewDetailsCommand = new RelayCommand<string>(ViewDetails);
             ExportDashboardCommand = new AsyncRelayCommand(ExportDashboardAsync);
-			NavigateCommand = new RelayCommand<string>(ViewDetails);
+			NavigateCommand = ViewDetailsCommand;
 
             InitializeCharts();
         }

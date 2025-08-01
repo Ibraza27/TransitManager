@@ -55,19 +55,7 @@ namespace TransitManager.Infrastructure.Data
             }
 
             // Filtres globaux pour les entités supprimées logiquement
-            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
-                {
-                    modelBuilder.Entity(entityType.ClrType)
-                        .HasQueryFilter(Expression.Lambda(
-                            Expression.Equal(
-                                Expression.Property(
-                                    Expression.Parameter(entityType.ClrType, "e"),
-                                    nameof(BaseEntity.Actif)),
-                                Expression.Constant(true))));
-                }
-            }
+
 
             // Seed data pour l'administrateur par défaut
             modelBuilder.Entity<Utilisateur>().HasData(new Utilisateur
@@ -82,6 +70,14 @@ namespace TransitManager.Infrastructure.Data
                 DateCreation = DateTime.UtcNow,
                 Actif = true
             });
+			// AJOUTER CES LIGNES :
+			modelBuilder.Entity<Client>().HasQueryFilter(e => e.Actif);
+			modelBuilder.Entity<Colis>().HasQueryFilter(e => e.Actif);
+			modelBuilder.Entity<Conteneur>().HasQueryFilter(e => e.Actif);
+			modelBuilder.Entity<Paiement>().HasQueryFilter(e => e.Actif);
+			modelBuilder.Entity<Utilisateur>().HasQueryFilter(e => e.Actif);
+			modelBuilder.Entity<Document>().HasQueryFilter(e => e.Actif);
+			// On N'ajoute PAS de filtre pour AuditLog
         }
 
         /// <summary>

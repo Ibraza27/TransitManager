@@ -6,22 +6,24 @@
 
     <Application.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <!-- Thèmes externes -->
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
-                <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
-                
-                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="Blue" SecondaryColor="Teal" />
-                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
-                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Defaults.xaml" />
+			<ResourceDictionary.MergedDictionaries>
+				<!-- 1. Thèmes MahApps  -->
+				<ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
+				<ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
+				<ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
+				<ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.MahApps;component/Themes/MaterialDesignTheme.MahApps.Defaults.xaml" />
 
-                <!-- Styles personnalisés -->
-                <!-- Nous les laissons commentés pour le moment pour garantir la compilation -->
-                <ResourceDictionary Source="/Resources/Styles/Colors.xaml" />
-                <ResourceDictionary Source="/Resources/Styles/Buttons.xaml" />
-                <ResourceDictionary Source="/Resources/Styles/DataGrids.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+				
+				<!-- 2 : Thèmes MaterialDesign  -->
+				<materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="Blue" SecondaryColor="Teal" />
+				<ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
+				
+				
+				<!-- 3. DERNIERS : Nos styles personnalisés (dans l'ordre : Colors → Buttons → DataGrids) -->
+				<ResourceDictionary Source="/Resources/Styles/Colors.xaml" />	
+				<ResourceDictionary Source="/Resources/Styles/Buttons.xaml" />
+				<ResourceDictionary Source="/Resources/Styles/DataGrids.xaml" />
+			</ResourceDictionary.MergedDictionaries>
 
             <!-- Déclarations globales -->
             <converters:StatusToColorConverter x:Key="StatusToColorConverter" />

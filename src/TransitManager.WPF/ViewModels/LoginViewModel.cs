@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using TransitManager.Core.Interfaces;
+using System.ComponentModel;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -24,29 +25,31 @@ namespace TransitManager.WPF.ViewModels
         private string? _appVersion;
 		
 
-        public string Username
-        {
-            get => _username;
-            set
-            {
-                if (SetProperty(ref _username, value))
-                {
-                    HasError = false;
-                }
-            }
-        }
+		public string Username
+		{
+			get => _username;
+			set
+			{
+				if (SetProperty(ref _username, value))
+				{
+					HasError = false;
+					RaiseCanExecuteChanged(); // ⭐ Notifier le changement ⭐
+				}
+			}
+		}
 
-        public string Password
-        {
-            get => _password;
-            set
-            {
-                if (SetProperty(ref _password, value))
-                {
-                    HasError = false;
-                }
-            }
-        }
+		public string Password
+		{
+			get => _password;
+			set
+			{
+				if (SetProperty(ref _password, value))
+				{
+					HasError = false;
+					RaiseCanExecuteChanged(); // ⭐ Notifier le changement ⭐
+				}
+			}
+		}
 
         public bool RememberMe
         {
@@ -76,20 +79,35 @@ namespace TransitManager.WPF.ViewModels
         public ICommand LoginCommand { get; }
         public ICommand ForgotPasswordCommand { get; }
 
-        public LoginViewModel(IAuthenticationService authenticationService)
-        {
-            _authenticationService = authenticationService;
+		public LoginViewModel(IAuthenticationService authenticationService)
+		{
+			_authenticationService = authenticationService;
 
-            Title = "Connexion";
-            AppVersion = GetAppVersion();
+			Title = "Connexion";
+			AppVersion = GetAppVersion();
+			IsBusy = false; // ⭐ 1. Initialiser explicitement ⭐
 
-            // Initialiser les commandes
-            LoginCommand = new AsyncRelayCommand(LoginAsync);
-            ForgotPasswordCommand = new AsyncRelayCommand(ForgotPasswordAsync);
+			// Initialiser les commandes
+			LoginCommand = new AsyncRelayCommand(LoginAsync, () => CanLogin());
+  			RegisterCommand(nameof(LoginCommand), (IRelayCommand)LoginCommand);
+			ForgotPasswordCommand = new AsyncRelayCommand(ForgotPasswordAsync);
 
-            // Charger les préférences sauvegardées
-            LoadSavedCredentials();
-        }
+			// Charger les préférences sauvegardées
+			LoadSavedCredentials();
+		}
+
+		// ⭐ 3. Implémenter INotifyPropertyChanged pour CanExecute ⭐
+		protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+		{
+			base.OnPropertyChanged(e);
+			
+			if (e.PropertyName == nameof(Username) || 
+				e.PropertyName == nameof(Password) ||
+				e.PropertyName == nameof(IsBusy))
+			{
+				(LoginCommand as RelayCommand)?.NotifyCanExecuteChanged();
+			}
+		}
 
         private bool CanLogin()
         {

@@ -181,6 +181,8 @@ namespace TransitManager.WPF.ViewModels
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+		
+
 
         /// <summary>
         /// Libère les ressources
@@ -197,6 +199,13 @@ namespace TransitManager.WPF.ViewModels
 
             _disposed = true;
         }
+		
+		public void RaiseCanExecuteChanged()
+		{
+			RefreshCommands();
+		}
+		
+		
     }
 
     /// <summary>

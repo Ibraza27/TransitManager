@@ -107,16 +107,19 @@
     </Style>
 
     <!-- Style pour les colonnes de montants -->
-    <Style x:Key="DataGridAmountColumnStyle" TargetType="TextBlock" BasedOn="{StaticResource DataGridTextColumnStyle}">
-        <Setter Property="HorizontalAlignment" Value="Right"/>
-        <Setter Property="FontFamily" Value="Consolas"/>
-        <Style.Triggers>
-            <DataTrigger Binding="{Binding Path=., Converter={StaticResource GreaterThanZeroConverter}}" Value="False">
-                <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
-                <Setter Property="FontWeight" Value="Medium"/>
-            </DataTrigger>
-        </Style.Triggers>
-    </Style>
+	<Style x:Key="DataGridAmountColumnStyle" TargetType="TextBlock" BasedOn="{StaticResource DataGridTextColumnStyle}">
+		<Setter Property="HorizontalAlignment" Value="Right"/>
+		<Setter Property="FontFamily" Value="Consolas"/>
+		<!-- DataTrigger commenté temporairement car GreaterThanZeroConverter n'existe pas -->
+		<!--
+		<Style.Triggers>
+			<DataTrigger Binding="{Binding Path=., Converter={StaticResource GreaterThanZeroConverter}}" Value="False">
+				<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+				<Setter Property="FontWeight" Value="Medium"/>
+			</DataTrigger>
+		</Style.Triggers>
+		-->
+	</Style>
 
     <!-- Style pour les colonnes de statut -->
     <Style x:Key="StatusBadgeStyle" TargetType="Border">

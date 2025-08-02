@@ -18,6 +18,11 @@ using TransitManager.Infrastructure.Services;
 using TransitManager.WPF.Helpers;
 using TransitManager.WPF.ViewModels;
 using TransitManager.WPF.Views.Auth;
+using TransitManager.WPF.Views.Clients; // Ajoutez les using pour les vues
+using TransitManager.WPF.Views.Colis;
+using TransitManager.WPF.Views.Conteneurs;
+using TransitManager.WPF.Views.Dashboard;
+using TransitManager.WPF.Views.Finance;
 
 namespace TransitManager.WPF
 {
@@ -53,27 +58,13 @@ namespace TransitManager.WPF
                     .Build();
 
                 await _host.StartAsync();
+				_notifier = _host.Services.GetRequiredService<Notifier>();
 
                 // On récupère le Notifier depuis le conteneur DI
-                _notifier = _host.Services.GetRequiredService<Notifier>();
+				var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+				Current.MainWindow = mainWindow; // <-- LIGNE À AJOUTER
+				mainWindow.Show();
 
-                Current.DispatcherUnhandledException += OnDispatcherUnhandledException;
-                AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-
-                // Afficher la fenêtre de connexion
-                var loginWindow = _host.Services.GetRequiredService<LoginView>();
-                var loginResult = loginWindow.ShowDialog();
-
-                if (loginResult == true)
-                {
-                    var mainWindow = _host.Services.GetRequiredService<MainWindow>();
-                    Current.MainWindow = mainWindow; // CORRECTION : Définir la MainWindow principale
-                    mainWindow.Show();
-                }
-                else
-                {
-                    Shutdown();
-                }
             }
             catch (Exception ex)
             {
@@ -127,24 +118,41 @@ namespace TransitManager.WPF
             services.AddTransient<ClientViewModel>();
             services.AddTransient<ColisViewModel>();
             services.AddTransient<ConteneurViewModel>();
+			services.AddTransient<ConteneurDetailViewModel>();
             
             // Views
             services.AddTransient<LoginView>();
             services.AddTransient<MainWindow>();
+			
+			services.AddTransient<DashboardView>();
+			services.AddTransient<ClientListView>();
+			services.AddTransient<ClientDetailView>();
+			services.AddTransient<ColisListView>();
+			services.AddTransient<ColisScanView>();
+			services.AddTransient<ConteneurListView>();
+			services.AddTransient<ConteneurDetailView>();
+			services.AddTransient<PaiementView>();
+			services.AddTransient<FactureView>();
 
             // CORRECTION : On enregistre le Notifier pour qu'il soit injectable partout
-            services.AddSingleton(provider => new Notifier(cfg =>
-            {
-                cfg.PositionProvider = new WindowPositionProvider(
-                    parentWindow: System.Windows.Application.Current.MainWindow,
-                    corner: Corner.TopRight,
-                    offsetX: 10,
-                    offsetY: 10);
-                cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
-                    notificationLifetime: TimeSpan.FromSeconds(5),
-                    maximumNotificationCount: MaximumNotificationCount.FromCount(5));
-                cfg.Dispatcher = System.Windows.Application.Current.Dispatcher;
-            }));
+			// Notification service
+			services.AddSingleton(provider =>
+			{
+				// On crée le Notifier ici, à la demande.
+				return new Notifier(cfg =>
+				{
+					cfg.PositionProvider = new PrimaryScreenPositionProvider(
+						corner: Corner.TopRight,
+						offsetX: 10,
+						offsetY: 10);
+
+					cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
+						notificationLifetime: TimeSpan.FromSeconds(5),
+						maximumNotificationCount: MaximumNotificationCount.FromCount(5));
+
+					cfg.Dispatcher = System.Windows.Application.Current.Dispatcher;
+				});
+			});
         }
 
         protected override async void OnExit(ExitEventArgs e)

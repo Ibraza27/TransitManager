@@ -123,6 +123,19 @@ namespace TransitManager.WPF.ViewModels
 
             // Charger l'utilisateur connecté
             CurrentUser = _authenticationService.CurrentUser;
+			
+			if (CurrentUser == null)
+			{
+				// Simuler l'utilisateur admin pour le développement
+				CurrentUser = new Utilisateur
+				{
+					Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+					NomUtilisateur = "admin",
+					Nom = "Administrateur",
+					Prenom = "Système",
+					Role = RoleUtilisateur.Administrateur
+				};
+			}
 
             // S'abonner aux notifications
             _notificationService.NotificationReceived += OnNotificationReceived;

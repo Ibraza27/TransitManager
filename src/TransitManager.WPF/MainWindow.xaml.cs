@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Media.Animation;
 using TransitManager.WPF.Helpers;
 using TransitManager.WPF.ViewModels;
+using TransitManager.Core.Interfaces;
 using System.Windows.Controls; // Pour Descendants<TextBlock>
 using System.Windows.Media;      // Pour RotateTransform
 
@@ -17,31 +18,23 @@ namespace TransitManager.WPF
     public partial class MainWindow : MetroWindow
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly INavigationService _navigationService;
         private bool _isMenuExpanded = true;
 
 
-        public MainWindow(IServiceProvider serviceProvider, MainViewModel viewModel, INavigationService navigationService)
+        public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
-            
-            _serviceProvider = serviceProvider;
-            _navigationService = navigationService;
-            
             DataContext = viewModel;
-            
-            // Initialiser le service de navigation avec le Frame
-            _navigationService.Initialize(MainFrame);
-            
-            // Naviguer vers le tableau de bord par défaut
-            Loaded += OnLoaded;
         }
+
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            _navigationService.NavigateTo("Dashboard");
+            // La navigation vers le tableau de bord est maintenant gérée par le MainViewModel.InitializeAsync()
+            // _navigationService.NavigateTo("Dashboard"); // Cette ligne n'est plus nécessaire
             StartSyncAnimation();
         }
+
 
 		private void ToggleMenuButton_Click(object sender, RoutedEventArgs e)
 		{

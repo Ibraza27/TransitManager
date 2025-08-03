@@ -1,8 +1,13 @@
 <Application x:Class="TransitManager.WPF.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:converters="clr-namespace:TransitManager.WPF.Converters">
+             xmlns:local="clr-namespace:TransitManager.WPF"
+             xmlns:converters="clr-namespace:TransitManager.WPF.Converters"
+             xmlns:viewModels="clr-namespace:TransitManager.WPF.ViewModels"
+             xmlns:viewsDashboard="clr-namespace:TransitManager.WPF.Views.Dashboard"
+             xmlns:viewsClients="clr-namespace:TransitManager.WPF.Views.Clients"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+
 
     <Application.Resources>
         <ResourceDictionary>
@@ -23,11 +28,31 @@
 				<ResourceDictionary Source="/Resources/Styles/Colors.xaml" />	
 				<ResourceDictionary Source="/Resources/Styles/Buttons.xaml" />
 				<ResourceDictionary Source="/Resources/Styles/DataGrids.xaml" />
-			</ResourceDictionary.MergedDictionaries>
+                <!-- ToastNotifications Styles -->
+                <!-- <ResourceDictionary Source="pack://application:,,,/ToastNotifications;component/Themes/Default.xaml" /> -->
+                <ResourceDictionary Source="pack://application:,,,/ToastNotifications.Messages;component/Themes/Default.xaml" />
+            </ResourceDictionary.MergedDictionaries>
 
             <!-- Déclarations globales -->
             <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+            <!-- DataTemplates pour les ViewModels et les Vues -->
+            <DataTemplate DataType="{x:Type viewModels:DashboardViewModel}">
+                <viewsDashboard:DashboardView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModels:ClientViewModel}">
+                <viewsClients:ClientListView />
+            </DataTemplate>
+
+            <!-- Ajoutez d'autres DataTemplates pour vos autres ViewModels et Vues -->
+            <!-- Exemple:
+            <DataTemplate DataType="{x:Type viewModels:ColisViewModel}">
+                <viewsColis:ColisListView />
+            </DataTemplate>
+            -->
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

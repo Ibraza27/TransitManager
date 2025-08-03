@@ -57,13 +57,26 @@ namespace TransitManager.WPF
                     .UseSerilog()
                     .Build();
 
+
+
                 await _host.StartAsync();
 				_notifier = _host.Services.GetRequiredService<Notifier>();
 
                 // On récupère le Notifier depuis le conteneur DI
 				var mainWindow = _host.Services.GetRequiredService<MainWindow>();
-				Current.MainWindow = mainWindow; // <-- LIGNE À AJOUTER
+				Current.MainWindow = mainWindow; 
+
+                // Assurez-vous que le DataContext de la MainWindow est défini sur le MainViewModel
+                // et que le MainViewModel est configuré pour afficher le DashboardViewModel au démarrage.
+                if (mainWindow.DataContext is MainViewModel mainViewModel)
+                {
+                    // Initialiser le MainViewModel
+                    await mainViewModel.InitializeAsync(); 
+                }
+
 				mainWindow.Show();
+
+
 
             }
             catch (Exception ex)

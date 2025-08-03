@@ -27,6 +27,14 @@ namespace TransitManager.WPF.ViewModels
         private Utilisateur? _currentUser;
         private string _searchText = string.Empty;
         private int _notificationCount;
+		
+		private ObservableObject? _currentView;
+        public ObservableObject? CurrentView
+        {
+            get => _currentView;
+            set => SetProperty(ref _currentView, value);
+        }
+
 
         /// <summary>
         /// Utilisateur actuellement connecté
@@ -150,7 +158,12 @@ namespace TransitManager.WPF.ViewModels
             
             // Afficher un message de bienvenue
             _notifier.ShowSuccess($"Bienvenue {CurrentUser?.NomComplet} !");
+
+            // Naviguer vers le tableau de bord au démarrage
+            _navigationService.NavigateTo("Dashboard");
         }
+
+
 
         private async Task NavigateToAsync(string? viewName)
         {
@@ -158,10 +171,30 @@ namespace TransitManager.WPF.ViewModels
 
             await ExecuteBusyActionAsync(async () =>
             {
-                _navigationService.NavigateTo(viewName);
-                await Task.Delay(100); // Petite pause pour l'animation
+                // Ancien code: _navigationService.NavigateTo(viewName);
+                // Nouveau code: Résoudre le ViewModel et l'assigner à CurrentView
+                switch (viewName)
+                {
+                    case "Dashboard":
+                        CurrentView = _serviceProvider.GetRequiredService<DashboardViewModel>();
+                        break;
+                    case "Clients":
+                        CurrentView = _serviceProvider.GetRequiredService<ClientViewModel>();
+                        break;
+                    // Ajoutez d'autres cas pour chaque ViewModel/vue que vous souhaitez naviguer
+                    // Exemple:
+                    // case "Colis":
+                    //     CurrentView = _serviceProvider.GetRequiredService<ColisViewModel>();
+                    //     break;
+                    default:
+                        // Gérer les cas non reconnus ou naviguer vers une vue par défaut
+                        _notifier.ShowWarning($"Navigation vers la vue '{viewName}' non implémentée.");
+                        break;
+                }
+                await Task.CompletedTask;
             });
         }
+
 
         private async Task PerformSearchAsync()
         {

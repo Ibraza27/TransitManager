@@ -21,7 +21,7 @@
 
         <!-- Colonne de droite pour le contenu -->
         <Grid Grid.Column="1">
-            <Frame x:Name="MainFrame" />
+            <ContentControl Content="{Binding CurrentView}" />
             <materialDesign:PackIcon Kind="Sync" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <materialDesign:PackIcon.RenderTransform>
                     <RotateTransform x:Name="SyncRotateTransform" CenterX="12" CenterY="12"/>

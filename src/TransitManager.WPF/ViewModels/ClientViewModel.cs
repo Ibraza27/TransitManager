@@ -165,10 +165,10 @@ namespace TransitManager.WPF.ViewModels
             Title = "Gestion des Clients";
 
             // Initialiser les commandes
-            NewClientCommand = new AsyncRelayCommand(NewClientAsync);
-            EditCommand = new AsyncRelayCommand<Client>(EditClientAsync);
+            NewClientCommand = new RelayCommand(NewClient);
+            EditCommand = new RelayCommand<Client>(EditClient);
             DeleteCommand = new AsyncRelayCommand<Client>(DeleteClientAsync);
-            ViewDetailsCommand = new AsyncRelayCommand<Client>(ViewDetailsAsync);
+            ViewDetailsCommand = new RelayCommand<Client>(ViewDetails);
             ExportCommand = new AsyncRelayCommand(ExportAsync);
             RefreshCommand = new AsyncRelayCommand(RefreshAsync);
             SearchCommand = new AsyncRelayCommand(SearchClientsAsync);
@@ -176,12 +176,13 @@ namespace TransitManager.WPF.ViewModels
             NextPageCommand = new RelayCommand(NextPage, () => CanGoNext);
         }
 
-        public override async Task LoadAsync()
-        {
-            await LoadCitiesAsync();
-            await LoadClientsAsync();
-            await LoadStatisticsAsync();
-        }
+
+		public override async Task LoadAsync()
+		{
+			await LoadCitiesAsync();
+			await LoadClientsAsync();
+			await LoadStatisticsAsync();
+		}
 
         private async Task LoadClientsAsync()
         {
@@ -256,19 +257,16 @@ namespace TransitManager.WPF.ViewModels
             TotalImpaye = await _clientService.GetTotalUnpaidBalanceAsync();
         }
 
-        private async Task NewClientAsync()
-        {
-            _navigationService.NavigateTo("ClientDetail", "new");
-            await Task.CompletedTask;
-        }
+		private void NewClient()
+		{
+			_navigationService.NavigateTo("ClientDetail", "new");
+		}
 
-        private async Task EditClientAsync(Client? client)
-        {
-            if (client == null) return;
-            _navigationService.NavigateTo("ClientDetail", client.Id);
-            await Task.CompletedTask;
-        }
-
+		private void EditClient(Client? client)
+		{
+			if (client == null) return;
+			_navigationService.NavigateTo("ClientDetail", client.Id);
+		}
         private async Task DeleteClientAsync(Client? client)
         {
             if (client == null) return;
@@ -295,12 +293,11 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        private async Task ViewDetailsAsync(Client? client)
-        {
-            if (client == null) return;
-            _navigationService.NavigateTo("ClientDetail", client.Id);
-            await Task.CompletedTask;
-        }
+		private void ViewDetails(Client? client)
+		{
+			if (client == null) return;
+			_navigationService.NavigateTo("ClientDetail", client.Id);
+		}
 
         private async Task ExportAsync()
         {

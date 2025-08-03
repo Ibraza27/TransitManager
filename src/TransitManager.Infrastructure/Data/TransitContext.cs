@@ -13,18 +13,17 @@ namespace TransitManager.Infrastructure.Data
     /// <summary>
     /// Contexte Entity Framework pour la base de données Transit Manager
     /// </summary>
-    public class TransitContext : DbContext
-    {
-        private readonly string? _currentUser;
 
-        public TransitContext(DbContextOptions<TransitContext> options) : base(options)
-        {
-        }
+	public class TransitContext : DbContext
+		{
+			private readonly string? _currentUser; // On peut garder ce champ pour une utilisation future
 
-        public TransitContext(DbContextOptions<TransitContext> options, string currentUser) : base(options)
-        {
-            _currentUser = currentUser;
-        }
+			public TransitContext(DbContextOptions<TransitContext> options) : base(options)
+			{
+				// Si vous avez besoin de l'utilisateur actuel plus tard, il faudra l'injecter
+				// via un autre service, mais pas dans le constructeur du DbContext.
+				_currentUser = "System"; // Valeur par défaut pour l'audit
+			}
 
         // DbSets pour les entités
         public DbSet<Client> Clients { get; set; } = null!;

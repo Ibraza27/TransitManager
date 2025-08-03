@@ -18,7 +18,7 @@ namespace TransitManager.Infrastructure.Repositories
         Task<IEnumerable<Client>> GetClientsWithUnpaidBalanceAsync();
         Task<bool> IsEmailUniqueAsync(string email, Guid? excludeId = null);
         Task<bool> IsPhoneUniqueAsync(string phone, Guid? excludeId = null);
-        Task<IEnumerable<string>> GetAllCitiesAsync();
+        Task<IEnumerable<string?>> GetAllCitiesAsync();
         Task<Dictionary<string, int>> GetClientsByLocationAsync();
     }
 
@@ -70,8 +70,8 @@ namespace TransitManager.Infrastructure.Repositories
                     c.TelephonePrincipal.Contains(searchTerm) ||
                     (c.TelephoneSecondaire != null && c.TelephoneSecondaire.Contains(searchTerm)) ||
                     (c.Email != null && c.Email.ToLower().Contains(searchTerm)) ||
-                    c.Ville.ToLower().Contains(searchTerm) ||
-                    c.AdressePrincipale.ToLower().Contains(searchTerm)
+                    (c.Ville != null && c.Ville.ToLower().Contains(searchTerm)) ||
+                    (c.AdressePrincipale != null && c.AdressePrincipale.ToLower().Contains(searchTerm))
                 ))
                 .OrderBy(c => c.Nom)
                 .ThenBy(c => c.Prenom)
@@ -125,10 +125,10 @@ namespace TransitManager.Infrastructure.Repositories
             return !await query.AnyAsync();
         }
 
-        public async Task<IEnumerable<string>> GetAllCitiesAsync()
+        public async Task<IEnumerable<string?>> GetAllCitiesAsync()
         {
             return await _dbSet
-                .Where(c => c.Actif)
+                .Where(c => c.Actif && c.Ville != null)
                 .Select(c => c.Ville)
                 .Distinct()
                 .OrderBy(v => v)
@@ -138,8 +138,8 @@ namespace TransitManager.Infrastructure.Repositories
         public async Task<Dictionary<string, int>> GetClientsByLocationAsync()
         {
             return await _dbSet
-                .Where(c => c.Actif)
-                .GroupBy(c => c.Ville)
+                .Where(c => c.Actif && c.Ville != null)
+                .GroupBy(c => c.Ville!)
                 .Select(g => new { Ville = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Ville, x => x.Count);
         }

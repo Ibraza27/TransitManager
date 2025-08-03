@@ -121,7 +121,7 @@ namespace TransitManager.WPF.ViewModels
             // Initialiser les commandes
             NavigateCommand = new AsyncRelayCommand<string>(NavigateToAsync);
             SearchCommand = new AsyncRelayCommand(PerformSearchAsync);
-            NewClientCommand = new AsyncRelayCommand(CreateNewClientAsync);
+            NewClientCommand = new RelayCommand(CreateNewClient);
             NewConteneurCommand = new AsyncRelayCommand(CreateNewConteneurAsync);
             ScanCommand = new AsyncRelayCommand(OpenScannerAsync);
             ShowProfileCommand = new AsyncRelayCommand(ShowProfileAsync);
@@ -204,14 +204,10 @@ namespace TransitManager.WPF.ViewModels
             });
         }
 
-        private async Task CreateNewClientAsync()
-        {
-            await ExecuteBusyActionAsync(async () =>
-            {
-                _navigationService.NavigateTo("ClientDetail", "new");
-                await Task.CompletedTask;
-            });
-        }
+		private void CreateNewClient()
+		{
+			_navigationService.NavigateTo("ClientDetail", "new");
+		}
 
         private async Task CreateNewConteneurAsync()
         {

@@ -43,39 +43,44 @@ namespace TransitManager.WPF.ViewModels
                    !IsBusy;
         }
 
-        private async Task SaveAsync()
-        {
-            if (!CanSave()) return;
+		private async Task SaveAsync()
+		{
+			if (!CanSave()) return;
 
-            await ExecuteBusyActionAsync(async () =>
-            {
-                try
-                {
-                    bool isNewClient = Client!.CreePar == null; 
+			await ExecuteBusyActionAsync(async () =>
+			{
+				try
+				{
+					bool isNewClient = Client!.CreePar == null; 
 
-                    if (isNewClient)
-                    {
-                        await _clientService.CreateAsync(Client);
-                    }
-                    else
-                    {
-                        await _clientService.UpdateAsync(Client);
-                    }
+					if (isNewClient)
+					{
+						await _clientService.CreateAsync(Client);
+					}
+					else
+					{
+						await _clientService.UpdateAsync(Client);
+					}
 
-                    await _dialogService.ShowInformationAsync("Succès", "Le client a été enregistré avec succès.");
-                    _navigationService.GoBack();
-                }
-                catch (Exception ex)
-                {
-                    await _dialogService.ShowErrorAsync("Erreur", $"Une erreur est survenue lors de l'enregistrement : {ex.Message}");
-                }
-            });
-        }
+					await _dialogService.ShowInformationAsync("Succès", "Le client a été enregistré avec succès.");
+					
+					// On re-navigue vers la liste des clients pour forcer un rechargement propre.
+					_navigationService.NavigateTo("Clients"); 
+				}
+				catch (Exception ex)
+				{
+					// Affichez l'exception interne pour un meilleur débogage !
+					var errorMessage = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+					await _dialogService.ShowErrorAsync("Erreur", $"Une erreur est survenue lors de l'enregistrement : {errorMessage}");
+				}
+			});
+		}
 
-        private void Cancel()
-        {
-            _navigationService.GoBack();
-        }
+		private void Cancel()
+		{
+			// L'annulation peut simplement revenir en arrière sans recharger.
+			_navigationService.GoBack();
+		}
 
         public Task InitializeAsync(string newClientMarker)
         {

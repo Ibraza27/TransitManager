@@ -3,11 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using Serilog.Events;
 using System;
 using System.IO;
 using System.Windows;
-using System.Windows.Threading;
 using ToastNotifications;
 using ToastNotifications.Lifetime;
 using ToastNotifications.Position;
@@ -18,18 +16,18 @@ using TransitManager.Infrastructure.Services;
 using TransitManager.WPF.Helpers;
 using TransitManager.WPF.ViewModels;
 using TransitManager.WPF.Views.Auth;
-using TransitManager.WPF.Views.Clients; // Ajoutez les using pour les vues
+using TransitManager.WPF.Views.Clients;
 using TransitManager.WPF.Views.Colis;
 using TransitManager.WPF.Views.Conteneurs;
 using TransitManager.WPF.Views.Dashboard;
 using TransitManager.WPF.Views.Finance;
+using TransitManager.WPF.Views.Notifications;
 
 namespace TransitManager.WPF
 {
     public partial class App : System.Windows.Application
     {
         private IHost? _host;
-        // La variable Notifier est conservée ici
         private Notifier? _notifier;
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -57,119 +55,93 @@ namespace TransitManager.WPF
                     .UseSerilog()
                     .Build();
 
-
-
                 await _host.StartAsync();
-				_notifier = _host.Services.GetRequiredService<Notifier>();
+                _notifier = _host.Services.GetRequiredService<Notifier>();
 
-                // On récupère le Notifier depuis le conteneur DI
-				var mainWindow = _host.Services.GetRequiredService<MainWindow>();
-				Current.MainWindow = mainWindow; 
+                var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+                Current.MainWindow = mainWindow;
 
-                // Assurez-vous que le DataContext de la MainWindow est défini sur le MainViewModel
-                // et que le MainViewModel est configuré pour afficher le DashboardViewModel au démarrage.
                 if (mainWindow.DataContext is MainViewModel mainViewModel)
                 {
-                    // Initialiser le MainViewModel
-                    await mainViewModel.InitializeAsync(); 
+                    await mainViewModel.InitializeAsync();
                 }
 
-				mainWindow.Show();
-
-
-
+                mainWindow.Show();
             }
-            catch (Exception ex)
-            {
-                Log.Fatal(ex, "Une erreur fatale s'est produite lors du démarrage");
-                System.Windows.MessageBox.Show($"Une erreur critique est survenue: {ex.Message}", "Erreur de Démarrage", MessageBoxButton.OK, MessageBoxImage.Error);
-                Shutdown(-1);
-            }
+			catch (Exception ex)
+			{
+				Log.Fatal(ex, "Une erreur fatale s'est produite lors du démarrage");
+				System.Windows.MessageBox.Show($"Une erreur critique est survenue: {ex.Message}\n\n{ex.InnerException?.Message}", "Erreur de Démarrage", MessageBoxButton.OK, MessageBoxImage.Error);
+				Shutdown(-1);
+			}
         }
 
         private void ConfigureServices(IConfiguration configuration, IServiceCollection services)
         {
-            // Configuration
             services.AddSingleton(configuration);
 
-			// Base de données
-			// On passe en Transient pour créer une nouvelle instance à chaque fois, évitant les problèmes de thread.
-			services.AddDbContext<TransitContext>(options =>
-				options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")),
-				ServiceLifetime.Transient);
+            // Base de données : Utilisation de la DbContextFactory, la meilleure pratique pour WPF.
+            services.AddDbContextFactory<TransitContext>(options =>
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
-            // Repositories
-            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-            services.AddScoped<IClientRepository, ClientRepository>();
-            services.AddScoped<IColisRepository, ColisRepository>();
-            services.AddScoped<IConteneurRepository, ConteneurRepository>();
+            // Repositories (peuvent rester Scoped ou passer en Transient, Transient est plus sûr)
+            services.AddTransient(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+            services.AddTransient<IClientRepository, ClientRepository>();
+            services.AddTransient<IColisRepository, ColisRepository>();
+            services.AddTransient<IConteneurRepository, ConteneurRepository>();
 
-            // Services métier
-            services.AddScoped<IClientService, ClientService>();
-            services.AddScoped<IColisService, ColisService>();
-            services.AddScoped<IConteneurService, ConteneurService>();
-            services.AddScoped<IPaiementService, PaiementService>();
-            services.AddScoped<INotificationService, NotificationService>();
+            // Services métier (doivent être Transient car ils dépendent de la DbContextFactory)
+            services.AddTransient<IClientService, ClientService>();
+            services.AddTransient<IColisService, ColisService>();
+            services.AddTransient<IConteneurService, ConteneurService>();
+            services.AddTransient<IPaiementService, PaiementService>();
+            services.AddTransient<INotificationService, NotificationService>();
+            services.AddTransient<IAuthenticationService, AuthenticationService>();
+            
+            // Services d'infrastructure (Scoped est ok ici car pas de DbContext)
             services.AddScoped<IBarcodeService, BarcodeService>();
-            
-            // Services infrastructure
-            services.AddScoped<IBackupService, BackupService>();
             services.AddScoped<IExportService, ExportService>();
-            
-            // CORRECTION : Mettre AuthenticationService en Scoped car il dépend du TransitContext (Scoped)
-            services.AddScoped<IAuthenticationService, AuthenticationService>();
+            services.AddScoped<IBackupService, BackupService>();
 
-            // CORRECTION : La navigation et les dialogues sont liés à l'UI, Singleton est OK ici.
+            // Services UI (Singleton car ils gèrent un état global de l'UI)
             services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<IDialogService, DialogService>();
 
             // AutoMapper
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
-			// ViewModels
-			services.AddTransient<LoginViewModel>();
-			services.AddTransient<MainViewModel>();
-			services.AddTransient<DashboardViewModel>();
-			services.AddTransient<ClientViewModel>();
-			services.AddTransient<ClientDetailViewModel>(); // <-- AJOUTEZ CETTE LIGNE
-			services.AddTransient<ColisViewModel>();
-			services.AddTransient<ConteneurViewModel>();
-			services.AddTransient<ConteneurDetailViewModel>();
-			services.AddTransient<NotificationsViewModel>();
-						
-            // Views
+            // ViewModels (Transient pour qu'ils soient recréés à chaque navigation)
+            services.AddTransient<LoginViewModel>();
+            services.AddTransient<MainViewModel>();
+            services.AddTransient<DashboardViewModel>();
+            services.AddTransient<ClientViewModel>();
+            services.AddTransient<ClientDetailViewModel>();
+            services.AddTransient<ColisViewModel>();
+            services.AddTransient<ConteneurViewModel>();
+            services.AddTransient<ConteneurDetailViewModel>();
+            services.AddTransient<NotificationsViewModel>();
+
+            // Views (Transient)
             services.AddTransient<LoginView>();
             services.AddTransient<MainWindow>();
-			
-			services.AddTransient<DashboardView>();
-			services.AddTransient<ClientListView>();
-			services.AddTransient<ClientDetailView>();
-			services.AddTransient<ColisListView>();
-			services.AddTransient<ColisScanView>();
-			services.AddTransient<ConteneurListView>();
-			services.AddTransient<ConteneurDetailView>();
-			services.AddTransient<PaiementView>();
-			services.AddTransient<FactureView>();
+            services.AddTransient<DashboardView>();
+            services.AddTransient<ClientListView>();
+            services.AddTransient<ClientDetailView>();
+            services.AddTransient<ColisListView>();
+            services.AddTransient<ColisScanView>();
+            services.AddTransient<ConteneurListView>();
+            services.AddTransient<ConteneurDetailView>();
+            services.AddTransient<PaiementView>();
+            services.AddTransient<FactureView>();
+            services.AddTransient<NotificationsView>();
 
-            // CORRECTION : On enregistre le Notifier pour qu'il soit injectable partout
-			// Notification service
-			services.AddSingleton(provider =>
-			{
-				// On crée le Notifier ici, à la demande.
-				return new Notifier(cfg =>
-				{
-					cfg.PositionProvider = new PrimaryScreenPositionProvider(
-						corner: Corner.TopRight,
-						offsetX: 10,
-						offsetY: 10);
-
-					cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(
-						notificationLifetime: TimeSpan.FromSeconds(5),
-						maximumNotificationCount: MaximumNotificationCount.FromCount(5));
-
-					cfg.Dispatcher = System.Windows.Application.Current.Dispatcher;
-				});
-			});
+            // Service de Notification (Toast)
+            services.AddSingleton(provider => new Notifier(cfg =>
+            {
+                cfg.PositionProvider = new PrimaryScreenPositionProvider(corner: Corner.TopRight, offsetX: 10, offsetY: 10);
+                cfg.LifetimeSupervisor = new TimeAndCountBasedLifetimeSupervisor(notificationLifetime: TimeSpan.FromSeconds(5), maximumNotificationCount: MaximumNotificationCount.FromCount(5));
+                cfg.Dispatcher = System.Windows.Application.Current.Dispatcher;
+            }));
         }
 
         protected override async void OnExit(ExitEventArgs e)
@@ -184,17 +156,11 @@ namespace TransitManager.WPF
             base.OnExit(e);
         }
 
-        private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
-        {
-            Log.Error(e.Exception, "Exception non gérée");
-            System.Windows.MessageBox.Show($"Une erreur inattendue est survenue:\n{e.Exception.Message}", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-            e.Handled = true;
-        }
-
-        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            var exception = e.ExceptionObject as Exception;
-            Log.Fatal(exception, "Erreur fatale");
-        }
+		private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+		{
+			Log.Error(e.Exception, "Exception non gérée");
+			System.Windows.MessageBox.Show($"Une erreur inattendue est survenue:\n{e.Exception.Message}", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+			e.Handled = true;
+		}
     }
 }

@@ -75,31 +75,31 @@
                                 </Grid.RowDefinitions>
 
                                 <TextBox Grid.Column="0" Grid.Row="0"
-                                       Text="{Binding Client.Nom}"
+                                       Text="{Binding Client.Nom, UpdateSourceTrigger=PropertyChanged}"
                                        materialDesign:HintAssist.Hint="Nom"
                                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                        Margin="0,0,5,10"/>
 
                                 <TextBox Grid.Column="1" Grid.Row="0"
-                                       Text="{Binding Client.Prenom}"
+                                       Text="{Binding Client.Prenom, UpdateSourceTrigger=PropertyChanged}"
                                        materialDesign:HintAssist.Hint="Prénom"
                                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                        Margin="5,0,0,10"/>
 
                                 <TextBox Grid.Column="0" Grid.Row="1"
-                                       Text="{Binding Client.TelephonePrincipal}"
+                                       Text="{Binding Client.TelephonePrincipal, UpdateSourceTrigger=PropertyChanged}"
                                        materialDesign:HintAssist.Hint="Téléphone principal"
                                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                        Margin="0,0,5,10"/>
 
                                 <TextBox Grid.Column="1" Grid.Row="1"
-                                       Text="{Binding Client.TelephoneSecondaire}"
+                                       Text="{Binding Client.TelephoneSecondaire, UpdateSourceTrigger=PropertyChanged}"
                                        materialDesign:HintAssist.Hint="Téléphone secondaire"
                                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                        Margin="5,0,0,10"/>
 
                                 <TextBox Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2"
-                                       Text="{Binding Client.Email}"
+                                       Text="{Binding Client.Email, UpdateSourceTrigger=PropertyChanged}"
                                        materialDesign:HintAssist.Hint="Email"
                                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                        Margin="0,0,0,10"/>
@@ -114,7 +114,7 @@
                                      Style="{StaticResource MaterialDesignHeadline6TextBlock}"
                                      Margin="0,0,0,20"/>
 
-                            <TextBox Text="{Binding Client.AdressePrincipale}"
+                            <TextBox Text="{Binding Client.AdressePrincipale, UpdateSourceTrigger=PropertyChanged}"
                                    materialDesign:HintAssist.Hint="Adresse principale"
                                    Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                    TextWrapping="Wrap"
@@ -130,19 +130,19 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBox Grid.Column="0"
-                                       Text="{Binding Client.Ville}"
+                                       Text="{Binding Client.Ville, UpdateSourceTrigger=PropertyChanged}"
                                        materialDesign:HintAssist.Hint="Ville"
                                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                        Margin="0,0,5,0"/>
 
                                 <TextBox Grid.Column="1"
-                                       Text="{Binding Client.CodePostal}"
+                                       Text="{Binding Client.CodePostal, UpdateSourceTrigger=PropertyChanged}"
                                        materialDesign:HintAssist.Hint="Code postal"
                                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                        Margin="5,0,5,0"/>
 
                                 <TextBox Grid.Column="2"
-                                       Text="{Binding Client.Pays}"
+                                       Text="{Binding Client.Pays, UpdateSourceTrigger=PropertyChanged}"
                                        materialDesign:HintAssist.Hint="Pays"
                                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                        Margin="5,0,0,0"/>
@@ -168,7 +168,7 @@
                                     IsChecked="{Binding Client.EstClientFidele}"
                                     Margin="0,0,0,10"/>
 
-                            <TextBox Text="{Binding Client.PourcentageRemise}"
+                            <TextBox Text="{Binding Client.PourcentageRemise, UpdateSourceTrigger=PropertyChanged}"
                                    materialDesign:HintAssist.Hint="Pourcentage de remise"
                                    Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
                         </StackPanel>

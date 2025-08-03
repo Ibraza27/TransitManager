@@ -12,7 +12,7 @@ using TransitManager.Infrastructure.Data;
 namespace TransitManager.Infrastructure.Migrations
 {
     [DbContext(typeof(TransitContext))]
-    [Migration("20250801162542_InitialCreate")]
+    [Migration("20250803135020_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -83,7 +83,6 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("AdressePrincipale")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
@@ -146,7 +145,6 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("Pays")
-                        .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -186,7 +184,6 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<string>("Ville")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
@@ -1019,12 +1016,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 8, 1, 16, 25, 40, 182, DateTimeKind.Utc).AddTicks(4128),
+                            DateCreation = new DateTime(2025, 8, 3, 13, 50, 18, 408, DateTimeKind.Utc).AddTicks(1146),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$1xkQmMdE0rmTgg.aBcZ/Z.QT3tL0JX8mpPurnlDAFVndGaRwgWDEK",
+                            MotDePasseHash = "$2a$11$dcl5P4Pdk085jQg80AzFmesiTIe03YxamxiY55sHBqHoP8MTAmB5S",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,

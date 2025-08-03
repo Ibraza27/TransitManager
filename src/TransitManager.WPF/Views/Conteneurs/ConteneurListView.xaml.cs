@@ -12,7 +12,6 @@ namespace TransitManager.WPF.Views.Conteneurs
         public ConteneurListView(ConteneurViewModel viewModel)
         {
             InitializeComponent();
-            DataContext = viewModel;
         }
 
         // === MÉTHODE AJOUTÉE POUR CORRIGER L'ERREUR DE COMPILATION ===

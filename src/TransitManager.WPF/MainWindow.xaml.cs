@@ -15,68 +15,24 @@ namespace TransitManager.WPF
     /// <summary>
     /// Logique d'interaction pour MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : MetroWindow
-    {
-        private readonly IServiceProvider _serviceProvider;
-        private bool _isMenuExpanded = true;
-
-
-        public MainWindow(MainViewModel viewModel)
-        {
-            InitializeComponent();
-            DataContext = viewModel;
-        }
-
-
-        private void OnLoaded(object sender, RoutedEventArgs e)
-        {
-            // La navigation vers le tableau de bord est maintenant gérée par le MainViewModel.InitializeAsync()
-            // _navigationService.NavigateTo("Dashboard"); // Cette ligne n'est plus nécessaire
-            StartSyncAnimation();
-        }
-
-
-		private void ToggleMenuButton_Click(object sender, RoutedEventArgs e)
+	public partial class MainWindow : MetroWindow
+	{
+		// On enlève _serviceProvider et _isMenuExpanded qui ne sont plus utilisés
+		
+		public MainWindow(MainViewModel viewModel)
 		{
-			/*
-			if (_isMenuExpanded)
-			{
-				// ... TOUT LE CODE EXISTANT ICI ...
-			}
-			else
-			{
-				// ... TOUT LE CODE EXISTANT ICI ...
-			}
-			
-			_isMenuExpanded = !_isMenuExpanded;
-			
-			var icon = ToggleMenuButton.Content as MaterialDesignThemes.Wpf.PackIcon;
-			if (icon != null)
-			{
-				icon.Kind = _isMenuExpanded 
-					? MaterialDesignThemes.Wpf.PackIconKind.MenuOpen 
-					: MaterialDesignThemes.Wpf.PackIconKind.Menu;
-			}
-			*/
+			InitializeComponent();
+			DataContext = viewModel;
+			// L'animation n'est plus dans le XAML, on peut la retirer ou la recréer si besoin
+			// StartSyncAnimation(); 
 		}
 
-        private void StartSyncAnimation()
-        {
-            var rotation = new DoubleAnimation
-            {
-                From = 0,
-                To = 360,
-                Duration = TimeSpan.FromSeconds(2),
-                RepeatBehavior = RepeatBehavior.Forever
-            };
-            
-            SyncRotateTransform.BeginAnimation(RotateTransform.AngleProperty, rotation);
-        }
 
-        protected override void OnClosed(EventArgs e)
-        {
-            base.OnClosed(e);
-            System.Windows.Application.Current.Shutdown();
-        }
+
+		protected override void OnClosed(EventArgs e)
+		{
+			base.OnClosed(e);
+			System.Windows.Application.Current.Shutdown();
+		}
     }
 }

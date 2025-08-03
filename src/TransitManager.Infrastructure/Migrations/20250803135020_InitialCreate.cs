@@ -22,11 +22,11 @@ namespace TransitManager.Infrastructure.Migrations
                     TelephonePrincipal = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     TelephoneSecondaire = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     Email = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
-                    AdressePrincipale = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    AdressePrincipale = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     AdresseLivraison = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    Ville = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Ville = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     CodePostal = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
-                    Pays = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false, defaultValue: "France"),
+                    Pays = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true, defaultValue: "France"),
                     DateInscription = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     Commentaires = table.Column<string>(type: "text", nullable: true),
                     PieceIdentite = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
@@ -360,7 +360,7 @@ namespace TransitManager.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Utilisateurs",
                 columns: new[] { "Id", "Actif", "CreePar", "DateCreation", "DateModification", "DateVerrouillage", "DerniereConnexion", "DoitChangerMotDePasse", "Email", "ExpirationToken", "FuseauHoraire", "Langue", "ModifiePar", "MotDePasseHash", "Nom", "NomUtilisateur", "NotificationsActivees", "NotificationsEmail", "NotificationsSMS", "PasswordSalt", "PermissionsSpecifiques", "PhotoProfil", "Preferences", "Prenom", "Role", "RowVersion", "Telephone", "TentativesConnexionEchouees", "Theme", "TokenReinitialisation" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 1, 16, 25, 40, 182, DateTimeKind.Utc).AddTicks(4128), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$1xkQmMdE0rmTgg.aBcZ/Z.QT3tL0JX8mpPurnlDAFVndGaRwgWDEK", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 3, 13, 50, 18, 408, DateTimeKind.Utc).AddTicks(1146), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$dcl5P4Pdk085jQg80AzFmesiTIe03YxamxiY55sHBqHoP8MTAmB5S", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UtilisateurId",

@@ -6,6 +6,10 @@
              xmlns:viewModels="clr-namespace:TransitManager.WPF.ViewModels"
              xmlns:viewsDashboard="clr-namespace:TransitManager.WPF.Views.Dashboard"
              xmlns:viewsClients="clr-namespace:TransitManager.WPF.Views.Clients"
+             xmlns:viewsColis="clr-namespace:TransitManager.WPF.Views.Colis" 
+             xmlns:viewsConteneurs="clr-namespace:TransitManager.WPF.Views.Conteneurs"
+             xmlns:conteneurs="clr-namespace:TransitManager.WPF.Views.Conteneurs"
+			 xmlns:viewsNotifications="clr-namespace:TransitManager.WPF.Views.Notifications"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
 
 
@@ -36,6 +40,7 @@
             <!-- Déclarations globales -->
             <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+			<converters:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter" />
 
             <!-- DataTemplates pour les ViewModels et les Vues -->
             <DataTemplate DataType="{x:Type viewModels:DashboardViewModel}">
@@ -45,13 +50,29 @@
             <DataTemplate DataType="{x:Type viewModels:ClientViewModel}">
                 <viewsClients:ClientListView />
             </DataTemplate>
+			
+            <!-- AJOUTEZ CE DATATEMPLATE -->
+            <DataTemplate DataType="{x:Type viewModels:ClientDetailViewModel}">
+                <viewsClients:ClientDetailView />
+            </DataTemplate>
 
-            <!-- Ajoutez d'autres DataTemplates pour vos autres ViewModels et Vues -->
-            <!-- Exemple:
             <DataTemplate DataType="{x:Type viewModels:ColisViewModel}">
                 <viewsColis:ColisListView />
             </DataTemplate>
-            -->
+            
+            <DataTemplate DataType="{x:Type viewModels:ConteneurViewModel}">
+                <viewsConteneurs:ConteneurListView />
+            </DataTemplate>
+
+            <!-- Ajoutez d'autres DataTemplates pour vos autres ViewModels et Vues -->
+            <!-- Exemple pour la vue de détail d'un conteneur -->
+            <DataTemplate DataType="{x:Type conteneurs:ConteneurDetailViewModel}">
+                <viewsConteneurs:ConteneurDetailView />
+            </DataTemplate>
+			<!-- AJOUTEZ CE DATATEMPLATE -->
+            <DataTemplate DataType="{x:Type viewModels:NotificationsViewModel}">
+                <viewsNotifications:NotificationsView />
+            </DataTemplate>
 
         </ResourceDictionary>
     </Application.Resources>

@@ -55,21 +55,21 @@ namespace TransitManager.Infrastructure.Data.Configurations
                 .HasMaxLength(150);
 
             builder.Property(c => c.AdressePrincipale)
-                .IsRequired()
+                .IsRequired(false)
                 .HasMaxLength(500);
 
             builder.Property(c => c.AdresseLivraison)
                 .HasMaxLength(500);
 
             builder.Property(c => c.Ville)
-                .IsRequired()
+                .IsRequired(false)
                 .HasMaxLength(100);
 
             builder.Property(c => c.CodePostal)
                 .HasMaxLength(20);
 
             builder.Property(c => c.Pays)
-                .IsRequired()
+                .IsRequired(false)
                 .HasMaxLength(100)
                 .HasDefaultValue("France");
 

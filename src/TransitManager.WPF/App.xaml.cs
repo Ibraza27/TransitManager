@@ -92,9 +92,11 @@ namespace TransitManager.WPF
             // Configuration
             services.AddSingleton(configuration);
 
-            // Base de données
-            services.AddDbContext<TransitContext>(options =>
-                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+			// Base de données
+			// On passe en Transient pour créer une nouvelle instance à chaque fois, évitant les problèmes de thread.
+			services.AddDbContext<TransitContext>(options =>
+				options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")),
+				ServiceLifetime.Transient);
 
             // Repositories
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
@@ -118,21 +120,23 @@ namespace TransitManager.WPF
             services.AddScoped<IAuthenticationService, AuthenticationService>();
 
             // CORRECTION : La navigation et les dialogues sont liés à l'UI, Singleton est OK ici.
-            services.AddScoped<INavigationService, NavigationService>();
+            services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<IDialogService, DialogService>();
 
             // AutoMapper
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
-            // ViewModels
-            services.AddTransient<LoginViewModel>();
-            services.AddTransient<MainViewModel>();
-            services.AddTransient<DashboardViewModel>();
-            services.AddTransient<ClientViewModel>();
-            services.AddTransient<ColisViewModel>();
-            services.AddTransient<ConteneurViewModel>();
+			// ViewModels
+			services.AddTransient<LoginViewModel>();
+			services.AddTransient<MainViewModel>();
+			services.AddTransient<DashboardViewModel>();
+			services.AddTransient<ClientViewModel>();
+			services.AddTransient<ClientDetailViewModel>(); // <-- AJOUTEZ CETTE LIGNE
+			services.AddTransient<ColisViewModel>();
+			services.AddTransient<ConteneurViewModel>();
 			services.AddTransient<ConteneurDetailViewModel>();
-            
+			services.AddTransient<NotificationsViewModel>();
+						
             // Views
             services.AddTransient<LoginView>();
             services.AddTransient<MainWindow>();

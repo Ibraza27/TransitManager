@@ -21,7 +21,14 @@ namespace TransitManager.Core.Entities
         /// </summary>
         [Required]
         [StringLength(100)]
-        public string Nom { get; set; } = string.Empty;
+		private string _nom = string.Empty;
+		[Required]
+		[StringLength(100)]
+		public string Nom
+		{
+			get => _nom;
+			set => SetProperty(ref _nom, value);
+		}
 
         /// <summary>
         /// Prénom du client
@@ -53,9 +60,8 @@ namespace TransitManager.Core.Entities
         /// <summary>
         /// Adresse principale
         /// </summary>
-        [Required]
         [StringLength(500)]
-        public string AdressePrincipale { get; set; } = string.Empty;
+        public string? AdressePrincipale { get; set; }
 
         /// <summary>
         /// Adresse de livraison (si différente)
@@ -66,9 +72,8 @@ namespace TransitManager.Core.Entities
         /// <summary>
         /// Ville
         /// </summary>
-        [Required]
         [StringLength(100)]
-        public string Ville { get; set; } = string.Empty;
+        public string? Ville { get; set; }
 
         /// <summary>
         /// Code postal
@@ -79,9 +84,8 @@ namespace TransitManager.Core.Entities
         /// <summary>
         /// Pays
         /// </summary>
-        [Required]
         [StringLength(100)]
-        public string Pays { get; set; } = string.Empty;
+        public string? Pays { get; set; }
 
         /// <summary>
         /// Date d'inscription

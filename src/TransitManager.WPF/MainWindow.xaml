@@ -6,28 +6,146 @@
                  xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
                  xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
                  mc:Ignorable="d"
-                 Title="Transit Manager - Test">
-    
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+                 Title="{Binding Title}"
+                 WindowStartupLocation="CenterScreen"
+                 WindowState="Maximized"
+                 d:DataContext="{d:DesignInstance viewModels:MainViewModel, IsDesignTimeCreatable=False}"
+                 xmlns:viewModels="clr-namespace:TransitManager.WPF.ViewModels">
 
-        <!-- Colonne de gauche pour le menu -->
-        <Grid x:Name="SideMenu" Grid.Column="0">
-             <Button x:Name="ToggleMenuButton" Content="Toggle" Click="ToggleMenuButton_Click" />
-        </Grid>
+    <materialDesign:DrawerHost x:Name="DrawerHost" IsLeftDrawerOpen="{Binding ElementName=MenuToggleButton, Path=IsChecked}">
 
-        <!-- Colonne de droite pour le contenu -->
-        <Grid Grid.Column="1">
-            <ContentControl Content="{Binding CurrentView}" />
-            <materialDesign:PackIcon Kind="Sync" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <materialDesign:PackIcon.RenderTransform>
-                    <RotateTransform x:Name="SyncRotateTransform" CenterX="12" CenterY="12"/>
-                </materialDesign:PackIcon.RenderTransform>
-            </materialDesign:PackIcon>
+        <!-- Contenu du menu latéral (gauche) -->
+        <materialDesign:DrawerHost.LeftDrawerContent>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- En-tête du menu -->
+                <StackPanel Grid.Row="0" Margin="16">
+                    <Image Source="/Resources/Images/logo.png" Height="60" Margin="0,10,0,10"/>
+                    <TextBlock Text="TRANSIT MANAGER" HorizontalAlignment="Center" FontWeight="Bold" FontSize="16" />
+                </StackPanel>
+
+                <!-- Items du menu -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ListBox x:Name="MenuListBox"
+                             Style="{StaticResource MaterialDesignNavigationListBox}"
+                             SelectedIndex="0">
+                        
+                        <ListBoxItem ToolTip="Tableau de bord">
+                            <RadioButton GroupName="MenuItems" IsChecked="True"
+                                         Command="{Binding NavigateCommand}" CommandParameter="Dashboard"
+                                         Style="{StaticResource MenuRadioButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ViewDashboard" VerticalAlignment="Center" Margin="16,0"/>
+                                    <TextBlock Text="Tableau de bord" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </ListBoxItem>
+
+                        <ListBoxItem ToolTip="Gestion des Clients">
+                            <RadioButton GroupName="MenuItems"
+                                         Command="{Binding NavigateCommand}" CommandParameter="Clients"
+                                         Style="{StaticResource MenuRadioButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="AccountGroup" VerticalAlignment="Center" Margin="16,0"/>
+                                    <TextBlock Text="Clients" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </ListBoxItem>
+
+                        <ListBoxItem ToolTip="Gestion des Colis">
+                            <RadioButton GroupName="MenuItems"
+                                         Command="{Binding NavigateCommand}" CommandParameter="Colis"
+                                         Style="{StaticResource MenuRadioButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="PackageVariant" VerticalAlignment="Center" Margin="16,0"/>
+                                    <TextBlock Text="Colis" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </ListBoxItem>
+
+                        <ListBoxItem ToolTip="Gestion des Conteneurs">
+                            <RadioButton GroupName="MenuItems"
+                                         Command="{Binding NavigateCommand}" CommandParameter="Conteneurs"
+                                         Style="{StaticResource MenuRadioButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="TruckDelivery" VerticalAlignment="Center" Margin="16,0"/>
+                                    <TextBlock Text="Conteneurs" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </ListBoxItem>
+                        
+                        <Separator Margin="16,10"/>
+
+                        <ListBoxItem ToolTip="Gestion Financière">
+                            <RadioButton GroupName="MenuItems"
+                                         Command="{Binding NavigateCommand}" CommandParameter="Finance"
+                                         Style="{StaticResource MenuRadioButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Finance" VerticalAlignment="Center" Margin="16,0"/>
+                                    <TextBlock Text="Finance" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </ListBoxItem>
+
+                    </ListBox>
+                </ScrollViewer>
+                
+                <!-- Pied de page du menu -->
+                <TextBlock Grid.Row="2" Text="© 2024" FontSize="10" Opacity="0.5" HorizontalAlignment="Center" Margin="10"/>
+
+            </Grid>
+        </materialDesign:DrawerHost.LeftDrawerContent>
+
+        <!-- Contenu principal (droite) -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Barre d'en-tête -->
+            <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="10" materialDesign:ShadowAssist.ShadowDepth="Depth2">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <ToggleButton x:Name="MenuToggleButton" Style="{StaticResource MaterialDesignHamburgerToggleButton}" IsChecked="True"/>
+                    
+                    <TextBlock Grid.Column="1" Text="{Binding CurrentView.Title, FallbackValue='Tableau de bord'}" 
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               FontSize="18" FontWeight="Medium"/>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Style="{StaticResource MaterialDesignIconButton}" ToolTip="Notifications"
+                                Command="{Binding ShowNotificationsCommand}">
+                            <materialDesign:Badged Badge="{Binding NotificationCount}" 
+                                                 BadgeColorZoneMode="SecondaryMid">
+                                <materialDesign:PackIcon Kind="Bell" />
+                            </materialDesign:Badged>
+                        </Button>
+                        <Button Style="{StaticResource MaterialDesignIconButton}" ToolTip="Profil"
+                                Command="{Binding ShowProfileCommand}">
+                            <materialDesign:PackIcon Kind="AccountCircle" />
+                        </Button>
+                        <Button Style="{StaticResource MaterialDesignIconButton}" ToolTip="Déconnexion"
+                                Command="{Binding LogoutCommand}">
+                            <materialDesign:PackIcon Kind="Logout" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </materialDesign:ColorZone>
+
+            <!-- Zone de contenu où les vues seront affichées -->
+            <ContentControl Grid.Row="1" Content="{Binding CurrentView}" Margin="8" />
+
         </Grid>
-    </Grid>
-    
+    </materialDesign:DrawerHost>
 </mah:MetroWindow>

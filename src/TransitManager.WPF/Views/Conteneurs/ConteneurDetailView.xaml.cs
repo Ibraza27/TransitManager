@@ -11,7 +11,6 @@ namespace TransitManager.WPF.Views.Conteneurs
         public ConteneurDetailView(ConteneurDetailViewModel viewModel)
         {
             InitializeComponent();
-            DataContext = viewModel;
         }
     }
 }

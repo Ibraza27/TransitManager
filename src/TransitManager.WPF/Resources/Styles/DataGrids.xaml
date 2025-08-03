@@ -164,60 +164,7 @@
             </StackPanel>
         </Grid>
     </ControlTemplate>
-
-    <!-- Style pour les en-têtes avec tri -->
-    <Style x:Key="SortableColumnHeaderStyle" TargetType="DataGridColumnHeader" 
-           BasedOn="{StaticResource CustomDataGridColumnHeaderStyle}">
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="DataGridColumnHeader">
-                    <Grid>
-                        <Border Background="{TemplateBinding Background}"
-                              BorderBrush="{TemplateBinding BorderBrush}"
-                              BorderThickness="{TemplateBinding BorderThickness}"
-                              Padding="{TemplateBinding Padding}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <ContentPresenter Grid.Column="0"
-                                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                                
-                                <materialDesign:PackIcon Grid.Column="1"
-                                                       x:Name="SortIcon"
-                                                       Kind="ArrowUp"
-                                                       Width="16" Height="16"
-                                                       Margin="4,0,0,0"
-                                                       Visibility="Collapsed"/>
-                            </Grid>
-                        </Border>
-                        
-                        <Thumb x:Name="PART_LeftHeaderGripper"
-                             HorizontalAlignment="Left"
-                             Style="{StaticResource MaterialDesignGridColumnHeaderGripper}"/>
-                        
-                        <Thumb x:Name="PART_RightHeaderGripper"
-                             HorizontalAlignment="Right"
-                             Style="{StaticResource MaterialDesignGridColumnHeaderGripper}"/>
-                    </Grid>
-                    
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="SortDirection" Value="Ascending">
-                            <Setter TargetName="SortIcon" Property="Visibility" Value="Visible"/>
-                            <Setter TargetName="SortIcon" Property="Kind" Value="ArrowUp"/>
-                        </Trigger>
-                        <Trigger Property="SortDirection" Value="Descending">
-                            <Setter TargetName="SortIcon" Property="Visibility" Value="Visible"/>
-                            <Setter TargetName="SortIcon" Property="Kind" Value="ArrowDown"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
+	
 
     <!-- Style pour les lignes alternées -->
     <Style x:Key="AlternatingRowStyle" TargetType="DataGrid" BasedOn="{StaticResource CustomDataGridStyle}">

@@ -1,131 +1,119 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Windows.Controls;
-using System.Windows.Navigation;
 using TransitManager.WPF.ViewModels;
-using TransitManager.WPF.Views.Auth;
-using TransitManager.WPF.Views.Clients;
-using TransitManager.WPF.Views.Colis;
 using TransitManager.WPF.Views.Conteneurs;
-using TransitManager.WPF.Views.Dashboard;
-using TransitManager.WPF.Views.Finance;
-using System.Windows;
 
 namespace TransitManager.WPF.Helpers
 {
     public interface INavigationService
     {
-        void Initialize(Frame frame);
-        void NavigateTo(string viewName, object? parameter = null);
-        void NavigateBack();
-        //void Initialize(object mainFrame);
-
-        bool CanNavigateBack { get; }
-        event EventHandler<System.Windows.Navigation.NavigationEventArgs>? Navigated;
+        BaseViewModel? CurrentView { get; }
+        event Action<BaseViewModel>? CurrentViewChanged;
+        bool CanGoBack { get; }
+        void GoBack();
+        void NavigateTo<TViewModel>() where TViewModel : BaseViewModel;
+        void NavigateTo(string viewName);
+        void NavigateTo(string viewName, object? parameter);
     }
 
-    public class NavigationService : INavigationService
+    public class NavigationService : ObservableObject, INavigationService
     {
         private readonly IServiceProvider _serviceProvider;
-        private Frame? _frame;
-        private readonly Stack<string> _navigationHistory = new();
-        private readonly Dictionary<string, Type> _viewMappings = new();
+        private BaseViewModel? _currentView;
+        private readonly Stack<BaseViewModel> _history = new Stack<BaseViewModel>();
 
-        public bool CanNavigateBack => _navigationHistory.Count > 1;
+        public BaseViewModel? CurrentView
+        {
+            get => _currentView;
+            private set => SetProperty(ref _currentView, value);
+        }
 
-        public event EventHandler<System.Windows.Navigation.NavigationEventArgs>? Navigated;
+        public bool CanGoBack => _history.Count > 0;
+
+        public event Action<BaseViewModel>? CurrentViewChanged;
+
+        private readonly Dictionary<string, Type> _viewModelMappings = new();
 
         public NavigationService(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
-            RegisterViews();
+            RegisterViewModels();
         }
 
-        public void Initialize(Frame frame)
+        private void RegisterViewModels()
         {
-            _frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            _frame.Navigated += OnFrameNavigated;
+            _viewModelMappings["Dashboard"] = typeof(DashboardViewModel);
+            _viewModelMappings["Clients"] = typeof(ClientViewModel);
+            _viewModelMappings["ClientDetail"] = typeof(ClientDetailViewModel);
+            _viewModelMappings["Colis"] = typeof(ColisViewModel);
+            _viewModelMappings["Conteneurs"] = typeof(ConteneurViewModel);
+            _viewModelMappings["ConteneurDetail"] = typeof(ConteneurDetailViewModel);
+            _viewModelMappings["Notifications"] = typeof(NotificationsViewModel);
         }
 
-        private void RegisterViews()
+        public void NavigateTo(string viewName)
         {
-            // Enregistrer toutes les vues disponibles
-            _viewMappings["Login"] = typeof(LoginView);
-            _viewMappings["Dashboard"] = typeof(DashboardView);
-            _viewMappings["Clients"] = typeof(ClientListView);
-            _viewMappings["ClientDetail"] = typeof(ClientDetailView);
-            _viewMappings["Colis"] = typeof(ColisListView);
-            _viewMappings["Scanner"] = typeof(ColisScanView);
-            _viewMappings["Conteneurs"] = typeof(ConteneurListView);
-            _viewMappings["ConteneurDetail"] = typeof(ConteneurDetailView);
-            _viewMappings["Finance"] = typeof(PaiementView);
-            _viewMappings["Factures"] = typeof(FactureView);
-            // Ajouter d'autres mappings selon les besoins
+            NavigateTo(viewName, null);
         }
 
-        public void NavigateTo(string viewName, object? parameter = null)
+        public void NavigateTo(string viewName, object? parameter)
         {
-            if (_frame == null)
-                throw new InvalidOperationException("NavigationService n'est pas initialisé. Appelez Initialize() d'abord.");
-
-            if (!_viewMappings.TryGetValue(viewName, out var viewType))
-                throw new ArgumentException($"Vue '{viewName}' non trouvée.", nameof(viewName));
-
-            // Créer l'instance de la vue
-            var view = _serviceProvider.GetRequiredService(viewType) as Page;
-            if (view == null)
-                throw new InvalidOperationException($"Impossible de créer une instance de {viewType.Name}");
-
-            // Si la vue a un DataContext qui est un ViewModel, l'initialiser
-            if (view.DataContext is BaseViewModel viewModel)
+            if (!_viewModelMappings.TryGetValue(viewName, out var viewModelType))
             {
-                // Si c'est un ViewModel avec paramètre
-                if (parameter != null && viewModel.GetType().IsGenericType)
+                throw new ArgumentException($"ViewModel pour la vue '{viewName}' non trouvé.");
+            }
+
+            // On empile la vue actuelle dans l'historique avant de changer
+            if (CurrentView != null)
+            {
+                _history.Push(CurrentView);
+            }
+
+            var viewModel = (BaseViewModel)_serviceProvider.GetRequiredService(viewModelType);
+
+            if (parameter != null)
+            {
+                var methodInfo = viewModel.GetType().GetMethod("InitializeAsync", new[] { parameter.GetType() });
+                if (methodInfo != null)
                 {
-                    var initMethod = viewModel.GetType().GetMethod("InitializeAsync", new[] { parameter.GetType() });
-                    if (initMethod != null)
-                    {
-                        initMethod.Invoke(viewModel, new[] { parameter });
-                    }
+                    methodInfo.Invoke(viewModel, new[] { parameter });
                 }
                 else
                 {
-                    // Initialisation standard
                     _ = viewModel.InitializeAsync();
                 }
             }
+            else
+            {
+                _ = viewModel.InitializeAsync();
+            }
 
-            // Naviguer vers la vue
-            _frame.Navigate(view, parameter);
-            
-            // Ajouter à l'historique
-            _navigationHistory.Push(viewName);
+            CurrentView = viewModel;
+            CurrentViewChanged?.Invoke(CurrentView);
         }
 
-        public void NavigateBack()
+        public void NavigateTo<TViewModel>() where TViewModel : BaseViewModel
         {
-            if (_frame?.CanGoBack == true)
+             if (CurrentView != null)
             {
-                _frame.GoBack();
-                
-                // Retirer de l'historique
-                if (_navigationHistory.Count > 0)
-                    _navigationHistory.Pop();
+                _history.Push(CurrentView);
+            }
+            
+            var viewModel = _serviceProvider.GetRequiredService<TViewModel>();
+            CurrentView = viewModel;
+            _ = CurrentView.InitializeAsync();
+            CurrentViewChanged?.Invoke(CurrentView);
+        }
+
+        public void GoBack()
+        {
+            if (CanGoBack)
+            {
+                CurrentView = _history.Pop();
+                CurrentViewChanged?.Invoke(CurrentView!);
             }
         }
-
-		private void OnFrameNavigated(object sender, System.Windows.Navigation.NavigationEventArgs e)
-		{
-			// La nouvelle propriété est 'e.Content', pas e.Parameter.
-			if (e.Content is FrameworkElement { DataContext: BaseViewModel viewModel })
-			{
-				_ = viewModel.LoadAsync();
-			}
-
-			Navigated?.Invoke(this, e);
-		}
     }
-
-
 }

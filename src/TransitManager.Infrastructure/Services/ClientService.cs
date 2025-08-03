@@ -11,16 +11,16 @@ using TransitManager.Infrastructure.Data;
 namespace TransitManager.Infrastructure.Services
 {
 
-    public class ClientService : IClientService
-    {
-        private readonly TransitContext _context;
-        private readonly INotificationService _notificationService;
+	public class ClientService : IClientService
+	{
+		private readonly TransitContext _context;
+		private readonly INotificationService _notificationService;
 
-        public ClientService(TransitContext context, INotificationService notificationService)
-        {
-            _context = context;
-            _notificationService = notificationService;
-        }
+		public ClientService(TransitContext context, INotificationService notificationService)
+		{
+			_context = context;
+			_notificationService = notificationService;
+		}
 
         public async Task<Client?> GetByIdAsync(Guid id)
         {
@@ -105,23 +105,24 @@ namespace TransitManager.Infrastructure.Services
             return client;
         }
 
-        public async Task<Client> UpdateAsync(Client client)
-        {
-            // Validation
-            if (await ExistsAsync(client.Email ?? "", client.TelephonePrincipal, client.Id))
-            {
-                throw new InvalidOperationException("Un autre client avec cet email ou ce téléphone existe déjà.");
-            }
+		public async Task<Client> UpdateAsync(Client client)
+		{
+			// Validation
+			if (await ExistsAsync(client.Email ?? "", client.TelephonePrincipal, client.Id))
+			{
+				throw new InvalidOperationException("Un autre client avec cet email ou ce téléphone existe déjà.");
+			}
 
-            // Mettre à jour les statistiques
-            await UpdateClientStatisticsAsync(client);
+			// Mettre à jour les statistiques
+			await UpdateClientStatisticsAsync(client);
 
-            // Mettre à jour
-            _context.Clients.Update(client);
-            await _context.SaveChangesAsync();
+			// Mettre à jour
+			// Important: On s'assure que l'entité est suivie par le contexte actuel
+			_context.Clients.Update(client);
+			await _context.SaveChangesAsync();
 
-            return client;
-        }
+			return client;
+		}
 
         public async Task<bool> DeleteAsync(Guid id)
         {
@@ -218,34 +219,37 @@ namespace TransitManager.Infrastructure.Services
             return code;
         }
 
-        private async Task UpdateClientStatisticsAsync(Client client)
-        {
-            // Calculer le nombre total d'envois
-            client.NombreTotalEnvois = await _context.Colis
-                .CountAsync(c => c.ClientId == client.Id);
+		private async Task UpdateClientStatisticsAsync(Client client)
+		{
+			// Calculer le nombre total d'envois
+			client.NombreTotalEnvois = await _context.Colis
+				.CountAsync(c => c.ClientId == client.Id);
 
-            // Calculer le volume total expédié
-            client.VolumeTotalExpedié = await _context.Colis
-                .Where(c => c.ClientId == client.Id)
-                .SumAsync(c => c.Volume);
+			// Calculer le volume total expédié
+			var colisDuClient = await _context.Colis
+				.Where(c => c.ClientId == client.Id)
+				.ToListAsync(); // <-- 1. On charge d'abord les colis en mémoire
+			
+			client.VolumeTotalExpedié = colisDuClient
+				.Sum(c => c.Volume); // <-- 2. On fait la somme sur la liste en mémoire
 
-            // Calculer la balance totale (montants dus)
-            var totalFacture = await _context.Colis
-                .Where(c => c.ClientId == client.Id)
-                .SumAsync(c => c.ValeurDeclaree * 0.1m); // Exemple : 10% de frais
+			// Calculer la balance totale (montants dus)
+			var totalFacture = await _context.Colis
+				.Where(c => c.ClientId == client.Id)
+				.SumAsync(c => c.ValeurDeclaree * 0.1m); // Exemple : 10% de frais
 
-            var totalPaye = await _context.Paiements
-                .Where(p => p.ClientId == client.Id && p.Statut == Core.Enums.StatutPaiement.Paye)
-                .SumAsync(p => p.Montant);
+			var totalPaye = await _context.Paiements
+				.Where(p => p.ClientId == client.Id && p.Statut == Core.Enums.StatutPaiement.Paye)
+				.SumAsync(p => p.Montant);
 
-            client.BalanceTotal = totalFacture - totalPaye;
+			client.BalanceTotal = totalFacture - totalPaye;
 
-            // Déterminer si c'est un client fidèle
-            if (client.NombreTotalEnvois >= 10 || client.VolumeTotalExpedié >= 100)
-            {
-                client.EstClientFidele = true;
-                client.PourcentageRemise = 5; // 5% de remise pour les clients fidèles
-            }
-        }
+			// Déterminer si c'est un client fidèle
+			if (client.NombreTotalEnvois >= 10 || client.VolumeTotalExpedié >= 100)
+			{
+				client.EstClientFidele = true;
+				client.PourcentageRemise = 5; // 5% de remise pour les clients fidèles
+			}
+		}
     }
 }

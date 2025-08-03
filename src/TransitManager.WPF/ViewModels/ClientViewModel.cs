@@ -176,12 +176,13 @@ namespace TransitManager.WPF.ViewModels
             NextPageCommand = new RelayCommand(NextPage, () => CanGoNext);
         }
 
-        public override async Task LoadAsync()
-        {
-            await LoadCitiesAsync();
-            await LoadClientsAsync();
-            await LoadStatisticsAsync();
-        }
+
+		public override async Task LoadAsync()
+		{
+			await LoadCitiesAsync();
+			await LoadClientsAsync();
+			await LoadStatisticsAsync();
+		}
 
         private async Task LoadClientsAsync()
         {

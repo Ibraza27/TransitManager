@@ -4,182 +4,111 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TransitManager.Core.Entities
 {
-    /// <summary>
-    /// Représente un client dans le système de gestion de transit
-    /// </summary>
     public class Client : BaseEntity
     {
-        /// <summary>
-        /// Code client unique auto-généré
-        /// </summary>
+        // --- Champs privés pour chaque propriété ---
+        private string _codeClient = string.Empty;
+        private string _nom = string.Empty;
+        private string _prenom = string.Empty;
+        private string _telephonePrincipal = string.Empty;
+        private string? _telephoneSecondaire;
+        private string? _email;
+        private string? _adressePrincipale;
+        private string? _adresseLivraison;
+        private string? _ville;
+        private string? _codePostal;
+        private string? _pays;
+        private string? _commentaires;
+        private string? _pieceIdentite;
+        private string? _typePieceIdentite;
+        private string? _numeroPieceIdentite;
+        private bool _estClientFidele;
+        private decimal _pourcentageRemise;
+        private decimal _balanceTotal;
+        private int _nombreTotalEnvois;
+        private decimal _volumeTotalExpedie;
+
+        // --- Propriétés publiques utilisant SetProperty ---
         [Required]
         [StringLength(20)]
-        public string CodeClient { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Nom du client
-        /// </summary>
+        public string CodeClient { get => _codeClient; set => SetProperty(ref _codeClient, value); }
+        
         [Required]
         [StringLength(100)]
-		private string _nom = string.Empty;
-		[Required]
-		[StringLength(100)]
-		public string Nom
-		{
-			get => _nom;
-			set => SetProperty(ref _nom, value);
-		}
+        public string Nom { get => _nom; set => SetProperty(ref _nom, value); }
 
-        /// <summary>
-        /// Prénom du client
-        /// </summary>
         [Required]
         [StringLength(100)]
-        public string Prenom { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Téléphone principal
-        /// </summary>
+        public string Prenom { get => _prenom; set => SetProperty(ref _prenom, value); }
+        
         [Required]
         [StringLength(20)]
-        public string TelephonePrincipal { get; set; } = string.Empty;
+        public string TelephonePrincipal { get => _telephonePrincipal; set => SetProperty(ref _telephonePrincipal, value); }
 
-        /// <summary>
-        /// Téléphone secondaire
-        /// </summary>
         [StringLength(20)]
-        public string? TelephoneSecondaire { get; set; }
-
-        /// <summary>
-        /// Adresse email
-        /// </summary>
+        public string? TelephoneSecondaire { get => _telephoneSecondaire; set => SetProperty(ref _telephoneSecondaire, value); }
+        
         [EmailAddress]
         [StringLength(150)]
-        public string? Email { get; set; }
-
-        /// <summary>
-        /// Adresse principale
-        /// </summary>
+        public string? Email { get => _email; set => SetProperty(ref _email, value); }
+        
         [StringLength(500)]
-        public string? AdressePrincipale { get; set; }
-
-        /// <summary>
-        /// Adresse de livraison (si différente)
-        /// </summary>
+        public string? AdressePrincipale { get => _adressePrincipale; set => SetProperty(ref _adressePrincipale, value); }
+        
         [StringLength(500)]
-        public string? AdresseLivraison { get; set; }
-
-        /// <summary>
-        /// Ville
-        /// </summary>
+        public string? AdresseLivraison { get => _adresseLivraison; set => SetProperty(ref _adresseLivraison, value); }
+        
         [StringLength(100)]
-        public string? Ville { get; set; }
-
-        /// <summary>
-        /// Code postal
-        /// </summary>
+        public string? Ville { get => _ville; set => SetProperty(ref _ville, value); }
+        
         [StringLength(20)]
-        public string? CodePostal { get; set; }
-
-        /// <summary>
-        /// Pays
-        /// </summary>
+        public string? CodePostal { get => _codePostal; set => SetProperty(ref _codePostal, value); }
+        
         [StringLength(100)]
-        public string? Pays { get; set; }
-
-        /// <summary>
-        /// Date d'inscription
-        /// </summary>
+        public string? Pays { get => _pays; set => SetProperty(ref _pays, value); }
+        
         public DateTime DateInscription { get; set; }
-
-        /// <summary>
-        /// Notes et commentaires spéciaux
-        /// </summary>
-        public string? Commentaires { get; set; }
-
-        /// <summary>
-        /// Photo ou scan de la pièce d'identité (chemin du fichier)
-        /// </summary>
+        
+        public string? Commentaires { get => _commentaires; set => SetProperty(ref _commentaires, value); }
+        
         [StringLength(500)]
-        public string? PieceIdentite { get; set; }
-
-        /// <summary>
-        /// Type de pièce d'identité
-        /// </summary>
+        public string? PieceIdentite { get => _pieceIdentite; set => SetProperty(ref _pieceIdentite, value); }
+        
         [StringLength(50)]
-        public string? TypePieceIdentite { get; set; }
+        public string? TypePieceIdentite { get => _typePieceIdentite; set => SetProperty(ref _typePieceIdentite, value); }
 
-        /// <summary>
-        /// Numéro de la pièce d'identité
-        /// </summary>
         [StringLength(100)]
-        public string? NumeroPieceIdentite { get; set; }
+        public string? NumeroPieceIdentite { get => _numeroPieceIdentite; set => SetProperty(ref _numeroPieceIdentite, value); }
+        
+        public bool EstClientFidele { get => _estClientFidele; set => SetProperty(ref _estClientFidele, value); }
+        
+        public decimal PourcentageRemise { get => _pourcentageRemise; set => SetProperty(ref _pourcentageRemise, value); }
+        
+        public decimal BalanceTotal { get => _balanceTotal; set => SetProperty(ref _balanceTotal, value); }
+        
+        public int NombreTotalEnvois { get => _nombreTotalEnvois; set => SetProperty(ref _nombreTotalEnvois, value); }
+        
+        public decimal VolumeTotalExpedié { get => _volumeTotalExpedie; set => SetProperty(ref _volumeTotalExpedie, value); }
 
-        /// <summary>
-        /// Indique si le client est un client fidèle
-        /// </summary>
-        public bool EstClientFidele { get; set; }
-
-        /// <summary>
-        /// Pourcentage de remise accordée
-        /// </summary>
-        public decimal PourcentageRemise { get; set; }
-
-        /// <summary>
-        /// Balance totale du client (montant dû)
-        /// </summary>
-        public decimal BalanceTotal { get; set; }
-
-        /// <summary>
-        /// Nombre total d'envois
-        /// </summary>
-        public int NombreTotalEnvois { get; set; }
-
-        /// <summary>
-        /// Volume total expédié (en m³)
-        /// </summary>
-        public decimal VolumeTotalExpedié { get; set; }
-
-        // Navigation properties
-        /// <summary>
-        /// Liste des colis du client
-        /// </summary>
-        public virtual ICollection<Colis> Colis { get; set; } = new List<Colis>();
-
-        /// <summary>
-        /// Liste des paiements du client
-        /// </summary>
-        public virtual ICollection<Paiement> Paiements { get; set; } = new List<Paiement>();
-
-        /// <summary>
-        /// Constructeur
-        /// </summary>
+        // --- Propriétés de navigation ---
+        public virtual ICollection<Colis> Colis { get; } = new List<Colis>();
+        public virtual ICollection<Paiement> Paiements { get; } = new List<Paiement>();
+        
+        // --- Constructeur et Méthodes ---
         public Client()
         {
             DateInscription = DateTime.UtcNow;
             CodeClient = GenerateCodeClient();
         }
 
-        /// <summary>
-        /// Génère un code client unique
-        /// </summary>
         private static string GenerateCodeClient()
         {
-            // Format: CLI-YYYYMMDD-XXXX (où XXXX est un nombre aléatoire)
             var date = DateTime.Now.ToString("yyyyMMdd");
             var random = new Random().Next(1000, 9999);
             return $"CLI-{date}-{random}";
         }
-
-        /// <summary>
-        /// Nom complet du client
-        /// </summary>
+        
         public string NomComplet => $"{Nom} {Prenom}";
-
-        /// <summary>
-        /// Adresse complète formatée
-        /// </summary>
-        public string AdresseComplete => 
-            $"{AdressePrincipale}, {CodePostal} {Ville}, {Pays}";
+        public string AdresseComplete => $"{AdressePrincipale}, {CodePostal} {Ville}, {Pays}";
     }
 }

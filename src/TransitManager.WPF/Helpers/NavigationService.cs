@@ -107,13 +107,18 @@ namespace TransitManager.WPF.Helpers
             CurrentViewChanged?.Invoke(CurrentView);
         }
 
-        public void GoBack()
-        {
-            if (CanGoBack)
-            {
-                CurrentView = _history.Pop();
-                CurrentViewChanged?.Invoke(CurrentView!);
-            }
-        }
+		public void GoBack()
+		{
+			if (CanGoBack)
+			{
+				var previousViewModel = _history.Pop();
+				CurrentView = previousViewModel;
+				
+				// On déclenche le rafraîchissement des données de la vue précédente
+				_ = previousViewModel.LoadAsync(); 
+				
+				CurrentViewChanged?.Invoke(CurrentView!);
+			}
+		}
     }
 }

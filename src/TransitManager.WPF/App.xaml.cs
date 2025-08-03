@@ -98,26 +98,26 @@ namespace TransitManager.WPF
 				options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")),
 				ServiceLifetime.Transient);
 
-            // Repositories
-            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-            services.AddScoped<IClientRepository, ClientRepository>();
-            services.AddScoped<IColisRepository, ColisRepository>();
-            services.AddScoped<IConteneurRepository, ConteneurRepository>();
+			// Repositories
+			services.AddTransient(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+			services.AddTransient<IClientRepository, ClientRepository>();
+			services.AddTransient<IColisRepository, ColisRepository>();
+			services.AddTransient<IConteneurRepository, ConteneurRepository>();
 
-            // Services métier
-            services.AddScoped<IClientService, ClientService>();
-            services.AddScoped<IColisService, ColisService>();
-            services.AddScoped<IConteneurService, ConteneurService>();
-            services.AddScoped<IPaiementService, PaiementService>();
-            services.AddScoped<INotificationService, NotificationService>();
-            services.AddScoped<IBarcodeService, BarcodeService>();
-            
-            // Services infrastructure
-            services.AddScoped<IBackupService, BackupService>();
-            services.AddScoped<IExportService, ExportService>();
-            
-            // CORRECTION : Mettre AuthenticationService en Scoped car il dépend du TransitContext (Scoped)
-            services.AddScoped<IAuthenticationService, AuthenticationService>();
+			// Services métier
+			services.AddTransient<IClientService, ClientService>();
+			services.AddTransient<IColisService, ColisService>();
+			services.AddTransient<IConteneurService, ConteneurService>();
+			services.AddTransient<IPaiementService, PaiementService>();
+			services.AddTransient<INotificationService, NotificationService>();
+			services.AddTransient<IBarcodeService, BarcodeService>();
+						
+			// Services infrastructure
+			services.AddTransient<IBackupService, BackupService>();
+			services.AddTransient<IExportService, ExportService>();
+						
+			// AuthenticationService
+			services.AddTransient<IAuthenticationService, AuthenticationService>();
 
             // CORRECTION : La navigation et les dialogues sont liés à l'UI, Singleton est OK ici.
             services.AddSingleton<INavigationService, NavigationService>();

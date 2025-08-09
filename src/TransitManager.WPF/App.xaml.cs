@@ -117,6 +117,7 @@ namespace TransitManager.WPF
             services.AddTransient<ClientViewModel>();
             services.AddTransient<ClientDetailViewModel>();
             services.AddTransient<ColisViewModel>();
+			services.AddTransient<ColisDetailViewModel>();
             services.AddTransient<ConteneurViewModel>();
             services.AddTransient<ConteneurDetailViewModel>();
             services.AddTransient<NotificationsViewModel>();

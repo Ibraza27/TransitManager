@@ -59,6 +59,10 @@
             <DataTemplate DataType="{x:Type viewModels:ColisViewModel}">
                 <viewsColis:ColisListView />
             </DataTemplate>
+			
+			<DataTemplate DataType="{x:Type viewModels:ColisDetailViewModel}">
+				<viewsColis:ColisDetailView />
+			</DataTemplate>
             
             <DataTemplate DataType="{x:Type viewModels:ConteneurViewModel}">
                 <viewsConteneurs:ConteneurListView />

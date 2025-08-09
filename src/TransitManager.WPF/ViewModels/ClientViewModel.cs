@@ -175,6 +175,13 @@ namespace TransitManager.WPF.ViewModels
             PreviousPageCommand = new RelayCommand(PreviousPage, () => CanGoPrevious);
             NextPageCommand = new RelayCommand(NextPage, () => CanGoNext);
         }
+		
+        public override async Task InitializeAsync()
+        {
+            // Cette méthode sera appelée à chaque fois que la vue devient active.
+            // Elle lance le chargement complet des données.
+            await LoadAsync();
+        }		
 
 
 		public override async Task LoadAsync()

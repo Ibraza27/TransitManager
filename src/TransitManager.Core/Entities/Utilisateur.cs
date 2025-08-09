@@ -211,27 +211,4 @@ namespace TransitManager.Core.Entities
         }
     }
 
-    /// <summary>
-    /// Enregistrement d'audit pour tracer les actions
-    /// </summary>
-	public class AuditLog // Sans BaseEntity
-	{
-		public Guid Id { get; set; } // Ajouté manuellement
-		public Guid UtilisateurId { get; set; }
-		public string Action { get; set; } = string.Empty;
-		public string Entite { get; set; } = string.Empty;
-		public string? EntiteId { get; set; }
-		public string? AnciennesValeurs { get; set; }
-		public string? NouvellesValeurs { get; set; }
-		public string? AdresseIP { get; set; }
-		public string? UserAgent { get; set; }
-		public DateTime DateAction { get; set; }
-		public virtual Utilisateur? Utilisateur { get; set; }
-
-		public AuditLog() // Ajout d'un constructeur
-		{
-			Id = Guid.NewGuid();
-			DateAction = DateTime.UtcNow;
-		}
-	}
 }

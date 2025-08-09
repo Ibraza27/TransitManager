@@ -237,14 +237,15 @@ namespace TransitManager.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UtilisateurId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Action = table.Column<string>(type: "text", nullable: false),
-                    Entite = table.Column<string>(type: "text", nullable: false),
-                    EntiteId = table.Column<string>(type: "text", nullable: true),
-                    AnciennesValeurs = table.Column<string>(type: "text", nullable: true),
-                    NouvellesValeurs = table.Column<string>(type: "text", nullable: true),
-                    AdresseIP = table.Column<string>(type: "text", nullable: true),
-                    UserAgent = table.Column<string>(type: "text", nullable: true),
-                    DateAction = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Action = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Entite = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    EntiteId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    DateAction = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ValeurAvant = table.Column<string>(type: "text", nullable: true),
+                    ValeurApres = table.Column<string>(type: "text", nullable: true),
+                    AdresseIP = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
+                    UserAgent = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Commentaires = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -360,7 +361,7 @@ namespace TransitManager.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Utilisateurs",
                 columns: new[] { "Id", "Actif", "CreePar", "DateCreation", "DateModification", "DateVerrouillage", "DerniereConnexion", "DoitChangerMotDePasse", "Email", "ExpirationToken", "FuseauHoraire", "Langue", "ModifiePar", "MotDePasseHash", "Nom", "NomUtilisateur", "NotificationsActivees", "NotificationsEmail", "NotificationsSMS", "PasswordSalt", "PermissionsSpecifiques", "PhotoProfil", "Preferences", "Prenom", "Role", "RowVersion", "Telephone", "TentativesConnexionEchouees", "Theme", "TokenReinitialisation" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 3, 13, 50, 18, 408, DateTimeKind.Utc).AddTicks(1146), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$dcl5P4Pdk085jQg80AzFmesiTIe03YxamxiY55sHBqHoP8MTAmB5S", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 9, 16, 15, 18, 938, DateTimeKind.Utc).AddTicks(7335), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$9gB2L.19QJZd6QHO.F4JV.WxzwPlJG62xoQGv1b9ahLNTPPvuWxzS", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UtilisateurId",

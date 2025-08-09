@@ -6,8 +6,10 @@ namespace TransitManager.Core.Entities
     /// <summary>
     /// Représente un log d'audit dans le système
     /// </summary>
-    public class AuditLog : BaseEntity
+    public class AuditLog
     {
+		public Guid Id { get; set; }
+		
         /// <summary>
         /// ID de l'utilisateur qui a effectué l'action
         /// </summary>

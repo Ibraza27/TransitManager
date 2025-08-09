@@ -100,68 +100,80 @@ namespace TransitManager.Infrastructure.Data
         /// <summary>
         /// Gère l'audit automatique des modifications
         /// </summary>
-        private void HandleAudit()
-        {
-            var entries = ChangeTracker.Entries()
-                .Where(e => e.Entity is BaseEntity && 
-                    (e.State == EntityState.Added || 
-                     e.State == EntityState.Modified || 
-                     e.State == EntityState.Deleted));
 
-            var now = DateTime.UtcNow;
-            var user = _currentUser ?? "System";
 
-            foreach (var entry in entries)
-            {
-                var entity = (BaseEntity)entry.Entity;
+		private void HandleAudit()
+		{
+			// Correction 1: Ajouter .ToList() pour créer une copie de la collection
+			// et éviter l'erreur "Collection was modified" lors de l'ajout des logs.
+			var entries = ChangeTracker.Entries()
+				.Where(e => e.Entity is BaseEntity &&
+							// Correction 2: Exclure explicitement les entités AuditLog de cette logique.
+							// Un log ne doit ni être "soft-deleted", ni avoir ses dates gérées automatiquement ici.
+							e.Entity.GetType() != typeof(AuditLog) &&
+							(e.State == EntityState.Added ||
+							 e.State == EntityState.Modified ||
+							 e.State == EntityState.Deleted))
+				.ToList();
 
-                switch (entry.State)
-                {
-                    case EntityState.Added:
-                        entity.DateCreation = now;
-                        entity.CreePar = user;
-                        CreateAuditLog(entry, "CREATE");
-                        break;
+			var now = DateTime.UtcNow;
+			var user = _currentUser ?? "System";
 
-                    case EntityState.Modified:
-                        entity.DateModification = now;
-                        entity.ModifiePar = user;
-                        CreateAuditLog(entry, "UPDATE");
-                        break;
+			foreach (var entry in entries)
+			{
+				var entity = (BaseEntity)entry.Entity;
 
-                    case EntityState.Deleted:
-                        // Suppression logique au lieu de physique
-                        entry.State = EntityState.Modified;
-                        entity.Actif = false;
-                        entity.DateModification = now;
-                        entity.ModifiePar = user;
-                        CreateAuditLog(entry, "DELETE");
-                        break;
-                }
-            }
-        }
+				switch (entry.State)
+				{
+					case EntityState.Added:
+						entity.DateCreation = now;
+						entity.CreePar = user;
+						CreateAuditLog(entry, "CREATE");
+						break;
+
+					case EntityState.Modified:
+						entity.DateModification = now;
+						entity.ModifiePar = user;
+						CreateAuditLog(entry, "UPDATE");
+						break;
+
+					case EntityState.Deleted:
+						// Suppression logique au lieu de physique
+						entry.State = EntityState.Modified;
+						entity.Actif = false;
+						entity.DateModification = now;
+						entity.ModifiePar = user;
+						CreateAuditLog(entry, "DELETE");
+						break;
+				}
+			}
+		}
 
         /// <summary>
         /// Crée un enregistrement d'audit
         /// </summary>
-        private void CreateAuditLog(EntityEntry entry, string action)
-        {
-            var audit = new AuditLog
-            {
-                Action = action,
-                Entite = entry.Entity.GetType().Name,
-                EntiteId = entry.Properties
-                    .FirstOrDefault(p => p.Metadata.IsPrimaryKey())?
-                    .CurrentValue?.ToString(),
-                DateAction = DateTime.UtcNow,
-                AnciennesValeurs = GetValues(entry, false),
-                NouvellesValeurs = GetValues(entry, true)
-            };
+		private void CreateAuditLog(EntityEntry entry, string action)
+		{
+			var audit = new AuditLog
+			{
+				Action = action,
+				Entite = entry.Entity.GetType().Name,
+				EntiteId = entry.Properties
+					.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?
+					.CurrentValue?.ToString(),
+				DateAction = DateTime.UtcNow,
+				ValeurAvant = GetValues(entry, false),
+				ValeurApres = GetValues(entry, true)   
+			};
 
-            if (Guid.TryParse(_currentUser, out var userId))
+            if (Guid.TryParse(_currentUser, out var userId) && userId != Guid.Empty)
             {
                 audit.UtilisateurId = userId;
             }
+			else
+			{
+				audit.UtilisateurId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+			}
 
             AuditLogs.Add(audit);
         }

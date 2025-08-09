@@ -30,12 +30,14 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.Property<string>("Action")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("AdresseIP")
-                        .HasColumnType("text");
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
 
-                    b.Property<string>("AnciennesValeurs")
+                    b.Property<string>("Commentaires")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("DateAction")
@@ -43,19 +45,25 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.Property<string>("Entite")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("EntiteId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NouvellesValeurs")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("UserAgent")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("UtilisateurId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ValeurApres")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ValeurAvant")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -1013,12 +1021,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 8, 3, 13, 50, 18, 408, DateTimeKind.Utc).AddTicks(1146),
+                            DateCreation = new DateTime(2025, 8, 9, 16, 15, 18, 938, DateTimeKind.Utc).AddTicks(7335),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$dcl5P4Pdk085jQg80AzFmesiTIe03YxamxiY55sHBqHoP8MTAmB5S",
+                            MotDePasseHash = "$2a$11$9gB2L.19QJZd6QHO.F4JV.WxzwPlJG62xoQGv1b9ahLNTPPvuWxzS",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,

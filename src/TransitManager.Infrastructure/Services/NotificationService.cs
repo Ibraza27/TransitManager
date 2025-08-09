@@ -23,20 +23,22 @@ namespace TransitManager.Infrastructure.Services // <-- Le bon namespace
             _authenticationService = authenticationService;
         }
 
-        public async Task NotifyAsync(string title, string message, TypeNotification type = TypeNotification.Information, PrioriteNotification priorite = PrioriteNotification.Normale)
-        {
-            var notification = new Notification
-            {
-                Title = title,
-                Message = message,
-                Type = type,
-                Priorite = priorite,
-                //DateCreation est gérée par BaseEntity, on la retire d'ici
-                UtilisateurId = _authenticationService.CurrentUser?.Id
-            };
+		public async Task NotifyAsync(string title, string message, TypeNotification type = TypeNotification.Information, PrioriteNotification priorite = PrioriteNotification.Normale)
+		{
+			var notification = new Notification
+			{
+				Title = title,
+				Message = message,
+				Type = type,
+				Priorite = priorite,
+				// Vérification de l'utilisateur actuel avant assignation
+				UtilisateurId = _authenticationService.CurrentUser?.Id != Guid.Empty 
+					? _authenticationService.CurrentUser?.Id 
+					: null
+			};
 
-            _context.Set<Notification>().Add(notification);
-            await _context.SaveChangesAsync();
+			_context.Set<Notification>().Add(notification);
+			await _context.SaveChangesAsync();
 
             NotificationReceived?.Invoke(this, new NotificationEventArgs
             {

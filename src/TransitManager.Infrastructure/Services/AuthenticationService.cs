@@ -55,15 +55,20 @@ namespace TransitManager.Infrastructure.Services
                 user.DateVerrouillage = null;
                 user.DerniereConnexion = DateTime.UtcNow;
 
-                var auditLog = new AuditLog
-                {
-                    UtilisateurId = user.Id,
-                    Action = "LOGIN",
-                    Entite = "Utilisateur",
-                    EntiteId = user.Id.ToString(),
-                    DateAction = DateTime.UtcNow
-                };
-                context.AuditLogs.Add(auditLog);
+
+				// Vérification que l'utilisateur est valide avant de créer le log
+				if (user.Id != Guid.Empty)
+				{
+					var auditLog = new AuditLog
+					{
+						UtilisateurId = user.Id,
+						Action = "LOGIN",
+						Entite = "Utilisateur",
+						EntiteId = user.Id.ToString(),
+						DateAction = DateTime.UtcNow
+					};
+					context.AuditLogs.Add(auditLog);
+				}
                 
                 await context.SaveChangesAsync();
 
@@ -82,15 +87,20 @@ namespace TransitManager.Infrastructure.Services
             if (_currentUser != null)
             {
                 await using var context = await _contextFactory.CreateDbContextAsync();
-                var auditLog = new AuditLog
-                {
-                    UtilisateurId = _currentUser.Id,
-                    Action = "LOGOUT",
-                    Entite = "Utilisateur",
-                    EntiteId = _currentUser.Id.ToString(),
-                    DateAction = DateTime.UtcNow
-                };
-                context.AuditLogs.Add(auditLog);
+
+				// Vérification que l'utilisateur actuel est valide
+				if (_currentUser.Id != Guid.Empty)
+				{
+					var auditLog = new AuditLog
+					{
+						UtilisateurId = _currentUser.Id,
+						Action = "LOGOUT",
+						Entite = "Utilisateur",
+						EntiteId = _currentUser.Id.ToString(),
+						DateAction = DateTime.UtcNow
+					};
+					context.AuditLogs.Add(auditLog);
+				}
                 await context.SaveChangesAsync();
             }
             _currentUser = null;

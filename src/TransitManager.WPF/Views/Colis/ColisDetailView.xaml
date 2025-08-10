@@ -54,9 +54,9 @@
                                       IsEditable="True"
                                       Text="{Binding ClientSearchText, UpdateSourceTrigger=PropertyChanged}"
                                       Margin="0,0,0,15"/>
-
+                                      
                             <TextBox Text="{Binding Colis.Designation, UpdateSourceTrigger=PropertyChanged}"
-                                     materialDesign:HintAssist.Hint="Désignation / Description *"
+                                     materialDesign:HintAssist.Hint="Désignation / Description"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      TextWrapping="Wrap" AcceptsReturn="True" Height="80"
                                      Margin="0,0,0,15"/>
@@ -68,18 +68,18 @@
                         </StackPanel>
                     </materialDesign:Card>
 
-                     <materialDesign:Card Padding="20" Margin="0,0,0,10">
+                    <materialDesign:Card Padding="20" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Destinataire" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,10"/>
-                            <CheckBox Name="DestinataireIdentiqueCheckBox" Content="Destinataire identique au propriétaire" IsChecked="{Binding DestinataireEstProprietaire}" Margin="0,0,0,15"/>
+                            <CheckBox Content="Destinataire identique au propriétaire" IsChecked="{Binding DestinataireEstProprietaire}" Margin="0,0,0,15"/>
 
                             <TextBox Text="{Binding Colis.Destinataire, UpdateSourceTrigger=PropertyChanged}"
-                                     IsEnabled="{Binding IsChecked, ElementName=DestinataireIdentiqueCheckBox, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
+                                     IsEnabled="{Binding DestinataireEstProprietaire, Converter={StaticResource InvertedBooleanConverter}}"
                                      materialDesign:HintAssist.Hint="Nom du destinataire final *"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      Margin="0,0,0,15"/>
                             <TextBox Text="{Binding Colis.TelephoneDestinataire, UpdateSourceTrigger=PropertyChanged}"
-                                     IsEnabled="{Binding IsChecked, ElementName=DestinataireIdentiqueCheckBox, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
+                                     IsEnabled="{Binding DestinataireEstProprietaire, Converter={StaticResource InvertedBooleanConverter}}"
                                      materialDesign:HintAssist.Hint="Téléphone du destinataire"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      Margin="0,0,0,15"/>
@@ -125,11 +125,11 @@
                                 <ToggleButton IsChecked="{Binding Colis.LivraisonADomicile}" Style="{StaticResource MaterialDesignSwitchToggleButton}"/>
                             </StackPanel>
                             
-							<TextBox Text="{Binding Colis.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged}"
-									 materialDesign:HintAssist.Hint="Valeur déclarée"
-									 materialDesign:TextFieldAssist.SuffixText="€"
-									 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-									 Margin="0,0,0,15"/>
+                            <TextBox Text="{Binding Colis.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged}"
+                                     materialDesign:HintAssist.Hint="Valeur déclarée"
+                                     materialDesign:TextFieldAssist.SuffixText="€"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Margin="0,0,0,15"/>
 
                             <CheckBox Content="Colis fragile" IsChecked="{Binding Colis.EstFragile}" Margin="0,0,0,10"/>
                             <CheckBox Content="Manipulation spéciale requise" IsChecked="{Binding Colis.ManipulationSpeciale}" Margin="0,0,0,15"/>
@@ -144,7 +144,6 @@
                     <materialDesign:Card Padding="20" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Codes-barres" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,10"/>
-
                             <ItemsControl ItemsSource="{Binding Barcodes}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -161,7 +160,6 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-
                             <Grid Margin="0,10,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -181,12 +179,12 @@
 
                     <materialDesign:Card Padding="20">
                         <StackPanel>
-                            <TextBlock Text="Prix Total Calculé" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,0,0,5"/>
-							<TextBox Text="{Binding Colis.PrixTotal, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" 
-									 materialDesign:TextFieldAssist.SuffixText="€"
-									 Style="{StaticResource MaterialDesignOutlinedTextBox}" 
-									 FontWeight="Bold" FontSize="20"
-									 Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            <TextBlock Text="Prix Total" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,0,0,5"/>
+                            <TextBox Text="{Binding Colis.PrixTotal, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" 
+                                     materialDesign:TextFieldAssist.SuffixText="€"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                                     FontWeight="Bold" FontSize="20"
+                                     Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         </StackPanel>
                     </materialDesign:Card>
                 </StackPanel>

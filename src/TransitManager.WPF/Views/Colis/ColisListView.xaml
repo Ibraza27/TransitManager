@@ -98,22 +98,48 @@
         <!-- Liste des colis -->
         <materialDesign:Card Grid.Row="2" Margin="16,8,16,8">
             <DataGrid ItemsSource="{Binding Colis}" SelectedItem="{Binding SelectedClient}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" Style="{StaticResource MaterialDesignDataGrid}">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Code-barres" Binding="{Binding CodeBarre}" Width="140" />
-                    <DataGridTextColumn Header="Référence" Binding="{Binding NumeroReference}" Width="140" />
-                    <DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*" />
-                    <DataGridTextColumn Header="Désignation" Binding="{Binding Designation}" Width="2*" />
-                    <DataGridTextColumn Header="Poids (kg)" Binding="{Binding Poids, StringFormat=N2}" Width="100" />
-                    <DataGridTemplateColumn Header="Statut" Width="120">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Border Background="{Binding Statut, Converter={StaticResource StatusToColorConverter}}" CornerRadius="12" Padding="8,4">
-                                    <TextBlock Text="{Binding Statut}" Foreground="White" FontSize="11" HorizontalAlignment="Center"/>
-                                </Border>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
+				<DataGrid.Columns>
+					<!-- Code-barres (affiche le premier ou "N/A") -->
+					<DataGridTextColumn Header="Code-barres" Binding="{Binding Barcodes[0].Value, TargetNullValue='N/A'}" Width="140" />
+					
+					<!-- Client -->
+					<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*" />
+
+					<!-- Désignation -->
+					<DataGridTextColumn Header="Désignation" Binding="{Binding Designation}" Width="2*" />
+					
+					<!-- Destination -->
+					<DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="150" />
+					
+					<!-- Nombre de Pièces -->
+					<DataGridTextColumn Header="Pièces" Binding="{Binding NombrePieces}" Width="80" />
+
+					<!-- Type de Colis -->
+					<DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100" />
+					
+					<!-- Valeur Déclarée -->
+					<DataGridTextColumn Header="Valeur" Binding="{Binding ValeurDeclaree, StringFormat=C}" Width="100" />
+					
+					<!-- Prix Total -->
+					<DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat=C}" Width="100">
+						<DataGridTextColumn.ElementStyle>
+							<Style TargetType="TextBlock">
+								<Setter Property="FontWeight" Value="Bold"/>
+							</Style>
+						</DataGridTextColumn.ElementStyle>
+					</DataGridTextColumn>
+
+					<!-- Statut -->
+					<DataGridTemplateColumn Header="Statut" Width="120">
+						<DataGridTemplateColumn.CellTemplate>
+							<DataTemplate>
+								<Border Background="{Binding Statut, Converter={StaticResource StatusToColorConverter}}" CornerRadius="12" Padding="8,4">
+									<TextBlock Text="{Binding Statut}" Foreground="White" FontSize="11" HorizontalAlignment="Center"/>
+								</Border>
+							</DataTemplate>
+						</DataGridTemplateColumn.CellTemplate>
+					</DataGridTemplateColumn>
+				</DataGrid.Columns>
             </DataGrid>
         </materialDesign:Card>
 

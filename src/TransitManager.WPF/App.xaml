@@ -41,6 +41,7 @@
             <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 			<converters:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter" />
+			<converters:InvertedBooleanConverter x:Key="InvertedBooleanConverter" />
 
             <!-- DataTemplates pour les ViewModels et les Vues -->
             <DataTemplate DataType="{x:Type viewModels:DashboardViewModel}">

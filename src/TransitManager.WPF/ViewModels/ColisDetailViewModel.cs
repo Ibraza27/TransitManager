@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
@@ -13,7 +12,7 @@ using TransitManager.WPF.Helpers;
 
 namespace TransitManager.WPF.ViewModels
 {
-    // Utilisation des "ObservableProperty" pour réduire le code répétitif
+    // La classe DOIT être déclarée comme "partial" pour que les générateurs de code fonctionnent
     public partial class ColisDetailViewModel : BaseViewModel
     {
         private readonly IColisService _colisService;
@@ -21,16 +20,14 @@ namespace TransitManager.WPF.ViewModels
         private readonly IBarcodeService _barcodeService;
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
-        
-        // --- Propriétés pour le Data Binding ---
+
+        // --- Propriétés pour le Data Binding (générées par le MVVM Toolkit) ---
 
         [ObservableProperty]
         private Colis? _colis;
 
-        // Collection complète des clients, chargée une seule fois.
         private List<Client> _allClients = new();
         
-        // Collection filtrée, affichée dans la ComboBox.
         [ObservableProperty]
         private ObservableCollection<Client> _clients = new();
 
@@ -73,13 +70,12 @@ namespace TransitManager.WPF.ViewModels
             GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
         }
 
-        // La condition pour activer le bouton "Enregistrer"
         private bool CanSave()
         {
             return Colis != null &&
-                   SelectedClient != null && // L'utilisateur doit avoir sélectionné un client valide
-                   !string.IsNullOrWhiteSpace(Colis.Designation) &&
+                   SelectedClient != null &&
                    !string.IsNullOrWhiteSpace(Colis.DestinationFinale) &&
+                   !string.IsNullOrWhiteSpace(Colis.Destinataire) &&
                    Colis.NombrePieces > 0 &&
                    !IsBusy;
         }
@@ -130,21 +126,23 @@ namespace TransitManager.WPF.ViewModels
             Barcodes.Add(new Barcode { Value = _barcodeService.GenerateBarcode() });
         }
 
-        // NOUVEAU: Méthode de filtrage des clients
         partial void OnClientSearchTextChanged(string? value)
         {
-            FilterClients();
+            if (value != SelectedClient?.NomComplet)
+            {
+                FilterClients(value);
+            }
         }
 
-        private void FilterClients()
+        private void FilterClients(string? searchText)
         {
-            if (string.IsNullOrWhiteSpace(ClientSearchText))
+            if (string.IsNullOrWhiteSpace(searchText))
             {
                 Clients = new ObservableCollection<Client>(_allClients);
             }
             else
             {
-                var searchTextLower = ClientSearchText.ToLower();
+                var searchTextLower = searchText.ToLower();
                 var filtered = _allClients.Where(c => 
                     c.NomComplet.ToLower().Contains(searchTextLower) ||
                     c.TelephonePrincipal.Contains(searchTextLower)
@@ -153,7 +151,6 @@ namespace TransitManager.WPF.ViewModels
             }
         }
         
-        // NOUVEAU: Logique pour la case à cocher
         partial void OnDestinataireEstProprietaireChanged(bool value)
         {
             UpdateDestinataire();
@@ -186,7 +183,7 @@ namespace TransitManager.WPF.ViewModels
                 CalculatePrice();
             }
         }
-
+        
         private void CalculatePrice()
         {
             if (Colis == null) return;
@@ -203,11 +200,11 @@ namespace TransitManager.WPF.ViewModels
             {
                 Title = "Nouveau Colis";
                 _allClients = (await _clientService.GetActiveClientsAsync()).ToList();
-                FilterClients();
+                FilterClients(null);
                 Colis = new Colis();
                 Barcodes = new ObservableCollection<Barcode>();
                 Colis.PropertyChanged += OnColisPropertyChanged;
-                DestinataireEstProprietaire = true; // Coché par défaut
+                DestinataireEstProprietaire = true;
             }
         }
 
@@ -217,7 +214,7 @@ namespace TransitManager.WPF.ViewModels
             await ExecuteBusyActionAsync(async () =>
             {
                 _allClients = (await _clientService.GetActiveClientsAsync()).ToList();
-                FilterClients();
+                FilterClients(null);
                 Colis = await _colisService.GetByIdAsync(colisId);
                 if (Colis != null)
                 {

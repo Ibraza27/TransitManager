@@ -9,12 +9,8 @@ namespace TransitManager.Core.Entities
     /// </summary>
     public class Colis : BaseEntity
     {
-        /// <summary>
-        /// Code-barres unique du colis
-        /// </summary>
-        [Required]
-        [StringLength(50)]
-        public string CodeBarre { get; set; } = string.Empty;
+		public virtual ICollection<Barcode> Barcodes { get; set; } = new List<Barcode>();
+
 
         /// <summary>
         /// Numéro de référence interne
@@ -205,6 +201,10 @@ namespace TransitManager.Core.Entities
         /// Poids facturable (le plus élevé entre poids réel et volumétrique)
         /// </summary>
         public decimal PoidsFacturable => Math.Max(Poids, PoidsVolumetrique);
+		
+		public TypeEnvoi TypeEnvoi { get; set; }
+		public bool LivraisonADomicile { get; set; }
+		public decimal PrixTotal { get; set; }
     }
 
 

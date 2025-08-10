@@ -33,6 +33,7 @@ namespace TransitManager.Infrastructure.Data
         public DbSet<Utilisateur> Utilisateurs { get; set; } = null!;
         public DbSet<Document> Documents { get; set; } = null!;
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+		public DbSet<Barcode> Barcodes { get; set; } = null!;
 
         /// <summary>
         /// Configuration du modèle

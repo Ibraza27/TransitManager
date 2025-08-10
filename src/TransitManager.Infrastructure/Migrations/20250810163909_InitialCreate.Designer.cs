@@ -12,7 +12,7 @@ using TransitManager.Infrastructure.Data;
 namespace TransitManager.Infrastructure.Migrations
 {
     [DbContext(typeof(TransitContext))]
-    [Migration("20250809161520_InitialCreate")]
+    [Migration("20250810163909_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -73,6 +73,48 @@ namespace TransitManager.Infrastructure.Migrations
                     b.HasIndex("UtilisateurId");
 
                     b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("TransitManager.Core.Entities.Barcode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Actif")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ColisId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CreePar")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("DateCreation")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DateModification")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModifiePar")
+                        .HasColumnType("text");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ColisId");
+
+                    b.HasIndex("Value")
+                        .IsUnique();
+
+                    b.ToTable("Barcodes", (string)null);
                 });
 
             modelBuilder.Entity("TransitManager.Core.Entities.Client", b =>
@@ -233,11 +275,6 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Property<Guid>("ClientId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CodeBarre")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<string>("Commentaires")
                         .HasColumnType("text");
 
@@ -273,6 +310,11 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("DestinationFinale")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<bool>("EstFragile")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -301,6 +343,9 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasDefaultValue(0m);
+
+                    b.Property<bool>("LivraisonADomicile")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LocalisationActuelle")
                         .HasMaxLength(200)
@@ -339,6 +384,10 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasDefaultValue(0m);
 
+                    b.Property<decimal>("PrixTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -352,10 +401,17 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("TelephoneDestinataire")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<int>("TypeEnvoi")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("ValeurDeclaree")
                         .ValueGeneratedOnAdd()
@@ -367,10 +423,6 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.HasIndex("ClientId")
                         .HasDatabaseName("IX_Colis_ClientId");
-
-                    b.HasIndex("CodeBarre")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Colis_CodeBarre");
 
                     b.HasIndex("ConteneurId")
                         .HasDatabaseName("IX_Colis_ConteneurId");
@@ -1024,12 +1076,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 8, 9, 16, 15, 18, 938, DateTimeKind.Utc).AddTicks(7335),
+                            DateCreation = new DateTime(2025, 8, 10, 16, 38, 58, 701, DateTimeKind.Utc).AddTicks(4951),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$9gB2L.19QJZd6QHO.F4JV.WxzwPlJG62xoQGv1b9ahLNTPPvuWxzS",
+                            MotDePasseHash = "$2a$11$7eVqL5brika3O.sB0PvUt.qjvSzczsDBK7A6zxgEfppMCr.FErM0C",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,
@@ -1051,6 +1103,17 @@ namespace TransitManager.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Utilisateur");
+                });
+
+            modelBuilder.Entity("TransitManager.Core.Entities.Barcode", b =>
+                {
+                    b.HasOne("TransitManager.Core.Entities.Colis", "Colis")
+                        .WithMany("Barcodes")
+                        .HasForeignKey("ColisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Colis");
                 });
 
             modelBuilder.Entity("TransitManager.Core.Entities.Colis", b =>
@@ -1142,6 +1205,11 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Navigation("Colis");
 
                     b.Navigation("Paiements");
+                });
+
+            modelBuilder.Entity("TransitManager.Core.Entities.Colis", b =>
+                {
+                    b.Navigation("Barcodes");
                 });
 
             modelBuilder.Entity("TransitManager.Core.Entities.Conteneur", b =>

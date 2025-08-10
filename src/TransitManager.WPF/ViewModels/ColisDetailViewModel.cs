@@ -1,9 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
@@ -11,23 +13,45 @@ using TransitManager.WPF.Helpers;
 
 namespace TransitManager.WPF.ViewModels
 {
-    public class ColisDetailViewModel : BaseViewModel
+    // Utilisation des "ObservableProperty" pour réduire le code répétitif
+    public partial class ColisDetailViewModel : BaseViewModel
     {
         private readonly IColisService _colisService;
         private readonly IClientService _clientService;
         private readonly IBarcodeService _barcodeService;
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
+        
+        // --- Propriétés pour le Data Binding ---
 
+        [ObservableProperty]
         private Colis? _colis;
-        public Colis? Colis { get => _colis; set => SetProperty(ref _colis, value); }
 
+        // Collection complète des clients, chargée une seule fois.
+        private List<Client> _allClients = new();
+        
+        // Collection filtrée, affichée dans la ComboBox.
+        [ObservableProperty]
         private ObservableCollection<Client> _clients = new();
-        public ObservableCollection<Client> Clients { get => _clients; set => SetProperty(ref _clients, value); }
 
+        [ObservableProperty]
+        private ObservableCollection<Barcode> _barcodes = new();
+
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(AddBarcodeCommand))]
         private string _newBarcode = string.Empty;
-        public string NewBarcode { get => _newBarcode; set => SetProperty(ref _newBarcode, value); }
 
+        [ObservableProperty]
+        private bool _destinataireEstProprietaire;
+
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+        private Client? _selectedClient;
+        
+        [ObservableProperty]
+        private string? _clientSearchText;
+
+        // --- Commandes ---
         public IAsyncRelayCommand SaveCommand { get; }
         public IRelayCommand CancelCommand { get; }
         public IRelayCommand AddBarcodeCommand { get; }
@@ -49,23 +73,29 @@ namespace TransitManager.WPF.ViewModels
             GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
         }
 
+        // La condition pour activer le bouton "Enregistrer"
         private bool CanSave()
         {
             return Colis != null &&
-                   Colis.ClientId != Guid.Empty &&
-                   !string.IsNullOrWhiteSpace(Colis.Destinataire) &&
+                   SelectedClient != null && // L'utilisateur doit avoir sélectionné un client valide
+                   !string.IsNullOrWhiteSpace(Colis.Designation) &&
+                   !string.IsNullOrWhiteSpace(Colis.DestinationFinale) &&
                    Colis.NombrePieces > 0 &&
                    !IsBusy;
         }
 
         private async Task SaveAsync()
         {
-            if (!CanSave()) return;
+            if (!CanSave() || Colis == null || SelectedClient == null) return;
+            
+            Colis.ClientId = SelectedClient.Id;
+            Colis.Barcodes = Barcodes.ToList();
+
             await ExecuteBusyActionAsync(async () =>
             {
                 try
                 {
-                    bool isNew = Colis!.CreePar == null;
+                    bool isNew = Colis.CreePar == null;
                     if (isNew) await _colisService.CreateAsync(Colis);
                     else await _colisService.UpdateAsync(Colis);
                     
@@ -78,44 +108,80 @@ namespace TransitManager.WPF.ViewModels
                 }
             });
         }
-
+        
         private void Cancel() => _navigationService.GoBack();
 
         private void AddBarcode()
         {
-            if (!string.IsNullOrWhiteSpace(NewBarcode) && Colis != null)
+            if (!string.IsNullOrWhiteSpace(NewBarcode))
             {
-                Colis.Barcodes.Add(new Barcode { Value = NewBarcode });
+                Barcodes.Add(new Barcode { Value = NewBarcode });
                 NewBarcode = string.Empty;
             }
         }
 
         private void RemoveBarcode(Barcode? barcode)
         {
-            if (barcode != null && Colis != null)
-            {
-                Colis.Barcodes.Remove(barcode);
-            }
+            if (barcode != null) Barcodes.Remove(barcode);
         }
 
         private void GenerateBarcode()
         {
-            if (Colis != null)
+            Barcodes.Add(new Barcode { Value = _barcodeService.GenerateBarcode() });
+        }
+
+        // NOUVEAU: Méthode de filtrage des clients
+        partial void OnClientSearchTextChanged(string? value)
+        {
+            FilterClients();
+        }
+
+        private void FilterClients()
+        {
+            if (string.IsNullOrWhiteSpace(ClientSearchText))
             {
-                Colis.Barcodes.Add(new Barcode { Value = _barcodeService.GenerateBarcode() });
+                Clients = new ObservableCollection<Client>(_allClients);
+            }
+            else
+            {
+                var searchTextLower = ClientSearchText.ToLower();
+                var filtered = _allClients.Where(c => 
+                    c.NomComplet.ToLower().Contains(searchTextLower) ||
+                    c.TelephonePrincipal.Contains(searchTextLower)
+                );
+                Clients = new ObservableCollection<Client>(filtered);
+            }
+        }
+        
+        // NOUVEAU: Logique pour la case à cocher
+        partial void OnDestinataireEstProprietaireChanged(bool value)
+        {
+            UpdateDestinataire();
+        }
+
+        partial void OnSelectedClientChanged(Client? value)
+        {
+            if (DestinataireEstProprietaire)
+            {
+                UpdateDestinataire();
             }
         }
 
-        private async Task LoadClientsAsync()
+        private void UpdateDestinataire()
         {
-            var clientsList = await _clientService.GetActiveClientsAsync();
-            Clients = new ObservableCollection<Client>(clientsList);
+            if (Colis == null) return;
+
+            if (DestinataireEstProprietaire && SelectedClient != null)
+            {
+                Colis.Destinataire = SelectedClient.NomComplet;
+                Colis.TelephoneDestinataire = SelectedClient.TelephonePrincipal;
+            }
         }
-        
+
         private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             SaveCommand.NotifyCanExecuteChanged();
-            if (e.PropertyName == nameof(Colis.TypeEnvoi) || e.PropertyName == nameof(Colis.LivraisonADomicile))
+            if (e.PropertyName is nameof(Colis.TypeEnvoi) or nameof(Colis.LivraisonADomicile) or nameof(Colis.Poids))
             {
                 CalculatePrice();
             }
@@ -125,11 +191,9 @@ namespace TransitManager.WPF.ViewModels
         {
             if (Colis == null) return;
             decimal prix = 0;
-            // Logique de prix simple (à adapter)
+            prix += Colis.Poids * 2.5m;
             if (Colis.TypeEnvoi == TypeEnvoi.AvecDedouanement) prix += 50m; else prix += 10m;
             if (Colis.LivraisonADomicile) prix += 15m;
-            prix += Colis.Poids * 2.5m; // Exemple : 2.5€ par kg
-
             Colis.PrixTotal = prix;
         }
 
@@ -138,9 +202,12 @@ namespace TransitManager.WPF.ViewModels
             if (newMarker == "new")
             {
                 Title = "Nouveau Colis";
+                _allClients = (await _clientService.GetActiveClientsAsync()).ToList();
+                FilterClients();
                 Colis = new Colis();
-                await LoadClientsAsync();
+                Barcodes = new ObservableCollection<Barcode>();
                 Colis.PropertyChanged += OnColisPropertyChanged;
+                DestinataireEstProprietaire = true; // Coché par défaut
             }
         }
 
@@ -149,10 +216,13 @@ namespace TransitManager.WPF.ViewModels
             Title = "Modifier le Colis";
             await ExecuteBusyActionAsync(async () =>
             {
-                await LoadClientsAsync();
+                _allClients = (await _clientService.GetActiveClientsAsync()).ToList();
+                FilterClients();
                 Colis = await _colisService.GetByIdAsync(colisId);
                 if (Colis != null)
                 {
+                    Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
+                    SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
                     Colis.PropertyChanged += OnColisPropertyChanged;
                 }
             });

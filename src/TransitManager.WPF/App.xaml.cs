@@ -22,6 +22,9 @@ using TransitManager.WPF.Views.Conteneurs;
 using TransitManager.WPF.Views.Dashboard;
 using TransitManager.WPF.Views.Finance;
 using TransitManager.WPF.Views.Notifications;
+using System.Globalization; 
+using System.Threading;    
+using System.Windows.Markup; 
 
 namespace TransitManager.WPF
 {
@@ -29,6 +32,16 @@ namespace TransitManager.WPF
     {
         private IHost? _host;
         private Notifier? _notifier;
+		
+        public App()
+        {
+            // Définit la culture pour toute l'application
+            var culture = new CultureInfo("fr-FR");
+            Thread.CurrentThread.CurrentCulture = culture;
+            Thread.CurrentThread.CurrentUICulture = culture;
+            FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(
+                XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
+        }
 
         protected override async void OnStartup(StartupEventArgs e)
         {

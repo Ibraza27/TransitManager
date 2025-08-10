@@ -44,7 +44,7 @@ namespace TransitManager.Infrastructure.Services
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.CodeBarre == barcode);
+                .FirstOrDefaultAsync(c => c.Barcodes.Any(b => b.Value == barcode));
         }
 
         public async Task<Colis?> GetByReferenceAsync(string reference)
@@ -113,10 +113,6 @@ namespace TransitManager.Infrastructure.Services
                 throw new InvalidOperationException("Le client spécifié n'existe pas.");
             }
 
-            if (string.IsNullOrEmpty(colis.CodeBarre))
-            {
-                colis.CodeBarre = await GenerateUniqueBarcodeAsync(context);
-            }
 
             context.Colis.Add(colis);
             await context.SaveChangesAsync();
@@ -160,7 +156,7 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Colis> ScanAsync(string barcode, string location)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.FirstOrDefaultAsync(c => c.CodeBarre == barcode);
+            var colis = await context.Colis.FirstOrDefaultAsync(c => c.Barcodes.Any(b => b.Value == barcode));
             if (colis == null)
             {
                 throw new InvalidOperationException($"Aucun colis trouvé avec le code-barres {barcode}");
@@ -272,7 +268,7 @@ namespace TransitManager.Infrastructure.Services
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
                 .Where(c => c.Actif && (
-                    c.CodeBarre.Contains(searchTerm) ||
+                    c.Barcodes.Any(b => b.Value.Contains(searchTerm)) ||
                     c.NumeroReference.ToLower().Contains(searchTerm) ||
                     c.Designation.ToLower().Contains(searchTerm) ||
                     (c.Client != null && (c.Client.Nom + " " + c.Client.Prenom).ToLower().Contains(searchTerm)) ||
@@ -283,14 +279,5 @@ namespace TransitManager.Infrastructure.Services
                 .ToListAsync();
         }
 
-        private async Task<string> GenerateUniqueBarcodeAsync(TransitContext context)
-        {
-            string barcode;
-            do
-            {
-                barcode = _barcodeService.GenerateBarcode();
-            } while (await context.Colis.AnyAsync(c => c.CodeBarre == barcode));
-            return barcode;
-        }
     }
 }

@@ -149,10 +149,10 @@ namespace TransitManager.Infrastructure.Services
                     Options = new EncodingOptions { Height = 80, Width = 380, Margin = 0, PureBarcode = true }
                 };
 
-                using var barcodeBitmap = barcodeWriter.Write(colis.CodeBarre);
-                graphics.DrawImage(barcodeBitmap, new Point(10, 200));
+				using var barcodeBitmap = barcodeWriter.Write(colis.NumeroReference); // Corrigé
+				graphics.DrawImage(barcodeBitmap, new Point(10, 200));
 
-                var labelPath = Path.Combine("Labels", $"{colis.CodeBarre}_label.png");
+				var labelPath = Path.Combine("Labels", $"{colis.NumeroReference}_label.png"); // Corrigé
                 Directory.CreateDirectory("Labels");
                 bitmap.Save(labelPath, ImageFormat.Png);
             });

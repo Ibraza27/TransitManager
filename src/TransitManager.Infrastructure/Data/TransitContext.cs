@@ -77,6 +77,7 @@ namespace TransitManager.Infrastructure.Data
 			modelBuilder.Entity<Paiement>().HasQueryFilter(e => e.Actif);
 			//modelBuilder.Entity<Utilisateur>().HasQueryFilter(e => e.Actif);
 			modelBuilder.Entity<Document>().HasQueryFilter(e => e.Actif);
+			modelBuilder.Entity<Barcode>().HasQueryFilter(b => b.Colis.Actif);
 			// On N'ajoute PAS de filtre pour AuditLog
         }
 

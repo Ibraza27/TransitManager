@@ -35,7 +35,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _dbSet
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
-                .FirstOrDefaultAsync(c => c.CodeBarre == barcode && c.Actif);
+                .FirstOrDefaultAsync(c => c.Barcodes.Any(b => b.Value == barcode) && c.Actif);
         }
 
         public async Task<Colis?> GetByReferenceAsync(string reference)
@@ -132,7 +132,7 @@ namespace TransitManager.Infrastructure.Repositories
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
                 .Where(c => c.Actif && (
-                    c.CodeBarre.Contains(searchTerm) ||
+                    c.Barcodes.Any(b => b.Value.Contains(searchTerm)) ||
                     c.NumeroReference.ToLower().Contains(searchTerm) ||
                     c.Designation.ToLower().Contains(searchTerm) ||
                     (c.Client != null && (

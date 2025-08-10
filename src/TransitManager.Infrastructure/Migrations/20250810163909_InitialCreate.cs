@@ -134,7 +134,6 @@ namespace TransitManager.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CodeBarre = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     NumeroReference = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     ClientId = table.Column<Guid>(type: "uuid", nullable: false),
                     ConteneurId = table.Column<Guid>(type: "uuid", nullable: true),
@@ -160,6 +159,11 @@ namespace TransitManager.Infrastructure.Migrations
                     Destinataire = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     SignatureReception = table.Column<string>(type: "text", nullable: true),
                     Commentaires = table.Column<string>(type: "text", nullable: true),
+                    TypeEnvoi = table.Column<int>(type: "integer", nullable: false),
+                    LivraisonADomicile = table.Column<bool>(type: "boolean", nullable: false),
+                    PrixTotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    TelephoneDestinataire = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    DestinationFinale = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreePar = table.Column<string>(type: "text", nullable: true),
@@ -291,6 +295,31 @@ namespace TransitManager.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Barcodes",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Value = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    ColisId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreePar = table.Column<string>(type: "text", nullable: true),
+                    ModifiePar = table.Column<string>(type: "text", nullable: true),
+                    Actif = table.Column<bool>(type: "boolean", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Barcodes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Barcodes_Colis_ColisId",
+                        column: x => x.ColisId,
+                        principalTable: "Colis",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Documents",
                 columns: table => new
                 {
@@ -361,12 +390,23 @@ namespace TransitManager.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Utilisateurs",
                 columns: new[] { "Id", "Actif", "CreePar", "DateCreation", "DateModification", "DateVerrouillage", "DerniereConnexion", "DoitChangerMotDePasse", "Email", "ExpirationToken", "FuseauHoraire", "Langue", "ModifiePar", "MotDePasseHash", "Nom", "NomUtilisateur", "NotificationsActivees", "NotificationsEmail", "NotificationsSMS", "PasswordSalt", "PermissionsSpecifiques", "PhotoProfil", "Preferences", "Prenom", "Role", "RowVersion", "Telephone", "TentativesConnexionEchouees", "Theme", "TokenReinitialisation" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 9, 16, 15, 18, 938, DateTimeKind.Utc).AddTicks(7335), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$9gB2L.19QJZd6QHO.F4JV.WxzwPlJG62xoQGv1b9ahLNTPPvuWxzS", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 10, 16, 38, 58, 701, DateTimeKind.Utc).AddTicks(4951), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$7eVqL5brika3O.sB0PvUt.qjvSzczsDBK7A6zxgEfppMCr.FErM0C", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UtilisateurId",
                 table: "AuditLogs",
                 column: "UtilisateurId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Barcodes_ColisId",
+                table: "Barcodes",
+                column: "ColisId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Barcodes_Value",
+                table: "Barcodes",
+                column: "Value",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Clients_CodeClient",
@@ -393,12 +433,6 @@ namespace TransitManager.Infrastructure.Migrations
                 name: "IX_Colis_ClientId",
                 table: "Colis",
                 column: "ClientId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Colis_CodeBarre",
-                table: "Colis",
-                column: "CodeBarre",
-                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Colis_ConteneurId",
@@ -559,6 +593,9 @@ namespace TransitManager.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "AuditLogs");
+
+            migrationBuilder.DropTable(
+                name: "Barcodes");
 
             migrationBuilder.DropTable(
                 name: "Documents");

@@ -132,7 +132,7 @@ namespace TransitManager.Infrastructure.Services
                 int row = 2;
                 foreach (var item in colis)
                 {
-                    worksheet.Cell(row, 1).Value = item.CodeBarre;
+                    worksheet.Cell(row, 1).Value = string.Join(", ", item.Barcodes.Select(b => b.Value));
                     worksheet.Cell(row, 2).Value = item.NumeroReference;
                     worksheet.Cell(row, 3).Value = item.Client?.NomComplet ?? "N/A";
                     worksheet.Cell(row, 4).Value = item.Conteneur?.NumeroDossier ?? "Non affecté";
@@ -247,7 +247,7 @@ namespace TransitManager.Infrastructure.Services
                                     foreach (var colis in conteneur.Colis.OrderBy(c => c.Client?.Nom))
                                     {
                                         table.Cell().Element(CellStyle).Text(index++);
-                                        table.Cell().Element(CellStyle).Text(colis.CodeBarre);
+                                        table.Cell().Element(CellStyle).Text(string.Join(", ", colis.Barcodes.Select(b => b.Value)));
                                         table.Cell().Element(CellStyle).Text(colis.Client?.NomComplet ?? "N/A");
                                         table.Cell().Element(CellStyle).Text(colis.Designation);
                                         table.Cell().Element(CellStyle).Text($"{colis.Poids:N2} kg");

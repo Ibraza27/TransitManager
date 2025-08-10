@@ -167,7 +167,6 @@ namespace TransitManager.Core.Entities
         {
             DateArrivee = DateTime.UtcNow;
             NumeroReference = GenerateReference();
-            CodeBarre = GenerateBarcode();
             Statut = StatutColis.EnAttente;
             Etat = EtatColis.BonEtat;
         }
@@ -205,6 +204,19 @@ namespace TransitManager.Core.Entities
 		public TypeEnvoi TypeEnvoi { get; set; }
 		public bool LivraisonADomicile { get; set; }
 		public decimal PrixTotal { get; set; }
+		
+
+		/// <summary>
+		/// Téléphone du destinataire final
+		/// </summary>
+		[StringLength(20)]
+		public string? TelephoneDestinataire { get; set; }
+
+		/// <summary>
+		/// Destination finale du colis
+		/// </summary>
+		[StringLength(200)]
+		public string DestinationFinale { get; set; } = string.Empty;
     }
 
 

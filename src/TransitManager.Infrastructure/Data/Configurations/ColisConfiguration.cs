@@ -18,10 +18,6 @@ namespace TransitManager.Infrastructure.Data.Configurations
             // Clé primaire
             builder.HasKey(c => c.Id);
 
-            // Index
-            builder.HasIndex(c => c.CodeBarre)
-                .IsUnique()
-                .HasDatabaseName("IX_Colis_CodeBarre");
 
             builder.HasIndex(c => c.NumeroReference)
                 .IsUnique()
@@ -39,10 +35,6 @@ namespace TransitManager.Infrastructure.Data.Configurations
             builder.HasIndex(c => c.DateArrivee)
                 .HasDatabaseName("IX_Colis_DateArrivee");
 
-            // Propriétés
-            builder.Property(c => c.CodeBarre)
-                .IsRequired()
-                .HasMaxLength(50);
 
             builder.Property(c => c.NumeroReference)
                 .IsRequired()

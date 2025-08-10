@@ -389,7 +389,7 @@ namespace TransitManager.WPF.ViewModels
 
                     if (!string.IsNullOrEmpty(location))
                     {
-                        await _colisService.ScanAsync(colis.CodeBarre, location);
+                        await _colisService.ScanAsync(colis.NumeroReference, location);
                         await RefreshAsync();
                         
                         StatusMessage = $"Colis {colis.NumeroReference} scanné avec succès.";

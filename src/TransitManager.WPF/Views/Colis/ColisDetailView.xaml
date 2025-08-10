@@ -21,12 +21,10 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
                 <StackPanel>
                     <TextBlock Text="{Binding Title}" Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
                     <TextBlock Text="{Binding Colis.NumeroReference}" Opacity="0.6" Style="{StaticResource MaterialDesignSubtitle1TextBlock}"/>
                 </StackPanel>
-
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
                     <Button Content="Annuler" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
@@ -50,24 +48,96 @@
 
                             <ComboBox materialDesign:HintAssist.Hint="Client Propriétaire *"
                                       ItemsSource="{Binding Clients}"
+                                      SelectedItem="{Binding SelectedClient}"
                                       DisplayMemberPath="NomComplet"
-                                      SelectedValuePath="Id"
-                                      SelectedValue="{Binding Colis.ClientId, UpdateSourceTrigger=PropertyChanged}"
-                                      Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                       IsEditable="True"
-                                      materialDesign:ComboBoxAssist.IsTextBoxEditable="True"
+                                      Text="{Binding ClientSearchText, UpdateSourceTrigger=PropertyChanged}"
                                       Margin="0,0,0,15"/>
 
                             <TextBox Text="{Binding Colis.Designation, UpdateSourceTrigger=PropertyChanged}"
                                      materialDesign:HintAssist.Hint="Désignation / Description *"
-                                     Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      TextWrapping="Wrap" AcceptsReturn="True" Height="80"
                                      Margin="0,0,0,15"/>
+                                     
+                            <TextBox Text="{Binding Colis.DestinationFinale, UpdateSourceTrigger=PropertyChanged}"
+                                     materialDesign:HintAssist.Hint="Destination du colis *"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Margin="0,0,0,15"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                     <materialDesign:Card Padding="20" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Destinataire" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,10"/>
+                            <CheckBox Name="DestinataireIdentiqueCheckBox" Content="Destinataire identique au propriétaire" IsChecked="{Binding DestinataireEstProprietaire}" Margin="0,0,0,15"/>
 
                             <TextBox Text="{Binding Colis.Destinataire, UpdateSourceTrigger=PropertyChanged}"
+                                     IsEnabled="{Binding IsChecked, ElementName=DestinataireIdentiqueCheckBox, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
                                      materialDesign:HintAssist.Hint="Nom du destinataire final *"
-                                     Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      Margin="0,0,0,15"/>
+                            <TextBox Text="{Binding Colis.TelephoneDestinataire, UpdateSourceTrigger=PropertyChanged}"
+                                     IsEnabled="{Binding IsChecked, ElementName=DestinataireIdentiqueCheckBox, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
+                                     materialDesign:HintAssist.Hint="Téléphone du destinataire"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Margin="0,0,0,15"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+                    
+                    <materialDesign:Card Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="Dimensions et Poids" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,20"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding Colis.Poids, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Poids (kg)" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,5,15"/>
+                                <TextBox Grid.Column="1" Text="{Binding Colis.NombrePieces, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Nombre de pièces *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5,0,0,15"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding Colis.Longueur, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Longueur (cm)" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,5,0"/>
+                                <TextBox Grid.Column="1" Text="{Binding Colis.Largeur, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Largeur (cm)" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5"/>
+                                <TextBox Grid.Column="2" Text="{Binding Colis.Hauteur, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Hauteur (cm)" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5,0,0,0"/>
+                            </Grid>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+
+                <!-- Colonne de droite -->
+                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <materialDesign:Card Padding="20" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Détails et Options" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,20"/>
+
+                            <ComboBox materialDesign:HintAssist.Hint="Type de colis *" ItemsSource="{Binding Source={x:Static helpers:EnumValues.TypeColisValues}}" SelectedItem="{Binding Colis.Type, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,0,0,15"/>
+                            <ComboBox materialDesign:HintAssist.Hint="Options d'envoi" ItemsSource="{Binding Source={x:Static helpers:EnumValues.TypeEnvoiValues}}" SelectedItem="{Binding Colis.TypeEnvoi, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,0,0,15"/>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                <TextBlock Text="Livraison à domicile ?" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ToggleButton IsChecked="{Binding Colis.LivraisonADomicile}" Style="{StaticResource MaterialDesignSwitchToggleButton}"/>
+                            </StackPanel>
+                            
+							<TextBox Text="{Binding Colis.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged}"
+									 materialDesign:HintAssist.Hint="Valeur déclarée"
+									 materialDesign:TextFieldAssist.SuffixText="€"
+									 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+									 Margin="0,0,0,15"/>
+
+                            <CheckBox Content="Colis fragile" IsChecked="{Binding Colis.EstFragile}" Margin="0,0,0,10"/>
+                            <CheckBox Content="Manipulation spéciale requise" IsChecked="{Binding Colis.ManipulationSpeciale}" Margin="0,0,0,15"/>
+
+                            <TextBox Text="{Binding Colis.InstructionsSpeciales, UpdateSourceTrigger=PropertyChanged}"
+                                     materialDesign:HintAssist.Hint="Instructions spéciales"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     TextWrapping="Wrap" AcceptsReturn="True" Height="80"/>
                         </StackPanel>
                     </materialDesign:Card>
                     
@@ -75,7 +145,7 @@
                         <StackPanel>
                             <TextBlock Text="Codes-barres" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,10"/>
 
-                            <ItemsControl ItemsSource="{Binding Colis.Barcodes}">
+                            <ItemsControl ItemsSource="{Binding Barcodes}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,2">
@@ -84,9 +154,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBox Grid.Column="0" Text="{Binding Value}" IsReadOnly="True" VerticalAlignment="Center"/>
-                                            <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Supprimer"
-                                                    Command="{Binding DataContext.RemoveBarcodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}">
+                                            <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Supprimer" Command="{Binding DataContext.RemoveBarcodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
                                                 <materialDesign:PackIcon Kind="Delete" Foreground="Red"/>
                                             </Button>
                                         </Grid>
@@ -100,15 +168,11 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Scanner ou entrer un code-barres"
-                                         Text="{Binding NewBarcode, UpdateSourceTrigger=PropertyChanged}"
-                                         VerticalAlignment="Center"/>
-                                <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Ajouter"
-                                        Command="{Binding AddBarcodeCommand}">
+                                <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Scanner ou entrer un code-barres" Text="{Binding NewBarcode, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Ajouter" Command="{Binding AddBarcodeCommand}">
                                     <materialDesign:PackIcon Kind="Plus"/>
                                 </Button>
-                                 <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Générer un code-barres interne"
-                                        Command="{Binding GenerateBarcodeCommand}">
+                                 <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Générer un code-barres interne" Command="{Binding GenerateBarcodeCommand}">
                                     <materialDesign:PackIcon Kind="BarcodeScan"/>
                                 </Button>
                             </Grid>
@@ -117,70 +181,12 @@
 
                     <materialDesign:Card Padding="20">
                         <StackPanel>
-                            <TextBlock Text="Dimensions et Poids" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,20"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding Colis.Poids, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Poids (kg)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0,0,5,15"/>
-                                <TextBox Grid.Column="1" Text="{Binding Colis.NombrePieces, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Nombre de pièces *" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="5,0,0,15"/>
-                            </Grid>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding Colis.Longueur, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Longueur (cm)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0,0,5,0"/>
-                                <TextBox Grid.Column="1" Text="{Binding Colis.Largeur, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Largeur (cm)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="5"/>
-                                <TextBox Grid.Column="2" Text="{Binding Colis.Hauteur, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Hauteur (cm)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="5,0,0,0"/>
-                            </Grid>
-                        </StackPanel>
-                    </materialDesign:Card>
-                </StackPanel>
-
-                <!-- Colonne de droite -->
-                <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                    <materialDesign:Card Padding="20">
-                        <StackPanel>
-                            <TextBlock Text="Détails et Options" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,20"/>
-
-                            <ComboBox materialDesign:HintAssist.Hint="Type de colis *"
-                                      ItemsSource="{Binding Source={x:Static helpers:EnumValues.TypeColisValues}}"
-                                      SelectedItem="{Binding Colis.Type, UpdateSourceTrigger=PropertyChanged}"
-                                      Style="{StaticResource MaterialDesignFloatingHintComboBox}"
-                                      Margin="0,0,0,15"/>
-
-                            <ComboBox materialDesign:HintAssist.Hint="Options d'envoi"
-                                      ItemsSource="{Binding Source={x:Static helpers:EnumValues.TypeEnvoiValues}}"
-                                      SelectedItem="{Binding Colis.TypeEnvoi, UpdateSourceTrigger=PropertyChanged}"
-                                      Style="{StaticResource MaterialDesignFloatingHintComboBox}"
-                                      Margin="0,0,0,15"/>
-                            
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                <TextBlock Text="Livraison à domicile ?" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <ToggleButton IsChecked="{Binding Colis.LivraisonADomicile}" Style="{StaticResource MaterialDesignSwitchToggleButton}"/>
-                            </StackPanel>
-                            
-                            <TextBox Text="{Binding Colis.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged, StringFormat=C}"
-                                     materialDesign:HintAssist.Hint="Valeur déclarée (€)"
-                                     Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                                     Margin="0,0,0,15"/>
-
-                            <CheckBox Content="Colis fragile" IsChecked="{Binding Colis.EstFragile}" Margin="0,0,0,10"/>
-                            <CheckBox Content="Manipulation spéciale requise" IsChecked="{Binding Colis.ManipulationSpeciale}" Margin="0,0,0,15"/>
-
-                            <TextBox Text="{Binding Colis.InstructionsSpeciales, UpdateSourceTrigger=PropertyChanged}"
-                                     materialDesign:HintAssist.Hint="Instructions spéciales"
-                                     Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                                     TextWrapping="Wrap" AcceptsReturn="True" Height="80"/>
-
-                            <Separator Margin="0,20"/>
-
                             <TextBlock Text="Prix Total Calculé" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,0,0,5"/>
-                            <TextBlock Text="{Binding Colis.PrixTotal, StringFormat=C}" Style="{StaticResource MaterialDesignHeadline5TextBlock}" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-
+							<TextBox Text="{Binding Colis.PrixTotal, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" 
+									 materialDesign:TextFieldAssist.SuffixText="€"
+									 Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+									 FontWeight="Bold" FontSize="20"
+									 Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         </StackPanel>
                     </materialDesign:Card>
                 </StackPanel>

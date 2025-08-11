@@ -1,17 +1,29 @@
 using System.Windows.Controls;
+using System.Windows.Input;
+using TransitManager.Core.Entities;
+using TransitManager.WPF.ViewModels;
 
 namespace TransitManager.WPF.Views.Colis
 {
-    public partial class ColisListView : System.Windows.Controls.UserControl
+    public partial class ColisListView : UserControl
     {
         public ColisListView()
         {
             InitializeComponent();
         }
 
-        private void DataGridRow_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void DataGridRow_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // Logique à venir
+            if (sender is DataGridRow row && row.DataContext is Core.Entities.Colis colis)
+            {
+                if (DataContext is ColisViewModel viewModel)
+                {
+                    if (viewModel.EditCommand.CanExecute(colis))
+                    {
+                        viewModel.EditCommand.Execute(colis);
+                    }
+                }
+            }
         }
     }
 }

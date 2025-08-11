@@ -12,8 +12,8 @@ using TransitManager.WPF.Helpers;
 
 namespace TransitManager.WPF.ViewModels
 {
-    // La classe DOIT être déclarée comme "partial" pour que les générateurs de code fonctionnent
-    public partial class ColisDetailViewModel : BaseViewModel
+    // RETRAIT du mot-clé "partial" pour désactiver la génération de code
+    public class ColisDetailViewModel : BaseViewModel
     {
         private readonly IColisService _colisService;
         private readonly IClientService _clientService;
@@ -21,39 +21,96 @@ namespace TransitManager.WPF.ViewModels
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
 
-        // --- Propriétés pour le Data Binding (générées par le MVVM Toolkit) ---
-
-        [ObservableProperty]
+        #region Champs Privés
         private Colis? _colis;
-
-        private List<Client> _allClients = new();
-        
-        [ObservableProperty]
         private ObservableCollection<Client> _clients = new();
-
-        [ObservableProperty]
+        private List<Client> _allClients = new();
         private ObservableCollection<Barcode> _barcodes = new();
-
-        [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(AddBarcodeCommand))]
         private string _newBarcode = string.Empty;
-
-        [ObservableProperty]
         private bool _destinataireEstProprietaire;
-
-        [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
         private Client? _selectedClient;
-        
-        [ObservableProperty]
         private string? _clientSearchText;
+        #endregion
 
-        // --- Commandes ---
+        #region Propriétés Publiques (Déclarées manuellement)
+        public Colis? Colis
+        {
+            get => _colis;
+            set => SetProperty(ref _colis, value);
+        }
+
+        public ObservableCollection<Client> Clients
+        {
+            get => _clients;
+            set => SetProperty(ref _clients, value);
+        }
+
+        public ObservableCollection<Barcode> Barcodes
+        {
+            get => _barcodes;
+            set => SetProperty(ref _barcodes, value);
+        }
+        
+        public string NewBarcode
+        {
+            get => _newBarcode;
+            set
+            {
+                if (SetProperty(ref _newBarcode, value))
+                {
+                    AddBarcodeCommand.NotifyCanExecuteChanged();
+                }
+            }
+        }
+
+        public bool DestinataireEstProprietaire
+        {
+            get => _destinataireEstProprietaire;
+            set
+            {
+                if (SetProperty(ref _destinataireEstProprietaire, value))
+                {
+                    UpdateDestinataire();
+                }
+            }
+        }
+        
+        public Client? SelectedClient
+        {
+            get => _selectedClient;
+            set
+            {
+                if (SetProperty(ref _selectedClient, value))
+                {
+                    SaveCommand.NotifyCanExecuteChanged();
+                    if (DestinataireEstProprietaire)
+                    {
+                        UpdateDestinataire();
+                    }
+                }
+            }
+        }
+
+        public string? ClientSearchText
+        {
+            get => _clientSearchText;
+            set
+            {
+                if (SetProperty(ref _clientSearchText, value) && value != SelectedClient?.NomComplet)
+                {
+                    FilterClients(value);
+                }
+            }
+        }
+        #endregion
+
+        #region Commandes
         public IAsyncRelayCommand SaveCommand { get; }
         public IRelayCommand CancelCommand { get; }
         public IRelayCommand AddBarcodeCommand { get; }
         public IRelayCommand<Barcode> RemoveBarcodeCommand { get; }
         public IRelayCommand GenerateBarcodeCommand { get; }
+        #endregion
 
         public ColisDetailViewModel(IColisService colisService, IClientService clientService, IBarcodeService barcodeService, INavigationService navigationService, IDialogService dialogService)
         {
@@ -83,7 +140,6 @@ namespace TransitManager.WPF.ViewModels
         private async Task SaveAsync()
         {
             if (!CanSave() || Colis == null || SelectedClient == null) return;
-            
             Colis.ClientId = SelectedClient.Id;
             Colis.Barcodes = Barcodes.ToList();
 
@@ -94,7 +150,6 @@ namespace TransitManager.WPF.ViewModels
                     bool isNew = Colis.CreePar == null;
                     if (isNew) await _colisService.CreateAsync(Colis);
                     else await _colisService.UpdateAsync(Colis);
-                    
                     await _dialogService.ShowInformationAsync("Succès", "Le colis a été enregistré.");
                     _navigationService.NavigateTo("Colis");
                 }
@@ -104,7 +159,7 @@ namespace TransitManager.WPF.ViewModels
                 }
             });
         }
-        
+
         private void Cancel() => _navigationService.GoBack();
 
         private void AddBarcode()
@@ -126,14 +181,6 @@ namespace TransitManager.WPF.ViewModels
             Barcodes.Add(new Barcode { Value = _barcodeService.GenerateBarcode() });
         }
 
-        partial void OnClientSearchTextChanged(string? value)
-        {
-            if (value != SelectedClient?.NomComplet)
-            {
-                FilterClients(value);
-            }
-        }
-
         private void FilterClients(string? searchText)
         {
             if (string.IsNullOrWhiteSpace(searchText))
@@ -143,31 +190,17 @@ namespace TransitManager.WPF.ViewModels
             else
             {
                 var searchTextLower = searchText.ToLower();
-                var filtered = _allClients.Where(c => 
+                var filtered = _allClients.Where(c =>
                     c.NomComplet.ToLower().Contains(searchTextLower) ||
                     c.TelephonePrincipal.Contains(searchTextLower)
                 );
                 Clients = new ObservableCollection<Client>(filtered);
             }
         }
-        
-        partial void OnDestinataireEstProprietaireChanged(bool value)
-        {
-            UpdateDestinataire();
-        }
-
-        partial void OnSelectedClientChanged(Client? value)
-        {
-            if (DestinataireEstProprietaire)
-            {
-                UpdateDestinataire();
-            }
-        }
 
         private void UpdateDestinataire()
         {
             if (Colis == null) return;
-
             if (DestinataireEstProprietaire && SelectedClient != null)
             {
                 Colis.Destinataire = SelectedClient.NomComplet;
@@ -183,7 +216,7 @@ namespace TransitManager.WPF.ViewModels
                 CalculatePrice();
             }
         }
-        
+
         private void CalculatePrice()
         {
             if (Colis == null) return;

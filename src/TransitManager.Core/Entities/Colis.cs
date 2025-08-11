@@ -1,168 +1,105 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using TransitManager.Core.Enums;
 
 namespace TransitManager.Core.Entities
 {
-    /// <summary>
-    /// Représente un colis/marchandise dans le système
-    /// </summary>
     public class Colis : BaseEntity
     {
-		public virtual ICollection<Barcode> Barcodes { get; set; } = new List<Barcode>();
+        // --- Champs privés ---
+        private string _numeroReference = string.Empty;
+        private Guid _clientId;
+        private Guid? _conteneurId;
+        private DateTime _dateArrivee;
+        private EtatColis _etat;
+        private StatutColis _statut;
+        private TypeColis _type;
+        private int _nombrePieces = 1;
+        private string _designation = string.Empty;
+        private decimal _poids;
+        private decimal _longueur;
+        private decimal _largeur;
+        private decimal _hauteur;
+        private decimal _valeurDeclaree;
+        private bool _estFragile;
+        private bool _manipulationSpeciale;
+        private string? _instructionsSpeciales;
+        private string? _photos;
+        private DateTime? _dateDernierScan;
+        private string? _localisationActuelle;
+        private string? _historiqueScan;
+        private DateTime? _dateLivraison;
+        private string? _destinataire;
+        private string? _signatureReception;
+        private string? _commentaires;
+        private string? _telephoneDestinataire;
+        private string _destinationFinale = string.Empty;
+        private TypeEnvoi _typeEnvoi;
+        private bool _livraisonADomicile;
+        private decimal _prixTotal;
 
+        // --- Propriétés Publiques ---
+        public virtual ICollection<Barcode> Barcodes { get; set; } = new List<Barcode>();
 
-        /// <summary>
-        /// Numéro de référence interne
-        /// </summary>
         [Required]
         [StringLength(50)]
-        public string NumeroReference { get; set; } = string.Empty;
-
-        /// <summary>
-        /// ID du client propriétaire
-        /// </summary>
-        public Guid ClientId { get; set; }
-
-        /// <summary>
-        /// ID du conteneur (si affecté)
-        /// </summary>
-        public Guid? ConteneurId { get; set; }
-
-        /// <summary>
-        /// Date d'arrivée/réception
-        /// </summary>
-        public DateTime DateArrivee { get; set; }
-
-        /// <summary>
-        /// État du colis
-        /// </summary>
-        public EtatColis Etat { get; set; }
-
-        /// <summary>
-        /// Statut actuel du colis
-        /// </summary>
-        public StatutColis Statut { get; set; }
-
-        /// <summary>
-        /// Type de colis
-        /// </summary>
-        public TypeColis Type { get; set; }
-
-        /// <summary>
-        /// Nombre de pièces dans le lot
-        /// </summary>
-        public int NombrePieces { get; set; } = 1;
-
-        /// <summary>
-        /// Désignation/description détaillée
-        /// </summary>
+        public string NumeroReference { get => _numeroReference; set => SetProperty(ref _numeroReference, value); }
+        public Guid ClientId { get => _clientId; set => SetProperty(ref _clientId, value); }
+        public Guid? ConteneurId { get => _conteneurId; set => SetProperty(ref _conteneurId, value); }
+        public DateTime DateArrivee { get => _dateArrivee; set => SetProperty(ref _dateArrivee, value); }
+        public EtatColis Etat { get => _etat; set => SetProperty(ref _etat, value); }
+        public StatutColis Statut { get => _statut; set => SetProperty(ref _statut, value); }
+        public TypeColis Type { get => _type; set => SetProperty(ref _type, value); }
+        public int NombrePieces { get => _nombrePieces; set => SetProperty(ref _nombrePieces, value); }
+        
         [Required]
         [StringLength(500)]
-        public string Designation { get; set; } = string.Empty;
+        public string Designation { get => _designation; set => SetProperty(ref _designation, value); }
 
-        /// <summary>
-        /// Poids en kilogrammes
-        /// </summary>
-        public decimal Poids { get; set; }
-
-        /// <summary>
-        /// Longueur en centimètres
-        /// </summary>
-        public decimal Longueur { get; set; }
-
-        /// <summary>
-        /// Largeur en centimètres
-        /// </summary>
-        public decimal Largeur { get; set; }
-
-        /// <summary>
-        /// Hauteur en centimètres
-        /// </summary>
-        public decimal Hauteur { get; set; }
-
-        /// <summary>
-        /// Volume calculé en m³
-        /// </summary>
-        public decimal Volume => (Longueur * Largeur * Hauteur) / 1000000m;
-
-        /// <summary>
-        /// Valeur déclarée pour l'assurance
-        /// </summary>
-        public decimal ValeurDeclaree { get; set; }
-
-        /// <summary>
-        /// Indique si le colis est fragile
-        /// </summary>
-        public bool EstFragile { get; set; }
-
-        /// <summary>
-        /// Indique si le colis nécessite une manipulation spéciale
-        /// </summary>
-        public bool ManipulationSpeciale { get; set; }
-
-        /// <summary>
-        /// Instructions spéciales de manipulation
-        /// </summary>
+        public decimal Poids { get => _poids; set => SetProperty(ref _poids, value); }
+        public decimal Longueur { get => _longueur; set => SetProperty(ref _longueur, value); }
+        public decimal Largeur { get => _largeur; set => SetProperty(ref _largeur, value); }
+        public decimal Hauteur { get => _hauteur; set => SetProperty(ref _hauteur, value); }
+        public decimal ValeurDeclaree { get => _valeurDeclaree; set => SetProperty(ref _valeurDeclaree, value); }
+        public bool EstFragile { get => _estFragile; set => SetProperty(ref _estFragile, value); }
+        public bool ManipulationSpeciale { get => _manipulationSpeciale; set => SetProperty(ref _manipulationSpeciale, value); }
+        
         [StringLength(1000)]
-        public string? InstructionsSpeciales { get; set; }
-
-        /// <summary>
-        /// Photos du colis (chemins séparés par des virgules)
-        /// </summary>
-        public string? Photos { get; set; }
-
-        /// <summary>
-        /// Date de dernière scan
-        /// </summary>
-        public DateTime? DateDernierScan { get; set; }
-
-        /// <summary>
-        /// Localisation actuelle
-        /// </summary>
+        public string? InstructionsSpeciales { get => _instructionsSpeciales; set => SetProperty(ref _instructionsSpeciales, value); }
+        
+        // --- PROPRIÉTÉS RESTAURÉES ---
+        public string? Photos { get => _photos; set => SetProperty(ref _photos, value); }
+        public DateTime? DateDernierScan { get => _dateDernierScan; set => SetProperty(ref _dateDernierScan, value); }
         [StringLength(200)]
-        public string? LocalisationActuelle { get; set; }
+        public string? LocalisationActuelle { get => _localisationActuelle; set => SetProperty(ref _localisationActuelle, value); }
+        public string? HistoriqueScan { get => _historiqueScan; set => SetProperty(ref _historiqueScan, value); }
+        public DateTime? DateLivraison { get => _dateLivraison; set => SetProperty(ref _dateLivraison, value); }
+        public string? SignatureReception { get => _signatureReception; set => SetProperty(ref _signatureReception, value); }
+        public string? Commentaires { get => _commentaires; set => SetProperty(ref _commentaires, value); }
+        // --- FIN DES PROPRIÉTÉS RESTAURÉES ---
 
-        /// <summary>
-        /// Historique des scans (JSON)
-        /// </summary>
-        public string? HistoriqueScan { get; set; }
-
-        /// <summary>
-        /// Date de livraison
-        /// </summary>
-        public DateTime? DateLivraison { get; set; }
-
-        /// <summary>
-        /// Nom du destinataire final
-        /// </summary>
         [StringLength(200)]
-        public string? Destinataire { get; set; }
+        public string? Destinataire { get => _destinataire; set => SetProperty(ref _destinataire, value); }
+        
+        [StringLength(20)]
+        public string? TelephoneDestinataire { get => _telephoneDestinataire; set => SetProperty(ref _telephoneDestinataire, value); }
+        
+        [Required]
+        [StringLength(200)]
+        public string DestinationFinale { get => _destinationFinale; set => SetProperty(ref _destinationFinale, value); }
 
-        /// <summary>
-        /// Signature de réception (base64)
-        /// </summary>
-        public string? SignatureReception { get; set; }
+        public TypeEnvoi TypeEnvoi { get => _typeEnvoi; set => SetProperty(ref _typeEnvoi, value); }
+        public bool LivraisonADomicile { get => _livraisonADomicile; set => SetProperty(ref _livraisonADomicile, value); }
+        public decimal PrixTotal { get => _prixTotal; set => SetProperty(ref _prixTotal, value); }
 
-        /// <summary>
-        /// Commentaires/notes
-        /// </summary>
-        public string? Commentaires { get; set; }
-
-        // Navigation properties
-        /// <summary>
-        /// Client propriétaire
-        /// </summary>
         public virtual Client? Client { get; set; }
-
-        /// <summary>
-        /// Conteneur associé
-        /// </summary>
         public virtual Conteneur? Conteneur { get; set; }
 
-        /// <summary>
-        /// Constructeur
-        /// </summary>
+        public decimal Volume => (Longueur * Largeur * Hauteur) / 1000000m;
+        public decimal PoidsVolumetrique => Volume * 167;
+        public decimal PoidsFacturable => Math.Max(Poids, PoidsVolumetrique);
+
         public Colis()
         {
             DateArrivee = DateTime.UtcNow;
@@ -171,53 +108,9 @@ namespace TransitManager.Core.Entities
             Etat = EtatColis.BonEtat;
         }
 
-        /// <summary>
-        /// Génère une référence unique
-        /// </summary>
         private static string GenerateReference()
         {
-            var date = DateTime.Now.ToString("yyyyMMdd");
-            var random = new Random().Next(10000, 99999);
-            return $"REF-{date}-{random}";
+            return $"REF-{DateTime.Now:yyyyMMdd}-{new Random().Next(10000, 99999)}";
         }
-
-        /// <summary>
-        /// Génère un code-barres unique
-        /// </summary>
-        private static string GenerateBarcode()
-        {
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            var random = new Random().Next(1000, 9999);
-            return $"{timestamp}{random}";
-        }
-
-        /// <summary>
-        /// Calcule le poids volumétrique
-        /// </summary>
-        public decimal PoidsVolumetrique => Volume * 167; // Standard industrie : 1m³ = 167kg
-
-        /// <summary>
-        /// Poids facturable (le plus élevé entre poids réel et volumétrique)
-        /// </summary>
-        public decimal PoidsFacturable => Math.Max(Poids, PoidsVolumetrique);
-		
-		public TypeEnvoi TypeEnvoi { get; set; }
-		public bool LivraisonADomicile { get; set; }
-		public decimal PrixTotal { get; set; }
-		
-
-		/// <summary>
-		/// Téléphone du destinataire final
-		/// </summary>
-		[StringLength(20)]
-		public string? TelephoneDestinataire { get; set; }
-
-		/// <summary>
-		/// Destination finale du colis
-		/// </summary>
-		[StringLength(200)]
-		public string DestinationFinale { get; set; } = string.Empty;
     }
-
-
 }

@@ -98,6 +98,8 @@
         <!-- Liste des colis -->
         <materialDesign:Card Grid.Row="2" Margin="16,8,16,8">
             <DataGrid ItemsSource="{Binding Colis}" SelectedItem="{Binding SelectedClient}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" Style="{StaticResource MaterialDesignDataGrid}">
+				
+				
 				<DataGrid.Columns>
 					<!-- Code-barres (affiche le premier ou "N/A") -->
 					<DataGridTextColumn Header="Code-barres" Binding="{Binding Barcodes[0].Value, TargetNullValue='N/A'}" Width="140" />

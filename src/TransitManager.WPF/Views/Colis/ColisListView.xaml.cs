@@ -5,7 +5,7 @@ using TransitManager.WPF.ViewModels;
 
 namespace TransitManager.WPF.Views.Colis
 {
-    public partial class ColisListView : UserControl
+    public partial class ColisListView : System.Windows.Controls.UserControl
     {
         public ColisListView()
         {

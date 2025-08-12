@@ -96,42 +96,33 @@
         </materialDesign:Card>
 
         <!-- Liste des colis -->
-        <materialDesign:Card Grid.Row="2" Margin="16,8,16,8">
-            <DataGrid ItemsSource="{Binding Colis}" SelectedItem="{Binding SelectedClient}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" Style="{StaticResource MaterialDesignDataGrid}">
+		<materialDesign:Card Grid.Row="2" Margin="16,8,16,8">
+			<DataGrid ItemsSource="{Binding Colis}"
+					  SelectedItem="{Binding SelectedColis}"
+					  AutoGenerateColumns="False"
+					  CanUserAddRows="False"
+					  IsReadOnly="True"
+					  Style="{StaticResource MaterialDesignDataGrid}">
 				
-				
+				<DataGrid.Resources>
+					<Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+						<EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
+					</Style>
+				</DataGrid.Resources>
+
 				<DataGrid.Columns>
-					<!-- Code-barres (affiche le premier ou "N/A") -->
-					<DataGridTextColumn Header="Code-barres" Binding="{Binding Barcodes[0].Value, TargetNullValue='N/A'}" Width="140" />
-					
-					<!-- Client -->
+					<!-- Utilise la propriété FirstBarcode pour un affichage sûr -->
+					<DataGridTextColumn Header="Code-barres" Binding="{Binding FirstBarcode}" Width="140" />
 					<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*" />
-
-					<!-- Désignation -->
 					<DataGridTextColumn Header="Désignation" Binding="{Binding Designation}" Width="2*" />
-					
-					<!-- Destination -->
 					<DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="150" />
-					
-					<!-- Nombre de Pièces -->
 					<DataGridTextColumn Header="Pièces" Binding="{Binding NombrePieces}" Width="80" />
-
-					<!-- Type de Colis -->
-					<DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100" />
-					
-					<!-- Valeur Déclarée -->
-					<DataGridTextColumn Header="Valeur" Binding="{Binding ValeurDeclaree, StringFormat=C}" Width="100" />
-					
-					<!-- Prix Total -->
 					<DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat=C}" Width="100">
 						<DataGridTextColumn.ElementStyle>
-							<Style TargetType="TextBlock">
-								<Setter Property="FontWeight" Value="Bold"/>
-							</Style>
+							<Style TargetType="TextBlock"><Setter Property="FontWeight" Value="Bold"/></Style>
 						</DataGridTextColumn.ElementStyle>
 					</DataGridTextColumn>
 
-					<!-- Statut -->
 					<DataGridTemplateColumn Header="Statut" Width="120">
 						<DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
@@ -141,9 +132,32 @@
 							</DataTemplate>
 						</DataGridTemplateColumn.CellTemplate>
 					</DataGridTemplateColumn>
+
+					<!-- Colonne Actions pour éditer et supprimer -->
+					<DataGridTemplateColumn Header="Actions" Width="Auto">
+						<DataGridTemplateColumn.CellTemplate>
+							<DataTemplate>
+								<StackPanel Orientation="Horizontal">
+									<Button Style="{StaticResource MaterialDesignIconButton}"
+											Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+											CommandParameter="{Binding}"
+											ToolTip="Modifier / Voir Détails">
+										<materialDesign:PackIcon Kind="Pencil" />
+									</Button>
+									<Button Style="{StaticResource MaterialDesignIconButton}"
+											Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+											CommandParameter="{Binding}"
+											ToolTip="Supprimer">
+										<materialDesign:PackIcon Kind="Delete" Foreground="{StaticResource ErrorBrush}" />
+									</Button>
+								</StackPanel>
+							</DataTemplate>
+						</DataGridTemplateColumn.CellTemplate>
+					</DataGridTemplateColumn>
+
 				</DataGrid.Columns>
-            </DataGrid>
-        </materialDesign:Card>
+			</DataGrid>
+		</materialDesign:Card>
 
         <!-- Barre de statut / Statistiques -->
         <materialDesign:Card Grid.Row="3" Margin="16,0,16,16" Padding="8">

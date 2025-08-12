@@ -112,5 +112,7 @@ namespace TransitManager.Core.Entities
         {
             return $"REF-{DateTime.Now:yyyyMMdd}-{new Random().Next(10000, 99999)}";
         }
+		
+		public string FirstBarcode => Barcodes?.FirstOrDefault()?.Value ?? "N/A";
     }
 }

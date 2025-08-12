@@ -33,6 +33,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+				.Include(c => c.Barcodes)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
@@ -63,6 +64,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+				.Include(c => c.Barcodes)
                 .AsNoTracking()
                 .OrderByDescending(c => c.DateArrivee)
                 .ToListAsync();
@@ -128,14 +130,37 @@ namespace TransitManager.Infrastructure.Services
 
             return colis;
         }
+		
+		public async Task<Colis> UpdateAsync(Colis colis)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
 
-        public async Task<Colis> UpdateAsync(Colis colis)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            context.Colis.Update(colis);
-            await context.SaveChangesAsync();
-            return colis;
-        }
+			// 1. Récupérer le colis original de la base de données, en incluant ses codes-barres existants.
+			var colisInDb = await context.Colis
+				.Include(c => c.Barcodes)
+				.FirstOrDefaultAsync(c => c.Id == colis.Id);
+
+			if (colisInDb == null)
+			{
+				throw new InvalidOperationException("Le colis que vous essayez de modifier n'existe pas.");
+			}
+
+			// 2. Mettre à jour les propriétés simples du colis (non-collections).
+			//    Ceci préserve l'objet que EF est en train de suivre.
+			context.Entry(colisInDb).CurrentValues.SetValues(colis);
+
+			// 3. Gérer manuellement la collection de codes-barres.
+			//    On supprime les anciens et on ajoute les nouveaux pour être sûr.
+			colisInDb.Barcodes.Clear();
+			foreach (var barcode in colis.Barcodes)
+			{
+				colisInDb.Barcodes.Add(new Barcode { Value = barcode.Value });
+			}
+
+			// 4. Sauvegarder les changements.
+			await context.SaveChangesAsync();
+			return colisInDb;
+		}
 
         public async Task<bool> DeleteAsync(Guid id)
         {
@@ -267,6 +292,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+				.Include(c => c.Barcodes) 
                 .Where(c => c.Actif && (
                     c.Barcodes.Any(b => b.Value.Contains(searchTerm)) ||
                     c.NumeroReference.ToLower().Contains(searchTerm) ||

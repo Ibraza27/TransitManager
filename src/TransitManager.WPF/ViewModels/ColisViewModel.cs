@@ -14,7 +14,7 @@ namespace TransitManager.WPF.ViewModels
 {
     public class ColisViewModel : BaseViewModel
     {
-        #region Services injectés
+        #region Services
         private readonly IColisService _colisService;
         private readonly IClientService _clientService;
         private readonly IConteneurService _conteneurService;
@@ -23,15 +23,13 @@ namespace TransitManager.WPF.ViewModels
         private readonly IExportService _exportService;
         #endregion
 
-        #region Champs privés et Propriétés publiques
-
+        #region Propriétés
         private ObservableCollection<Colis> _colis = new();
         public ObservableCollection<Colis> Colis { get => _colis; set => SetProperty(ref _colis, value); }
-
+        
         private Colis? _selectedColis;
         public Colis? SelectedColis { get => _selectedColis; set => SetProperty(ref _selectedColis, value); }
         
-        // --- Filtres ---
         private string _searchText = string.Empty;
         public string SearchText { get => _searchText; set { if (SetProperty(ref _searchText, value)) { _ = LoadColisAsync(); } } }
 
@@ -50,7 +48,6 @@ namespace TransitManager.WPF.ViewModels
         private DateTime? _selectedDate;
         public DateTime? SelectedDate { get => _selectedDate; set { if (SetProperty(ref _selectedDate, value)) { _ = LoadColisAsync(); } } }
         
-        // --- Listes pour les ComboBox de filtres ---
         private ObservableCollection<Client> _clientsList = new();
         public ObservableCollection<Client> ClientsList { get => _clientsList; set => SetProperty(ref _clientsList, value); }
         
@@ -60,7 +57,6 @@ namespace TransitManager.WPF.ViewModels
         private ObservableCollection<string> _statutsList = new();
         public ObservableCollection<string> StatutsList { get => _statutsList; set => SetProperty(ref _statutsList, value); }
 
-        // --- Statistiques ---
         private int _totalColis;
         public int TotalColis { get => _totalColis; set => SetProperty(ref _totalColis, value); }
 
@@ -69,7 +65,6 @@ namespace TransitManager.WPF.ViewModels
 
         private decimal _volumeTotal;
         public decimal VolumeTotal { get => _volumeTotal; set => SetProperty(ref _volumeTotal, value); }
-
         #endregion
 
         #region Commandes
@@ -83,12 +78,8 @@ namespace TransitManager.WPF.ViewModels
         #endregion
 
         public ColisViewModel(
-            IColisService colisService, 
-            IClientService clientService, 
-            IConteneurService conteneurService, 
-            INavigationService navigationService, 
-            IDialogService dialogService, 
-            IExportService exportService)
+            IColisService colisService, IClientService clientService, IConteneurService conteneurService, 
+            INavigationService navigationService, IDialogService dialogService, IExportService exportService)
         {
             _colisService = colisService;
             _clientService = clientService;
@@ -96,12 +87,11 @@ namespace TransitManager.WPF.ViewModels
             _navigationService = navigationService;
             _dialogService = dialogService;
             _exportService = exportService;
-
             Title = "Gestion des Colis / Marchandises";
-            
+
             NewColisCommand = new AsyncRelayCommand(NewColis);
             RefreshCommand = new AsyncRelayCommand(LoadAsync);
-            SearchCommand = new AsyncRelayCommand(LoadColisAsync); // Le bouton recherche relance le filtre
+            SearchCommand = new AsyncRelayCommand(LoadColisAsync);
             ClearFiltersCommand = new RelayCommand(ClearFilters);
             ExportCommand = new AsyncRelayCommand(ExportAsync);
             EditCommand = new AsyncRelayCommand<Colis>(EditColis);
@@ -112,7 +102,6 @@ namespace TransitManager.WPF.ViewModels
 
         public override Task InitializeAsync()
         {
-            // Cette méthode est appelée à chaque fois que l'utilisateur navigue vers cet onglet
             return LoadAsync();
         }
 
@@ -121,10 +110,9 @@ namespace TransitManager.WPF.ViewModels
             await ExecuteBusyActionAsync(async () =>
             {
                 StatusMessage = "Chargement des données...";
-                var clientsTask = LoadClientsForFilterAsync();
-                var conteneursTask = LoadConteneursForFilterAsync();
-                await Task.WhenAll(clientsTask, conteneursTask);
+                var filterDataTask = LoadFilterDataAsync();
                 await LoadColisAsync();
+                await filterDataTask;
                 StatusMessage = "";
             });
         }
@@ -135,30 +123,23 @@ namespace TransitManager.WPF.ViewModels
             {
                 IEnumerable<Core.Entities.Colis> filteredColis;
 
-                if (!string.IsNullOrWhiteSpace(SearchText))
-                {
+                if (!string.IsNullOrWhiteSpace(SearchText)) {
                     filteredColis = await _colisService.SearchAsync(SearchText);
-                }
-                else
-                {
+                } else {
                     filteredColis = await _colisService.GetAllAsync();
                 }
 
-                if (!string.IsNullOrEmpty(SelectedStatut) && SelectedStatut != "Tous" && Enum.TryParse<StatutColis>(SelectedStatut, out var statut))
-                {
-                    filteredColis = filteredColis.Where(c => c.Statut == statut);
-                }
-                if (SelectedClient != null)
-                {
+                if (SelectedClient != null) {
                     filteredColis = filteredColis.Where(c => c.ClientId == SelectedClient.Id);
                 }
-                if (SelectedConteneur != null)
-                {
+                if (SelectedConteneur != null) {
                     filteredColis = filteredColis.Where(c => c.ConteneurId == SelectedConteneur.Id);
                 }
-                if (SelectedDate.HasValue)
-                {
+                if (SelectedDate.HasValue) {
                     filteredColis = filteredColis.Where(c => c.DateArrivee.Date == SelectedDate.Value.Date);
+                }
+                if (!string.IsNullOrEmpty(SelectedStatut) && SelectedStatut != "Tous" && Enum.TryParse<StatutColis>(SelectedStatut, out var statut)) {
+                    filteredColis = filteredColis.Where(c => c.Statut == statut);
                 }
                 
                 Colis = new ObservableCollection<Core.Entities.Colis>(filteredColis.ToList());
@@ -166,75 +147,36 @@ namespace TransitManager.WPF.ViewModels
             });
         }
         
-        private async Task LoadClientsForFilterAsync()
+        private async Task LoadFilterDataAsync()
         {
-            ClientsList = new ObservableCollection<Client>(await _clientService.GetActiveClientsAsync());
+            var clients = await _clientService.GetActiveClientsAsync();
+            ClientsList = new ObservableCollection<Client>(clients);
+            var conteneurs = await _conteneurService.GetOpenConteneursAsync();
+            ConteneursList = new ObservableCollection<Conteneur>(conteneurs);
         }
 
-        private async Task LoadConteneursForFilterAsync()
-        {
-            ConteneursList = new ObservableCollection<Conteneur>(await _conteneurService.GetOpenConteneursAsync());
-        }
-
-        private void InitializeStatutsList()
-        {
-            StatutsList = new ObservableCollection<string>(Enum.GetNames(typeof(StatutColis)));
-            StatutsList.Insert(0, "Tous");
-        }
-
-        private void CalculateStatistics()
-        {
-            TotalColis = Colis.Count;
-            PoidsTotal = Colis.Sum(c => c.Poids);
-            VolumeTotal = Colis.Sum(c => c.Volume);
-        }
+        private void InitializeStatutsList() { StatutsList = new ObservableCollection<string>(Enum.GetNames(typeof(StatutColis))); StatutsList.Insert(0, "Tous"); }
+        private void CalculateStatistics() { TotalColis = Colis.Count; PoidsTotal = Colis.Sum(c => c.Poids); VolumeTotal = Colis.Sum(c => c.Volume); }
         
         private void ClearFilters()
         {
-            // Réinitialiser les propriétés déclenchera automatiquement le rechargement grâce aux setters
-            SelectedStatut = "Tous";
             SelectedClient = null;
             SelectedConteneur = null;
             SelectedDate = null;
-            SearchText = string.Empty; 
+            SelectedStatut = "Tous";
+            SearchText = string.Empty;
         }
 
-        private Task NewColis()
-        {
-            _navigationService.NavigateTo("ColisDetail", "new");
-            return Task.CompletedTask;
-        }
-
-        private Task EditColis(Colis? colis)
-        {
-            if (colis != null)
-            {
-                _navigationService.NavigateTo("ColisDetail", colis.Id);
-            }
-            return Task.CompletedTask;
-        }
+        private Task NewColis() { _navigationService.NavigateTo("ColisDetail", "new"); return Task.CompletedTask; }
+        private Task EditColis(Colis? colis) { if (colis != null) { _navigationService.NavigateTo("ColisDetail", colis.Id); } return Task.CompletedTask; }
 
         private async Task DeleteColis(Colis? colis)
         {
             if (colis == null) return;
-
-            var confirm = await _dialogService.ShowConfirmationAsync("Supprimer le Colis", $"Êtes-vous sûr de vouloir supprimer le colis avec la référence {colis.NumeroReference}?");
-            
-            if (confirm)
-            {
-                await ExecuteBusyActionAsync(async () =>
-                {
-                    try
-                    {
-                        await _colisService.DeleteAsync(colis.Id);
-                        StatusMessage = "Colis supprimé avec succès.";
-                        await LoadColisAsync(); // Recharger la liste pour refléter la suppression
-                    }
-                    catch (Exception ex)
-                    {
-                        await _dialogService.ShowErrorAsync("Erreur de suppression", ex.Message);
-                    }
-                });
+            var confirm = await _dialogService.ShowConfirmationAsync("Supprimer le Colis", $"Êtes-vous sûr de vouloir supprimer le colis {colis.NumeroReference}?");
+            if (confirm) {
+                await _colisService.DeleteAsync(colis.Id);
+                await LoadAsync();
             }
         }
         
@@ -242,19 +184,12 @@ namespace TransitManager.WPF.ViewModels
         {
             await ExecuteBusyActionAsync(async () =>
             {
-                try
+                var data = await _exportService.ExportColisToExcelAsync(Colis);
+                var savePath = _dialogService.ShowSaveFileDialog("Fichiers Excel (*.xlsx)|*.xlsx", $"Export_Colis_{DateTime.Now:yyyyMMdd}.xlsx");
+                if (!string.IsNullOrEmpty(savePath))
                 {
-                    var data = await _exportService.ExportColisToExcelAsync(Colis);
-                    var savePath = _dialogService.ShowSaveFileDialog("Fichiers Excel (*.xlsx)|*.xlsx", $"Export_Colis_{DateTime.Now:yyyyMMdd}.xlsx");
-                    if (!string.IsNullOrEmpty(savePath))
-                    {
-                        await System.IO.File.WriteAllBytesAsync(savePath, data);
-                        await _dialogService.ShowInformationAsync("Succès", "Les données ont été exportées avec succès.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await _dialogService.ShowErrorAsync("Erreur d'exportation", ex.Message);
+                    await System.IO.File.WriteAllBytesAsync(savePath, data);
+                    await _dialogService.ShowInformationAsync("Succès", "Exportation réussie.");
                 }
             });
         }

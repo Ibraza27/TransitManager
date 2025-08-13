@@ -390,7 +390,7 @@ namespace TransitManager.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Utilisateurs",
                 columns: new[] { "Id", "Actif", "CreePar", "DateCreation", "DateModification", "DateVerrouillage", "DerniereConnexion", "DoitChangerMotDePasse", "Email", "ExpirationToken", "FuseauHoraire", "Langue", "ModifiePar", "MotDePasseHash", "Nom", "NomUtilisateur", "NotificationsActivees", "NotificationsEmail", "NotificationsSMS", "PasswordSalt", "PermissionsSpecifiques", "PhotoProfil", "Preferences", "Prenom", "Role", "RowVersion", "Telephone", "TentativesConnexionEchouees", "Theme", "TokenReinitialisation" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 12, 7, 35, 43, 247, DateTimeKind.Utc).AddTicks(8997), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$gwzLG2ICLKdqsl466lVMLenAgQnay56quwJESlIEsix.PX/ezlNCe", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 13, 17, 5, 15, 497, DateTimeKind.Utc).AddTicks(414), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$U0NM8YqAUoBhqp/sv6Q0t.jMfpmj9fzfXcbfsdFwgSV1P80VYWP86", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UtilisateurId",
@@ -406,7 +406,8 @@ namespace TransitManager.Infrastructure.Migrations
                 name: "IX_Barcodes_Value",
                 table: "Barcodes",
                 column: "Value",
-                unique: true);
+                unique: true,
+                filter: "\"Actif\" = true");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Clients_CodeClient",

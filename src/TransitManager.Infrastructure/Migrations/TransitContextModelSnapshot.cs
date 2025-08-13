@@ -109,7 +109,8 @@ namespace TransitManager.Infrastructure.Migrations
                     b.HasIndex("ColisId");
 
                     b.HasIndex("Value")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"Actif\" = true");
 
                     b.ToTable("Barcodes", (string)null);
                 });
@@ -1073,12 +1074,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 8, 12, 7, 35, 43, 247, DateTimeKind.Utc).AddTicks(8997),
+                            DateCreation = new DateTime(2025, 8, 13, 17, 5, 15, 497, DateTimeKind.Utc).AddTicks(414),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$gwzLG2ICLKdqsl466lVMLenAgQnay56quwJESlIEsix.PX/ezlNCe",
+                            MotDePasseHash = "$2a$11$U0NM8YqAUoBhqp/sv6Q0t.jMfpmj9fzfXcbfsdFwgSV1P80VYWP86",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,

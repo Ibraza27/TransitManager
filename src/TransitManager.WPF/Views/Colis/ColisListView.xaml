@@ -31,7 +31,6 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding NewColisCommand}" Margin="0,0,10,0">
                         <StackPanel Orientation="Horizontal">
-                            <!-- CORRECTION ICI: PackagePlus -> PackageVariantPlus -->
                             <materialDesign:PackIcon Kind="PackageVariantPlus" Margin="0,0,5,0"/>
                             <TextBlock Text="Nouveau Colis"/>
                         </StackPanel>
@@ -47,7 +46,7 @@
             </Grid>
         </materialDesign:Card>
 
-        <!-- Barre de recherche et filtres (inchangée) -->
+        <!-- Barre de recherche et filtres -->
         <materialDesign:Card Grid.Row="1" Margin="16,8,16,0" Padding="16">
             <Grid>
                 <Grid.RowDefinitions>
@@ -111,8 +110,8 @@
 				</DataGrid.Resources>
 
 				<DataGrid.Columns>
-					<!-- Utilise la propriété FirstBarcode pour un affichage sûr -->
-					<DataGridTextColumn Header="Code-barres" Binding="{Binding FirstBarcode}" Width="140" />
+                    <!-- Correction: Binding sur AllBarcodes pour afficher tous les codes-barres -->
+					<DataGridTextColumn Header="Codes-barres" Binding="{Binding AllBarcodes}" Width="140" />
 					<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*" />
 					<DataGridTextColumn Header="Désignation" Binding="{Binding Designation}" Width="2*" />
 					<DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="150" />
@@ -138,6 +137,7 @@
 						<DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<StackPanel Orientation="Horizontal">
+                                    <!-- Correction: AncestorType est bien UserControl car le DataContext du UserControl est le ViewModel -->
 									<Button Style="{StaticResource MaterialDesignIconButton}"
 											Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
 											CommandParameter="{Binding}"
@@ -161,7 +161,6 @@
 
         <!-- Barre de statut / Statistiques -->
         <materialDesign:Card Grid.Row="3" Margin="16,0,16,16" Padding="8">
-            <!-- Contenu de la barre de statut (inchangé) -->
              <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>

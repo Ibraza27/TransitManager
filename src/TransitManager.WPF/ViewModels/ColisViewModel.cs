@@ -33,8 +33,8 @@ namespace TransitManager.WPF.ViewModels
         private string _searchText = string.Empty;
         public string SearchText { get => _searchText; set { if (SetProperty(ref _searchText, value)) { _ = LoadColisAsync(); } } }
 
-        private bool _showFilters;
-        public bool ShowFilters { get => _showFilters; set => SetProperty(ref _showFilters, value); }
+		private bool _showFilters = true; // Par défaut, les filtres sont maintenant visibles
+		public bool ShowFilters { get => _showFilters; set => SetProperty(ref _showFilters, value); }
 
         private string? _selectedStatut = "Tous";
         public string? SelectedStatut { get => _selectedStatut; set { if (SetProperty(ref _selectedStatut, value)) { _ = LoadColisAsync(); } } }
@@ -164,7 +164,8 @@ namespace TransitManager.WPF.ViewModels
             SelectedConteneur = null;
             SelectedDate = null;
             SelectedStatut = "Tous";
-            SearchText = string.Empty;
+            // La recherche ne sera pas vidée pour permettre à l'utilisateur de la conserver s'il le souhaite
+            _ = LoadColisAsync();
         }
 
         private Task NewColis() { _navigationService.NavigateTo("ColisDetail", "new"); return Task.CompletedTask; }
@@ -176,7 +177,7 @@ namespace TransitManager.WPF.ViewModels
             var confirm = await _dialogService.ShowConfirmationAsync("Supprimer le Colis", $"Êtes-vous sûr de vouloir supprimer le colis {colis.NumeroReference}?");
             if (confirm) {
                 await _colisService.DeleteAsync(colis.Id);
-                await LoadAsync();
+                await LoadAsync(); // Recharger toutes les données pour refléter la suppression
             }
         }
         

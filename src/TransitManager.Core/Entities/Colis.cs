@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using TransitManager.Core.Enums;
 
 namespace TransitManager.Core.Entities
@@ -114,5 +115,6 @@ namespace TransitManager.Core.Entities
         }
 		
 		public string FirstBarcode => Barcodes?.FirstOrDefault()?.Value ?? "N/A";
+        public string AllBarcodes => Barcodes != null && Barcodes.Any() ? string.Join(", ", Barcodes.Select(b => b.Value)) : "N/A";
     }
 }

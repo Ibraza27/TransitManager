@@ -22,86 +22,101 @@ namespace TransitManager.WPF.ViewModels
         private readonly IDialogService _dialogService;
 
         #region Champs Privés
-        private Colis? _colis;
-        private ObservableCollection<Client> _clients = new();
-        private List<Client> _allClients = new();
-        private ObservableCollection<Barcode> _barcodes = new();
-        private string _newBarcode = string.Empty;
-        private bool _destinataireEstProprietaire;
-        private Client? _selectedClient;
-        private string? _clientSearchText;
-        #endregion
+		private Colis? _colis;
+		private ObservableCollection<Client> _clients = new();
+		private List<Client> _allClients = new();
+		private ObservableCollection<Barcode> _barcodes = new(); // Backing field pour la propriété
+		private string _newBarcode = string.Empty;
+		private bool _destinataireEstProprietaire;
+		private Client? _selectedClient;
+		private string? _clientSearchText;
+		#endregion
 
-        #region Propriétés Publiques (Déclarées manuellement)
-        public Colis? Colis
-        {
-            get => _colis;
-            set => SetProperty(ref _colis, value);
-        }
+		#region Propriétés Publiques
+		public Colis? Colis
+		{
+			get => _colis;
+			set => SetProperty(ref _colis, value);
+		}
 
-        public ObservableCollection<Client> Clients
-        {
-            get => _clients;
-            set => SetProperty(ref _clients, value);
-        }
+		public ObservableCollection<Client> Clients
+		{
+			get => _clients;
+			set => SetProperty(ref _clients, value);
+		}
 
-        public ObservableCollection<Barcode> Barcodes
-        {
-            get => _barcodes;
-            set => SetProperty(ref _barcodes, value);
-        }
-        
-        public string NewBarcode
-        {
-            get => _newBarcode;
-            set
-            {
-                if (SetProperty(ref _newBarcode, value))
-                {
-                    AddBarcodeCommand.NotifyCanExecuteChanged();
-                }
-            }
-        }
+		public ObservableCollection<Barcode> Barcodes
+		{
+			get => _barcodes;
+			set
+			{
+				// Se désabonner de l'ancienne collection pour éviter les fuites de mémoire
+				if (_barcodes != null)
+				{
+					_barcodes.CollectionChanged -= OnBarcodesCollectionChanged;
+				}
 
-        public bool DestinataireEstProprietaire
-        {
-            get => _destinataireEstProprietaire;
-            set
-            {
-                if (SetProperty(ref _destinataireEstProprietaire, value))
-                {
-                    UpdateDestinataire();
-                }
-            }
-        }
-        
-        public Client? SelectedClient
-        {
-            get => _selectedClient;
-            set
-            {
-                if (SetProperty(ref _selectedClient, value))
-                {
-                    SaveCommand.NotifyCanExecuteChanged();
-                    if (DestinataireEstProprietaire)
-                    {
-                        UpdateDestinataire();
-                    }
-                }
-            }
-        }
+				SetProperty(ref _barcodes, value);
 
-        public string? ClientSearchText
-        {
-            get => _clientSearchText;
-            set
-            {
-                if (SetProperty(ref _clientSearchText, value) && value != SelectedClient?.NomComplet)
-                {
-                    FilterClients(value);
-                }
-            }
-        }
+				// S'abonner à la nouvelle collection
+				if (_barcodes != null)
+				{
+					_barcodes.CollectionChanged += OnBarcodesCollectionChanged;
+				}
+			}
+		}
+				
+		public string NewBarcode
+		{
+			get => _newBarcode;
+			set
+			{
+				if (SetProperty(ref _newBarcode, value))
+				{
+					AddBarcodeCommand.NotifyCanExecuteChanged();
+				}
+			}
+		}
+
+		public bool DestinataireEstProprietaire
+		{
+			get => _destinataireEstProprietaire;
+			set
+			{
+				if (SetProperty(ref _destinataireEstProprietaire, value))
+				{
+					UpdateDestinataire();
+				}
+			}
+		}
+				
+		public Client? SelectedClient
+		{
+			get => _selectedClient;
+			set
+			{
+				if (SetProperty(ref _selectedClient, value))
+				{
+					SaveCommand.NotifyCanExecuteChanged();
+					if (DestinataireEstProprietaire)
+					{
+						UpdateDestinataire();
+					}
+				}
+			}
+		}
+
+		public string? ClientSearchText
+		{
+			get => _clientSearchText;
+			set
+			{
+				if (SetProperty(ref _clientSearchText, value) && value != SelectedClient?.NomComplet)
+				{
+					FilterClients(value);
+				}
+			}
+		}
         #endregion
 
         #region Commandes
@@ -131,6 +146,7 @@ namespace TransitManager.WPF.ViewModels
         {
             return Colis != null &&
                    SelectedClient != null &&
+				   Barcodes.Any() &&
                    !string.IsNullOrWhiteSpace(Colis.DestinationFinale) &&
                    !string.IsNullOrWhiteSpace(Colis.Destinataire) &&
                    Colis.NombrePieces > 0 &&
@@ -159,6 +175,12 @@ namespace TransitManager.WPF.ViewModels
                 }
             });
         }
+		
+		private void OnBarcodesCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+		{
+			// A chaque ajout ou suppression, on notifie à la commande de réévaluer son état.
+			SaveCommand.NotifyCanExecuteChanged();
+		}
 
         private void Cancel() => _navigationService.GoBack();
 

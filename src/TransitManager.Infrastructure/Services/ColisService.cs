@@ -118,33 +118,86 @@ namespace TransitManager.Infrastructure.Services
             return colis;
         }
 
-        public async Task<Colis> UpdateAsync(Colis colis)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colisInDb = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Id == colis.Id);
-            if (colisInDb == null) throw new InvalidOperationException("Colis non trouvé.");
+		public async Task<Colis> UpdateAsync(Colis colis)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			var colisInDb = await context.Colis
+				.Include(c => c.Barcodes)
+				.FirstOrDefaultAsync(c => c.Id == colis.Id);
 
-            context.Entry(colisInDb).CurrentValues.SetValues(colis);
+			if (colisInDb == null)
+			{
+				throw new DbUpdateConcurrencyException("Le colis que vous essayez de modifier n'existe plus.");
+			}
 
-            var barcodesToDelete = colisInDb.Barcodes.Where(db => !colis.Barcodes.Any(ui => ui.Value == db.Value)).ToList();
-            foreach (var b in barcodesToDelete) { context.Barcodes.Remove(b); }
+			context.Entry(colisInDb).CurrentValues.SetValues(colis);
+			
+			var submittedBarcodeValues = new HashSet<string>(colis.Barcodes.Select(b => b.Value.Trim()).Where(v => !string.IsNullOrEmpty(v)));
+			var dbBarcodes = colisInDb.Barcodes.ToList();
 
-            var barcodesToAdd = colis.Barcodes.Where(ui => !colisInDb.Barcodes.Any(db => db.Value == ui.Value)).ToList();
-            foreach (var b in barcodesToAdd) { colisInDb.Barcodes.Add(new Barcode { Value = b.Value }); }
+			// 3a. Identifier et "supprimer doucement" les codes-barres qui existent en BDD mais plus dans l'interface
+			var barcodesToRemove = dbBarcodes.Where(b => !submittedBarcodeValues.Contains(b.Value)).ToList();
+			if (barcodesToRemove.Any())
+			{
+				// === LA CORRECTION EST ICI ===
+				// Au lieu de supprimer physiquement, on les désactive.
+				foreach (var barcode in barcodesToRemove)
+				{
+					barcode.Actif = false;
+				}
+			}
 
-            await context.SaveChangesAsync();
-            return colisInDb;
-        }
+			// 3b. Identifier et ajouter les codes-barres qui sont dans l'interface mais pas encore en BDD
+			var dbBarcodeValues = new HashSet<string>(dbBarcodes.Select(b => b.Value));
+			var barcodesToAdd = submittedBarcodeValues
+				.Where(value => !dbBarcodeValues.Contains(value))
+				.Select(value => new Barcode { Value = value, ColisId = colisInDb.Id })
+				.ToList();
 
-        public async Task<bool> DeleteAsync(Guid id)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.FindAsync(id);
-            if (colis == null) return false;
-            colis.Actif = false;
-            await context.SaveChangesAsync();
-            return true;
-        }
+			if (barcodesToAdd.Any())
+			{
+				await context.Barcodes.AddRangeAsync(barcodesToAdd);
+			}
+			
+			context.Entry(colisInDb).Property(c => c.RowVersion).OriginalValue = colis.RowVersion;
+
+			try
+			{
+				await context.SaveChangesAsync();
+			}
+			catch (DbUpdateConcurrencyException ex)
+			{
+				throw new InvalidOperationException("Les données du colis ont été modifiées par un autre utilisateur. Veuillez rafraîchir et réessayer.", ex);
+			}
+			
+			return colisInDb;
+		}
+
+		public async Task<bool> DeleteAsync(Guid id)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			// On charge le colis ET ses codes-barres associés
+			var colis = await context.Colis
+				.Include(c => c.Barcodes)
+				.FirstOrDefaultAsync(c => c.Id == id);
+
+			if (colis == null) return false;
+
+			// 1. Désactiver le colis lui-même
+			colis.Actif = false;
+
+			// 2. Désactiver tous les codes-barres liés
+			foreach (var barcode in colis.Barcodes)
+			{
+				barcode.Actif = false;
+			}
+
+			// 3. Sauvegarder toutes les modifications en une seule fois
+			await context.SaveChangesAsync();
+			return true;
+		}
 
         public async Task<Colis> ScanAsync(string barcode, string location)
         {
@@ -219,7 +272,6 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
-        // CORRECTION ICI : La méthode est maintenant "public"
         public async Task<IEnumerable<Colis>> SearchAsync(string searchTerm)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();

@@ -230,24 +230,29 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            SaveCommand.NotifyCanExecuteChanged();
-            if (e.PropertyName is nameof(Colis.TypeEnvoi) or nameof(Colis.LivraisonADomicile) or nameof(Colis.Poids))
-            {
-                CalculatePrice();
-            }
-        }
+		private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+		{
+			SaveCommand.NotifyCanExecuteChanged();
+			
+			// La logique de calcul automatique est maintenant désactivée (en commentaire)
+			/*
+			if (e.PropertyName is nameof(Colis.TypeEnvoi) or nameof(Colis.LivraisonADomicile) or nameof(Colis.Poids))
+			{
+				CalculatePrice();
+			}
+			*/
+		}
 
-        private void CalculatePrice()
-        {
-            if (Colis == null) return;
-            decimal prix = 0;
-            prix += Colis.Poids * 2.5m;
-            if (Colis.TypeEnvoi == TypeEnvoi.AvecDedouanement) prix += 50m; else prix += 10m;
-            if (Colis.LivraisonADomicile) prix += 15m;
-            Colis.PrixTotal = prix;
-        }
+		private void CalculatePrice()
+		{
+			// Cette méthode n'est plus appelée mais nous la laissons au cas où vous changeriez d'avis.
+			if (Colis == null) return;
+			decimal prix = 0;
+			prix += Colis.Poids * 2.5m;
+			if (Colis.TypeEnvoi == TypeEnvoi.AvecDedouanement) prix += 50m; else prix += 10m;
+			if (Colis.LivraisonADomicile) prix += 15m;
+			Colis.PrixTotal = prix;
+		}
 
         public async Task InitializeAsync(string newMarker)
         {

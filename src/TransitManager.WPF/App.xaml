@@ -7,6 +7,7 @@
              xmlns:viewsDashboard="clr-namespace:TransitManager.WPF.Views.Dashboard"
              xmlns:viewsClients="clr-namespace:TransitManager.WPF.Views.Clients"
              xmlns:viewsColis="clr-namespace:TransitManager.WPF.Views.Colis" 
+             xmlns:viewsVehicules="clr-namespace:TransitManager.WPF.Views.Vehicules"
              xmlns:viewsConteneurs="clr-namespace:TransitManager.WPF.Views.Conteneurs"
              xmlns:conteneurs="clr-namespace:TransitManager.WPF.Views.Conteneurs"
 			 xmlns:viewsNotifications="clr-namespace:TransitManager.WPF.Views.Notifications"
@@ -52,7 +53,6 @@
                 <viewsClients:ClientListView />
             </DataTemplate>
 			
-            <!-- AJOUTEZ CE DATATEMPLATE -->
             <DataTemplate DataType="{x:Type viewModels:ClientDetailViewModel}">
                 <viewsClients:ClientDetailView />
             </DataTemplate>
@@ -60,6 +60,10 @@
             <DataTemplate DataType="{x:Type viewModels:ColisViewModel}">
                 <viewsColis:ColisListView />
             </DataTemplate>
+			
+			<DataTemplate DataType="{x:Type viewModels:VehiculeViewModel}">
+				<viewsVehicules:VehiculeListView />
+			</DataTemplate>		
 			
 			<DataTemplate DataType="{x:Type viewModels:ColisDetailViewModel}">
 				<viewsColis:ColisDetailView />
@@ -69,12 +73,10 @@
                 <viewsConteneurs:ConteneurListView />
             </DataTemplate>
 
-            <!-- Ajoutez d'autres DataTemplates pour vos autres ViewModels et Vues -->
-            <!-- Exemple pour la vue de détail d'un conteneur -->
             <DataTemplate DataType="{x:Type conteneurs:ConteneurDetailViewModel}">
                 <viewsConteneurs:ConteneurDetailView />
             </DataTemplate>
-			<!-- AJOUTEZ CE DATATEMPLATE -->
+
             <DataTemplate DataType="{x:Type viewModels:NotificationsViewModel}">
                 <viewsNotifications:NotificationsView />
             </DataTemplate>

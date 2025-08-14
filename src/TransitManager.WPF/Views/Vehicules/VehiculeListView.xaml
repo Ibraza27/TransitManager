@@ -1,0 +1,111 @@
+<UserControl x:Class="TransitManager.WPF.Views.Vehicules.VehiculeListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1200">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- En-tête -->
+        <materialDesign:Card Grid.Row="0" Padding="16" Margin="16,16,16,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Gestion des Véhicules" Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding NewVehiculeCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <!-- LA CORRECTION EST ICI -->
+                            <materialDesign:PackIcon Kind="CarPlus" Margin="0,0,5,0"/>
+                            <TextBlock Text="Nouveau Véhicule"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Barre de recherche -->
+        <materialDesign:Card Grid.Row="1" Margin="16,8,16,0" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MaxWidth="500"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Rechercher (immatriculation, marque, modèle, client...)" 
+                         materialDesign:TextFieldAssist.HasClearButton="True" 
+                         materialDesign:TextFieldAssist.LeadingIcon="Magnify" 
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconButton}" Command="{Binding RefreshCommand}" ToolTip="Actualiser">
+                    <materialDesign:PackIcon Kind="Refresh"/>
+                </Button>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Liste des véhicules -->
+        <materialDesign:Card Grid.Row="2" Margin="16,8,16,8">
+            <DataGrid ItemsSource="{Binding Vehicules}" SelectedItem="{Binding SelectedVehicule}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" Style="{StaticResource MaterialDesignDataGrid}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Immatriculation" Binding="{Binding Immatriculation}" Width="1.5*" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="2*"/>
+                    <DataGridTextColumn Header="Marque" Binding="{Binding Marque}" Width="*"/>
+                    <DataGridTextColumn Header="Modèle" Binding="{Binding Modele}" Width="*"/>
+                    <DataGridTextColumn Header="Année" Binding="{Binding Annee}" Width="Auto"/>
+                    <DataGridTextColumn Header="Kilométrage" Binding="{Binding Kilometrage, StringFormat={}{0:N0} km}" Width="*"/>
+                    <DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="*"/>
+                    <DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat=C}" Width="*"/>
+                    <DataGridTextColumn Header="Total Payé" Binding="{Binding SommePayee, StringFormat=C}" Width="*"/>
+                    <DataGridTextColumn Header="Total Restant" Binding="{Binding RestantAPayer, StringFormat=C}" Width="*"/>
+
+                    <DataGridTemplateColumn Header="Actions" Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" ToolTip="Modifier">
+                                        <materialDesign:PackIcon Kind="Pencil" />
+                                    </Button>
+                                    <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" ToolTip="Supprimer">
+                                        <materialDesign:PackIcon Kind="Delete" Foreground="{StaticResource ErrorBrush}" />
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </materialDesign:Card>
+        
+        <!-- Barre de statut -->
+        <materialDesign:Card Grid.Row="3" Margin="16,0,16,16" Padding="8">
+            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Margin="8,0">
+                    <materialDesign:PackIcon Kind="CashMultiple" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding PrixTotalGlobal, StringFormat='Prix Total : {0:C}'}"/>
+                </StackPanel>
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+                <StackPanel Orientation="Horizontal" Margin="8,0">
+                    <materialDesign:PackIcon Kind="CashCheck" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource SuccessBrush}"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding TotalPayeGlobal, StringFormat='Total Payé : {0:C}'}"/>
+                </StackPanel>
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+                <StackPanel Orientation="Horizontal" Margin="8,0">
+                    <materialDesign:PackIcon Kind="CashRemove" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource ErrorBrush}"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding TotalRestantGlobal, StringFormat='Total Restant : {0:C}'}"/>
+                </StackPanel>
+            </WrapPanel>
+        </materialDesign:Card>
+    </Grid>
+</UserControl>

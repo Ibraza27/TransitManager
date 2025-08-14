@@ -130,6 +130,43 @@ namespace TransitManager.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Vehicules",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClientId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Immatriculation = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Marque = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Modele = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Annee = table.Column<int>(type: "integer", nullable: false),
+                    Kilometrage = table.Column<int>(type: "integer", nullable: false),
+                    DestinationFinale = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    ValeurDeclaree = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Destinataire = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    TelephoneDestinataire = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Commentaires = table.Column<string>(type: "text", nullable: true),
+                    PrixTotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    SommePayee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreePar = table.Column<string>(type: "text", nullable: true),
+                    ModifiePar = table.Column<string>(type: "text", nullable: true),
+                    Actif = table.Column<bool>(type: "boolean", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Vehicules", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Vehicules_Clients_ClientId",
+                        column: x => x.ClientId,
+                        principalTable: "Clients",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Colis",
                 columns: table => new
                 {
@@ -164,6 +201,7 @@ namespace TransitManager.Infrastructure.Migrations
                     TypeEnvoi = table.Column<int>(type: "integer", nullable: false),
                     LivraisonADomicile = table.Column<bool>(type: "boolean", nullable: false),
                     PrixTotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    SommePayee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreePar = table.Column<string>(type: "text", nullable: true),
@@ -390,7 +428,7 @@ namespace TransitManager.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Utilisateurs",
                 columns: new[] { "Id", "Actif", "CreePar", "DateCreation", "DateModification", "DateVerrouillage", "DerniereConnexion", "DoitChangerMotDePasse", "Email", "ExpirationToken", "FuseauHoraire", "Langue", "ModifiePar", "MotDePasseHash", "Nom", "NomUtilisateur", "NotificationsActivees", "NotificationsEmail", "NotificationsSMS", "PasswordSalt", "PermissionsSpecifiques", "PhotoProfil", "Preferences", "Prenom", "Role", "RowVersion", "Telephone", "TentativesConnexionEchouees", "Theme", "TokenReinitialisation" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 13, 17, 5, 15, 497, DateTimeKind.Utc).AddTicks(414), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$U0NM8YqAUoBhqp/sv6Q0t.jMfpmj9fzfXcbfsdFwgSV1P80VYWP86", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 14, 7, 46, 56, 349, DateTimeKind.Utc).AddTicks(9573), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$Oq4jymBYbF2lUK4.EgrIqOVAOVmFpoMZEjFNDgEmucrb2dPACE5Ga", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UtilisateurId",
@@ -587,6 +625,17 @@ namespace TransitManager.Infrastructure.Migrations
                 name: "IX_Paiements_Statut",
                 table: "Paiements",
                 column: "Statut");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Vehicules_ClientId",
+                table: "Vehicules",
+                column: "ClientId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Vehicules_Immatriculation",
+                table: "Vehicules",
+                column: "Immatriculation",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -603,6 +652,9 @@ namespace TransitManager.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Notifications");
+
+            migrationBuilder.DropTable(
+                name: "Vehicules");
 
             migrationBuilder.DropTable(
                 name: "Colis");

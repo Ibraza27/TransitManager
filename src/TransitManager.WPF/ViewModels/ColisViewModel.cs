@@ -33,7 +33,7 @@ namespace TransitManager.WPF.ViewModels
         private string _searchText = string.Empty;
         public string SearchText { get => _searchText; set { if (SetProperty(ref _searchText, value)) { _ = LoadColisAsync(); } } }
 
-		private bool _showFilters = true; // Par défaut, les filtres sont maintenant visibles
+		private bool _showFilters = true;
 		public bool ShowFilters { get => _showFilters; set => SetProperty(ref _showFilters, value); }
 
         private string? _selectedStatut = "Tous";
@@ -57,6 +57,7 @@ namespace TransitManager.WPF.ViewModels
         private ObservableCollection<string> _statutsList = new();
         public ObservableCollection<string> StatutsList { get => _statutsList; set => SetProperty(ref _statutsList, value); }
 
+        // --- STATISTIQUES ---
         private int _totalColis;
         public int TotalColis { get => _totalColis; set => SetProperty(ref _totalColis, value); }
 
@@ -65,6 +66,20 @@ namespace TransitManager.WPF.ViewModels
 
         private decimal _volumeTotal;
         public decimal VolumeTotal { get => _volumeTotal; set => SetProperty(ref _volumeTotal, value); }
+
+        // PROPRIÉTÉS AJOUTÉES
+        private int _totalPieces;
+        public int TotalPieces { get => _totalPieces; set => SetProperty(ref _totalPieces, value); }
+
+        private decimal _prixTotalGlobal;
+        public decimal PrixTotalGlobal { get => _prixTotalGlobal; set => SetProperty(ref _prixTotalGlobal, value); }
+
+        private decimal _totalPayeGlobal;
+        public decimal TotalPayeGlobal { get => _totalPayeGlobal; set => SetProperty(ref _totalPayeGlobal, value); }
+
+        private decimal _totalRestantGlobal;
+        public decimal TotalRestantGlobal { get => _totalRestantGlobal; set => SetProperty(ref _totalRestantGlobal, value); }
+
         #endregion
 
         #region Commandes
@@ -156,7 +171,18 @@ namespace TransitManager.WPF.ViewModels
         }
 
         private void InitializeStatutsList() { StatutsList = new ObservableCollection<string>(Enum.GetNames(typeof(StatutColis))); StatutsList.Insert(0, "Tous"); }
-        private void CalculateStatistics() { TotalColis = Colis.Count; PoidsTotal = Colis.Sum(c => c.Poids); VolumeTotal = Colis.Sum(c => c.Volume); }
+        
+        private void CalculateStatistics() 
+        { 
+            TotalColis = Colis.Count; 
+            PoidsTotal = Colis.Sum(c => c.Poids); 
+            VolumeTotal = Colis.Sum(c => c.Volume);
+            // CALCULS AJOUTÉS
+            TotalPieces = Colis.Sum(c => c.NombrePieces);
+            PrixTotalGlobal = Colis.Sum(c => c.PrixTotal);
+            TotalPayeGlobal = Colis.Sum(c => c.SommePayee);
+            TotalRestantGlobal = Colis.Sum(c => c.RestantAPayer);
+        }
         
         private void ClearFilters()
         {
@@ -164,7 +190,6 @@ namespace TransitManager.WPF.ViewModels
             SelectedConteneur = null;
             SelectedDate = null;
             SelectedStatut = "Tous";
-            // La recherche ne sera pas vidée pour permettre à l'utilisateur de la conserver s'il le souhaite
             _ = LoadColisAsync();
         }
 
@@ -177,7 +202,7 @@ namespace TransitManager.WPF.ViewModels
             var confirm = await _dialogService.ShowConfirmationAsync("Supprimer le Colis", $"Êtes-vous sûr de vouloir supprimer le colis {colis.NumeroReference}?");
             if (confirm) {
                 await _colisService.DeleteAsync(colis.Id);
-                await LoadAsync(); // Recharger toutes les données pour refléter la suppression
+                await LoadAsync();
             }
         }
         

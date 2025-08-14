@@ -34,6 +34,7 @@ namespace TransitManager.Infrastructure.Data
         public DbSet<Document> Documents { get; set; } = null!;
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 		public DbSet<Barcode> Barcodes { get; set; } = null!;
+		public DbSet<Vehicule> Vehicules { get; set; } = null!;
 
         /// <summary>
         /// Configuration du modèle
@@ -73,6 +74,7 @@ namespace TransitManager.Infrastructure.Data
 			// AJOUTER CES LIGNES :
 			modelBuilder.Entity<Client>().HasQueryFilter(e => e.Actif);
 			modelBuilder.Entity<Colis>().HasQueryFilter(e => e.Actif);
+			modelBuilder.Entity<Vehicule>().HasQueryFilter(e => e.Actif);
 			modelBuilder.Entity<Conteneur>().HasQueryFilter(e => e.Actif);
 			modelBuilder.Entity<Paiement>().HasQueryFilter(e => e.Actif);
 			//modelBuilder.Entity<Utilisateur>().HasQueryFilter(e => e.Actif);

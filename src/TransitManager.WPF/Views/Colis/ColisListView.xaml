@@ -121,6 +121,25 @@
 							<Style TargetType="TextBlock"><Setter Property="FontWeight" Value="Bold"/></Style>
 						</DataGridTextColumn.ElementStyle>
 					</DataGridTextColumn>
+					
+
+					<DataGridTextColumn Header="Total Payé" Binding="{Binding SommePayee, StringFormat=C}" Width="100">
+						<DataGridTextColumn.ElementStyle>
+							<Style TargetType="TextBlock">
+								<Setter Property="FontWeight" Value="Bold"/>
+								<Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+							</Style>
+						</DataGridTextColumn.ElementStyle>
+					</DataGridTextColumn>
+
+					<DataGridTextColumn Header="Total Restant" Binding="{Binding RestantAPayer, StringFormat=C}" Width="100">
+						<DataGridTextColumn.ElementStyle>
+							<Style TargetType="TextBlock">
+								<Setter Property="FontWeight" Value="Bold"/>
+								<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+							</Style>
+						</DataGridTextColumn.ElementStyle>
+					</DataGridTextColumn>
 
 					<DataGridTemplateColumn Header="Statut" Width="120">
 						<DataGridTemplateColumn.CellTemplate>
@@ -167,22 +186,49 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <WrapPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Margin="8,0">
-                        <materialDesign:PackIcon Kind="Package" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <TextBlock VerticalAlignment="Center" Text="{Binding TotalColis, StringFormat='Total : {0} colis'}"/>
-                    </StackPanel>
-                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
-                    <StackPanel Orientation="Horizontal" Margin="8,0">
-                        <materialDesign:PackIcon Kind="Weight" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <TextBlock VerticalAlignment="Center" Text="{Binding PoidsTotal, StringFormat='Poids total : {0:N0} kg'}"/>
-                    </StackPanel>
-                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
-                    <StackPanel Orientation="Horizontal" Margin="8,0">
-                        <materialDesign:PackIcon Kind="CubeOutline" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <TextBlock VerticalAlignment="Center" Text="{Binding VolumeTotal, StringFormat='Volume total : {0:N2} m³'}"/>
-                    </StackPanel>
-                </WrapPanel>
+				<WrapPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+					<!-- Total Colis -->
+					<StackPanel Orientation="Horizontal" Margin="8,0">
+						<materialDesign:PackIcon Kind="Package" VerticalAlignment="Center" Margin="0,0,5,0"/>
+						<TextBlock VerticalAlignment="Center" Text="{Binding TotalColis, StringFormat='Total : {0} colis'}"/>
+					</StackPanel>
+					<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+					<!-- Total Pièces -->
+					<StackPanel Orientation="Horizontal" Margin="8,0">
+						<materialDesign:PackIcon Kind="Numeric" VerticalAlignment="Center" Margin="0,0,5,0"/>
+						<TextBlock VerticalAlignment="Center" Text="{Binding TotalPieces, StringFormat='Pièces : {0}'}"/>
+					</StackPanel>
+					<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+					<!-- Poids -->
+					<StackPanel Orientation="Horizontal" Margin="8,0">
+						<materialDesign:PackIcon Kind="WeightKilogram" VerticalAlignment="Center" Margin="0,0,5,0"/>
+						<TextBlock VerticalAlignment="Center" Text="{Binding PoidsTotal, StringFormat='Poids : {0:N0} kg'}"/>
+					</StackPanel>
+					<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+					<!-- Volume -->
+					<StackPanel Orientation="Horizontal" Margin="8,0">
+						<materialDesign:PackIcon Kind="CubeOutline" VerticalAlignment="Center" Margin="0,0,5,0"/>
+						<TextBlock VerticalAlignment="Center" Text="{Binding VolumeTotal, StringFormat='Volume : {0:N2} m³'}"/>
+					</StackPanel>
+					<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="15,0"/>
+					<!-- Prix Total -->
+					<StackPanel Orientation="Horizontal" Margin="8,0">
+						<materialDesign:PackIcon Kind="CashMultiple" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+						<TextBlock VerticalAlignment="Center" Text="{Binding PrixTotalGlobal, StringFormat='Prix Total : {0:C}'}"/>
+					</StackPanel>
+					<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+					<!-- Total Payé -->
+					<StackPanel Orientation="Horizontal" Margin="8,0">
+						<materialDesign:PackIcon Kind="CashCheck" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource SuccessBrush}"/>
+						<TextBlock VerticalAlignment="Center" Text="{Binding TotalPayeGlobal, StringFormat='Total Payé : {0:C}'}"/>
+					</StackPanel>
+					<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+					<!-- Total Restant -->
+					<StackPanel Orientation="Horizontal" Margin="8,0">
+						<materialDesign:PackIcon Kind="CashRemove" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource ErrorBrush}"/>
+						<TextBlock VerticalAlignment="Center" Text="{Binding TotalRestantGlobal, StringFormat='Total Restant : {0:C}'}"/>
+					</StackPanel>
+				</WrapPanel>
             </Grid>
         </materialDesign:Card>
 

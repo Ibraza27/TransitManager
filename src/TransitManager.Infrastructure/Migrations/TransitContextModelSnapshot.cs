@@ -394,6 +394,10 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Property<string>("SignatureReception")
                         .HasColumnType("text");
 
+                    b.Property<decimal>("SommePayee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<string>("Statut")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1074,12 +1078,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 8, 13, 17, 5, 15, 497, DateTimeKind.Utc).AddTicks(414),
+                            DateCreation = new DateTime(2025, 8, 14, 7, 46, 56, 349, DateTimeKind.Utc).AddTicks(9573),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$U0NM8YqAUoBhqp/sv6Q0t.jMfpmj9fzfXcbfsdFwgSV1P80VYWP86",
+                            MotDePasseHash = "$2a$11$Oq4jymBYbF2lUK4.EgrIqOVAOVmFpoMZEjFNDgEmucrb2dPACE5Ga",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,
@@ -1090,6 +1094,97 @@ namespace TransitManager.Infrastructure.Migrations
                             TentativesConnexionEchouees = 0,
                             Theme = "Clair"
                         });
+                });
+
+            modelBuilder.Entity("TransitManager.Core.Entities.Vehicule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Actif")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Annee")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Commentaires")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CreePar")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("DateCreation")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DateModification")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Destinataire")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("DestinationFinale")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Immatriculation")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Kilometrage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Marque")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Modele")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ModifiePar")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("PrixTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("bytea");
+
+                    b.Property<decimal>("SommePayee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("TelephoneDestinataire")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("ValeurDeclaree")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("Immatriculation")
+                        .IsUnique();
+
+                    b.ToTable("Vehicules", (string)null);
                 });
 
             modelBuilder.Entity("TransitManager.Core.Entities.AuditLog", b =>
@@ -1196,6 +1291,17 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Navigation("Client");
 
                     b.Navigation("Conteneur");
+                });
+
+            modelBuilder.Entity("TransitManager.Core.Entities.Vehicule", b =>
+                {
+                    b.HasOne("TransitManager.Core.Entities.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("TransitManager.Core.Entities.Client", b =>

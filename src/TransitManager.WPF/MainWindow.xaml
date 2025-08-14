@@ -67,6 +67,18 @@
                                 </StackPanel>
                             </RadioButton>
                         </ListBoxItem>
+						
+						<ListBoxItem ToolTip="Gestion des Véhicules">
+							<RadioButton GroupName="MenuItems"
+										 Command="{Binding NavigateCommand}" CommandParameter="Vehicules"
+										 Style="{StaticResource MenuRadioButtonStyle}">
+								<StackPanel Orientation="Horizontal">
+									<materialDesign:PackIcon Kind="Car" VerticalAlignment="Center" Margin="16,0"/>
+									<TextBlock Text="Véhicules" VerticalAlignment="Center"/>
+								</StackPanel>
+							</RadioButton>
+						</ListBoxItem>
+						
 
                         <ListBoxItem ToolTip="Gestion des Conteneurs">
                             <RadioButton GroupName="MenuItems"

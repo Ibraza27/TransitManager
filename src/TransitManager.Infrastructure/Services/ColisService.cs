@@ -33,7 +33,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
-                .Include(c => c.Barcodes)
+                .Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
@@ -44,7 +44,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
-                .Include(c => c.Barcodes)
+                .Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Barcodes.Any(b => b.Value == barcode));
         }
@@ -55,7 +55,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
-                .Include(c => c.Barcodes)
+                .Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.NumeroReference == reference);
         }
@@ -66,7 +66,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
-                .Include(c => c.Barcodes)
+                .Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .AsNoTracking()
                 .OrderByDescending(c => c.DateArrivee)
                 .ToListAsync();
@@ -77,7 +77,7 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis
                 .Include(c => c.Conteneur)
-                .Include(c => c.Barcodes)
+                .Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .Where(c => c.ClientId == clientId)
                 .AsNoTracking()
                 .OrderByDescending(c => c.DateArrivee)
@@ -89,7 +89,7 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis
                 .Include(c => c.Client)
-                .Include(c => c.Barcodes)
+                .Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .Where(c => c.ConteneurId == conteneurId)
                 .AsNoTracking()
                 .OrderBy(c => c.Client!.Nom)
@@ -103,7 +103,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
-                .Include(c => c.Barcodes)
+                .Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .Where(c => c.Statut == statut)
                 .AsNoTracking()
                 .OrderByDescending(c => c.DateArrivee)
@@ -136,19 +136,15 @@ namespace TransitManager.Infrastructure.Services
 			var submittedBarcodeValues = new HashSet<string>(colis.Barcodes.Select(b => b.Value.Trim()).Where(v => !string.IsNullOrEmpty(v)));
 			var dbBarcodes = colisInDb.Barcodes.ToList();
 
-			// 3a. Identifier et "supprimer doucement" les codes-barres qui existent en BDD mais plus dans l'interface
 			var barcodesToRemove = dbBarcodes.Where(b => !submittedBarcodeValues.Contains(b.Value)).ToList();
 			if (barcodesToRemove.Any())
 			{
-				// === LA CORRECTION EST ICI ===
-				// Au lieu de supprimer physiquement, on les désactive.
 				foreach (var barcode in barcodesToRemove)
 				{
 					barcode.Actif = false;
 				}
 			}
 
-			// 3b. Identifier et ajouter les codes-barres qui sont dans l'interface mais pas encore en BDD
 			var dbBarcodeValues = new HashSet<string>(dbBarcodes.Select(b => b.Value));
 			var barcodesToAdd = submittedBarcodeValues
 				.Where(value => !dbBarcodeValues.Contains(value))
@@ -178,23 +174,19 @@ namespace TransitManager.Infrastructure.Services
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
 			
-			// On charge le colis ET ses codes-barres associés
 			var colis = await context.Colis
 				.Include(c => c.Barcodes)
 				.FirstOrDefaultAsync(c => c.Id == id);
 
 			if (colis == null) return false;
 
-			// 1. Désactiver le colis lui-même
 			colis.Actif = false;
 
-			// 2. Désactiver tous les codes-barres liés
 			foreach (var barcode in colis.Barcodes)
 			{
 				barcode.Actif = false;
 			}
 
-			// 3. Sauvegarder toutes les modifications en une seule fois
 			await context.SaveChangesAsync();
 			return true;
 		}
@@ -247,7 +239,7 @@ namespace TransitManager.Infrastructure.Services
         public async Task<IEnumerable<Colis>> GetRecentColisAsync(int count)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes)
+            return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .Where(c => c.Actif).AsNoTracking().OrderByDescending(c => c.DateArrivee).Take(count).ToListAsync();
         }
 
@@ -255,7 +247,7 @@ namespace TransitManager.Infrastructure.Services
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             var dateLimit = DateTime.UtcNow.AddDays(-days);
-            return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes)
+            return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .Where(c => c.Actif && c.Statut == StatutColis.EnAttente && c.DateArrivee < dateLimit)
                 .AsNoTracking().OrderBy(c => c.DateArrivee).ToListAsync();
         }
@@ -281,7 +273,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
-                .Include(c => c.Barcodes)
+                .Include(c => c.Barcodes.Where(b => b.Actif)) // CORRECTION: Filtrage des codes-barres
                 .Where(c => c.Actif && (
                     c.Barcodes.Any(b => b.Value.ToLower().Contains(searchTerm)) ||
                     c.NumeroReference.ToLower().Contains(searchTerm) ||

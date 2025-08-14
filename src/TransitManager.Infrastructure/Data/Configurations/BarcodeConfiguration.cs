@@ -11,7 +11,7 @@ namespace TransitManager.Infrastructure.Data.Configurations
 			builder.ToTable("Barcodes");
 			builder.HasKey(b => b.Id);
 
-			// Un code-barres ACTIF doit être unique.
+			// CORRECTION: Un code-barres ACTIF doit être unique.
 			// Les codes-barres inactifs (supprimés) sont ignorés par la contrainte.
 			builder.HasIndex(b => b.Value)
 				.IsUnique()
@@ -21,9 +21,8 @@ namespace TransitManager.Infrastructure.Data.Configurations
 				.IsRequired()
 				.HasMaxLength(100);
 
-			// Relation avec Colis : un code-barres appartient à un seul colis
 			builder.HasOne(b => b.Colis)
-				.WithMany(c => c.Barcodes) // La collection que nous avons ajoutée à Colis
+				.WithMany(c => c.Barcodes)
 				.HasForeignKey(b => b.ColisId);
 		}
     }

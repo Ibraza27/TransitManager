@@ -1,3 +1,5 @@
+// FONCTION COMPLÈTE MODIFIÉE (Colis.cs)
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -39,6 +41,8 @@ namespace TransitManager.Core.Entities
         private TypeEnvoi _typeEnvoi;
         private bool _livraisonADomicile;
         private decimal _prixTotal;
+        private decimal _sommePayee; // CHAMP AJOUTÉ
+        private decimal _restantAPayer; // CHAMP AJOUTÉ
 
         // --- Propriétés Publiques ---
         public virtual ICollection<Barcode> Barcodes { get; set; } = new List<Barcode>();
@@ -69,7 +73,6 @@ namespace TransitManager.Core.Entities
         [StringLength(1000)]
         public string? InstructionsSpeciales { get => _instructionsSpeciales; set => SetProperty(ref _instructionsSpeciales, value); }
         
-        // --- PROPRIÉTÉS RESTAURÉES ---
         public string? Photos { get => _photos; set => SetProperty(ref _photos, value); }
         public DateTime? DateDernierScan { get => _dateDernierScan; set => SetProperty(ref _dateDernierScan, value); }
         [StringLength(200)]
@@ -78,7 +81,6 @@ namespace TransitManager.Core.Entities
         public DateTime? DateLivraison { get => _dateLivraison; set => SetProperty(ref _dateLivraison, value); }
         public string? SignatureReception { get => _signatureReception; set => SetProperty(ref _signatureReception, value); }
         public string? Commentaires { get => _commentaires; set => SetProperty(ref _commentaires, value); }
-        // --- FIN DES PROPRIÉTÉS RESTAURÉES ---
 
         [StringLength(200)]
         public string? Destinataire { get => _destinataire; set => SetProperty(ref _destinataire, value); }
@@ -92,7 +94,13 @@ namespace TransitManager.Core.Entities
 
         public TypeEnvoi TypeEnvoi { get => _typeEnvoi; set => SetProperty(ref _typeEnvoi, value); }
         public bool LivraisonADomicile { get => _livraisonADomicile; set => SetProperty(ref _livraisonADomicile, value); }
-        public decimal PrixTotal { get => _prixTotal; set => SetProperty(ref _prixTotal, value); }
+        public decimal PrixTotal { get => _prixTotal; set { if (SetProperty(ref _prixTotal, value)) OnPropertyChanged(nameof(RestantAPayer)); } }
+        
+        // PROPRIÉTÉ AJOUTÉE
+        public decimal SommePayee { get => _sommePayee; set { if (SetProperty(ref _sommePayee, value)) OnPropertyChanged(nameof(RestantAPayer)); } }
+        
+        // PROPRIÉTÉ CALCULÉE AJOUTÉE (pas de `SetProperty` car elle dépend des autres)
+        public decimal RestantAPayer => PrixTotal - SommePayee;
 
         public virtual Client? Client { get; set; }
         public virtual Conteneur? Conteneur { get; set; }

@@ -106,6 +106,7 @@ namespace TransitManager.WPF
             // Services métier (doivent être Transient car ils dépendent de la DbContextFactory)
             services.AddTransient<IClientService, ClientService>();
             services.AddTransient<IColisService, ColisService>();
+			services.AddTransient<IVehiculeService, VehiculeService>();
             services.AddTransient<IConteneurService, ConteneurService>();
             services.AddTransient<IPaiementService, PaiementService>();
             services.AddTransient<INotificationService, NotificationService>();
@@ -131,6 +132,7 @@ namespace TransitManager.WPF
             services.AddTransient<ClientDetailViewModel>();
             services.AddTransient<ColisViewModel>();
 			services.AddTransient<ColisDetailViewModel>();
+			services.AddTransient<VehiculeViewModel>();
             services.AddTransient<ConteneurViewModel>();
             services.AddTransient<ConteneurDetailViewModel>();
             services.AddTransient<NotificationsViewModel>();
@@ -143,6 +145,7 @@ namespace TransitManager.WPF
             services.AddTransient<ClientDetailView>();
             services.AddTransient<ColisListView>();
             services.AddTransient<ColisScanView>();
+			services.AddTransient<Views.Vehicules.VehiculeListView>();
             services.AddTransient<ConteneurListView>();
             services.AddTransient<ConteneurDetailView>();
             services.AddTransient<PaiementView>();

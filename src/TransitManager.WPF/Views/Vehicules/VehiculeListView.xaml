@@ -28,7 +28,6 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding NewVehiculeCommand}">
                         <StackPanel Orientation="Horizontal">
-                            <!-- LA CORRECTION EST ICI -->
                             <materialDesign:PackIcon Kind="CarPlus" Margin="0,0,5,0"/>
                             <TextBlock Text="Nouveau Véhicule"/>
                         </StackPanel>
@@ -66,9 +65,11 @@
                     <DataGridTextColumn Header="Année" Binding="{Binding Annee}" Width="Auto"/>
                     <DataGridTextColumn Header="Kilométrage" Binding="{Binding Kilometrage, StringFormat={}{0:N0} km}" Width="*"/>
                     <DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="*"/>
-                    <DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat=C}" Width="*"/>
-                    <DataGridTextColumn Header="Total Payé" Binding="{Binding SommePayee, StringFormat=C}" Width="*"/>
-                    <DataGridTextColumn Header="Total Restant" Binding="{Binding RestantAPayer, StringFormat=C}" Width="*"/>
+                    
+                    <!-- CORRECTION APPLIQUÉE SELON VOTRE ANALYSE -->
+                    <DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat='{}{0:N2} €'}" Width="*"/>
+                    <DataGridTextColumn Header="Total Payé" Binding="{Binding SommePayee, StringFormat='{}{0:N2} €'}" Width="*"/>
+                    <DataGridTextColumn Header="Total Restant" Binding="{Binding RestantAPayer, StringFormat='{}{0:N2} €'}" Width="*"/>
 
                     <DataGridTemplateColumn Header="Actions" Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
@@ -91,19 +92,20 @@
         <!-- Barre de statut -->
         <materialDesign:Card Grid.Row="3" Margin="16,0,16,16" Padding="8">
             <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- CORRECTION APPLIQUÉE SELON VOTRE ANALYSE -->
                 <StackPanel Orientation="Horizontal" Margin="8,0">
                     <materialDesign:PackIcon Kind="CashMultiple" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                    <TextBlock VerticalAlignment="Center" Text="{Binding PrixTotalGlobal, StringFormat='Prix Total : {0:C}'}"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding PrixTotalGlobal, StringFormat='Prix Total : {0:N2} €'}"/>
                 </StackPanel>
                 <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
                 <StackPanel Orientation="Horizontal" Margin="8,0">
                     <materialDesign:PackIcon Kind="CashCheck" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource SuccessBrush}"/>
-                    <TextBlock VerticalAlignment="Center" Text="{Binding TotalPayeGlobal, StringFormat='Total Payé : {0:C}'}"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding TotalPayeGlobal, StringFormat='Total Payé : {0:N2} €'}"/>
                 </StackPanel>
                 <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
                 <StackPanel Orientation="Horizontal" Margin="8,0">
                     <materialDesign:PackIcon Kind="CashRemove" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource ErrorBrush}"/>
-                    <TextBlock VerticalAlignment="Center" Text="{Binding TotalRestantGlobal, StringFormat='Total Restant : {0:C}'}"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding TotalRestantGlobal, StringFormat='Total Restant : {0:N2} €'}"/>
                 </StackPanel>
             </WrapPanel>
         </materialDesign:Card>

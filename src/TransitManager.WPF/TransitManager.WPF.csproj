@@ -9,6 +9,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\Images\camion_plan.png" />
+    <None Remove="Resources\Images\moto_plan.png" />
+    <None Remove="Resources\Images\quad_plan.png" />
+    <None Remove="Resources\Images\van_plan.png" />
+    <None Remove="Resources\Images\vehicule_plan.png" />
+    <None Remove="Resources\Images\voiture.jpg" />
+    <None Remove="Resources\Images\voiture_plan.png" />
+  </ItemGroup>
   
   <ItemGroup>
     <!-- On laisse Visual Studio gérer les versions ici, c'est plus stable -->
@@ -36,6 +46,15 @@
   <ItemGroup>
     <ProjectReference Include="..\TransitManager.Core\TransitManager.Core.csproj" />
     <ProjectReference Include="..\TransitManager.Infrastructure\TransitManager.Infrastructure.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Resource Include="Resources\Images\camion_plan.png" />
+    <Resource Include="Resources\Images\moto_plan.png" />
+    <Resource Include="Resources\Images\quad_plan.png" />
+    <Resource Include="Resources\Images\van_plan.png" />
+    <Resource Include="Resources\Images\vehicule_plan.png" />
+    <Resource Include="Resources\Images\voiture_plan.png" />
   </ItemGroup>
   
   <ItemGroup>

@@ -63,7 +63,11 @@
 			
 			<DataTemplate DataType="{x:Type viewModels:VehiculeViewModel}">
 				<viewsVehicules:VehiculeListView />
-			</DataTemplate>		
+			</DataTemplate>	
+
+			<DataTemplate DataType="{x:Type viewModels:VehiculeDetailViewModel}">
+				<viewsVehicules:VehiculeDetailView/>
+			</DataTemplate>			
 			
 			<DataTemplate DataType="{x:Type viewModels:ColisDetailViewModel}">
 				<viewsColis:ColisDetailView />

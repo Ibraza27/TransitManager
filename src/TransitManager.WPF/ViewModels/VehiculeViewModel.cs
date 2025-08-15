@@ -73,8 +73,7 @@ namespace TransitManager.WPF.ViewModels
 
         private Task NewVehicule()
         {
-            // Nous créerons cette vue de détail à la prochaine étape
-            // _navigationService.NavigateTo("VehiculeDetail", "new");
+            _navigationService.NavigateTo("VehiculeDetail", "new");
             return Task.CompletedTask;
         }
 
@@ -82,7 +81,7 @@ namespace TransitManager.WPF.ViewModels
         {
             if (vehicule != null)
             {
-                // _navigationService.NavigateTo("VehiculeDetail", vehicule.Id);
+                _navigationService.NavigateTo("VehiculeDetail", vehicule.Id);
             }
             return Task.CompletedTask;
         }

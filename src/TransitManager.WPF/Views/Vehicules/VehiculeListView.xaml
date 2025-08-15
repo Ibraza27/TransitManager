@@ -28,7 +28,7 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding NewVehiculeCommand}">
                         <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="CarPlus" Margin="0,0,5,0"/>
+                            <materialDesign:PackIcon Kind="Car" Margin="0,0,5,0"/>
                             <TextBlock Text="Nouveau Véhicule"/>
                         </StackPanel>
                     </Button>
@@ -63,13 +63,36 @@
                     <DataGridTextColumn Header="Marque" Binding="{Binding Marque}" Width="*"/>
                     <DataGridTextColumn Header="Modèle" Binding="{Binding Modele}" Width="*"/>
                     <DataGridTextColumn Header="Année" Binding="{Binding Annee}" Width="Auto"/>
-                    <DataGridTextColumn Header="Kilométrage" Binding="{Binding Kilometrage, StringFormat={}{0:N0} km}" Width="*"/>
+                    <DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires}" Width="2*"/>
                     <DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="*"/>
                     
                     <!-- CORRECTION APPLIQUÉE SELON VOTRE ANALYSE -->
-                    <DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat='{}{0:N2} €'}" Width="*"/>
-                    <DataGridTextColumn Header="Total Payé" Binding="{Binding SommePayee, StringFormat='{}{0:N2} €'}" Width="*"/>
-                    <DataGridTextColumn Header="Total Restant" Binding="{Binding RestantAPayer, StringFormat='{}{0:N2} €'}" Width="*"/>
+					<DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat='{}{0:N2} €'}" Width="*">
+						<DataGridTextColumn.ElementStyle>
+							<Style TargetType="TextBlock">
+								<Setter Property="FontWeight" Value="Bold"/>
+								<Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
+							</Style>
+						</DataGridTextColumn.ElementStyle>
+					</DataGridTextColumn>
+
+					<DataGridTextColumn Header="Total Payé" Binding="{Binding SommePayee, StringFormat='{}{0:N2} €'}" Width="*">
+						<DataGridTextColumn.ElementStyle>
+							<Style TargetType="TextBlock">
+								<Setter Property="FontWeight" Value="Bold"/>
+								<Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+							</Style>
+						</DataGridTextColumn.ElementStyle>
+					</DataGridTextColumn>
+
+					<DataGridTextColumn Header="Total Restant" Binding="{Binding RestantAPayer, StringFormat='{}{0:N2} €'}" Width="*">
+						<DataGridTextColumn.ElementStyle>
+							<Style TargetType="TextBlock">
+								<Setter Property="FontWeight" Value="Bold"/>
+								<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+							</Style>
+						</DataGridTextColumn.ElementStyle>
+					</DataGridTextColumn>
 
                     <DataGridTemplateColumn Header="Actions" Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>

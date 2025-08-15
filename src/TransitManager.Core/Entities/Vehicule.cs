@@ -53,11 +53,35 @@ namespace TransitManager.Core.Entities
 		public TypeVehicule Type { get => _type; set => SetProperty(ref _type, value); }
 		public string? Commentaires { get => _commentaires; set => SetProperty(ref _commentaires, value); }
 		
-		public decimal PrixTotal { get => _prixTotal; set { if (SetProperty(ref _prixTotal, value)) OnPropertyChanged(nameof(RestantAPayer)); } }
-		
-		public decimal SommePayee { get => _sommePayee; set { if (SetProperty(ref _sommePayee, value)) OnPropertyChanged(nameof(RestantAPayer)); } }
+		public decimal PrixTotal
+		{
+			get => _prixTotal;
+			set
+			{
+				if (SetProperty(ref _prixTotal, value))
+				{
+					OnPropertyChanged(nameof(RestantAPayer)); // Notifier que le restant a changé
+				}
+			}
+		}
+
+		public decimal SommePayee
+		{
+			get => _sommePayee;
+			set
+			{
+				if (SetProperty(ref _sommePayee, value))
+				{
+					OnPropertyChanged(nameof(RestantAPayer)); // Notifier que le restant a changé
+				}
+			}
+		}
 
 		public decimal RestantAPayer => PrixTotal - SommePayee;
+		
+		public string? EtatDesLieux { get; set; }
+		
+		public string? EtatDesLieuxRayures { get; set; }
 
 		// Relation de navigation vers le client
 		public virtual Client? Client { get; set; }

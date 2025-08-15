@@ -12,7 +12,7 @@ using TransitManager.Infrastructure.Data;
 namespace TransitManager.Infrastructure.Migrations
 {
     [DbContext(typeof(TransitContext))]
-    [Migration("20250814074659_InitialCreate")]
+    [Migration("20250815073155_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1081,12 +1081,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 8, 14, 7, 46, 56, 349, DateTimeKind.Utc).AddTicks(9573),
+                            DateCreation = new DateTime(2025, 8, 15, 7, 31, 31, 899, DateTimeKind.Utc).AddTicks(761),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$Oq4jymBYbF2lUK4.EgrIqOVAOVmFpoMZEjFNDgEmucrb2dPACE5Ga",
+                            MotDePasseHash = "$2a$11$Obtjpvvl13k7XbKKNUyjt.w0o9s9eFQB8tYDRIgCGa/TUVwBLD19O",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,
@@ -1134,6 +1134,12 @@ namespace TransitManager.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("EtatDesLieux")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EtatDesLieuxRayures")
+                        .HasColumnType("text");
 
                     b.Property<string>("Immatriculation")
                         .IsRequired()

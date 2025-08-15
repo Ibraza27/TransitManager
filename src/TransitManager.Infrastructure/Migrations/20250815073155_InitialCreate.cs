@@ -148,6 +148,8 @@ namespace TransitManager.Infrastructure.Migrations
                     Commentaires = table.Column<string>(type: "text", nullable: true),
                     PrixTotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     SommePayee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    EtatDesLieux = table.Column<string>(type: "text", nullable: true),
+                    EtatDesLieuxRayures = table.Column<string>(type: "text", nullable: true),
                     DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreePar = table.Column<string>(type: "text", nullable: true),
@@ -428,7 +430,7 @@ namespace TransitManager.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Utilisateurs",
                 columns: new[] { "Id", "Actif", "CreePar", "DateCreation", "DateModification", "DateVerrouillage", "DerniereConnexion", "DoitChangerMotDePasse", "Email", "ExpirationToken", "FuseauHoraire", "Langue", "ModifiePar", "MotDePasseHash", "Nom", "NomUtilisateur", "NotificationsActivees", "NotificationsEmail", "NotificationsSMS", "PasswordSalt", "PermissionsSpecifiques", "PhotoProfil", "Preferences", "Prenom", "Role", "RowVersion", "Telephone", "TentativesConnexionEchouees", "Theme", "TokenReinitialisation" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 14, 7, 46, 56, 349, DateTimeKind.Utc).AddTicks(9573), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$Oq4jymBYbF2lUK4.EgrIqOVAOVmFpoMZEjFNDgEmucrb2dPACE5Ga", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 15, 7, 31, 31, 899, DateTimeKind.Utc).AddTicks(761), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$Obtjpvvl13k7XbKKNUyjt.w0o9s9eFQB8tYDRIgCGa/TUVwBLD19O", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UtilisateurId",

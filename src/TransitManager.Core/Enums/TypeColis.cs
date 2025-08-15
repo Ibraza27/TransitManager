@@ -5,7 +5,6 @@ namespace TransitManager.Core.Enums
         Colis,
         Palette,
         Conteneur,
-        Vehicule,
         Vrac,
         Autre
     }

@@ -169,114 +169,105 @@ namespace TransitManager.Infrastructure.Services
             });
         }
 
-        public async Task<byte[]> ExportConteneurManifestAsync(Conteneur conteneur)
-        {
-            return await Task.Run(() =>
-            {
-                var document = PdfDocument.Create(container =>
-                {
-                    container.Page(page =>
-                    {
-                        page.Size(PageSizes.A4);
-                        page.Margin(2, Unit.Centimetre);
-                        page.PageColor(Colors.White);
-                        page.DefaultTextStyle(x => x.FontSize(11));
+		public async Task<byte[]> ExportConteneurManifestAsync(Conteneur conteneur)
+		{
+			return await Task.Run(() =>
+			{
+				var document = PdfDocument.Create(container =>
+				{
+					container.Page(page =>
+					{
+						page.Size(PageSizes.A4);
+						page.Margin(2, Unit.Centimetre);
+						page.PageColor(Colors.White);
+						page.DefaultTextStyle(x => x.FontSize(11));
 
-                        page.Header()
-                            .Text("MANIFESTE D'EXPÉDITION")
-                            .SemiBold().FontSize(20).FontColor(Colors.Blue.Darken2);
+						page.Header()
+							.Text("MANIFESTE D'EXPÉDITION")
+							.SemiBold().FontSize(20).FontColor(Colors.Blue.Darken2);
 
-                        page.Content()
-                            .PaddingVertical(1, Unit.Centimetre)
-                            .Column(x =>
-                            {
-                                x.Spacing(20);
+						page.Content()
+							.PaddingVertical(1, Unit.Centimetre)
+							.Column(x =>
+							{
+								x.Spacing(20);
 
-                                // Informations du conteneur
-                                x.Item().Background(Colors.Grey.Lighten3).Padding(10).Column(column =>
-                                {
-                                    column.Item().Text($"Numéro de dossier: {conteneur.NumeroDossier}").FontSize(14).SemiBold();
-                                    column.Item().Text($"Destination: {conteneur.Destination}, {conteneur.PaysDestination}");
-                                    column.Item().Text($"Date de départ prévue: {conteneur.DateDepartPrevue?.ToString("dd/MM/yyyy") ?? "Non définie"}");
-                                    column.Item().Text($"Transporteur: {conteneur.Transporteur ?? "Non défini"}");
-                                    column.Item().Text($"Numéro de tracking: {conteneur.NumeroTracking ?? "Non défini"}");
-                                });
+								// Informations du conteneur
+								x.Item().Background(Colors.Grey.Lighten3).Padding(10).Column(column =>
+								{
+									column.Item().Text($"Numéro de dossier: {conteneur.NumeroDossier}").FontSize(14).SemiBold();
+									column.Item().Text($"Destination: {conteneur.Destination}, {conteneur.PaysDestination}");
+									column.Item().Text($"Date de départ: {conteneur.DateDepart?.ToString("dd/MM/yyyy") ?? "Non définie"}");
+									column.Item().Text($"Compagnie: {conteneur.NomCompagnie ?? "Non défini"}");
+									column.Item().Text($"N° Plomb: {conteneur.NumeroPlomb ?? "Non défini"}");
+								});
 
-                                // Statistiques
-                                x.Item().Row(row =>
-                                {
-                                    row.RelativeItem().Border(1).Padding(5).Text($"Nombre de colis: {conteneur.NombreColis}");
-                                    row.RelativeItem().Border(1).Padding(5).Text($"Poids total: {conteneur.PoidsUtilise:N2} kg");
-                                    row.RelativeItem().Border(1).Padding(5).Text($"Volume total: {conteneur.VolumeUtilise:N2} m³");
-                                });
+								// Statistiques
+								x.Item().Row(row =>
+								{
+									row.RelativeItem().Border(1).Padding(5).Text($"Nombre de colis: {conteneur.NombreColis}");
+									row.RelativeItem().Border(1).Padding(5).Text($"Nombre de véhicules: {conteneur.NombreVehicules}");
+								});
 
-                                // Liste des colis
-                                x.Item().Text("LISTE DES COLIS").FontSize(14).SemiBold();
-                                x.Item().Table(table =>
-                                {
-                                    table.ColumnsDefinition(columns =>
-                                    {
-                                        columns.ConstantColumn(50);
-                                        columns.RelativeColumn(2);
-                                        columns.RelativeColumn(3);
-                                        columns.RelativeColumn(4);
-                                        columns.RelativeColumn(1);
-                                        columns.RelativeColumn(1);
-                                        columns.RelativeColumn(1);
-                                    });
+								// Liste des colis
+								x.Item().Text("LISTE DES COLIS").FontSize(14).SemiBold();
+								x.Item().Table(table =>
+								{
+									table.ColumnsDefinition(columns =>
+									{
+										columns.ConstantColumn(50);
+										columns.RelativeColumn(2);
+										columns.RelativeColumn(3);
+										columns.RelativeColumn(4);
+										columns.RelativeColumn(1);
+									});
 
-                                    // En-têtes
-                                    table.Header(header =>
-                                    {
-                                        header.Cell().Element(CellStyle).Text("#");
-                                        header.Cell().Element(CellStyle).Text("Code-barres");
-                                        header.Cell().Element(CellStyle).Text("Client");
-                                        header.Cell().Element(CellStyle).Text("Désignation");
-                                        header.Cell().Element(CellStyle).Text("Poids");
-                                        header.Cell().Element(CellStyle).Text("Volume");
-                                        header.Cell().Element(CellStyle).Text("Valeur");
+									table.Header(header =>
+									{
+										header.Cell().Element(CellStyle).Text("#");
+										header.Cell().Element(CellStyle).Text("Code-barres");
+										header.Cell().Element(CellStyle).Text("Client");
+										header.Cell().Element(CellStyle).Text("Désignation");
+										header.Cell().Element(CellStyle).Text("Poids");
 
-                                        static IContainer CellStyle(IContainer container)
-                                        {
-                                            return container.DefaultTextStyle(x => x.SemiBold()).PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Black);
-                                        }
-                                    });
+										static IContainer CellStyle(IContainer container)
+										{
+											return container.DefaultTextStyle(x => x.SemiBold()).PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Black);
+										}
+									});
 
-                                    // Données
-                                    var index = 1;
-                                    foreach (var colis in conteneur.Colis.OrderBy(c => c.Client?.Nom))
-                                    {
-                                        table.Cell().Element(CellStyle).Text(index++);
-                                        table.Cell().Element(CellStyle).Text(string.Join(", ", colis.Barcodes.Select(b => b.Value)));
-                                        table.Cell().Element(CellStyle).Text(colis.Client?.NomComplet ?? "N/A");
-                                        table.Cell().Element(CellStyle).Text(colis.Designation);
-                                        table.Cell().Element(CellStyle).Text($"{colis.Poids:N2} kg");
-                                        table.Cell().Element(CellStyle).Text($"{colis.Volume:N2} m³");
-                                        table.Cell().Element(CellStyle).Text($"{colis.ValeurDeclaree:C}");
+									var index = 1;
+									foreach (var colis in conteneur.Colis.OrderBy(c => c.Client?.Nom))
+									{
+										table.Cell().Element(CellStyle).Text(index++);
+										table.Cell().Element(CellStyle).Text(colis.AllBarcodes);
+										table.Cell().Element(CellStyle).Text(colis.Client?.NomComplet ?? "N/A");
+										table.Cell().Element(CellStyle).Text(colis.Designation);
+										table.Cell().Element(CellStyle).Text($"{colis.Poids:N2} kg");
 
-                                        static IContainer CellStyle(IContainer container)
-                                        {
-                                            return container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(5);
-                                        }
-                                    }
-                                });
-                            });
+										static IContainer CellStyle(IContainer container)
+										{
+											return container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(5);
+										}
+									}
+								});
+							});
 
-                        page.Footer()
-                            .AlignCenter()
-                            .Text(x =>
-                            {
-                                x.Span("Page ");
-                                x.CurrentPageNumber();
-                                x.Span(" / ");
-                                x.TotalPages();
-                            });
-                    });
-                });
+						page.Footer()
+							.AlignCenter()
+							.Text(x =>
+							{
+								x.Span("Page ");
+								x.CurrentPageNumber();
+								x.Span(" / ");
+								x.TotalPages();
+							});
+					});
+				});
 
-                return document.GeneratePdf();
-            });
-        }
+				return document.GeneratePdf();
+			});
+		}
 
         public async Task<byte[]> GenerateInvoicePdfAsync(Client client, IEnumerable<Colis> colis, decimal montant)
         {

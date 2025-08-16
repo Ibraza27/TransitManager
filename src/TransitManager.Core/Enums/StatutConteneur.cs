@@ -2,13 +2,14 @@ namespace TransitManager.Core.Enums
 {
     public enum StatutConteneur
     {
-        Ouvert,
+        Reçu,
         EnPreparation,
         EnTransit,
         Arrive,
         EnDedouanement,
         Livre,
         Cloture,
-        Annule
+        Annule,
+        Ouvert // On le garde pour la logique existante
     }
 }

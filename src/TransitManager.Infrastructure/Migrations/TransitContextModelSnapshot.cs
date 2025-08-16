@@ -368,6 +368,10 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
 
+                    b.Property<string>("NumeroPlomb")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("NumeroReference")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -412,8 +416,10 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int>("TypeEnvoi")
-                        .HasColumnType("integer");
+                    b.Property<string>("TypeEnvoi")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<decimal>("ValeurDeclaree")
                         .ValueGeneratedOnAdd()
@@ -423,21 +429,16 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientId")
-                        .HasDatabaseName("IX_Colis_ClientId");
+                    b.HasIndex("ClientId");
 
-                    b.HasIndex("ConteneurId")
-                        .HasDatabaseName("IX_Colis_ConteneurId");
+                    b.HasIndex("ConteneurId");
 
-                    b.HasIndex("DateArrivee")
-                        .HasDatabaseName("IX_Colis_DateArrivee");
+                    b.HasIndex("DateArrivee");
 
                     b.HasIndex("NumeroReference")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Colis_NumeroReference");
+                        .IsUnique();
 
-                    b.HasIndex("Statut")
-                        .HasDatabaseName("IX_Colis_Statut");
+                    b.HasIndex("Statut");
 
                     b.ToTable("Colis", (string)null);
                 });
@@ -453,99 +454,57 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<decimal>("AutresFrais")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasDefaultValue(0m);
-
-                    b.Property<decimal>("CapacitePoids")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasDefaultValue(28000m);
-
-                    b.Property<decimal>("CapaciteVolume")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasDefaultValue(33m);
-
                     b.Property<string>("Commentaires")
                         .HasColumnType("text");
 
                     b.Property<string>("CreePar")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("DateArriveePrevue")
+                    b.Property<DateTime?>("DateArriveeDestination")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("DateArriveeReelle")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DateCloture")
+                    b.Property<DateTime?>("DateChargement")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateCreation")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("DateDepartPrevue")
+                    b.Property<DateTime?>("DateDedouanement")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("DateDepartReelle")
+                    b.Property<DateTime?>("DateDepart")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DateModification")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("DateOuverture")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    b.Property<DateTime?>("DateReception")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Destination")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("DocumentsDouaniers")
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("FraisDedouanement")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasDefaultValue(0m);
-
-                    b.Property<decimal>("FraisTransport")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasDefaultValue(0m);
-
-                    b.Property<string>("ListeColisage")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("ManifesteExpedition")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("ModifiePar")
                         .HasColumnType("text");
+
+                    b.Property<string>("NomCompagnie")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NomTransitaire")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("NumeroDossier")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("NumeroNavireVol")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("NumeroTracking")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<string>("NumeroPlomb")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("PaysDestination")
                         .IsRequired()
@@ -562,35 +521,12 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("Transporteur")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("TypeEnvoi")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("DateDepartPrevue")
-                        .HasDatabaseName("IX_Conteneurs_DateDepartPrevue");
-
-                    b.HasIndex("DateOuverture")
-                        .HasDatabaseName("IX_Conteneurs_DateOuverture");
-
-                    b.HasIndex("Destination")
-                        .HasDatabaseName("IX_Conteneurs_Destination");
-
                     b.HasIndex("NumeroDossier")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Conteneurs_NumeroDossier");
+                        .IsUnique();
 
-                    b.HasIndex("PaysDestination")
-                        .HasDatabaseName("IX_Conteneurs_PaysDestination");
-
-                    b.HasIndex("Statut")
-                        .HasDatabaseName("IX_Conteneurs_Statut");
+                    b.HasIndex("Statut");
 
                     b.ToTable("Conteneurs", (string)null);
                 });
@@ -1078,12 +1014,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 8, 15, 7, 31, 31, 899, DateTimeKind.Utc).AddTicks(761),
+                            DateCreation = new DateTime(2025, 8, 15, 16, 34, 9, 900, DateTimeKind.Utc).AddTicks(1592),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$Obtjpvvl13k7XbKKNUyjt.w0o9s9eFQB8tYDRIgCGa/TUVwBLD19O",
+                            MotDePasseHash = "$2a$11$fY8.4rEDz1LtUvNFvvJLIO7Snnf1gg3l1u9oP8WnvocBbL.QBgqgq",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,
@@ -1113,6 +1049,9 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.Property<string>("Commentaires")
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("ConteneurId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CreePar")
                         .HasColumnType("text");
@@ -1159,6 +1098,10 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Property<string>("ModifiePar")
                         .HasColumnType("text");
 
+                    b.Property<string>("NumeroPlomb")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<decimal>("PrixTotal")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -1169,6 +1112,11 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Property<decimal>("SommePayee")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Statut")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("TelephoneDestinataire")
                         .HasMaxLength(20)
@@ -1187,8 +1135,12 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.HasIndex("ClientId");
 
+                    b.HasIndex("ConteneurId");
+
                     b.HasIndex("Immatriculation")
                         .IsUnique();
+
+                    b.HasIndex("Statut");
 
                     b.ToTable("Vehicules", (string)null);
                 });
@@ -1307,7 +1259,14 @@ namespace TransitManager.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("TransitManager.Core.Entities.Conteneur", "Conteneur")
+                        .WithMany("Vehicules")
+                        .HasForeignKey("ConteneurId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Client");
+
+                    b.Navigation("Conteneur");
                 });
 
             modelBuilder.Entity("TransitManager.Core.Entities.Client", b =>
@@ -1325,6 +1284,8 @@ namespace TransitManager.Infrastructure.Migrations
             modelBuilder.Entity("TransitManager.Core.Entities.Conteneur", b =>
                 {
                     b.Navigation("Colis");
+
+                    b.Navigation("Vehicules");
                 });
 
             modelBuilder.Entity("TransitManager.Core.Entities.Utilisateur", b =>

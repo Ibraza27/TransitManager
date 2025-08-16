@@ -120,7 +120,7 @@ namespace TransitManager.WPF.ViewModels
             return LoadAsync();
         }
 
-        public async Task LoadAsync()
+        public override async Task LoadAsync()
         {
             await ExecuteBusyActionAsync(async () =>
             {

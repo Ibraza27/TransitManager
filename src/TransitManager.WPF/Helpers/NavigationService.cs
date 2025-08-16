@@ -52,6 +52,7 @@ namespace TransitManager.WPF.Helpers
 			_viewModelMappings["Vehicules"] = typeof(VehiculeViewModel);
 			_viewModelMappings["VehiculeDetail"] = typeof(VehiculeDetailViewModel);
             _viewModelMappings["Conteneurs"] = typeof(ConteneurViewModel);
+			_viewModelMappings["ConteneurDetail"] = typeof(ConteneurDetailViewModel);
             _viewModelMappings["ConteneurDetail"] = typeof(ConteneurDetailViewModel);
             _viewModelMappings["Notifications"] = typeof(NotificationsViewModel);
         }

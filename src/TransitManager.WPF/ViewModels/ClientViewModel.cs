@@ -244,17 +244,19 @@ namespace TransitManager.WPF.ViewModels
             });
         }
 
-        private async Task LoadCitiesAsync()
-        {
-            var allClients = await _clientService.GetAllAsync();
-            var cities = allClients
-                .Select(c => c.Ville)
-                .Distinct()
-                .OrderBy(v => v)
-                .ToList();
+		private async Task LoadCitiesAsync()
+		{
+			var allClients = await _clientService.GetAllAsync();
+			var cities = allClients
+				.Select(c => c.Ville)
+				.Where(v => !string.IsNullOrEmpty(v)) // On filtre les villes nulles ou vides
+				.Select(v => v!) // On affirme au compilateur que ce n'est plus null
+				.Distinct()
+				.OrderBy(v => v)
+				.ToList();
 
-            Cities = new ObservableCollection<string>(cities);
-        }
+			Cities = new ObservableCollection<string>(cities);
+		}
 
         private async Task LoadStatisticsAsync()
         {

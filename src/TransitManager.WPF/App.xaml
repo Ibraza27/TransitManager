@@ -77,7 +77,7 @@
                 <viewsConteneurs:ConteneurListView />
             </DataTemplate>
 
-            <DataTemplate DataType="{x:Type conteneurs:ConteneurDetailViewModel}">
+            <DataTemplate DataType="{x:Type viewModels:ConteneurDetailViewModel}">
                 <viewsConteneurs:ConteneurDetailView />
             </DataTemplate>
 

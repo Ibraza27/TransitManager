@@ -1,5 +1,3 @@
-// FONCTION COMPLÈTE MODIFIÉE (Colis.cs)
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -10,7 +8,6 @@ namespace TransitManager.Core.Entities
 {
     public class Colis : BaseEntity
     {
-        // --- Champs privés ---
         private string _numeroReference = string.Empty;
         private Guid _clientId;
         private Guid? _conteneurId;
@@ -41,10 +38,11 @@ namespace TransitManager.Core.Entities
         private TypeEnvoi _typeEnvoi;
         private bool _livraisonADomicile;
         private decimal _prixTotal;
-        private decimal _sommePayee; // CHAMP AJOUTÉ
-        private decimal _restantAPayer; // CHAMP AJOUTÉ
+        private decimal _sommePayee;
+        
+        // --- NOUVEAU CHAMP ---
+        private string? _numeroPlomb;
 
-        // --- Propriétés Publiques ---
         public virtual ICollection<Barcode> Barcodes { get; set; } = new List<Barcode>();
 
         [Required]
@@ -96,12 +94,14 @@ namespace TransitManager.Core.Entities
         public bool LivraisonADomicile { get => _livraisonADomicile; set => SetProperty(ref _livraisonADomicile, value); }
         public decimal PrixTotal { get => _prixTotal; set { if (SetProperty(ref _prixTotal, value)) OnPropertyChanged(nameof(RestantAPayer)); } }
         
-        // PROPRIÉTÉ AJOUTÉE
         public decimal SommePayee { get => _sommePayee; set { if (SetProperty(ref _sommePayee, value)) OnPropertyChanged(nameof(RestantAPayer)); } }
         
-        // PROPRIÉTÉ CALCULÉE AJOUTÉE (pas de `SetProperty` car elle dépend des autres)
         public decimal RestantAPayer => PrixTotal - SommePayee;
 
+        // --- NOUVELLE PROPRIÉTÉ ---
+        [StringLength(50)]
+        public string? NumeroPlomb { get => _numeroPlomb; set => SetProperty(ref _numeroPlomb, value); }
+        
         public virtual Client? Client { get; set; }
         public virtual Conteneur? Conteneur { get; set; }
 

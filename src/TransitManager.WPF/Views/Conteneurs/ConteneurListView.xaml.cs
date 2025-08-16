@@ -1,5 +1,6 @@
 using System.Windows.Controls;
-using System.Windows.Input; // N'oubliez pas d'ajouter ce using !
+using System.Windows.Input;
+using TransitManager.Core.Entities;
 using TransitManager.WPF.ViewModels;
 
 namespace TransitManager.WPF.Views.Conteneurs
@@ -9,22 +10,23 @@ namespace TransitManager.WPF.Views.Conteneurs
     /// </summary>
     public partial class ConteneurListView : System.Windows.Controls.UserControl
     {
-        public ConteneurListView(ConteneurViewModel viewModel)
+        public ConteneurListView()
         {
             InitializeComponent();
         }
 
-        // === MÉTHODE AJOUTÉE POUR CORRIGER L'ERREUR DE COMPILATION ===
         private void DataGridRow_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // La logique pour cet événement sera ajoutée plus tard.
-            // Par exemple, on pourrait récupérer le ViewModel et appeler une commande pour
-            // naviguer vers la vue de détail du conteneur sélectionné.
-
-            // if (DataContext is ConteneurViewModel viewModel && viewModel.ViewDetailsCommand.CanExecute(null))
-            // {
-            //     viewModel.ViewDetailsCommand.Execute(null);
-            // }
+            if (sender is DataGridRow row && row.DataContext is Conteneur conteneur)
+            {
+                if (DataContext is ConteneurViewModel viewModel)
+                {
+                    if (viewModel.ViewDetailsCommand.CanExecute(conteneur))
+                    {
+                        viewModel.ViewDetailsCommand.Execute(conteneur);
+                    }
+                }
+            }
         }
     }
 }

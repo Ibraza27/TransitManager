@@ -14,5 +14,6 @@ namespace TransitManager.Core.Interfaces
         Task<Vehicule> UpdateAsync(Vehicule vehicule);
         Task<bool> DeleteAsync(Guid id);
         Task<IEnumerable<Vehicule>> SearchAsync(string searchTerm);
+		Task<bool> RemoveFromConteneurAsync(Guid vehiculeId);
     }
 }

@@ -55,27 +55,17 @@ namespace TransitManager.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     NumeroDossier = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    NumeroPlomb = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    NomCompagnie = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    NomTransitaire = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     Destination = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     PaysDestination = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    TypeEnvoi = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Statut = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    DateOuverture = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    DateDepartPrevue = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    DateDepartReelle = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    DateArriveePrevue = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    DateArriveeReelle = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    DateCloture = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CapaciteVolume = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 33m),
-                    CapacitePoids = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 28000m),
-                    Transporteur = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    NumeroTracking = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    NumeroNavireVol = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    DocumentsDouaniers = table.Column<string>(type: "text", nullable: true),
-                    ManifesteExpedition = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    ListeColisage = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    FraisTransport = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
-                    FraisDedouanement = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
-                    AutresFrais = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
+                    DateReception = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DateChargement = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DateDepart = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DateArriveeDestination = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DateDedouanement = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Commentaires = table.Column<string>(type: "text", nullable: true),
                     DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -130,45 +120,6 @@ namespace TransitManager.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Vehicules",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ClientId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Immatriculation = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Marque = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Modele = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Annee = table.Column<int>(type: "integer", nullable: false),
-                    Kilometrage = table.Column<int>(type: "integer", nullable: false),
-                    DestinationFinale = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    ValeurDeclaree = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    Destinataire = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    TelephoneDestinataire = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
-                    Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Commentaires = table.Column<string>(type: "text", nullable: true),
-                    PrixTotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    SommePayee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    EtatDesLieux = table.Column<string>(type: "text", nullable: true),
-                    EtatDesLieuxRayures = table.Column<string>(type: "text", nullable: true),
-                    DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CreePar = table.Column<string>(type: "text", nullable: true),
-                    ModifiePar = table.Column<string>(type: "text", nullable: true),
-                    Actif = table.Column<bool>(type: "boolean", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Vehicules", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Vehicules_Clients_ClientId",
-                        column: x => x.ClientId,
-                        principalTable: "Clients",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Colis",
                 columns: table => new
                 {
@@ -200,10 +151,11 @@ namespace TransitManager.Infrastructure.Migrations
                     Destinataire = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     TelephoneDestinataire = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     DestinationFinale = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    TypeEnvoi = table.Column<int>(type: "integer", nullable: false),
+                    TypeEnvoi = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     LivraisonADomicile = table.Column<bool>(type: "boolean", nullable: false),
                     PrixTotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     SommePayee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    NumeroPlomb = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreePar = table.Column<string>(type: "text", nullable: true),
@@ -269,6 +221,54 @@ namespace TransitManager.Infrastructure.Migrations
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Paiements_Conteneurs_ConteneurId",
+                        column: x => x.ConteneurId,
+                        principalTable: "Conteneurs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Vehicules",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClientId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Immatriculation = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Marque = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Modele = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Annee = table.Column<int>(type: "integer", nullable: false),
+                    Kilometrage = table.Column<int>(type: "integer", nullable: false),
+                    DestinationFinale = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    ValeurDeclaree = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Destinataire = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    TelephoneDestinataire = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Commentaires = table.Column<string>(type: "text", nullable: true),
+                    PrixTotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    SommePayee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    EtatDesLieux = table.Column<string>(type: "text", nullable: true),
+                    EtatDesLieuxRayures = table.Column<string>(type: "text", nullable: true),
+                    Statut = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ConteneurId = table.Column<Guid>(type: "uuid", nullable: true),
+                    NumeroPlomb = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreePar = table.Column<string>(type: "text", nullable: true),
+                    ModifiePar = table.Column<string>(type: "text", nullable: true),
+                    Actif = table.Column<bool>(type: "boolean", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Vehicules", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Vehicules_Clients_ClientId",
+                        column: x => x.ClientId,
+                        principalTable: "Clients",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Vehicules_Conteneurs_ConteneurId",
                         column: x => x.ConteneurId,
                         principalTable: "Conteneurs",
                         principalColumn: "Id",
@@ -430,7 +430,7 @@ namespace TransitManager.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Utilisateurs",
                 columns: new[] { "Id", "Actif", "CreePar", "DateCreation", "DateModification", "DateVerrouillage", "DerniereConnexion", "DoitChangerMotDePasse", "Email", "ExpirationToken", "FuseauHoraire", "Langue", "ModifiePar", "MotDePasseHash", "Nom", "NomUtilisateur", "NotificationsActivees", "NotificationsEmail", "NotificationsSMS", "PasswordSalt", "PermissionsSpecifiques", "PhotoProfil", "Preferences", "Prenom", "Role", "RowVersion", "Telephone", "TentativesConnexionEchouees", "Theme", "TokenReinitialisation" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 15, 7, 31, 31, 899, DateTimeKind.Utc).AddTicks(761), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$Obtjpvvl13k7XbKKNUyjt.w0o9s9eFQB8tYDRIgCGa/TUVwBLD19O", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 15, 16, 34, 9, 900, DateTimeKind.Utc).AddTicks(1592), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$fY8.4rEDz1LtUvNFvvJLIO7Snnf1gg3l1u9oP8WnvocBbL.QBgqgq", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UtilisateurId",
@@ -497,30 +497,10 @@ namespace TransitManager.Infrastructure.Migrations
                 column: "Statut");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Conteneurs_DateDepartPrevue",
-                table: "Conteneurs",
-                column: "DateDepartPrevue");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Conteneurs_DateOuverture",
-                table: "Conteneurs",
-                column: "DateOuverture");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Conteneurs_Destination",
-                table: "Conteneurs",
-                column: "Destination");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Conteneurs_NumeroDossier",
                 table: "Conteneurs",
                 column: "NumeroDossier",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Conteneurs_PaysDestination",
-                table: "Conteneurs",
-                column: "PaysDestination");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Conteneurs_Statut",
@@ -634,10 +614,20 @@ namespace TransitManager.Infrastructure.Migrations
                 column: "ClientId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Vehicules_ConteneurId",
+                table: "Vehicules",
+                column: "ConteneurId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Vehicules_Immatriculation",
                 table: "Vehicules",
                 column: "Immatriculation",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Vehicules_Statut",
+                table: "Vehicules",
+                column: "Statut");
         }
 
         /// <inheritdoc />

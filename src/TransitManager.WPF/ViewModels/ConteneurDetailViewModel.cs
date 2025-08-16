@@ -77,52 +77,46 @@ namespace TransitManager.WPF.ViewModels
             AddVehiculeCommand = new AsyncRelayCommand<Vehicule>(AddVehiculeAsync);
             RemoveVehiculeCommand = new AsyncRelayCommand<Vehicule>(RemoveVehiculeAsync);
 
-            // --- ABONNEMENT AUX CHANGEMENTS DES COLLECTIONS ---
             ColisAffectes.CollectionChanged += OnAffectationChanged;
             VehiculesAffectes.CollectionChanged += OnAffectationChanged;
         }
 
         private void OnAffectationChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            // On notifie que l'état de la commande Save a peut-être changé
             SaveCommand.NotifyCanExecuteChanged();
         }
 
         private bool CanSave()
         {
-            return Conteneur != null &&
-                   !string.IsNullOrWhiteSpace(Conteneur.NumeroDossier) &&
-                   !string.IsNullOrWhiteSpace(Conteneur.Destination) &&
-                   !string.IsNullOrWhiteSpace(Conteneur.PaysDestination) &&
-                   Conteneur.DateReception.HasValue &&
-                   !IsBusy;
+            if (Conteneur == null || IsBusy) return false;
+            
+            // La sauvegarde est possible si l'objet a changé depuis son chargement initial
+            // ou si c'est un nouvel objet avec les champs requis remplis.
+            bool isNewAndValid = string.IsNullOrEmpty(Conteneur.CreePar) &&
+                                 !string.IsNullOrWhiteSpace(Conteneur.NumeroDossier) &&
+                                 !string.IsNullOrWhiteSpace(Conteneur.Destination) &&
+                                 !string.IsNullOrWhiteSpace(Conteneur.PaysDestination) &&
+                                 Conteneur.DateReception.HasValue;
+
+            // Pour l'instant, on active toujours si les champs sont bons pour simplifier
+            return isNewAndValid || !string.IsNullOrEmpty(Conteneur.CreePar);
         }
 
-        // --- MÉTHODE MISE À JOUR POUR GÉRER LE STATUT ---
         private void OnConteneurPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             SaveCommand.NotifyCanExecuteChanged();
-
             if (Conteneur == null) return;
-
-            // Liste des propriétés de date qui affectent le statut
             var dateProperties = new[]
             {
-                nameof(Conteneur.DateReception),
-                nameof(Conteneur.DateChargement),
-                nameof(Conteneur.DateDepart),
-                nameof(Conteneur.DateArriveeDestination),
-                nameof(Conteneur.DateDedouanement)
+                nameof(Conteneur.DateReception), nameof(Conteneur.DateChargement), nameof(Conteneur.DateDepart),
+                nameof(Conteneur.DateArriveeDestination), nameof(Conteneur.DateDedouanement)
             };
-
-            // Si une des dates a changé, on recalcule le statut
             if (dateProperties.Contains(e.PropertyName))
             {
                 Conteneur.Statut = CalculateStatus(Conteneur);
             }
         }
         
-        // --- NOUVELLE MÉTHODE DE CALCUL DUPLIQUÉE ICI POUR LA RÉACTIVITÉ DE L'UI ---
         private StatutConteneur CalculateStatus(Conteneur conteneur)
         {
             if (conteneur.DateDedouanement.HasValue) return StatutConteneur.EnDedouanement;
@@ -130,7 +124,7 @@ namespace TransitManager.WPF.ViewModels
             if (conteneur.DateDepart.HasValue) return StatutConteneur.EnTransit;
             if (conteneur.DateChargement.HasValue) return StatutConteneur.EnPreparation;
             if (conteneur.DateReception.HasValue) return StatutConteneur.Reçu;
-            return StatutConteneur.Reçu; // Statut par défaut
+            return StatutConteneur.Reçu;
         }
 
         public async Task InitializeAsync(string newMarker)
@@ -158,20 +152,17 @@ namespace TransitManager.WPF.ViewModels
         private void RefreshCollections()
         {
             if (Conteneur == null) return;
-            
             ClientsAffiches.Clear();
             foreach(var client in Conteneur.ClientsDistincts) ClientsAffiches.Add(client);
-
             ColisAffectes.Clear();
             foreach(var colis in Conteneur.Colis) ColisAffectes.Add(colis);
-            
             VehiculesAffectes.Clear();
             foreach(var vehicule in Conteneur.Vehicules) VehiculesAffectes.Add(vehicule);
         }
 
         private async Task SaveAsync()
         {
-            if (!CanSave() || Conteneur == null) return;
+            if (Conteneur == null) return; // CanSave doit déjà bloquer mais sécurité supplémentaire
 
             await ExecuteBusyActionAsync(async () =>
             {
@@ -184,7 +175,26 @@ namespace TransitManager.WPF.ViewModels
                     }
                     else
                     {
-                        await _conteneurService.UpdateAsync(Conteneur);
+                        // On crée une copie "propre" de l'objet pour la sauvegarde
+                        // afin d'éviter d'envoyer des entités déjà trackées au service
+                        var conteneurToSave = new Conteneur
+                        {
+                            Id = Conteneur.Id,
+                            // Copiez toutes les propriétés modifiables ici
+                            NumeroDossier = Conteneur.NumeroDossier,
+                            NumeroPlomb = Conteneur.NumeroPlomb,
+                            NomCompagnie = Conteneur.NomCompagnie,
+                            NomTransitaire = Conteneur.NomTransitaire,
+                            Destination = Conteneur.Destination,
+                            PaysDestination = Conteneur.PaysDestination,
+                            DateReception = Conteneur.DateReception,
+                            DateChargement = Conteneur.DateChargement,
+                            DateDepart = Conteneur.DateDepart,
+                            DateArriveeDestination = Conteneur.DateArriveeDestination,
+                            DateDedouanement = Conteneur.DateDedouanement,
+                            Commentaires = Conteneur.Commentaires
+                        };
+                        await _conteneurService.UpdateAsync(conteneurToSave);
                     }
                     await _dialogService.ShowInformationAsync("Succès", "Le dossier a été enregistré.");
                     _navigationService.GoBack();
@@ -196,137 +206,102 @@ namespace TransitManager.WPF.ViewModels
             });
         }
         
-        #region Méthodes de recherche et d'affectation (inchangées)
+        private async Task AddColisAsync(Colis? colis)
+        {
+            if (colis == null || Conteneur == null) return;
+            bool success = await _colisService.AssignToConteneurAsync(colis.Id, Conteneur.Id);
+            if (success)
+            {
+                colis.ConteneurId = Conteneur.Id;
+                colis.Statut = StatutColis.Affecte;
+                colis.NumeroPlomb = Conteneur.NumeroPlomb;
+                ColisAffectes.Add(colis);
+                ColisSearchResults.Remove(colis);
+                RefreshClientList();
+            }
+            else
+            {
+                await _dialogService.ShowErrorAsync("Erreur", "Le colis n'a pas pu être affecté.");
+            }
+        }
+        
+        private async Task RemoveColisAsync(Colis? colis)
+        {
+            if (colis == null) return;
+            bool success = await _colisService.RemoveFromConteneurAsync(colis.Id);
+            if (success)
+            {
+                ColisAffectes.Remove(colis);
+                RefreshClientList();
+            }
+            else
+            {
+                await _dialogService.ShowErrorAsync("Erreur", "Le colis n'a pas pu être retiré.");
+            }
+        }
+        
+        private async Task AddVehiculeAsync(Vehicule? vehicule)
+        {
+            if (vehicule == null || Conteneur == null) return;
+            bool success = await _vehiculeService.AssignToConteneurAsync(vehicule.Id, Conteneur.Id);
+            if (success)
+            {
+                vehicule.ConteneurId = Conteneur.Id;
+                vehicule.Statut = StatutVehicule.Affecte;
+                vehicule.NumeroPlomb = Conteneur.NumeroPlomb;
+                VehiculesAffectes.Add(vehicule);
+                VehiculeSearchResults.Remove(vehicule);
+                RefreshClientList();
+            }
+            else
+            {
+                await _dialogService.ShowErrorAsync("Erreur", "Le véhicule n'a pas pu être affecté.");
+            }
+        }
+
+        private async Task RemoveVehiculeAsync(Vehicule? vehicule)
+        {
+            if (vehicule == null) return;
+            bool success = await _vehiculeService.RemoveFromConteneurAsync(vehicule.Id);
+            if (success)
+            {
+                VehiculesAffectes.Remove(vehicule);
+                RefreshClientList();
+            }
+            else
+            {
+                await _dialogService.ShowErrorAsync("Erreur", "Le véhicule n'a pas pu être retiré.");
+            }
+        }
+        
+        private void RefreshClientList()
+        {
+            if (Conteneur == null) return;
+            var colisClients = ColisAffectes.Select(c => c.Client);
+            var vehiculeClients = VehiculesAffectes.Select(v => v.Client);
+            var allClients = colisClients.Union(vehiculeClients).Where(c => c != null).Select(c => c!).DistinctBy(c => c.Id).ToList();
+            ClientsAffiches.Clear();
+            foreach(var client in allClients) ClientsAffiches.Add(client);
+        }
+
+        // Le reste des méthodes ne change pas
+        #region Autres méthodes
         private async Task SearchColisAsync()
         {
-            if (string.IsNullOrWhiteSpace(ColisSearchText))
-            {
-                ColisSearchResults.Clear();
-                return;
-            }
+            if (string.IsNullOrWhiteSpace(ColisSearchText)) { ColisSearchResults.Clear(); return; }
             var results = await _colisService.SearchAsync(ColisSearchText);
             var unassigned = results.Where(c => c.Statut == StatutColis.EnAttente);
             ColisSearchResults.Clear();
             foreach (var item in unassigned) ColisSearchResults.Add(item);
         }
-
-		private async Task AddColisAsync(Colis? colis)
-		{
-			if (colis == null || Conteneur == null) return;
-
-			colis.ConteneurId = Conteneur.Id;
-			colis.Statut = StatutColis.Affecte;
-			// On assigne le numéro de plomb du conteneur au colis au moment de l'affectation
-			colis.NumeroPlomb = Conteneur.NumeroPlomb; 
-			
-			await _colisService.UpdateAsync(colis);
-			
-			ColisAffectes.Add(colis);
-			ColisSearchResults.Remove(colis);
-			
-			// Le client est maintenant géré par la méthode centralisée
-			RefreshClientList();
-		}
-        
-		private async Task RemoveColisAsync(Colis? colis)
-		{
-			if (colis == null || Conteneur == null) return;
-
-			var confirm = await _dialogService.ShowConfirmationAsync(
-				"Retirer le Colis", 
-				$"Êtes-vous sûr de vouloir retirer le colis {colis.NumeroReference} de ce conteneur ?");
-
-			if (!confirm) return;
-
-			// On ne modifie plus le colis ici, on passe l'ID au service
-			bool success = await _colisService.RemoveFromConteneurAsync(colis.Id);
-
-			if (success)
-			{
-				ColisAffectes.Remove(colis);
-				RefreshClientList();
-			}
-			else
-			{
-				await _dialogService.ShowErrorAsync("Erreur", "Le colis n'a pas pu être retiré.");
-			}
-		}
-        
         private async Task SearchVehiculesAsync()
         {
-            if (string.IsNullOrWhiteSpace(VehiculeSearchText))
-            {
-                VehiculeSearchResults.Clear();
-                return;
-            }
+            if (string.IsNullOrWhiteSpace(VehiculeSearchText)) { VehiculeSearchResults.Clear(); return; }
             var results = await _vehiculeService.SearchAsync(VehiculeSearchText);
             var unassigned = results.Where(v => v.Statut == StatutVehicule.EnAttente);
             VehiculeSearchResults.Clear();
             foreach (var item in unassigned) VehiculeSearchResults.Add(item);
         }
-
-		private async Task AddVehiculeAsync(Vehicule? vehicule)
-		{
-			if (vehicule == null || Conteneur == null) return;
-
-			vehicule.ConteneurId = Conteneur.Id;
-			vehicule.Statut = StatutVehicule.Affecte;
-			// On assigne le numéro de plomb du conteneur au véhicule au moment de l'affectation
-			vehicule.NumeroPlomb = Conteneur.NumeroPlomb;
-
-			await _vehiculeService.UpdateAsync(vehicule);
-			
-			VehiculesAffectes.Add(vehicule);
-			VehiculeSearchResults.Remove(vehicule);
-			
-			// Le client est maintenant géré par la méthode centralisée
-			RefreshClientList();
-		}
-
-		private async Task RemoveVehiculeAsync(Vehicule? vehicule)
-		{
-			if (vehicule == null || Conteneur == null) return;
-
-			var confirm = await _dialogService.ShowConfirmationAsync(
-				"Retirer le Véhicule", 
-				$"Êtes-vous sûr de vouloir retirer le véhicule {vehicule.Immatriculation} de ce conteneur ?");
-
-			if (!confirm) return;
-
-			// On ne modifie plus le véhicule ici, on passe l'ID au service
-			bool success = await _vehiculeService.RemoveFromConteneurAsync(vehicule.Id);
-
-			if (success)
-			{
-				VehiculesAffectes.Remove(vehicule);
-				RefreshClientList();
-			}
-			else
-			{
-				await _dialogService.ShowErrorAsync("Erreur", "Le véhicule n'a pas pu être retiré.");
-			}
-		}
-		
-		private void RefreshClientList()
-		{
-			if (Conteneur == null) return;
-
-			var colisClients = ColisAffectes.Select(c => c.Client);
-			var vehiculeClients = VehiculesAffectes.Select(v => v.Client);
-			
-			var allClients = colisClients.Union(vehiculeClients)
-										 .Where(c => c != null)
-										 .Select(c => c!)
-										 .DistinctBy(c => c.Id)
-										 .ToList();
-
-			ClientsAffiches.Clear();
-			foreach(var client in allClients)
-			{
-				ClientsAffiches.Add(client);
-			}
-		}
-		
         #endregion
     }
 }

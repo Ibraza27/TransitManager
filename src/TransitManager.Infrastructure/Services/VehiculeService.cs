@@ -22,11 +22,11 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Vehicule> CreateAsync(Vehicule vehicule)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            // On attache le client existant au contexte pour éviter les conflits de tracking
-            if (vehicule.Client != null)
-            {
-                context.Entry(vehicule.Client).State = EntityState.Unchanged;
-            }
+            
+            // On attache l'entité Client au contexte sans la marquer comme modifiée.
+            // Cela indique à EF : "Ce client existe déjà, ne le crée pas."
+            context.Attach(vehicule.Client!);
+
             context.Vehicules.Add(vehicule);
             await context.SaveChangesAsync();
             return vehicule;
@@ -35,17 +35,36 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Vehicule> UpdateAsync(Vehicule vehicule)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
+            
             var vehiculeInDb = await context.Vehicules.FindAsync(vehicule.Id);
-            if (vehiculeInDb == null) throw new Exception("Véhicule non trouvé pour la mise à jour.");
+            if (vehiculeInDb == null) 
+            {
+                throw new InvalidOperationException("Le véhicule que vous essayez de modifier n'existe plus.");
+            }
             
-            // Copier les propriétés modifiées depuis l'objet de l'UI vers l'objet suivi par EF
+            // On copie les propriétés simples (Immatriculation, Marque, etc.)
             context.Entry(vehiculeInDb).CurrentValues.SetValues(vehicule);
-            
-            // S'assurer que le client n'est pas tracké à nouveau
+
+            // On met à jour les relations manuellement
             vehiculeInDb.ClientId = vehicule.ClientId;
+            vehiculeInDb.ConteneurId = vehicule.ConteneurId;
 
             await context.SaveChangesAsync();
             return vehiculeInDb;
+        }
+        
+        public async Task<bool> AssignToConteneurAsync(Guid vehiculeId, Guid conteneurId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var vehicule = await context.Vehicules.FindAsync(vehiculeId);
+            var conteneur = await context.Conteneurs.FindAsync(conteneurId);
+            var canReceiveStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation };
+            if (vehicule == null || conteneur == null || !canReceiveStatuses.Contains(conteneur.Statut)) return false;
+            vehicule.ConteneurId = conteneurId;
+            vehicule.Statut = StatutVehicule.Affecte;
+            vehicule.NumeroPlomb = conteneur.NumeroPlomb;
+            await context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> RemoveFromConteneurAsync(Guid vehiculeId)
@@ -59,9 +78,8 @@ namespace TransitManager.Infrastructure.Services
             await context.SaveChangesAsync();
             return true;
         }
-
-        // Le reste des méthodes ne change pas
-        #region Méthodes de lecture et autres
+        
+        #region Read-only methods
         public async Task<Vehicule?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();

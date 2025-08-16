@@ -25,12 +25,13 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Colis> CreateAsync(Colis colis)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            // Pour une création, on attache le client existant au contexte
-            if (colis.ClientId != Guid.Empty)
+            
+            // Attacher le client existant au contexte
+            if (colis.Client != null)
             {
-                var client = await context.Clients.FindAsync(colis.ClientId);
-                if (client != null) colis.Client = client;
+                context.Attach(colis.Client);
             }
+
             context.Colis.Add(colis);
             await context.SaveChangesAsync();
             return colis;
@@ -42,10 +43,14 @@ namespace TransitManager.Infrastructure.Services
             var colisInDb = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Id == colis.Id);
             if (colisInDb == null) throw new InvalidOperationException("Le colis n'existe plus.");
 
-            // Copier les propriétés simples de l'objet UI vers l'objet BDD
+            // Copier les propriétés simples
             context.Entry(colisInDb).CurrentValues.SetValues(colis);
+            
+            // Mettre à jour les relations
+            colisInDb.ClientId = colis.ClientId;
+            colisInDb.ConteneurId = colis.ConteneurId;
 
-            // Gérer la synchronisation des codes-barres
+            // Synchroniser la collection de codes-barres
             var submittedBarcodeValues = new HashSet<string>(colis.Barcodes.Select(b => b.Value));
             var dbBarcodes = colisInDb.Barcodes.ToList();
             var barcodesToRemove = dbBarcodes.Where(b => b.Actif && !submittedBarcodeValues.Contains(b.Value)).ToList();
@@ -87,7 +92,8 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
-        #region Méthodes de lecture et autres
+        // --- Le reste du fichier ne change pas ---
+        #region Read-only methods
         public async Task<Colis?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();

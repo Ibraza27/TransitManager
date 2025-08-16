@@ -23,10 +23,8 @@ namespace TransitManager.Infrastructure.Services
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             
-            // On attache l'entité Client au contexte sans la marquer comme modifiée.
-            // Cela indique à EF : "Ce client existe déjà, ne le crée pas."
-            context.Attach(vehicule.Client!);
-
+            // On n'attache plus l'objet client complet. EF gérera la relation via ClientId.
+            // Cela évite les erreurs si vehicule.Client est null.
             context.Vehicules.Add(vehicule);
             await context.SaveChangesAsync();
             return vehicule;
@@ -42,10 +40,7 @@ namespace TransitManager.Infrastructure.Services
                 throw new InvalidOperationException("Le véhicule que vous essayez de modifier n'existe plus.");
             }
             
-            // On copie les propriétés simples (Immatriculation, Marque, etc.)
             context.Entry(vehiculeInDb).CurrentValues.SetValues(vehicule);
-
-            // On met à jour les relations manuellement
             vehiculeInDb.ClientId = vehicule.ClientId;
             vehiculeInDb.ConteneurId = vehicule.ConteneurId;
 
@@ -60,6 +55,7 @@ namespace TransitManager.Infrastructure.Services
             var conteneur = await context.Conteneurs.FindAsync(conteneurId);
             var canReceiveStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation };
             if (vehicule == null || conteneur == null || !canReceiveStatuses.Contains(conteneur.Statut)) return false;
+            
             vehicule.ConteneurId = conteneurId;
             vehicule.Statut = StatutVehicule.Affecte;
             vehicule.NumeroPlomb = conteneur.NumeroPlomb;
@@ -72,6 +68,7 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var vehicule = await context.Vehicules.FindAsync(vehiculeId);
             if (vehicule == null) return false;
+
             vehicule.ConteneurId = null;
             vehicule.Statut = StatutVehicule.EnAttente;
             vehicule.NumeroPlomb = null;
@@ -88,7 +85,7 @@ namespace TransitManager.Infrastructure.Services
         public async Task<IEnumerable<Vehicule>> GetAllAsync()
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Vehicules.Include(v => v.Client).AsNoTracking().OrderByDescending(v => v.DateCreation).ToListAsync();
+            return await context.Vehicules.Include(v => v.Client).Include(v => v.Conteneur).AsNoTracking().OrderByDescending(v => v.DateCreation).ToListAsync();
         }
         public async Task<IEnumerable<Vehicule>> GetByClientAsync(Guid clientId)
         {

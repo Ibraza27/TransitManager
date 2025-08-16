@@ -66,7 +66,18 @@
                     <DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires}" Width="2*"/>
                     <DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="*"/>
 					<DataGridTextColumn Header="Conteneur" Binding="{Binding Conteneur.NumeroDossier}" Width="*"/>
-					<DataGridTextColumn Header="Statut" Binding="{Binding Statut}" Width="*"/>
+					<DataGridTemplateColumn Header="Statut" Width="120">
+						<DataGridTemplateColumn.CellTemplate>
+							<DataTemplate>
+								<Border Background="{Binding Statut, Converter={StaticResource StatusToColorConverter}}"
+										CornerRadius="12" Padding="12,4">
+									<TextBlock Text="{Binding Statut}" 
+											   Foreground="White" FontSize="11" 
+											   HorizontalAlignment="Center"/>
+								</Border>
+							</DataTemplate>
+						</DataGridTemplateColumn.CellTemplate>
+					</DataGridTemplateColumn>
                     
                     <!-- CORRECTION APPLIQUÉE SELON VOTRE ANALYSE -->
 					<DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat='{}{0:N2} €'}" Width="*">

@@ -163,8 +163,6 @@ namespace TransitManager.WPF.ViewModels
 		private async Task SaveAsync()
 		{
 			if (Conteneur == null) return;
-
-			// La validation CanSave a déjà été faite
 			if (!CanSave()) 
 			{
 				await _dialogService.ShowWarningAsync("Validation", "Veuillez remplir tous les champs obligatoires (*).");
@@ -182,7 +180,6 @@ namespace TransitManager.WPF.ViewModels
 					}
 					else
 					{
-						// On passe directement l'objet de l'UI. Le service se chargera du reste.
 						await _conteneurService.UpdateAsync(Conteneur);
 					}
 					await _dialogService.ShowInformationAsync("Succès", "Le dossier a été enregistré.");

@@ -12,7 +12,6 @@ using TransitManager.WPF.Helpers;
 
 namespace TransitManager.WPF.ViewModels
 {
-    // RETRAIT du mot-clé "partial" pour désactiver la génération de code
     public class ColisDetailViewModel : BaseViewModel
     {
         private readonly IColisService _colisService;
@@ -20,18 +19,17 @@ namespace TransitManager.WPF.ViewModels
         private readonly IBarcodeService _barcodeService;
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
-        private readonly IConteneurService _conteneurService; // Ajout du service pour les conteneurs
+        private readonly IConteneurService _conteneurService;
 
         #region Champs Privés
         private Colis? _colis;
         private ObservableCollection<Client> _clients = new();
         private List<Client> _allClients = new();
-        private ObservableCollection<Barcode> _barcodes = new(); // Backing field pour la propriété
+        private ObservableCollection<Barcode> _barcodes = new();
         private ObservableCollection<Conteneur> _conteneursDisponibles = new();
         private string _newBarcode = string.Empty;
         private bool _destinataireEstProprietaire;
         private Client? _selectedClient;
-        private Conteneur? _selectedConteneur;
         private string? _clientSearchText;
         #endregion
 
@@ -53,13 +51,11 @@ namespace TransitManager.WPF.ViewModels
             get => _barcodes;
             set
             {
-                // Se désabonner de l'ancienne collection pour éviter les fuites de mémoire
                 if (_barcodes != null)
                 {
                     _barcodes.CollectionChanged -= OnBarcodesCollectionChanged;
                 }
                 SetProperty(ref _barcodes, value);
-                // S'abonner à la nouvelle collection
                 if (_barcodes != null)
                 {
                     _barcodes.CollectionChanged += OnBarcodesCollectionChanged;
@@ -113,22 +109,24 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        public Conteneur? SelectedConteneur
-        {
-            get => _selectedConteneur;
-            set
-            {
-                if (SetProperty(ref _selectedConteneur, value))
-                {
-                    // Mettre à jour le ConteneurId du colis et sauvegarder
-                    if (Colis != null)
-                    {
-                        Colis.ConteneurId = value?.Id;
-                        _ = SaveAsync(); // On sauvegarde automatiquement
-                    }
-                }
-            }
-        }
+		private Conteneur? _selectedConteneur;
+		public Conteneur? SelectedConteneur
+		{
+			get => _selectedConteneur;
+			set 
+			{
+				if (SetProperty(ref _selectedConteneur, value))
+				{
+					// On ne sauvegarde plus automatiquement.
+					// On met simplement à jour l'ID et on laisse l'utilisateur cliquer sur "Enregistrer".
+					if (Colis != null)
+					{
+						Colis.ConteneurId = (value?.Id == Guid.Empty) ? null : value?.Id;
+						// Le PropertyChanged sur Colis déclenchera la réévaluation de CanSave
+					}
+				}
+			}
+		}
 
         public string? ClientSearchText
         {
@@ -159,6 +157,7 @@ namespace TransitManager.WPF.ViewModels
             _navigationService = navigationService;
             _dialogService = dialogService;
             _conteneurService = conteneurService;
+
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
             AddBarcodeCommand = new RelayCommand(AddBarcode, () => !string.IsNullOrWhiteSpace(NewBarcode));
@@ -177,31 +176,50 @@ namespace TransitManager.WPF.ViewModels
                    !IsBusy;
         }
 
-        private async Task SaveAsync()
-        {
-            if (!CanSave() || Colis == null || SelectedClient == null) return;
-            Colis.ClientId = SelectedClient.Id;
-            Colis.Barcodes = Barcodes.ToList();
-            await ExecuteBusyActionAsync(async () =>
-            {
-                try
-                {
-                    bool isNew = Colis.CreePar == null;
-                    if (isNew) await _colisService.CreateAsync(Colis);
-                    else await _colisService.UpdateAsync(Colis);
-                    await _dialogService.ShowInformationAsync("Succès", "Le colis a été enregistré.");
-                    _navigationService.NavigateTo("Colis");
-                }
-                catch (Exception ex)
-                {
-                    await _dialogService.ShowErrorAsync("Erreur", $"Erreur d'enregistrement : {ex.Message}");
-                }
-            });
-        }
+		private async Task SaveAsync()
+		{
+			if (!CanSave() || Colis == null || SelectedClient == null) return;
+
+			// --- NOUVELLE LOGIQUE DE STATUT ---
+			// Si on affecte à un conteneur, le statut devient Affecte.
+			// Si on le retire, il redevient EnAttente.
+			if (Colis.ConteneurId.HasValue && Colis.Statut == StatutColis.EnAttente)
+			{
+				Colis.Statut = StatutColis.Affecte;
+			}
+			else if (!Colis.ConteneurId.HasValue && Colis.Statut == StatutColis.Affecte)
+			{
+				Colis.Statut = StatutColis.EnAttente;
+			}
+
+			Colis.ClientId = SelectedClient.Id;
+			Colis.Barcodes = Barcodes.ToList();
+
+			await ExecuteBusyActionAsync(async () =>
+			{
+				try
+				{
+					bool isNew = string.IsNullOrEmpty(Colis.CreePar);
+					if (isNew)
+					{
+						await _colisService.CreateAsync(Colis);
+					}
+					else
+					{
+						await _colisService.UpdateAsync(Colis);
+					}
+					await _dialogService.ShowInformationAsync("Succès", "Le colis a été enregistré.");
+					_navigationService.GoBack(); // <-- On ferme la fenêtre après l'enregistrement
+				}
+				catch (Exception ex)
+				{
+					await _dialogService.ShowErrorAsync("Erreur", $"Erreur d'enregistrement : {ex.Message}\n{ex.InnerException?.Message}");
+				}
+			});
+		}
 
         private void OnBarcodesCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            // A chaque ajout ou suppression, on notifie à la commande de réévaluer son état.
             SaveCommand.NotifyCanExecuteChanged();
         }
 
@@ -256,8 +274,6 @@ namespace TransitManager.WPF.ViewModels
         private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             SaveCommand.NotifyCanExecuteChanged();
-
-            // La logique de calcul automatique est maintenant désactivée (en commentaire)
             /*
             if (e.PropertyName is nameof(Colis.TypeEnvoi) or nameof(Colis.LivraisonADomicile) or nameof(Colis.Poids))
             {
@@ -268,7 +284,6 @@ namespace TransitManager.WPF.ViewModels
 
         private void CalculatePrice()
         {
-            // Cette méthode n'est plus appelée mais nous la laissons au cas où vous changeriez d'avis.
             if (Colis == null) return;
             decimal prix = 0;
             prix += Colis.Poids * 2.5m;
@@ -318,12 +333,29 @@ namespace TransitManager.WPF.ViewModels
         {
             var conteneurs = await _conteneurService.GetOpenConteneursAsync();
             ConteneursDisponibles.Clear();
-            // On ajoute une option "Aucun" pour pouvoir désaffecter
             ConteneursDisponibles.Add(new Conteneur { Id = Guid.Empty, NumeroDossier = "Aucun" });
             foreach (var c in conteneurs)
             {
                 ConteneursDisponibles.Add(c);
             }
+        }
+
+        private async void HandleConteneurSelectionChange()
+        {
+            if (Colis == null || IsBusy) return;
+            var newConteneurId = _selectedConteneur?.Id == Guid.Empty ? null : _selectedConteneur?.Id;
+
+            if (Colis.ConteneurId == newConteneurId) return;
+            if (newConteneurId.HasValue)
+            {
+                await _colisService.AssignToConteneurAsync(Colis.Id, newConteneurId.Value);
+            }
+            else
+            {
+                await _colisService.RemoveFromConteneurAsync(Colis.Id);
+            }
+
+            await InitializeAsync(Colis.Id);
         }
     }
 }

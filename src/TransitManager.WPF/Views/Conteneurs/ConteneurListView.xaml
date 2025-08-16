@@ -98,6 +98,7 @@
                     <DataGridTextColumn Header="Date Chargement" Binding="{Binding DateChargement, StringFormat='dd/MM/yy'}" Width="Auto"/>
                     <DataGridTextColumn Header="Date Départ" Binding="{Binding DateDepart, StringFormat='dd/MM/yy'}" Width="Auto"/>
                     <DataGridTextColumn Header="Date Arrivée" Binding="{Binding DateArriveeDestination, StringFormat='dd/MM/yy'}" Width="Auto"/>
+					<DataGridTextColumn Header="Date Clôture" Binding="{Binding DateCloture, StringFormat='dd/MM/yy'}" Width="Auto"/>
                     <DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires}" Width="2*"/>
                     
                     <DataGridTemplateColumn Header="Actions" Width="Auto">

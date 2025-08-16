@@ -49,7 +49,12 @@ namespace TransitManager.WPF.ViewModels
             DeleteCommand = new AsyncRelayCommand<Vehicule>(DeleteVehicule);
         }
 
-        public override Task InitializeAsync() => LoadVehiculesAsync();
+		public override Task InitializeAsync()
+		{
+			// On efface les filtres et on recharge
+			SearchText = string.Empty;
+			return LoadVehiculesAsync();
+		}
 
         private async Task LoadVehiculesAsync()
         {

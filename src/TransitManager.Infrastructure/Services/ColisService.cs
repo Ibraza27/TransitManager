@@ -25,13 +25,7 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Colis> CreateAsync(Colis colis)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            
-            // Attacher le client existant au contexte
-            if (colis.Client != null)
-            {
-                context.Attach(colis.Client);
-            }
-
+            // On n'attache plus l'objet client, EF gérera la relation via ClientId
             context.Colis.Add(colis);
             await context.SaveChangesAsync();
             return colis;
@@ -43,14 +37,10 @@ namespace TransitManager.Infrastructure.Services
             var colisInDb = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Id == colis.Id);
             if (colisInDb == null) throw new InvalidOperationException("Le colis n'existe plus.");
 
-            // Copier les propriétés simples
             context.Entry(colisInDb).CurrentValues.SetValues(colis);
-            
-            // Mettre à jour les relations
             colisInDb.ClientId = colis.ClientId;
             colisInDb.ConteneurId = colis.ConteneurId;
-
-            // Synchroniser la collection de codes-barres
+            
             var submittedBarcodeValues = new HashSet<string>(colis.Barcodes.Select(b => b.Value));
             var dbBarcodes = colisInDb.Barcodes.ToList();
             var barcodesToRemove = dbBarcodes.Where(b => b.Actif && !submittedBarcodeValues.Contains(b.Value)).ToList();
@@ -66,6 +56,8 @@ namespace TransitManager.Infrastructure.Services
             return colisInDb;
         }
 
+        // ... le reste du fichier est identique ...
+        #region Reste du service (inchangé)
         public async Task<bool> AssignToConteneurAsync(Guid colisId, Guid conteneurId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -79,7 +71,6 @@ namespace TransitManager.Infrastructure.Services
             await context.SaveChangesAsync();
             return true;
         }
-
         public async Task<bool> RemoveFromConteneurAsync(Guid colisId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -91,9 +82,6 @@ namespace TransitManager.Infrastructure.Services
             await context.SaveChangesAsync();
             return true;
         }
-
-        // --- Le reste du fichier ne change pas ---
-        #region Read-only methods
         public async Task<Colis?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();

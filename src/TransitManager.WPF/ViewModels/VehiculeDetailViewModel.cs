@@ -88,24 +88,21 @@ namespace TransitManager.WPF.ViewModels
         // --- NOUVELLES PROPRIÉTÉS POUR L'AFFECTATION ---
         public ObservableCollection<Conteneur> ConteneursDisponibles { get; } = new();
 
-        private Conteneur? _selectedConteneur;
-        public Conteneur? SelectedConteneur
-        {
-            get => _selectedConteneur;
-            set 
-            {
-                if (SetProperty(ref _selectedConteneur, value))
-                {
-                    // La logique d'affectation est déclenchée ici
-                    if (Vehicule != null)
-                    {
-                        // Si "Aucun" est sélectionné, l'ID sera Guid.Empty, donc null
-                        Vehicule.ConteneurId = (value?.Id == Guid.Empty) ? null : value?.Id;
-                        _ = SaveAsync(); // On sauvegarde automatiquement le changement
-                    }
-                }
-            }
-        }
+		private Conteneur? _selectedConteneur;
+		public Conteneur? SelectedConteneur
+		{
+			get => _selectedConteneur;
+			set 
+			{
+				if (SetProperty(ref _selectedConteneur, value))
+				{
+					if (Vehicule != null)
+					{
+						Vehicule.ConteneurId = (value?.Id == Guid.Empty) ? null : value?.Id;
+					}
+				}
+			}
+		}
         
         public IAsyncRelayCommand SaveCommand { get; }
         public IRelayCommand CancelCommand { get; }
@@ -190,41 +187,51 @@ namespace TransitManager.WPF.ViewModels
             }
         }
         
-        private async Task SaveAsync()
-        {
-            if (!CanSave() || Vehicule == null || SelectedClient == null) return;
-            
-            Vehicule.ClientId = SelectedClient.Id;
-            SerializeDamagePoints();
-            SerializeRayures();
+		private async Task SaveAsync()
+		{
+			if (!CanSave() || Vehicule == null || SelectedClient == null) return;
+			
+			// --- NOUVELLE LOGIQUE DE STATUT ---
+			if (Vehicule.ConteneurId.HasValue && Vehicule.Statut == StatutVehicule.EnAttente)
+			{
+				Vehicule.Statut = StatutVehicule.Affecte;
+			}
+			else if (!Vehicule.ConteneurId.HasValue && Vehicule.Statut != StatutVehicule.EnAttente)
+			{
+				// On ne remet EnAttente que si ce n'est pas un statut "problème"
+				if(Vehicule.Statut != StatutVehicule.Probleme && Vehicule.Statut != StatutVehicule.Retourne)
+				{
+					Vehicule.Statut = StatutVehicule.EnAttente;
+				}
+			}
+					
+			Vehicule.ClientId = SelectedClient.Id;
+			SerializeDamagePoints();
+			SerializeRayures();
 
-            await ExecuteBusyActionAsync(async () =>
-            {
-                try
-                {
-                    bool isNew = string.IsNullOrEmpty(Vehicule.CreePar);
-                    if (isNew)
-                    {
-                        await _vehiculeService.CreateAsync(Vehicule);
-                    }
-                    else
-                    {
-                        await _vehiculeService.UpdateAsync(Vehicule);
-                    }
+			await ExecuteBusyActionAsync(async () =>
+			{
+				try
+				{
+					bool isNew = string.IsNullOrEmpty(Vehicule.CreePar);
+					if (isNew)
+					{
+						await _vehiculeService.CreateAsync(Vehicule);
+					}
+					else
+					{
+						await _vehiculeService.UpdateAsync(Vehicule);
+					}
 
-                    // On ne ferme pas la fenêtre pour permettre l'affectation
-                    await _dialogService.ShowInformationAsync("Succès", "Le véhicule a été enregistré.");
-                    
-                    // On recharge pour s'assurer que les données sont à jour
-                    if (!isNew) await InitializeAsync(Vehicule.Id);
-                }
-                catch (Exception ex)
-                {
-                    await _dialogService.ShowErrorAsync("Erreur", $"Erreur d'enregistrement : {ex.Message}");
-                }
-            });
-        }
-
+					await _dialogService.ShowInformationAsync("Succès", "Le véhicule a été enregistré.");
+					_navigationService.GoBack(); // <-- On ferme la fenêtre après l'enregistrement
+				}
+				catch (Exception ex)
+				{
+					await _dialogService.ShowErrorAsync("Erreur", $"Erreur d'enregistrement : {ex.Message}\n{ex.InnerException?.Message}");
+				}
+			});
+		}
         // Le reste du fichier est inchangé
         #region Reste du code (inchangé)
         private bool CanSave()

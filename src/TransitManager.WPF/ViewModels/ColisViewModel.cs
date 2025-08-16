@@ -115,10 +115,12 @@ namespace TransitManager.WPF.ViewModels
             InitializeStatutsList();
         }
 
-        public override Task InitializeAsync()
-        {
-            return LoadAsync();
-        }
+		public override async Task InitializeAsync()
+		{
+			// On efface les filtres et on recharge tout à chaque fois que la vue est activée
+			ClearFilters();
+			await LoadAsync();
+		}
 
         public override async Task LoadAsync()
         {

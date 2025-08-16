@@ -23,6 +23,8 @@ namespace TransitManager.WPF.Converters
             {
                 case StatutColis statutColis:
                     return GetColisStatusColor(statutColis);
+					
+				case StatutVehicule statutVehicule: return GetVehiculeStatusColor(statutVehicule);
                     
                 case StatutConteneur statutConteneur:
                     return GetConteneurStatusColor(statutConteneur);
@@ -43,6 +45,7 @@ namespace TransitManager.WPF.Converters
             return statut switch
             {
                 StatutColis.EnAttente => new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 152, 0)), // Orange
+				StatutColis.EnDedouanement => new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 87, 34)), // Deep Orange
                 StatutColis.Affecte => new SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243)), // Blue
                 StatutColis.EnTransit => new SolidColorBrush(System.Windows.Media.Color.FromRgb(3, 169, 244)), // Light Blue
                 StatutColis.Arrive => new SolidColorBrush(System.Windows.Media.Color.FromRgb(139, 195, 74)), // Light Green
@@ -69,6 +72,22 @@ namespace TransitManager.WPF.Converters
                 _ => new SolidColorBrush(System.Windows.Media.Colors.Gray)
             };
         }
+		
+		private System.Windows.Media.Brush GetVehiculeStatusColor(StatutVehicule statut)
+		{
+			return statut switch
+			{
+				StatutVehicule.EnAttente => new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 152, 0)),
+				StatutVehicule.Affecte => new SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243)),
+				StatutVehicule.EnTransit => new SolidColorBrush(System.Windows.Media.Color.FromRgb(3, 169, 244)),
+				StatutVehicule.Arrive => new SolidColorBrush(System.Windows.Media.Color.FromRgb(139, 195, 74)),
+				StatutVehicule.EnDedouanement => new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 87, 34)),
+				StatutVehicule.Livre => new SolidColorBrush(System.Windows.Media.Color.FromRgb(76, 175, 80)),
+				StatutVehicule.Probleme => new SolidColorBrush(System.Windows.Media.Color.FromRgb(244, 67, 54)),
+				StatutVehicule.Retourne => new SolidColorBrush(System.Windows.Media.Color.FromRgb(121, 85, 72)),
+				_ => new SolidColorBrush(System.Windows.Media.Colors.Gray)
+			};
+		}
 
         private System.Windows.Media.Brush GetPaiementStatusColor(StatutPaiement statut)
         {

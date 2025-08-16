@@ -178,11 +178,18 @@ namespace TransitManager.WPF.ViewModels
 		
         public override async Task InitializeAsync()
         {
+			ClearFilters();
             // Cette méthode sera appelée à chaque fois que la vue devient active.
             // Elle lance le chargement complet des données.
             await LoadAsync();
         }		
 
+		private void ClearFilters()
+		{
+			SearchText = string.Empty;
+			SelectedStatus = "Tous";
+			SelectedCity = null;
+		}
 
 		public override async Task LoadAsync()
 		{

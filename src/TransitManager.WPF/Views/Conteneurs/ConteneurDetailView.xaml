@@ -100,7 +100,7 @@
 							<TextBlock Text="Colis Affectés" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,10,0,5"/>
 							<DataGrid ItemsSource="{Binding ColisAffectes}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
 								<DataGrid.Columns>
-									<DataGridTextColumn Header="Référence" Binding="{Binding NumeroReference}" Width="*"/>
+									<DataGridTextColumn Header="Référence" Binding="{Binding NumeroReference}" Width="*" FontWeight="Bold"/>
 									<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*"/>
 									<DataGridTextColumn Header="Désignation" Binding="{Binding Designation}" Width="2*"/>
 									<DataGridTextColumn Header="Pièces" Binding="{Binding NombrePieces}" Width="Auto"/>

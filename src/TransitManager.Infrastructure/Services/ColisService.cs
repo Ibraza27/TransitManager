@@ -25,7 +25,12 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Colis> CreateAsync(Colis colis)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            if (colis.Client != null) context.Entry(colis.Client).State = EntityState.Unchanged;
+            // Pour une création, on attache le client existant au contexte
+            if (colis.ClientId != Guid.Empty)
+            {
+                var client = await context.Clients.FindAsync(colis.ClientId);
+                if (client != null) colis.Client = client;
+            }
             context.Colis.Add(colis);
             await context.SaveChangesAsync();
             return colis;
@@ -37,17 +42,19 @@ namespace TransitManager.Infrastructure.Services
             var colisInDb = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Id == colis.Id);
             if (colisInDb == null) throw new InvalidOperationException("Le colis n'existe plus.");
 
-            // Copier les propriétés simples
+            // Copier les propriétés simples de l'objet UI vers l'objet BDD
             context.Entry(colisInDb).CurrentValues.SetValues(colis);
 
-            // Gérer les collections
+            // Gérer la synchronisation des codes-barres
             var submittedBarcodeValues = new HashSet<string>(colis.Barcodes.Select(b => b.Value));
             var dbBarcodes = colisInDb.Barcodes.ToList();
             var barcodesToRemove = dbBarcodes.Where(b => b.Actif && !submittedBarcodeValues.Contains(b.Value)).ToList();
             foreach (var barcode in barcodesToRemove) barcode.Actif = false;
+            
             var dbBarcodeValues = new HashSet<string>(dbBarcodes.Select(b => b.Value));
             var barcodesToAdd = submittedBarcodeValues.Where(value => !dbBarcodeValues.Contains(value))
                 .Select(value => new Barcode { Value = value, ColisId = colisInDb.Id }).ToList();
+                
             if (barcodesToAdd.Any()) await context.Barcodes.AddRangeAsync(barcodesToAdd);
             
             await context.SaveChangesAsync();
@@ -59,10 +66,8 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var colis = await context.Colis.FindAsync(colisId);
             var conteneur = await context.Conteneurs.FindAsync(conteneurId);
-
             var canReceiveStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation };
             if (colis == null || conteneur == null || !canReceiveStatuses.Contains(conteneur.Statut)) return false;
-
             colis.ConteneurId = conteneurId;
             colis.Statut = StatutColis.Affecte;
             colis.NumeroPlomb = conteneur.NumeroPlomb;
@@ -75,7 +80,6 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var colis = await context.Colis.FindAsync(colisId);
             if (colis == null) return false;
-
             colis.ConteneurId = null;
             colis.Statut = StatutColis.EnAttente;
             colis.NumeroPlomb = null;
@@ -83,7 +87,7 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
-        #region Méthodes de lecture et autres (inchangées)
+        #region Méthodes de lecture et autres
         public async Task<Colis?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();

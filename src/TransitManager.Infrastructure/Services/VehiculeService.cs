@@ -22,7 +22,11 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Vehicule> CreateAsync(Vehicule vehicule)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            if (vehicule.Client != null) context.Entry(vehicule.Client).State = EntityState.Unchanged;
+            // On attache le client existant au contexte pour éviter les conflits de tracking
+            if (vehicule.Client != null)
+            {
+                context.Entry(vehicule.Client).State = EntityState.Unchanged;
+            }
             context.Vehicules.Add(vehicule);
             await context.SaveChangesAsync();
             return vehicule;
@@ -31,15 +35,17 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Vehicule> UpdateAsync(Vehicule vehicule)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            // On ne modifie pas directement l'objet passé, on charge celui de la BDD
             var vehiculeInDb = await context.Vehicules.FindAsync(vehicule.Id);
-            if (vehiculeInDb != null)
-            {
-                context.Entry(vehiculeInDb).CurrentValues.SetValues(vehicule);
-                await context.SaveChangesAsync();
-                return vehiculeInDb;
-            }
-            throw new Exception("Véhicule non trouvé pour la mise à jour.");
+            if (vehiculeInDb == null) throw new Exception("Véhicule non trouvé pour la mise à jour.");
+            
+            // Copier les propriétés modifiées depuis l'objet de l'UI vers l'objet suivi par EF
+            context.Entry(vehiculeInDb).CurrentValues.SetValues(vehicule);
+            
+            // S'assurer que le client n'est pas tracké à nouveau
+            vehiculeInDb.ClientId = vehicule.ClientId;
+
+            await context.SaveChangesAsync();
+            return vehiculeInDb;
         }
 
         public async Task<bool> RemoveFromConteneurAsync(Guid vehiculeId)
@@ -47,7 +53,6 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var vehicule = await context.Vehicules.FindAsync(vehiculeId);
             if (vehicule == null) return false;
-
             vehicule.ConteneurId = null;
             vehicule.Statut = StatutVehicule.EnAttente;
             vehicule.NumeroPlomb = null;
@@ -55,7 +60,8 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
-        #region Méthodes de lecture et autres (inchangées)
+        // Le reste des méthodes ne change pas
+        #region Méthodes de lecture et autres
         public async Task<Vehicule?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();

@@ -65,6 +65,8 @@
                     <DataGridTextColumn Header="Année" Binding="{Binding Annee}" Width="Auto"/>
                     <DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires}" Width="2*"/>
                     <DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="*"/>
+					<DataGridTextColumn Header="Conteneur" Binding="{Binding Conteneur.NumeroDossier}" Width="*"/>
+					<DataGridTextColumn Header="Statut" Binding="{Binding Statut}" Width="*"/>
                     
                     <!-- CORRECTION APPLIQUÉE SELON VOTRE ANALYSE -->
 					<DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat='{}{0:N2} €'}" Width="*">

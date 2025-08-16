@@ -12,7 +12,7 @@ using TransitManager.Infrastructure.Data;
 namespace TransitManager.Infrastructure.Migrations
 {
     [DbContext(typeof(TransitContext))]
-    [Migration("20250815163413_InitialCreate")]
+    [Migration("20250816135106_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -467,6 +467,9 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DateChargement")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DateCloture")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateCreation")
@@ -1017,12 +1020,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 8, 15, 16, 34, 9, 900, DateTimeKind.Utc).AddTicks(1592),
+                            DateCreation = new DateTime(2025, 8, 16, 13, 51, 5, 480, DateTimeKind.Utc).AddTicks(7797),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$fY8.4rEDz1LtUvNFvvJLIO7Snnf1gg3l1u9oP8WnvocBbL.QBgqgq",
+                            MotDePasseHash = "$2a$11$lGoMpMpgQju.YkYKz3JoAOziP6xFd/wS5BA0snlEi4a7F8uHsaFEq",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,

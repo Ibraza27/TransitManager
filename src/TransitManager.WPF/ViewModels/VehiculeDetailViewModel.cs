@@ -1,13 +1,13 @@
-using System.IO;
-using System.Windows.Ink;
 using CommunityToolkit.Mvvm.Input;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Windows;
+using System.Windows.Ink;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
@@ -19,6 +19,7 @@ namespace TransitManager.WPF.ViewModels
     {
         private readonly IVehiculeService _vehiculeService;
         private readonly IClientService _clientService;
+        private readonly IConteneurService _conteneurService; // <-- NOUVEAU : Service injecté
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
 
@@ -34,7 +35,6 @@ namespace TransitManager.WPF.ViewModels
             }
         }
         
-        // --- NOUVELLE PROPRIÉTÉ POUR L'IMAGE ---
         private string _planImagePath = "/Resources/Images/vehicule_plan.png";
         public string PlanImagePath { get => _planImagePath; set => SetProperty(ref _planImagePath, value); }
 
@@ -83,31 +83,53 @@ namespace TransitManager.WPF.ViewModels
         }
 
         public ObservableCollection<System.Windows.Point> DamagePoints { get; set; } = new();
-		public StrokeCollection Rayures { get; set; } = new StrokeCollection();
+        public StrokeCollection Rayures { get; set; } = new StrokeCollection();
 
+        // --- NOUVELLES PROPRIÉTÉS POUR L'AFFECTATION ---
+        public ObservableCollection<Conteneur> ConteneursDisponibles { get; } = new();
+
+        private Conteneur? _selectedConteneur;
+        public Conteneur? SelectedConteneur
+        {
+            get => _selectedConteneur;
+            set 
+            {
+                if (SetProperty(ref _selectedConteneur, value))
+                {
+                    // La logique d'affectation est déclenchée ici
+                    if (Vehicule != null)
+                    {
+                        // Si "Aucun" est sélectionné, l'ID sera Guid.Empty, donc null
+                        Vehicule.ConteneurId = (value?.Id == Guid.Empty) ? null : value?.Id;
+                        _ = SaveAsync(); // On sauvegarde automatiquement le changement
+                    }
+                }
+            }
+        }
+        
         public IAsyncRelayCommand SaveCommand { get; }
         public IRelayCommand CancelCommand { get; }
         public IRelayCommand<System.Windows.Point> AddDamagePointCommand { get; }
         public IRelayCommand<System.Windows.Point> RemoveDamagePointCommand { get; }
 
-		public VehiculeDetailViewModel(IVehiculeService vehiculeService, IClientService clientService, INavigationService navigationService, IDialogService dialogService)
-		{
-			_vehiculeService = vehiculeService;
-			_clientService = clientService;
-			_navigationService = navigationService;
-			_dialogService = dialogService;
+        public VehiculeDetailViewModel(IVehiculeService vehiculeService, IClientService clientService, 
+                                       IConteneurService conteneurService, // <-- NOUVEAU : Service injecté
+                                       INavigationService navigationService, IDialogService dialogService)
+        {
+            _vehiculeService = vehiculeService;
+            _clientService = clientService;
+            _conteneurService = conteneurService; // <-- NOUVEAU : Service assigné
+            _navigationService = navigationService;
+            _dialogService = dialogService;
 
-			SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
-			CancelCommand = new RelayCommand(Cancel);
-			AddDamagePointCommand = new RelayCommand<System.Windows.Point>(AddDamagePoint);
-			RemoveDamagePointCommand = new RelayCommand<System.Windows.Point>(RemoveDamagePoint);
-
-			// S'abonner aux changements des points d'impact (déjà présent)
-			DamagePoints.CollectionChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
-			
-			// LIGNE AJOUTÉE : S'abonner aux changements des rayures (traits dessinés)
-			Rayures.StrokesChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
-		}
+            SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
+            CancelCommand = new RelayCommand(Cancel);
+            AddDamagePointCommand = new RelayCommand<System.Windows.Point>(AddDamagePoint);
+            RemoveDamagePointCommand = new RelayCommand<System.Windows.Point>(RemoveDamagePoint);
+            
+            DamagePoints.CollectionChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
+            Rayures.StrokesChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
+        }
         
         public async Task InitializeAsync(string newMarker)
         {
@@ -118,55 +140,69 @@ namespace TransitManager.WPF.ViewModels
                     _allClients = (await _clientService.GetActiveClientsAsync()).ToList();
                     FilterClients(null);
                     Title = "Nouveau Véhicule";
-                    Vehicule = new Vehicule(); // L'abonnement se fait via le setter
+                    Vehicule = new Vehicule();
                     DestinataireEstProprietaire = true;
+                    
+                    await LoadConteneursDisponiblesAsync(); // <-- NOUVEAU
                 });
             }
         }
         
-		public async Task InitializeAsync(Guid vehiculeId)
-		{
-			await ExecuteBusyActionAsync(async () =>
-			{
-				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
-				FilterClients(null);
-				
-				Title = "Modifier le Véhicule";
-				Vehicule = await _vehiculeService.GetByIdAsync(vehiculeId);
-				if (Vehicule != null)
-				{
-					SelectedClient = Clients.FirstOrDefault(c => c.Id == Vehicule.ClientId);
-					LoadDamagePoints();
-					LoadRayures();
-
-					// LIGNE AJOUTÉE : Mettre à jour l'image au chargement initial
-					UpdatePlanImage(Vehicule.Type);
-				}
-			});
-		}
-        
-        private bool CanSave()
+        public async Task InitializeAsync(Guid vehiculeId)
         {
-            return Vehicule != null && SelectedClient != null &&
-                   !string.IsNullOrWhiteSpace(Vehicule.Immatriculation) &&
-                   !string.IsNullOrWhiteSpace(Vehicule.Marque) &&
-                   !string.IsNullOrWhiteSpace(Vehicule.Modele) &&
-                   !IsBusy;
+            await ExecuteBusyActionAsync(async () =>
+            {
+                _allClients = (await _clientService.GetActiveClientsAsync()).ToList();
+                FilterClients(null);
+                
+                Title = "Modifier le Véhicule";
+                Vehicule = await _vehiculeService.GetByIdAsync(vehiculeId);
+                if (Vehicule != null)
+                {
+                    SelectedClient = Clients.FirstOrDefault(c => c.Id == Vehicule.ClientId);
+                    LoadDamagePoints();
+                    LoadRayures();
+                    UpdatePlanImage(Vehicule.Type);
+
+                    // --- NOUVELLE LOGIQUE D'INITIALISATION ---
+                    await LoadConteneursDisponiblesAsync();
+                    if (Vehicule.ConteneurId.HasValue)
+                    {
+                        SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Vehicule.ConteneurId.Value);
+                    }
+                    else
+                    {
+                        SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Guid.Empty);
+                    }
+                }
+            });
         }
 
+        // --- NOUVELLE MÉTHODE ---
+        private async Task LoadConteneursDisponiblesAsync()
+        {
+            var conteneurs = await _conteneurService.GetOpenConteneursAsync();
+            ConteneursDisponibles.Clear();
+            ConteneursDisponibles.Add(new Conteneur { Id = Guid.Empty, NumeroDossier = "Aucun" }); 
+            foreach (var c in conteneurs)
+            {
+                ConteneursDisponibles.Add(c);
+            }
+        }
+        
         private async Task SaveAsync()
         {
             if (!CanSave() || Vehicule == null || SelectedClient == null) return;
             
             Vehicule.ClientId = SelectedClient.Id;
             SerializeDamagePoints();
-			SerializeRayures();
+            SerializeRayures();
 
             await ExecuteBusyActionAsync(async () =>
             {
                 try
                 {
-                    bool isNew = Vehicule.CreePar == null;
+                    bool isNew = string.IsNullOrEmpty(Vehicule.CreePar);
                     if (isNew)
                     {
                         await _vehiculeService.CreateAsync(Vehicule);
@@ -175,8 +211,12 @@ namespace TransitManager.WPF.ViewModels
                     {
                         await _vehiculeService.UpdateAsync(Vehicule);
                     }
+
+                    // On ne ferme pas la fenêtre pour permettre l'affectation
                     await _dialogService.ShowInformationAsync("Succès", "Le véhicule a été enregistré.");
-                    _navigationService.GoBack();
+                    
+                    // On recharge pour s'assurer que les données sont à jour
+                    if (!isNew) await InitializeAsync(Vehicule.Id);
                 }
                 catch (Exception ex)
                 {
@@ -185,29 +225,30 @@ namespace TransitManager.WPF.ViewModels
             });
         }
 
+        // Le reste du fichier est inchangé
+        #region Reste du code (inchangé)
+        private bool CanSave()
+        {
+            return Vehicule != null && SelectedClient != null &&
+                   !string.IsNullOrWhiteSpace(Vehicule.Immatriculation) &&
+                   !string.IsNullOrWhiteSpace(Vehicule.Marque) &&
+                   !string.IsNullOrWhiteSpace(Vehicule.Modele) &&
+                   !IsBusy;
+        }
         private void Cancel() => _navigationService.GoBack();
-        
         private void AddDamagePoint(System.Windows.Point point) => DamagePoints.Add(point);
         private void RemoveDamagePoint(System.Windows.Point point) => DamagePoints.Remove(point);
-
         private void SerializeDamagePoints()
         {
-            if (Vehicule != null)
-            {
-                Vehicule.EtatDesLieux = JsonSerializer.Serialize(DamagePoints);
-            }
+            if (Vehicule != null) Vehicule.EtatDesLieux = JsonSerializer.Serialize(DamagePoints);
         }
-		
-		private void SerializeRayures()
-		{
-			if (Vehicule == null) return;
-
-			using var memoryStream = new MemoryStream();
-			Rayures.Save(memoryStream);
-			Vehicule.EtatDesLieuxRayures = Convert.ToBase64String(memoryStream.ToArray());
-		}
-
-
+        private void SerializeRayures()
+        {
+            if (Vehicule == null) return;
+            using var memoryStream = new MemoryStream();
+            Rayures.Save(memoryStream);
+            Vehicule.EtatDesLieuxRayures = Convert.ToBase64String(memoryStream.ToArray());
+        }
         private void LoadDamagePoints()
         {
             DamagePoints.Clear();
@@ -216,31 +257,23 @@ namespace TransitManager.WPF.ViewModels
                 try
                 {
                     var points = JsonSerializer.Deserialize<List<System.Windows.Point>>(Vehicule.EtatDesLieux);
-                    if (points != null)
-                    {
-                        foreach (var p in points) DamagePoints.Add(p);
-                    }
-                }
-                catch { /* Ignorer les erreurs de désérialisation */ }
+                    if (points != null) foreach (var p in points) DamagePoints.Add(p);
+                } catch { /* Ignorer */ }
             }
         }
-		
-		private void LoadRayures()
-		{
-			Rayures.Clear();
-			if (Vehicule != null && !string.IsNullOrEmpty(Vehicule.EtatDesLieuxRayures))
-			{
-				try
-				{
-					byte[] bytes = Convert.FromBase64String(Vehicule.EtatDesLieuxRayures);
-					using var memoryStream = new MemoryStream(bytes);
-					var loadedStrokes = new StrokeCollection(memoryStream);
-					Rayures.Add(loadedStrokes);
-				}
-				catch { /* Ignorer si les données sont corrompues */ }
-			}
-		}	
-        
+        private void LoadRayures()
+        {
+            Rayures.Clear();
+            if (Vehicule != null && !string.IsNullOrEmpty(Vehicule.EtatDesLieuxRayures))
+            {
+                try
+                {
+                    byte[] bytes = Convert.FromBase64String(Vehicule.EtatDesLieuxRayures);
+                    using var memoryStream = new MemoryStream(bytes);
+                    Rayures.Add(new StrokeCollection(memoryStream));
+                } catch { /* Ignorer */ }
+            }
+        }
         private void FilterClients(string? searchText)
         {
             if (string.IsNullOrWhiteSpace(searchText))
@@ -250,14 +283,10 @@ namespace TransitManager.WPF.ViewModels
             else
             {
                 var searchTextLower = searchText.ToLower();
-                var filtered = _allClients.Where(c =>
-                    c.NomComplet.ToLower().Contains(searchTextLower) ||
-                    c.TelephonePrincipal.Contains(searchTextLower)
-                );
+                var filtered = _allClients.Where(c => c.NomComplet.ToLower().Contains(searchTextLower) || c.TelephonePrincipal.Contains(searchTextLower));
                 Clients = new ObservableCollection<Client>(filtered);
             }
         }
-
         private void UpdateDestinataire()
         {
             if (Vehicule == null) return;
@@ -267,32 +296,27 @@ namespace TransitManager.WPF.ViewModels
                 Vehicule.TelephoneDestinataire = SelectedClient.TelephonePrincipal;
             }
         }
-
-        // MÉTHODE AJOUTÉE : C'est elle qui réactive le bouton
         private void OnVehiculePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             SaveCommand.NotifyCanExecuteChanged();
-
-            // Si le type de véhicule change, on met à jour l'image
             if (e.PropertyName == nameof(Vehicule.Type) && Vehicule != null)
             {
                 UpdatePlanImage(Vehicule.Type);
             }
         }
-
-        // NOUVELLE MÉTHODE
         private void UpdatePlanImage(TypeVehicule type)
         {
             PlanImagePath = type switch
             {
                 TypeVehicule.Voiture => "/Resources/Images/voiture_plan.png",
                 TypeVehicule.Moto => "/Resources/Images/moto_plan.png",
-                TypeVehicule.Scooter => "/Resources/Images/moto_plan.png", // On réutilise la même
+                TypeVehicule.Scooter => "/Resources/Images/moto_plan.png",
                 TypeVehicule.Camion => "/Resources/Images/camion_plan.png",
-                TypeVehicule.Bus => "/Resources/Images/camion_plan.png", // On réutilise
-                TypeVehicule.Van => "/Resources/Images/camion_plan.png", // On réutilise
-                _ => "/Resources/Images/vehicule_plan.png" // Image par défaut
+                TypeVehicule.Bus => "/Resources/Images/camion_plan.png",
+                TypeVehicule.Van => "/Resources/Images/camion_plan.png",
+                _ => "/Resources/Images/vehicule_plan.png"
             };
         }
+        #endregion
     }
 }

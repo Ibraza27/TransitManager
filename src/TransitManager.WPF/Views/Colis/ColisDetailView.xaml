@@ -121,6 +121,12 @@
 
                             <ComboBox materialDesign:HintAssist.Hint="Type de colis *" ItemsSource="{Binding Source={x:Static helpers:EnumValues.TypeColisValues}}" SelectedItem="{Binding Colis.Type, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,0,0,15"/>
                             <ComboBox materialDesign:HintAssist.Hint="Options d'envoi" ItemsSource="{Binding Source={x:Static helpers:EnumValues.TypeEnvoiValues}}" SelectedItem="{Binding Colis.TypeEnvoi, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,0,0,15"/>
+							<ComboBox materialDesign:HintAssist.Hint="Conteneur"
+									  ItemsSource="{Binding ConteneursDisponibles}"
+									  SelectedItem="{Binding SelectedConteneur}"
+									  DisplayMemberPath="NumeroDossier"
+									  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+									  Margin="0,0,0,15"/>							
                             
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                 <TextBlock Text="Livraison à domicile ?" VerticalAlignment="Center" Margin="0,0,10,0"/>

@@ -52,6 +52,7 @@ namespace TransitManager.Core.Entities
         public DateTime? DateDepart { get => _dateDepart; set => SetProperty(ref _dateDepart, value); }
         public DateTime? DateArriveeDestination { get => _dateArriveeDestination; set => SetProperty(ref _dateArriveeDestination, value); }
         public DateTime? DateDedouanement { get => _dateDedouanement; set => SetProperty(ref _dateDedouanement, value); }
+		public DateTime? DateCloture { get; set; }
 
         public string? Commentaires { get => _commentaires; set => SetProperty(ref _commentaires, value); }
 

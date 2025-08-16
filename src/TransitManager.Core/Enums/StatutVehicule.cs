@@ -7,6 +7,7 @@ namespace TransitManager.Core.Enums
         Charge,
         EnTransit,
         Arrive,
+		EnDedouanement,
         Livre,
         Probleme,
         Retourne

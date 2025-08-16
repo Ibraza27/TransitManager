@@ -115,6 +115,7 @@
 					<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*" />
 					<DataGridTextColumn Header="Désignation" Binding="{Binding Designation}" Width="2*" />
 					<DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="150" />
+					<DataGridTextColumn Header="Conteneur" Binding="{Binding Conteneur.NumeroDossier}" Width="*"/>
 					<DataGridTextColumn Header="Pièces" Binding="{Binding NombrePieces}" Width="80" />
 					<DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat=C}" Width="100">
 						<DataGridTextColumn.ElementStyle>

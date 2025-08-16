@@ -6,6 +6,7 @@ namespace TransitManager.Core.Enums
         Affecte,
         EnTransit,
         Arrive,
+		EnDedouanement,
         Livre,
         Probleme,
         Perdu,

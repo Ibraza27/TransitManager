@@ -160,51 +160,40 @@ namespace TransitManager.WPF.ViewModels
             foreach(var vehicule in Conteneur.Vehicules) VehiculesAffectes.Add(vehicule);
         }
 
-        private async Task SaveAsync()
-        {
-            if (Conteneur == null) return; // CanSave doit déjà bloquer mais sécurité supplémentaire
+		private async Task SaveAsync()
+		{
+			if (Conteneur == null) return;
 
-            await ExecuteBusyActionAsync(async () =>
-            {
-                try
-                {
-                    bool isNew = string.IsNullOrEmpty(Conteneur.CreePar);
-                    if (isNew)
-                    {
-                        await _conteneurService.CreateAsync(Conteneur);
-                    }
-                    else
-                    {
-                        // On crée une copie "propre" de l'objet pour la sauvegarde
-                        // afin d'éviter d'envoyer des entités déjà trackées au service
-                        var conteneurToSave = new Conteneur
-                        {
-                            Id = Conteneur.Id,
-                            // Copiez toutes les propriétés modifiables ici
-                            NumeroDossier = Conteneur.NumeroDossier,
-                            NumeroPlomb = Conteneur.NumeroPlomb,
-                            NomCompagnie = Conteneur.NomCompagnie,
-                            NomTransitaire = Conteneur.NomTransitaire,
-                            Destination = Conteneur.Destination,
-                            PaysDestination = Conteneur.PaysDestination,
-                            DateReception = Conteneur.DateReception,
-                            DateChargement = Conteneur.DateChargement,
-                            DateDepart = Conteneur.DateDepart,
-                            DateArriveeDestination = Conteneur.DateArriveeDestination,
-                            DateDedouanement = Conteneur.DateDedouanement,
-                            Commentaires = Conteneur.Commentaires
-                        };
-                        await _conteneurService.UpdateAsync(conteneurToSave);
-                    }
-                    await _dialogService.ShowInformationAsync("Succès", "Le dossier a été enregistré.");
-                    _navigationService.GoBack();
-                }
-                catch (Exception ex)
-                {
-                    await _dialogService.ShowErrorAsync("Erreur d'enregistrement", $"{ex.Message}\n\nDétails: {ex.InnerException?.Message}");
-                }
-            });
-        }
+			// La validation CanSave a déjà été faite
+			if (!CanSave()) 
+			{
+				await _dialogService.ShowWarningAsync("Validation", "Veuillez remplir tous les champs obligatoires (*).");
+				return;
+			}
+
+			await ExecuteBusyActionAsync(async () =>
+			{
+				try
+				{
+					bool isNew = string.IsNullOrEmpty(Conteneur.CreePar);
+					if (isNew)
+					{
+						await _conteneurService.CreateAsync(Conteneur);
+					}
+					else
+					{
+						// On passe directement l'objet de l'UI. Le service se chargera du reste.
+						await _conteneurService.UpdateAsync(Conteneur);
+					}
+					await _dialogService.ShowInformationAsync("Succès", "Le dossier a été enregistré.");
+					_navigationService.GoBack();
+				}
+				catch (Exception ex)
+				{
+					await _dialogService.ShowErrorAsync("Erreur d'enregistrement", $"{ex.Message}\n\nDétails: {ex.InnerException?.Message}");
+				}
+			});
+		}
         
         private async Task AddColisAsync(Colis? colis)
         {

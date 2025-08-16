@@ -53,6 +53,7 @@
                             <DatePicker SelectedDate="{Binding Conteneur.DateDepart, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Date de départ" Style="{StaticResource MaterialDesignOutlinedDatePicker}" Margin="0,0,0,10"/>
                             <DatePicker SelectedDate="{Binding Conteneur.DateArriveeDestination, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Date d'arrivée à destination" Style="{StaticResource MaterialDesignOutlinedDatePicker}" Margin="0,0,0,10"/>
                             <DatePicker SelectedDate="{Binding Conteneur.DateDedouanement, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Date de dédouanement" Style="{StaticResource MaterialDesignOutlinedDatePicker}" Margin="0,0,0,10"/>
+							<DatePicker SelectedDate="{Binding Conteneur.DateCloture, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Date de clôture" Style="{StaticResource MaterialDesignOutlinedDatePicker}" Margin="0,0,0,10"/>
                         </StackPanel>
                     </Grid>
                 </materialDesign:Card>

@@ -21,10 +21,23 @@ namespace TransitManager.Infrastructure.Services
             _notificationService = notificationService;
         }
 
+        // NOUVELLE MÉTHODE PUBLIQUE POUR RECALCULER LE STATUT
+        public async Task RecalculateStatusAsync(Guid conteneurId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var conteneur = await context.Conteneurs
+                .Include(c => c.Colis)
+                .Include(c => c.Vehicules)
+                .FirstOrDefaultAsync(c => c.Id == conteneurId);
+
+            if (conteneur == null) return;
+
+            await UpdateAndSaveConteneurStatus(conteneur, context);
+        }
+
         public async Task<Conteneur> UpdateAsync(Conteneur conteneurFromUI)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            
             var conteneurInDb = await context.Conteneurs
                 .Include(c => c.Colis)
                 .Include(c => c.Vehicules)
@@ -34,37 +47,56 @@ namespace TransitManager.Infrastructure.Services
             
             var oldStatus = conteneurInDb.Statut;
             
-            // On applique les changements de l'UI (y compris la DateCloture = null)
             context.Entry(conteneurInDb).CurrentValues.SetValues(conteneurFromUI);
 
-            // On recalcule le statut basé sur les nouvelles valeurs
-            var newStatus = CalculateStatus(conteneurInDb);
-            conteneurInDb.Statut = newStatus;
-
-            // On compare l'ancien statut de la BDD avec le nouveau statut calculé
-            if (newStatus != oldStatus)
-            {
-                await UpdateChildrenStatus(conteneurInDb, newStatus, context);
-            }
-            
-            if (conteneurInDb.Colis.All(c => c.Statut == StatutColis.Livre) &&
-                conteneurInDb.Vehicules.All(v => v.Statut == StatutVehicule.Livre) &&
-                conteneurInDb.Statut != StatutConteneur.Cloture)
-            {
-                conteneurInDb.Statut = StatutConteneur.Cloture;
-                if (!conteneurInDb.DateCloture.HasValue) conteneurInDb.DateCloture = DateTime.UtcNow;
-            }
+            // La logique de mise à jour du statut est maintenant dans une méthode séparée
+            await UpdateAndSaveConteneurStatus(conteneurInDb, context, oldStatus);
 
             if (conteneurInDb.NumeroPlomb != conteneurFromUI.NumeroPlomb)
             {
                 await UpdatePlombOnChildren(conteneurInDb.Id, conteneurInDb.NumeroPlomb, context);
             }
 
-            await context.SaveChangesAsync();
             return conteneurInDb;
         }
 
-        private StatutConteneur CalculateStatus(Conteneur conteneur)
+        private async Task UpdateAndSaveConteneurStatus(Conteneur conteneur, TransitContext context, StatutConteneur? oldStatus = null)
+        {
+            var problemColis = conteneur.Colis.Any(c => c.Statut == StatutColis.Probleme || c.Statut == StatutColis.Perdu);
+            var problemVehicule = conteneur.Vehicules.Any(v => v.Statut == StatutVehicule.Probleme);
+
+            // Règle 1 : Un élément en problème met le conteneur en problème
+            if (problemColis || problemVehicule)
+            {
+                conteneur.Statut = StatutConteneur.Probleme;
+            }
+            // Règle 2 : Si tous les éléments sont livrés ET que le conteneur n'est pas vide, il est clôturé
+            // <-- MODIFICATION CLÉ : Ajout de la vérification que le conteneur n'est pas vide
+            else if ((conteneur.Colis.Any() || conteneur.Vehicules.Any()) && conteneur.Colis.All(c => c.Statut == StatutColis.Livre) && conteneur.Vehicules.All(v => v.Statut == StatutVehicule.Livre))
+            {
+                conteneur.Statut = StatutConteneur.Cloture;
+                if (!conteneur.DateCloture.HasValue) 
+                {
+                    conteneur.DateCloture = DateTime.UtcNow;
+                }
+            }
+            // Règle 3 : Sinon (y compris s'il est vide), le statut est basé sur les dates
+            else
+            {
+                conteneur.Statut = CalculateStatusFromDates(conteneur);
+            }
+            
+            var currentStatusInDb = oldStatus ?? (await context.Entry(conteneur).GetDatabaseValuesAsync())?.GetValue<StatutConteneur>(nameof(Conteneur.Statut)) ?? conteneur.Statut;
+
+            if (conteneur.Statut != currentStatusInDb)
+            {
+                await UpdateChildrenStatus(conteneur, context);
+            }
+            
+            await context.SaveChangesAsync();
+        }
+
+        private StatutConteneur CalculateStatusFromDates(Conteneur conteneur)
         {
             if (conteneur.DateCloture.HasValue) return StatutConteneur.Cloture;
             if (conteneur.DateDedouanement.HasValue) return StatutConteneur.EnDedouanement;
@@ -75,12 +107,23 @@ namespace TransitManager.Infrastructure.Services
             return StatutConteneur.Reçu;
         }
 
-        private async Task UpdateChildrenStatus(Conteneur conteneur, StatutConteneur newContainerStatus, TransitContext context)
+        private async Task UpdateChildrenStatus(Conteneur conteneur, TransitContext context)
         {
+            // Statuts "manuels" qui priment et ne doivent JAMAIS être écrasés par une synchro de conteneur.
+            var ignoredColisStatuses = new[] { StatutColis.Probleme, StatutColis.Perdu, StatutColis.Retourne, StatutColis.Livre };
+            var ignoredVehiculeStatuses = new[] { StatutVehicule.Probleme, StatutVehicule.Retourne, StatutVehicule.Livre };
+
+            // On ne fait rien si le conteneur passe en problème, car on ne veut pas écraser les statuts des enfants "sains".
+            if (conteneur.Statut == StatutConteneur.Probleme)
+            {
+                return;
+            }
+
+            // Déterminer le statut cible pour les enfants en fonction du nouveau statut du conteneur.
             StatutColis newColisStatus;
             StatutVehicule newVehiculeStatus;
-
-            switch (newContainerStatus)
+            
+            switch (conteneur.Statut)
             {
                 case StatutConteneur.EnTransit:
                     newColisStatus = StatutColis.EnTransit; newVehiculeStatus = StatutVehicule.EnTransit; break;
@@ -89,32 +132,27 @@ namespace TransitManager.Infrastructure.Services
                 case StatutConteneur.EnDedouanement:
                     newColisStatus = StatutColis.EnDedouanement; newVehiculeStatus = StatutVehicule.EnDedouanement; break;
                 case StatutConteneur.Cloture:
+                case StatutConteneur.Livre: // Au cas où
                     newColisStatus = StatutColis.Livre; newVehiculeStatus = StatutVehicule.Livre; break;
-                default: // Reçu, EnPreparation, ou retour à un état précédent
+                default: // Pour Reçu, EnPreparation, etc., le statut synchronisé est Affecte.
                     newColisStatus = StatutColis.Affecte; newVehiculeStatus = StatutVehicule.Affecte; break;
             }
-            await SetChildrenStatus(conteneur.Id, newColisStatus, newVehiculeStatus, context);
-        }
 
-        private async Task SetChildrenStatus(Guid conteneurId, StatutColis newColisStatus, StatutVehicule newVehiculeStatus, TransitContext context)
-        {
-            var problemStatus = new[] { StatutColis.Probleme, StatutColis.Perdu, StatutColis.Retourne };
+            // Appliquer la mise à jour uniquement aux éléments qui n'ont pas un statut manuel prioritaire.
             await context.Colis
-                .Where(c => c.ConteneurId == conteneurId && !problemStatus.Contains(c.Statut))
+                .Where(c => c.ConteneurId == conteneur.Id && !ignoredColisStatuses.Contains(c.Statut))
                 .ExecuteUpdateAsync(s => s.SetProperty(c => c.Statut, newColisStatus));
 
-            var problemVehiculeStatus = new[] { StatutVehicule.Probleme, StatutVehicule.Retourne };
             await context.Vehicules
-                .Where(v => v.ConteneurId == conteneurId && !problemVehiculeStatus.Contains(v.Statut))
+                .Where(v => v.ConteneurId == conteneur.Id && !ignoredVehiculeStatuses.Contains(v.Statut))
                 .ExecuteUpdateAsync(s => s.SetProperty(v => v.Statut, newVehiculeStatus));
         }
 
-        // --- Le reste du service ne change pas ---
         #region Reste du service (inchangé)
         public async Task<Conteneur> CreateAsync(Conteneur conteneur)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            conteneur.Statut = CalculateStatus(conteneur);
+            conteneur.Statut = CalculateStatusFromDates(conteneur);
             context.Conteneurs.Add(conteneur);
             await context.SaveChangesAsync();
             await _notificationService.NotifyAsync("Nouveau conteneur", $"Le conteneur {conteneur.NumeroDossier} pour {conteneur.Destination} a été créé.");

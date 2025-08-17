@@ -10,6 +10,7 @@ namespace TransitManager.Core.Enums
         Livre,
         Cloture,
         Annule,
+		Probleme,
         Ouvert // On le garde pour la logique existante
     }
 }

@@ -29,5 +29,6 @@ namespace TransitManager.Core.Interfaces
         Task<decimal> CalculateProfitabilityAsync(Guid conteneurId);
 		Task<IEnumerable<string>> GetAllDestinationsAsync();
 		Task<IEnumerable<Conteneur>> GetOpenConteneursAsync();
+		Task RecalculateStatusAsync(Guid conteneurId);
     }
 }

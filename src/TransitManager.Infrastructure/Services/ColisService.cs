@@ -15,19 +15,27 @@ namespace TransitManager.Infrastructure.Services
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;
+        private readonly IConteneurService _conteneurService;
 
-        public ColisService(IDbContextFactory<TransitContext> contextFactory, INotificationService notificationService)
+        public ColisService(IDbContextFactory<TransitContext> contextFactory, INotificationService notificationService, IConteneurService conteneurService)
         {
             _contextFactory = contextFactory;
             _notificationService = notificationService;
+            _conteneurService = conteneurService;
         }
 
         public async Task<Colis> CreateAsync(Colis colis)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            // On n'attache plus l'objet client, EF gérera la relation via ClientId
             context.Colis.Add(colis);
             await context.SaveChangesAsync();
+            
+            // Si le colis a été directement affecté à un conteneur à la création
+            if (colis.ConteneurId.HasValue)
+            {
+                await _conteneurService.RecalculateStatusAsync(colis.ConteneurId.Value);
+            }
+
             return colis;
         }
 
@@ -36,6 +44,13 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var colisInDb = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Id == colis.Id);
             if (colisInDb == null) throw new InvalidOperationException("Le colis n'existe plus.");
+
+            var originalConteneurId = colisInDb.ConteneurId;
+
+            if (colis.Statut == StatutColis.Retourne)
+            {
+                colis.ConteneurId = null;
+            }
 
             context.Entry(colisInDb).CurrentValues.SetValues(colis);
             colisInDb.ClientId = colis.ClientId;
@@ -53,70 +68,91 @@ namespace TransitManager.Infrastructure.Services
             if (barcodesToAdd.Any()) await context.Barcodes.AddRangeAsync(barcodesToAdd);
             
             await context.SaveChangesAsync();
+
+            if (originalConteneurId.HasValue)
+            {
+                await _conteneurService.RecalculateStatusAsync(originalConteneurId.Value);
+            }
+            if (colisInDb.ConteneurId.HasValue && colisInDb.ConteneurId != originalConteneurId)
+            {
+                await _conteneurService.RecalculateStatusAsync(colisInDb.ConteneurId.Value);
+            }
+            
             return colisInDb;
         }
 
-        // ... le reste du fichier est identique ...
-        #region Reste du service (inchangé)
         public async Task<bool> AssignToConteneurAsync(Guid colisId, Guid conteneurId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             var colis = await context.Colis.FindAsync(colisId);
             var conteneur = await context.Conteneurs.FindAsync(conteneurId);
-            var canReceiveStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation };
+            // On ajoute le statut "Probleme" à la liste des statuts valides pour une affectation
+            var canReceiveStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation, StatutConteneur.Probleme };
             if (colis == null || conteneur == null || !canReceiveStatuses.Contains(conteneur.Statut)) return false;
             colis.ConteneurId = conteneurId;
             colis.Statut = StatutColis.Affecte;
             colis.NumeroPlomb = conteneur.NumeroPlomb;
             await context.SaveChangesAsync();
+            await _conteneurService.RecalculateStatusAsync(conteneurId);
             return true;
         }
+
         public async Task<bool> RemoveFromConteneurAsync(Guid colisId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             var colis = await context.Colis.FindAsync(colisId);
-            if (colis == null) return false;
+            if (colis == null || !colis.ConteneurId.HasValue) return false;
+            var originalConteneurId = colis.ConteneurId.Value;
             colis.ConteneurId = null;
             colis.Statut = StatutColis.EnAttente;
             colis.NumeroPlomb = null;
             await context.SaveChangesAsync();
+            await _conteneurService.RecalculateStatusAsync(originalConteneurId);
             return true;
         }
+
         public async Task<Colis?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
         }
+
         public async Task<Colis?> GetByBarcodeAsync(string barcode)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).AsNoTracking().FirstOrDefaultAsync(c => c.Barcodes.Any(b => b.Value == barcode));
         }
+
         public async Task<Colis?> GetByReferenceAsync(string reference)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).AsNoTracking().FirstOrDefaultAsync(c => c.NumeroReference == reference);
         }
+
         public async Task<IEnumerable<Colis>> GetAllAsync()
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).AsNoTracking().OrderByDescending(c => c.DateArrivee).ToListAsync();
         }
+
         public async Task<IEnumerable<Colis>> GetByClientAsync(Guid clientId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis.Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.ClientId == clientId).AsNoTracking().OrderByDescending(c => c.DateArrivee).ToListAsync();
         }
+
         public async Task<IEnumerable<Colis>> GetByConteneurAsync(Guid conteneurId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.ConteneurId == conteneurId).AsNoTracking().OrderBy(c => c.Client!.Nom).ThenBy(c => c.DateArrivee).ToListAsync();
         }
+
         public async Task<IEnumerable<Colis>> GetByStatusAsync(StatutColis statut)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.Statut == statut).AsNoTracking().OrderByDescending(c => c.DateArrivee).ToListAsync();
         }
+
         public async Task<bool> DeleteAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -127,6 +163,7 @@ namespace TransitManager.Infrastructure.Services
             await context.SaveChangesAsync();
             return true;
         }
+
         public async Task<Colis> ScanAsync(string barcode, string location)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -140,22 +177,26 @@ namespace TransitManager.Infrastructure.Services
             await context.SaveChangesAsync();
             return colis;
         }
+
         public async Task<int> GetCountByStatusAsync(StatutColis statut)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis.CountAsync(c => c.Statut == statut && c.Actif);
         }
+
         public async Task<IEnumerable<Colis>> GetRecentColisAsync(int count)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.Actif).AsNoTracking().OrderByDescending(c => c.DateArrivee).Take(count).ToListAsync();
         }
+
         public async Task<IEnumerable<Colis>> GetColisWaitingLongTimeAsync(int days)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             var dateLimit = DateTime.UtcNow.AddDays(-days);
             return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.Actif && c.Statut == StatutColis.EnAttente && c.DateArrivee < dateLimit).AsNoTracking().OrderBy(c => c.DateArrivee).ToListAsync();
         }
+
         public async Task<bool> MarkAsDeliveredAsync(Guid colisId, string signature)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -167,6 +208,7 @@ namespace TransitManager.Infrastructure.Services
             await context.SaveChangesAsync();
             return true;
         }
+
         public async Task<IEnumerable<Colis>> SearchAsync(string searchTerm)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -174,6 +216,5 @@ namespace TransitManager.Infrastructure.Services
             searchTerm = searchTerm.ToLower();
             return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.Actif && (c.Barcodes.Any(b => b.Value.ToLower().Contains(searchTerm)) || c.NumeroReference.ToLower().Contains(searchTerm) || c.Designation.ToLower().Contains(searchTerm) || (c.Client != null && (c.Client.Nom + " " + c.Client.Prenom).ToLower().Contains(searchTerm)) || (c.Conteneur != null && c.Conteneur.NumeroDossier.ToLower().Contains(searchTerm)))).AsNoTracking().OrderByDescending(c => c.DateArrivee).ToListAsync();
         }
-        #endregion
     }
 }

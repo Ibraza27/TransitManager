@@ -140,6 +140,8 @@ namespace TransitManager.WPF.ViewModels
             }
         }
         #endregion
+		
+		public ObservableCollection<StatutColis> AvailableStatuses { get; } = new();
 
         #region Commandes
         public IAsyncRelayCommand SaveCommand { get; }
@@ -176,22 +178,11 @@ namespace TransitManager.WPF.ViewModels
                    !IsBusy;
         }
 
-		private async Task SaveAsync()
+        private async Task SaveAsync()
 		{
 			if (!CanSave() || Colis == null || SelectedClient == null) return;
-
-			// --- NOUVELLE LOGIQUE DE STATUT ---
-			// Si on affecte à un conteneur, le statut devient Affecte.
-			// Si on le retire, il redevient EnAttente.
-			if (Colis.ConteneurId.HasValue && Colis.Statut == StatutColis.EnAttente)
-			{
-				Colis.Statut = StatutColis.Affecte;
-			}
-			else if (!Colis.ConteneurId.HasValue && Colis.Statut == StatutColis.Affecte)
-			{
-				Colis.Statut = StatutColis.EnAttente;
-			}
-
+            
+            // La logique complexe est maintenant dans le service, le ViewModel envoie juste les données.
 			Colis.ClientId = SelectedClient.Id;
 			Colis.Barcodes = Barcodes.ToList();
 
@@ -209,7 +200,7 @@ namespace TransitManager.WPF.ViewModels
 						await _colisService.UpdateAsync(Colis);
 					}
 					await _dialogService.ShowInformationAsync("Succès", "Le colis a été enregistré.");
-					_navigationService.GoBack(); // <-- On ferme la fenêtre après l'enregistrement
+					_navigationService.GoBack();
 				}
 				catch (Exception ex)
 				{
@@ -304,6 +295,9 @@ namespace TransitManager.WPF.ViewModels
                 Colis.PropertyChanged += OnColisPropertyChanged;
                 DestinataireEstProprietaire = true;
                 await LoadConteneursDisponiblesAsync();
+				
+				LoadAvailableStatuses();
+				
             }
         }
 
@@ -325,16 +319,80 @@ namespace TransitManager.WPF.ViewModels
                     {
                         SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Colis.ConteneurId.Value);
                     }
+					LoadAvailableStatuses();
                 }
             });
         }
+		
+        private void LoadAvailableStatuses()
+        {
+            AvailableStatuses.Clear();
+            if (Colis == null) return;
 
+            var statuses = new HashSet<StatutColis>();
+
+            // 1. Ajouter le statut actuel du colis
+            statuses.Add(Colis.Statut);
+            
+            // 2. Ajouter les statuts manuels importants
+            statuses.Add(StatutColis.Probleme);
+            statuses.Add(StatutColis.Perdu);
+            statuses.Add(StatutColis.Retourne);
+            statuses.Add(StatutColis.Livre);
+
+            // 3. Ajouter le statut "normal" basé sur les DATES du conteneur (et non plus son statut)
+            if (SelectedConteneur != null && SelectedConteneur.Id != Guid.Empty)
+            {
+                var containerDrivenStatus = GetNormalStatusFromContainerDates(SelectedConteneur);
+                statuses.Add(containerDrivenStatus);
+            }
+            else
+            {
+                // Si pas de conteneur, le statut normal est "EnAttente"
+                statuses.Add(StatutColis.EnAttente);
+            }
+
+            // Remplir la liste triée pour l'affichage
+            foreach (var s in statuses.OrderBy(s => s.ToString()))
+            {
+                AvailableStatuses.Add(s);
+            }
+        }
+		
+        private StatutColis GetNormalStatusFromContainerDates(Conteneur conteneur)
+        {
+            if (conteneur.DateCloture.HasValue) return StatutColis.Livre;
+            if (conteneur.DateDedouanement.HasValue) return StatutColis.EnDedouanement;
+            if (conteneur.DateArriveeDestination.HasValue) return StatutColis.Arrive;
+            if (conteneur.DateDepart.HasValue) return StatutColis.EnTransit;
+            
+            // Si aucune des dates ci-dessus n'est remplie, le statut normal est "Affecté"
+            return StatutColis.Affecte;
+        }
+		
         private async Task LoadConteneursDisponiblesAsync()
         {
-            var conteneurs = await _conteneurService.GetOpenConteneursAsync();
+            // On charge tous les conteneurs qui peuvent recevoir des colis
+            var conteneurs = (await _conteneurService.GetAllAsync())
+                .Where(c => c.Statut == StatutConteneur.Reçu || 
+                            c.Statut == StatutConteneur.EnPreparation ||
+                            c.Statut == StatutConteneur.Probleme)
+                .ToList();
+
             ConteneursDisponibles.Clear();
             ConteneursDisponibles.Add(new Conteneur { Id = Guid.Empty, NumeroDossier = "Aucun" });
-            foreach (var c in conteneurs)
+
+            // S'assurer que le conteneur actuel du colis est dans la liste, même si son statut a changé
+            if (Colis?.ConteneurId.HasValue == true && !conteneurs.Any(c => c.Id == Colis.ConteneurId.Value))
+            {
+                var currentConteneur = await _conteneurService.GetByIdAsync(Colis.ConteneurId.Value);
+                if (currentConteneur != null)
+                {
+                    conteneurs.Add(currentConteneur);
+                }
+            }
+
+            foreach (var c in conteneurs.OrderBy(c => c.NumeroDossier))
             {
                 ConteneursDisponibles.Add(c);
             }

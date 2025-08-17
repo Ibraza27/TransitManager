@@ -86,6 +86,11 @@
                                        DisplayMemberPath="NumeroDossier"
                                        Style="{StaticResource MaterialDesignOutlinedComboBox}" 
                                        Margin="0,0,0,15"/>
+                            <ComboBox materialDesign:HintAssist.Hint="Statut manuel (optionnel)" 
+                                      ItemsSource="{Binding AvailableStatuses}"
+                                      SelectedItem="{Binding Vehicule.Statut, UpdateSourceTrigger=PropertyChanged}" 
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}" 
+                                      Margin="0,0,0,15"/>									   
                              <ComboBox materialDesign:HintAssist.Hint="Type de Véhicule" ItemsSource="{Binding Source={x:Static helpers:EnumValues.TypeVehiculeValues}}" SelectedItem="{Binding Vehicule.Type, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,0,0,15"/>
                              <TextBox Text="{Binding Vehicule.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" materialDesign:TextFieldAssist.SuffixText="€" materialDesign:HintAssist.Hint="Valeur Déclarée" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
                              <Grid>

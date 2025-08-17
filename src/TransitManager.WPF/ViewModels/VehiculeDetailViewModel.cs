@@ -89,6 +89,9 @@ namespace TransitManager.WPF.ViewModels
         public ObservableCollection<Conteneur> ConteneursDisponibles { get; } = new();
 
 		private Conteneur? _selectedConteneur;
+		
+		public ObservableCollection<StatutVehicule> AvailableStatuses { get; } = new();
+		
 		public Conteneur? SelectedConteneur
 		{
 			get => _selectedConteneur;
@@ -141,6 +144,7 @@ namespace TransitManager.WPF.ViewModels
                     DestinataireEstProprietaire = true;
                     
                     await LoadConteneursDisponiblesAsync(); // <-- NOUVEAU
+					LoadAvailableStatuses();
                 });
             }
         }
@@ -171,17 +175,78 @@ namespace TransitManager.WPF.ViewModels
                     {
                         SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Guid.Empty);
                     }
+					LoadAvailableStatuses();
                 }
             });
+        }
+		
+        private void LoadAvailableStatuses()
+        {
+            AvailableStatuses.Clear();
+            if (Vehicule == null) return;
+
+            var statuses = new HashSet<StatutVehicule>();
+
+            // 1. Ajouter le statut actuel du véhicule
+            statuses.Add(Vehicule.Statut);
+
+            // 2. Ajouter les statuts manuels importants
+            statuses.Add(StatutVehicule.Probleme);
+            statuses.Add(StatutVehicule.Retourne);
+            statuses.Add(StatutVehicule.Livre);
+
+            // 3. Ajouter le statut "normal" basé sur les DATES du conteneur
+            if (SelectedConteneur != null && SelectedConteneur.Id != Guid.Empty)
+            {
+                var containerDrivenStatus = GetNormalStatusFromContainerDates(SelectedConteneur);
+                statuses.Add(containerDrivenStatus);
+            }
+            else
+            {
+                statuses.Add(StatutVehicule.EnAttente);
+            }
+
+            // Remplir la liste triée
+            foreach (var s in statuses.OrderBy(s => s.ToString()))
+            {
+                AvailableStatuses.Add(s);
+            }
+        }	
+
+        private StatutVehicule GetNormalStatusFromContainerDates(Conteneur conteneur)
+        {
+            if (conteneur.DateCloture.HasValue) return StatutVehicule.Livre;
+            if (conteneur.DateDedouanement.HasValue) return StatutVehicule.EnDedouanement;
+            if (conteneur.DateArriveeDestination.HasValue) return StatutVehicule.Arrive;
+            if (conteneur.DateDepart.HasValue) return StatutVehicule.EnTransit;
+
+            return StatutVehicule.Affecte;
         }
 
         // --- NOUVELLE MÉTHODE ---
         private async Task LoadConteneursDisponiblesAsync()
         {
-            var conteneurs = await _conteneurService.GetOpenConteneursAsync();
+            // On charge tous les conteneurs qui peuvent recevoir des véhicules
+            var conteneurs = (await _conteneurService.GetAllAsync())
+                .Where(c => c.Statut == StatutConteneur.Reçu || 
+                            c.Statut == StatutConteneur.EnPreparation ||
+                            c.Statut == StatutConteneur.Probleme)
+                .ToList();
+
             ConteneursDisponibles.Clear();
-            ConteneursDisponibles.Add(new Conteneur { Id = Guid.Empty, NumeroDossier = "Aucun" }); 
-            foreach (var c in conteneurs)
+            ConteneursDisponibles.Add(new Conteneur { Id = Guid.Empty, NumeroDossier = "Aucun" });
+
+            // S'assurer que le conteneur actuel du véhicule est dans la liste, même si son statut a changé
+            if (Vehicule?.ConteneurId.HasValue == true && !conteneurs.Any(c => c.Id == Vehicule.ConteneurId.Value))
+            {
+                var currentConteneur = await _conteneurService.GetByIdAsync(Vehicule.ConteneurId.Value);
+                if (currentConteneur != null)
+                {
+                    conteneurs.Add(currentConteneur);
+                }
+            }
+            
+            foreach (var c in conteneurs.OrderBy(c => c.NumeroDossier))
             {
                 ConteneursDisponibles.Add(c);
             }

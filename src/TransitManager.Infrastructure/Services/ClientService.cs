@@ -19,11 +19,12 @@ namespace TransitManager.Infrastructure.Services
             _contextFactory = contextFactory;
             _notificationService = notificationService;
         }
-
+		
         public async Task<Client?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Clients
+				.IgnoreQueryFilters()
                 .Include(c => c.Colis)
                 .Include(c => c.Paiements)
                 .AsNoTracking()
@@ -40,10 +41,13 @@ namespace TransitManager.Infrastructure.Services
                 .FirstOrDefaultAsync(c => c.CodeClient == code);
         }
 
+
         public async Task<IEnumerable<Client>> GetAllAsync()
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
+            // On utilise IgnoreQueryFilters() pour récupérer VRAIMENT tous les clients.
             return await context.Clients
+                .IgnoreQueryFilters() 
                 .AsNoTracking()
                 .OrderBy(c => c.Nom)
                 .ThenBy(c => c.Prenom)
@@ -109,21 +113,36 @@ namespace TransitManager.Infrastructure.Services
             return client;
         }
 
-        public async Task<Client> UpdateAsync(Client client)
+        public async Task<Client> UpdateAsync(Client clientFromUI)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            if (await ExistsAsync(client.Email ?? "", client.TelephonePrincipal, client.Id))
+            if (await ExistsAsync(clientFromUI.Email ?? "", clientFromUI.TelephonePrincipal, clientFromUI.Id))
             {
                 throw new InvalidOperationException("Un autre client avec cet email ou ce téléphone existe déjà.");
             }
 
-            await UpdateClientStatisticsAsync(client, context);
+            // ÉTAPE 1: Charger l'entité originale depuis la BDD (c'est elle qui est "suivie").
+            var clientInDb = await context.Clients
+                                          .IgnoreQueryFilters() // Important pour pouvoir modifier un client inactif
+                                          .Include(c => c.Colis)
+                                          .FirstOrDefaultAsync(c => c.Id == clientFromUI.Id);
 
-            context.Clients.Update(client);
+            if (clientInDb == null)
+            {
+                throw new InvalidOperationException("Le client que vous essayez de modifier n'a pas été trouvé.");
+            }
+
+            // ÉTAPE 2: Copier les propriétés modifiées depuis l'objet de l'UI vers l'objet de la BDD.
+            context.Entry(clientInDb).CurrentValues.SetValues(clientFromUI);
+
+            // ÉTAPE 3: Recalculer les statistiques sur l'objet suivi par EF.
+            await UpdateClientStatisticsAsync(clientInDb, context);
+
+            // ÉTAPE 4: Sauvegarder les changements. EF sait ce qui a changé sur clientInDb.
             await context.SaveChangesAsync();
 
-            return client;
+            return clientInDb;
         }
 
         public async Task<bool> DeleteAsync(Guid id)
@@ -230,23 +249,26 @@ namespace TransitManager.Infrastructure.Services
 
         private async Task UpdateClientStatisticsAsync(Client client, TransitContext context)
         {
-            client.NombreTotalEnvois = await context.Colis.CountAsync(c => c.ClientId == client.Id);
-
-            var colisDuClient = await context.Colis.Where(c => c.ClientId == client.Id).ToListAsync();
-            client.VolumeTotalExpedié = colisDuClient.Sum(c => c.Volume);
-
-            var totalFacture = colisDuClient.Sum(c => c.ValeurDeclaree * 0.1m);
+            // La logique est maintenant plus simple car les colis sont déjà chargés avec le client.
+            client.NombreTotalEnvois = client.Colis.Count(c => c.Actif);
+            client.VolumeTotalExpedié = client.Colis.Where(c => c.Actif).Sum(c => c.Volume);
 
             var totalPaye = await context.Paiements
                 .Where(p => p.ClientId == client.Id && p.Statut == Core.Enums.StatutPaiement.Paye)
                 .SumAsync(p => p.Montant);
 
+            var totalFacture = client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal);
             client.BalanceTotal = totalFacture - totalPaye;
 
             if (client.NombreTotalEnvois >= 10 || client.VolumeTotalExpedié >= 100)
             {
                 client.EstClientFidele = true;
                 client.PourcentageRemise = 5;
+            }
+            else
+            {
+                client.EstClientFidele = false;
+                client.PourcentageRemise = 0;
             }
         }
     }

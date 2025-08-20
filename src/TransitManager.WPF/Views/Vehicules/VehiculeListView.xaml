@@ -36,25 +36,56 @@
             </Grid>
         </materialDesign:Card>
 
-        <!-- Barre de recherche -->
+        <!-- Barre de recherche et filtres -->
         <materialDesign:Card Grid.Row="1" Margin="16,8,16,0" Padding="16">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MaxWidth="500"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Rechercher (immatriculation, marque, modèle, client...)" 
-                         materialDesign:TextFieldAssist.HasClearButton="True" 
-                         materialDesign:TextFieldAssist.LeadingIcon="Magnify" 
-                         Style="{StaticResource MaterialDesignOutlinedTextBox}" 
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
-                <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconButton}" Command="{Binding RefreshCommand}" ToolTip="Actualiser">
-                    <materialDesign:PackIcon Kind="Refresh"/>
-                </Button>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MaxWidth="500"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Rechercher (immatriculation, client, conteneur...)" 
+                             materialDesign:TextFieldAssist.HasClearButton="True" 
+                             materialDesign:TextFieldAssist.LeadingIcon="Magnify" 
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                        <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding RefreshCommand}" ToolTip="Actualiser">
+                            <materialDesign:PackIcon Kind="Refresh"/>
+                        </Button>
+                        <ToggleButton Style="{StaticResource MaterialDesignSwitchToggleButton}" IsChecked="{Binding ShowFilters}" ToolTip="Afficher/Masquer les filtres" Margin="5,0,0,0">
+                            <materialDesign:PackIcon Kind="FilterVariant"/>
+                        </ToggleButton>
+                    </StackPanel>
+                </Grid>
+                <Grid Grid.Row="1" Margin="0,10,0,0" Visibility="{Binding ShowFilters, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/> <!-- Colonne ajoutée -->
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Grid.Column="0" materialDesign:HintAssist.Hint="Statut" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,0,5,0" SelectedItem="{Binding SelectedStatut}" ItemsSource="{Binding StatutsList}"/>
+                    <ComboBox Grid.Column="1" materialDesign:HintAssist.Hint="Client" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="5,0" IsEditable="True" ItemsSource="{Binding ClientsList}" SelectedItem="{Binding SelectedClient}" DisplayMemberPath="NomComplet"/>
+                    <ComboBox Grid.Column="2" materialDesign:HintAssist.Hint="Conteneur" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="5,0" IsEditable="True" ItemsSource="{Binding ConteneursList}" SelectedItem="{Binding SelectedConteneur}" DisplayMemberPath="NumeroDossier"/>
+                    <!-- DatePicker ajouté -->
+                    <DatePicker Grid.Column="3" materialDesign:HintAssist.Hint="Date de création" Style="{StaticResource MaterialDesignOutlinedDatePicker}" Margin="5,0,0,0" SelectedDate="{Binding SelectedDate}"/>
+                    <Button Grid.Column="4" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding ClearFiltersCommand}" Margin="10,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="FilterRemove" Margin="0,0,5,0"/>
+                            <TextBlock Text="Effacer"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
             </Grid>
         </materialDesign:Card>
-
-        <!-- Liste des véhicules -->
+        
+        <!-- ... reste du fichier inchangé ... -->
         <materialDesign:Card Grid.Row="2" Margin="16,8,16,8">
             <DataGrid ItemsSource="{Binding Vehicules}" SelectedItem="{Binding SelectedVehicule}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" Style="{StaticResource MaterialDesignDataGrid}">
                 <DataGrid.Columns>
@@ -63,50 +94,31 @@
                     <DataGridTextColumn Header="Marque" Binding="{Binding Marque}" Width="*"/>
                     <DataGridTextColumn Header="Modèle" Binding="{Binding Modele}" Width="*"/>
                     <DataGridTextColumn Header="Année" Binding="{Binding Annee}" Width="Auto"/>
-                    <DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires}" Width="2*"/>
-                    <DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="*"/>
-					<DataGridTextColumn Header="Conteneur" Binding="{Binding Conteneur.NumeroDossier}" Width="*"/>
+                    <DataGridTextColumn Header="Conteneur" Binding="{Binding Conteneur.NumeroDossier}" Width="*"/>
 					<DataGridTemplateColumn Header="Statut" Width="120">
 						<DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
-								<Border Background="{Binding Statut, Converter={StaticResource StatusToColorConverter}}"
-										CornerRadius="12" Padding="12,4">
-									<TextBlock Text="{Binding Statut}" 
-											   Foreground="White" FontSize="11" 
-											   HorizontalAlignment="Center"/>
+								<Border Background="{Binding Statut, Converter={StaticResource StatusToColorConverter}}" CornerRadius="12" Padding="12,4">
+									<TextBlock Text="{Binding Statut}" Foreground="White" FontSize="11" HorizontalAlignment="Center"/>
 								</Border>
 							</DataTemplate>
 						</DataGridTemplateColumn.CellTemplate>
 					</DataGridTemplateColumn>
-                    
-                    <!-- CORRECTION APPLIQUÉE SELON VOTRE ANALYSE -->
 					<DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat='{}{0:N2} €'}" Width="*">
 						<DataGridTextColumn.ElementStyle>
-							<Style TargetType="TextBlock">
-								<Setter Property="FontWeight" Value="Bold"/>
-								<Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
-							</Style>
+							<Style TargetType="TextBlock"><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/></Style>
 						</DataGridTextColumn.ElementStyle>
 					</DataGridTextColumn>
-
 					<DataGridTextColumn Header="Total Payé" Binding="{Binding SommePayee, StringFormat='{}{0:N2} €'}" Width="*">
 						<DataGridTextColumn.ElementStyle>
-							<Style TargetType="TextBlock">
-								<Setter Property="FontWeight" Value="Bold"/>
-								<Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
-							</Style>
+							<Style TargetType="TextBlock"><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/></Style>
 						</DataGridTextColumn.ElementStyle>
 					</DataGridTextColumn>
-
 					<DataGridTextColumn Header="Total Restant" Binding="{Binding RestantAPayer, StringFormat='{}{0:N2} €'}" Width="*">
 						<DataGridTextColumn.ElementStyle>
-							<Style TargetType="TextBlock">
-								<Setter Property="FontWeight" Value="Bold"/>
-								<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
-							</Style>
+							<Style TargetType="TextBlock"><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/></Style>
 						</DataGridTextColumn.ElementStyle>
 					</DataGridTextColumn>
-
                     <DataGridTemplateColumn Header="Actions" Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -125,10 +137,8 @@
             </DataGrid>
         </materialDesign:Card>
         
-        <!-- Barre de statut -->
         <materialDesign:Card Grid.Row="3" Margin="16,0,16,16" Padding="8">
             <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- CORRECTION APPLIQUÉE SELON VOTRE ANALYSE -->
                 <StackPanel Orientation="Horizontal" Margin="8,0">
                     <materialDesign:PackIcon Kind="CashMultiple" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                     <TextBlock VerticalAlignment="Center" Text="{Binding PrixTotalGlobal, StringFormat='Prix Total : {0:N2} €'}"/>

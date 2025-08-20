@@ -25,6 +25,16 @@
                     <TextBlock Text="{Binding Title}" Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
                     <TextBlock Text="{Binding Colis.NumeroReference}" Opacity="0.6" Style="{StaticResource MaterialDesignSubtitle1TextBlock}"/>
                 </StackPanel>
+				
+                <Button Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Command="{Binding OpenInventaireCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="ClipboardList" Margin="0,0,8,0"/>
+                        <TextBlock Text="Inventaire"/>
+                    </StackPanel>
+                </Button>
+				
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
                     <Button Content="Annuler" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
@@ -97,8 +107,10 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Grid.Column="0" Text="{Binding Colis.Poids, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Poids (kg)" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,5,15"/>
-                                <TextBox Grid.Column="1" Text="{Binding Colis.NombrePieces, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Nombre de pièces *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5,0,0,15"/>
-                            </Grid>
+                                <TextBox Grid.Column="1" Text="{Binding Colis.NombrePieces, UpdateSourceTrigger=PropertyChanged}" 
+                                         IsReadOnly="{Binding HasInventaire}"
+                                         materialDesign:HintAssist.Hint="Nombre de pièces *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5,0,0,15"/>               
+							</Grid>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -139,6 +151,7 @@
                             </StackPanel>
                             
 							<TextBox Text="{Binding Colis.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged}"
+									 IsReadOnly="{Binding HasInventaire}"
 									 materialDesign:HintAssist.Hint="Valeur déclarée"
 									 materialDesign:TextFieldAssist.SuffixText="€"
 									 Style="{StaticResource MaterialDesignOutlinedTextBox}"

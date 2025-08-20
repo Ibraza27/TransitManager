@@ -9,10 +9,15 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
+// --- LIGNES À AJOUTER ---
+using CommunityToolkit.Mvvm.Messaging;
+using TransitManager.WPF.Messages;
+using System.Text.Json;
+using TransitManager.WPF.Views.Inventaire;
 
 namespace TransitManager.WPF.ViewModels
 {
-    public class ColisViewModel : BaseViewModel
+    public class ColisViewModel : BaseViewModel, IRecipient<ClientUpdatedMessage>, IRecipient<ConteneurUpdatedMessage>
     {
         #region Services
         private readonly IColisService _colisService;
@@ -21,6 +26,7 @@ namespace TransitManager.WPF.ViewModels
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
         private readonly IExportService _exportService;
+        private readonly IMessenger _messenger;
         #endregion
 
         #region Propriétés
@@ -41,23 +47,20 @@ namespace TransitManager.WPF.ViewModels
 
         private Client? _selectedClient;
         public Client? SelectedClient { get => _selectedClient; set { if (SetProperty(ref _selectedClient, value)) { _ = LoadColisAsync(); } } }
+        private List<Client> _fullClientsList = new();
+        public ObservableCollection<Client> ClientsList { get; } = new();
 
         private Conteneur? _selectedConteneur;
         public Conteneur? SelectedConteneur { get => _selectedConteneur; set { if (SetProperty(ref _selectedConteneur, value)) { _ = LoadColisAsync(); } } }
-        
+        private List<Conteneur> _fullConteneursList = new();
+        public ObservableCollection<Conteneur> ConteneursList { get; } = new();
+
         private DateTime? _selectedDate;
         public DateTime? SelectedDate { get => _selectedDate; set { if (SetProperty(ref _selectedDate, value)) { _ = LoadColisAsync(); } } }
         
-        private ObservableCollection<Client> _clientsList = new();
-        public ObservableCollection<Client> ClientsList { get => _clientsList; set => SetProperty(ref _clientsList, value); }
-        
-        private ObservableCollection<Conteneur> _conteneursList = new();
-        public ObservableCollection<Conteneur> ConteneursList { get => _conteneursList; set => SetProperty(ref _conteneursList, value); }
-
         private ObservableCollection<string> _statutsList = new();
         public ObservableCollection<string> StatutsList { get => _statutsList; set => SetProperty(ref _statutsList, value); }
 
-        // --- STATISTIQUES ---
         private int _totalColis;
         public int TotalColis { get => _totalColis; set => SetProperty(ref _totalColis, value); }
 
@@ -67,7 +70,6 @@ namespace TransitManager.WPF.ViewModels
         private decimal _volumeTotal;
         public decimal VolumeTotal { get => _volumeTotal; set => SetProperty(ref _volumeTotal, value); }
 
-        // PROPRIÉTÉS AJOUTÉES
         private int _totalPieces;
         public int TotalPieces { get => _totalPieces; set => SetProperty(ref _totalPieces, value); }
 
@@ -90,11 +92,12 @@ namespace TransitManager.WPF.ViewModels
         public IAsyncRelayCommand ExportCommand { get; }
         public IAsyncRelayCommand<Colis> EditCommand { get; }
         public IAsyncRelayCommand<Colis> DeleteCommand { get; }
+		public IAsyncRelayCommand<Colis> OpenInventaireFromListCommand { get; }
         #endregion
 
         public ColisViewModel(
             IColisService colisService, IClientService clientService, IConteneurService conteneurService, 
-            INavigationService navigationService, IDialogService dialogService, IExportService exportService)
+            INavigationService navigationService, IDialogService dialogService, IExportService exportService, IMessenger messenger)
         {
             _colisService = colisService;
             _clientService = clientService;
@@ -102,6 +105,7 @@ namespace TransitManager.WPF.ViewModels
             _navigationService = navigationService;
             _dialogService = dialogService;
             _exportService = exportService;
+            _messenger = messenger;
             Title = "Gestion des Colis / Marchandises";
 
             NewColisCommand = new AsyncRelayCommand(NewColis);
@@ -111,13 +115,48 @@ namespace TransitManager.WPF.ViewModels
             ExportCommand = new AsyncRelayCommand(ExportAsync);
             EditCommand = new AsyncRelayCommand<Colis>(EditColis);
             DeleteCommand = new AsyncRelayCommand<Colis>(DeleteColis);
+			OpenInventaireFromListCommand = new AsyncRelayCommand<Colis>(OpenInventaireFromList);
 
             InitializeStatutsList();
+            _messenger.RegisterAll(this);
+        }
+		
+        private async Task OpenInventaireFromList(Colis? colis)
+        {
+            if (colis == null) return;
+
+            var inventaireViewModel = new InventaireViewModel(colis.InventaireJson);
+            
+            var mainWindow = System.Windows.Application.Current.MainWindow;
+
+            var inventaireWindow = new InventaireView(inventaireViewModel)
+            {
+                Owner = mainWindow
+            };
+
+            if (inventaireWindow.ShowDialog() == true)
+            {
+                colis.InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items);
+                colis.NombrePieces = inventaireViewModel.TotalQuantite;
+                colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
+
+                await _colisService.UpdateAsync(colis);
+                await LoadColisAsync();
+            }
+        }		
+
+        public async void Receive(ClientUpdatedMessage message)
+        {
+            await LoadFilterDataAsync();
         }
 
-		public override async Task InitializeAsync()
+        public async void Receive(ConteneurUpdatedMessage message)
+        {
+            await LoadFilterDataAsync();
+        }
+        
+        public override async Task InitializeAsync()
 		{
-			// On efface les filtres et on recharge tout à chaque fois que la vue est activée
 			ClearFilters();
 			await LoadAsync();
 		}
@@ -127,9 +166,8 @@ namespace TransitManager.WPF.ViewModels
             await ExecuteBusyActionAsync(async () =>
             {
                 StatusMessage = "Chargement des données...";
-                var filterDataTask = LoadFilterDataAsync();
+                await LoadFilterDataAsync();
                 await LoadColisAsync();
-                await filterDataTask;
                 StatusMessage = "";
             });
         }
@@ -138,12 +176,18 @@ namespace TransitManager.WPF.ViewModels
         {
             await ExecuteBusyActionAsync(async () =>
             {
-                IEnumerable<Core.Entities.Colis> filteredColis;
+                var filteredColis = await _colisService.GetAllAsync();
 
-                if (!string.IsNullOrWhiteSpace(SearchText)) {
-                    filteredColis = await _colisService.SearchAsync(SearchText);
-                } else {
-                    filteredColis = await _colisService.GetAllAsync();
+                if (!string.IsNullOrWhiteSpace(SearchText))
+                {
+                    var searchTextLower = SearchText.ToLower();
+                    filteredColis = filteredColis.Where(c => 
+                        c.AllBarcodes.ToLower().Contains(searchTextLower) ||
+                        c.NumeroReference.ToLower().Contains(searchTextLower) ||
+                        (c.Client?.NomComplet.ToLower().Contains(searchTextLower) == true) ||
+                        (c.Conteneur?.NumeroDossier.ToLower().Contains(searchTextLower) == true) ||
+                        (c.DestinationFinale.ToLower().Contains(searchTextLower))
+                    );
                 }
 
                 if (SelectedClient != null) {
@@ -166,10 +210,13 @@ namespace TransitManager.WPF.ViewModels
         
         private async Task LoadFilterDataAsync()
         {
-            var clients = await _clientService.GetActiveClientsAsync();
-            ClientsList = new ObservableCollection<Client>(clients);
-            var conteneurs = await _conteneurService.GetOpenConteneursAsync();
-            ConteneursList = new ObservableCollection<Conteneur>(conteneurs);
+            _fullClientsList = (await _clientService.GetActiveClientsAsync()).ToList();
+            ClientsList.Clear();
+            foreach(var client in _fullClientsList) ClientsList.Add(client);
+
+            _fullConteneursList = (await _conteneurService.GetAllAsync()).ToList();
+            ConteneursList.Clear();
+            foreach(var conteneur in _fullConteneursList) ConteneursList.Add(conteneur);
         }
 
         private void InitializeStatutsList() { StatutsList = new ObservableCollection<string>(Enum.GetNames(typeof(StatutColis))); StatutsList.Insert(0, "Tous"); }
@@ -179,7 +226,6 @@ namespace TransitManager.WPF.ViewModels
             TotalColis = Colis.Count; 
             PoidsTotal = Colis.Sum(c => c.Poids); 
             VolumeTotal = Colis.Sum(c => c.Volume);
-            // CALCULS AJOUTÉS
             TotalPieces = Colis.Sum(c => c.NombrePieces);
             PrixTotalGlobal = Colis.Sum(c => c.PrixTotal);
             TotalPayeGlobal = Colis.Sum(c => c.SommePayee);

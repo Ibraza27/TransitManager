@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
+using CommunityToolkit.Mvvm.Messaging;
+using TransitManager.WPF.Messages;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -12,6 +14,7 @@ namespace TransitManager.WPF.ViewModels
         private readonly IClientService _clientService;
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
+		private readonly IMessenger _messenger;
 
         private Client? _client;
         public Client? Client
@@ -25,11 +28,12 @@ namespace TransitManager.WPF.ViewModels
         public IAsyncRelayCommand SaveCommand { get; }
         public IRelayCommand CancelCommand { get; }
 
-        public ClientDetailViewModel(IClientService clientService, INavigationService navigationService, IDialogService dialogService)
+        public ClientDetailViewModel(IClientService clientService, INavigationService navigationService, IDialogService dialogService, IMessenger messenger)
         {
             _clientService = clientService;
             _navigationService = navigationService;
             _dialogService = dialogService;
+			_messenger = messenger;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
@@ -61,6 +65,10 @@ namespace TransitManager.WPF.ViewModels
                         await _clientService.UpdateAsync(Client);
                     }
                     await _dialogService.ShowInformationAsync("Succès", "Le client a été enregistré.");
+                    
+                    // --- ENVOI DU MESSAGE ---
+                    _messenger.Send(new ClientUpdatedMessage(true));
+
                     _navigationService.GoBack();
                 }
                 catch (Exception ex)

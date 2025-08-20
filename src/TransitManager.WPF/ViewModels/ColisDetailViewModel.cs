@@ -9,6 +9,10 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
+using System.Text.Json;
+using TransitManager.WPF.Views.Inventaire;
+using CommunityToolkit.Mvvm.Messaging;
+using TransitManager.WPF.Messages;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -34,10 +38,24 @@ namespace TransitManager.WPF.ViewModels
         #endregion
 
         #region Propriétés Publiques
+
         public Colis? Colis
         {
             get => _colis;
-            set => SetProperty(ref _colis, value);
+            set
+            {
+                if (_colis != null)
+                {
+                    _colis.PropertyChanging -= OnColisPropertyChanging;
+                    _colis.PropertyChanged -= OnColisPropertyChanged; // Se désabonner aussi de cet événement
+                }
+                SetProperty(ref _colis, value);
+                if (_colis != null)
+                {
+                    _colis.PropertyChanging += OnColisPropertyChanging;
+                    _colis.PropertyChanged += OnColisPropertyChanged; // Se réabonner
+                }
+            }
         }
 
         public ObservableCollection<Client> Clients
@@ -142,6 +160,7 @@ namespace TransitManager.WPF.ViewModels
         #endregion
 		
 		public ObservableCollection<StatutColis> AvailableStatuses { get; } = new();
+		public bool HasInventaire => !string.IsNullOrEmpty(Colis?.InventaireJson) && Colis.InventaireJson != "[]";
 
         #region Commandes
         public IAsyncRelayCommand SaveCommand { get; }
@@ -149,6 +168,7 @@ namespace TransitManager.WPF.ViewModels
         public IRelayCommand AddBarcodeCommand { get; }
         public IRelayCommand<Barcode> RemoveBarcodeCommand { get; }
         public IRelayCommand GenerateBarcodeCommand { get; }
+		public IAsyncRelayCommand OpenInventaireCommand { get; }
         #endregion
 
         public ColisDetailViewModel(IColisService colisService, IClientService clientService, IBarcodeService barcodeService, INavigationService navigationService, IDialogService dialogService, IConteneurService conteneurService)
@@ -164,6 +184,7 @@ namespace TransitManager.WPF.ViewModels
             CancelCommand = new RelayCommand(Cancel);
             AddBarcodeCommand = new RelayCommand(AddBarcode, () => !string.IsNullOrWhiteSpace(NewBarcode));
             RemoveBarcodeCommand = new RelayCommand<Barcode>(RemoveBarcode);
+			OpenInventaireCommand = new AsyncRelayCommand(OpenInventaire);
             GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
         }
 
@@ -262,15 +283,36 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
+        private async void OnColisPropertyChanging(object? sender, System.ComponentModel.PropertyChangingEventArgs e)
+        {
+            if (Colis == null || !HasInventaire || Colis.Id == Guid.Empty) return;
+
+            if (e.PropertyName == nameof(Colis.NombrePieces) || e.PropertyName == nameof(Colis.ValeurDeclaree))
+            {
+                var originalColis = await _colisService.GetByIdAsync(Colis.Id);
+                if (originalColis != null)
+                {
+                    // Pour éviter une boucle infinie, on se désabonne temporairement
+                    Colis.PropertyChanging -= OnColisPropertyChanging;
+                    Colis.NombrePieces = originalColis.NombrePieces;
+                    Colis.ValeurDeclaree = originalColis.ValeurDeclaree;
+                    Colis.PropertyChanging += OnColisPropertyChanging;
+                }
+
+                var confirm = await _dialogService.ShowConfirmationAsync(
+                    "Modification Manuelle", 
+                    "Les valeurs de ce champ sont calculées depuis l'inventaire.\nVoulez-vous ouvrir l'inventaire pour faire vos modifications ?");
+                
+                if (confirm)
+                {
+                    await OpenInventaire();
+                } 
+            }
+        }
+
         private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             SaveCommand.NotifyCanExecuteChanged();
-            /*
-            if (e.PropertyName is nameof(Colis.TypeEnvoi) or nameof(Colis.LivraisonADomicile) or nameof(Colis.Poids))
-            {
-                CalculatePrice();
-            }
-            */
         }
 
         private void CalculatePrice()
@@ -301,6 +343,24 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
+        private async Task OpenInventaire()
+        {
+            if (Colis == null) return;
+            var inventaireViewModel = new InventaireViewModel(Colis.InventaireJson);
+            var inventaireWindow = new InventaireView(inventaireViewModel)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+
+            if (inventaireWindow.ShowDialog() == true)
+            {
+                Colis.InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items);
+                Colis.NombrePieces = inventaireViewModel.TotalQuantite;
+                Colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
+                OnPropertyChanged(nameof(HasInventaire));
+            }
+        }
+
         public async Task InitializeAsync(Guid colisId)
         {
             Title = "Modifier le Colis";
@@ -315,11 +375,19 @@ namespace TransitManager.WPF.ViewModels
                     SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
                     Colis.PropertyChanged += OnColisPropertyChanged;
                     await LoadConteneursDisponiblesAsync();
+					OnPropertyChanged(nameof(HasInventaire));
                     if (Colis.ConteneurId.HasValue)
                     {
                         SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Colis.ConteneurId.Value);
                     }
-					LoadAvailableStatuses();
+                    LoadAvailableStatuses();
+                    
+                    // --- LA CORRECTION EST ICI ---
+                    // On vérifie si les informations du destinataire correspondent à celles du propriétaire
+                    if (SelectedClient != null && Colis.Destinataire == SelectedClient.NomComplet && Colis.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
+                    {
+                        DestinataireEstProprietaire = true;
+                    }
                 }
             });
         }

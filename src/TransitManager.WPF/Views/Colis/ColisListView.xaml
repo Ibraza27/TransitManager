@@ -82,7 +82,7 @@
                     </Grid.ColumnDefinitions>
                     <ComboBox Grid.Column="0" materialDesign:HintAssist.Hint="Statut" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,0,5,0" SelectedItem="{Binding SelectedStatut}" ItemsSource="{Binding StatutsList}"/>
                     <ComboBox Grid.Column="1" materialDesign:HintAssist.Hint="Client" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="5,0" IsEditable="True" ItemsSource="{Binding ClientsList}" SelectedItem="{Binding SelectedClient}" DisplayMemberPath="NomComplet"/>
-                    <ComboBox Grid.Column="2" materialDesign:HintAssist.Hint="Conteneur" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="5,0" ItemsSource="{Binding ConteneursList}" SelectedItem="{Binding SelectedConteneur}" DisplayMemberPath="NumeroDossier}"/>
+                    <ComboBox Grid.Column="2" materialDesign:HintAssist.Hint="Conteneur" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="5,0" IsEditable="True" ItemsSource="{Binding ConteneursList}" SelectedItem="{Binding SelectedConteneur}" DisplayMemberPath="NumeroDossier"/>
                     <DatePicker Grid.Column="3" materialDesign:HintAssist.Hint="Date d'arrivée" Style="{StaticResource MaterialDesignOutlinedDatePicker}" Margin="5,0,0,0" SelectedDate="{Binding SelectedDate}"/>
                     <Button Grid.Column="4" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding ClearFiltersCommand}" Margin="10,0,0,0">
                         <StackPanel Orientation="Horizontal">
@@ -106,6 +106,28 @@
 				<DataGrid.Resources>
 					<Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
 						<EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
+						
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                <ContextMenu>
+                                    <!-- MODIFICATION SUR TOUTES LES COMMANDES CI-DESSOUS -->
+                                    <MenuItem Header="Inventaire" Command="{Binding DataContext.OpenInventaireFromListCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                                        <MenuItem.Icon><materialDesign:PackIcon Kind="ClipboardList" /></MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator />
+                                    <MenuItem Header="Modifier / Voir Détails" Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                                        <MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Supprimer" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                                        <MenuItem.Icon><materialDesign:PackIcon Kind="Delete" Foreground="Red" /></MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator />
+                                    <MenuItem Header="Actualiser" Command="{Binding DataContext.RefreshCommand, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                         <MenuItem.Icon><materialDesign:PackIcon Kind="Refresh" /></MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </Setter.Value>
+                        </Setter>
 					</Style>
 				</DataGrid.Resources>
 

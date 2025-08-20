@@ -171,7 +171,7 @@ namespace TransitManager.WPF.ViewModels
             ViewDetailsCommand = new RelayCommand<Client>(ViewDetails);
             ExportCommand = new AsyncRelayCommand(ExportAsync);
             RefreshCommand = new AsyncRelayCommand(RefreshAsync);
-            SearchCommand = new AsyncRelayCommand(SearchClientsAsync);
+            SearchCommand = new AsyncRelayCommand(LoadClientsAsync);
             PreviousPageCommand = new RelayCommand(PreviousPage, () => CanGoPrevious);
             NextPageCommand = new RelayCommand(NextPage, () => CanGoNext);
         }
@@ -202,48 +202,56 @@ namespace TransitManager.WPF.ViewModels
         {
             await ExecuteBusyActionAsync(async () =>
             {
-                IEnumerable<Client> clients;
+                // Étape 1 : Obtenir la liste COMPLÈTE des clients une seule fois.
+                var allClients = await _clientService.GetAllAsync();
+                
+                // Étape 2 : Appliquer tous les filtres en mémoire (c'est plus flexible).
+                IEnumerable<Client> filteredClients = allClients;
 
-                // Filtrer selon le statut sélectionné
+                // Filtre par statut
                 switch (SelectedStatus)
                 {
                     case "Actifs":
-                        clients = await _clientService.GetActiveClientsAsync();
+                        filteredClients = filteredClients.Where(c => c.Actif);
                         break;
                     case "Inactifs":
-                        clients = (await _clientService.GetAllAsync()).Where(c => !c.Actif);
+                        filteredClients = filteredClients.Where(c => !c.Actif);
                         break;
                     case "Clients fidèles":
-                        clients = (await _clientService.GetAllAsync()).Where(c => c.EstClientFidele);
+                        filteredClients = filteredClients.Where(c => c.EstClientFidele);
                         break;
                     case "Avec impayés":
-                        clients = await _clientService.GetClientsWithUnpaidBalanceAsync();
+                        filteredClients = filteredClients.Where(c => c.BalanceTotal > 0);
                         break;
-                    default:
-                        clients = await _clientService.GetAllAsync();
-                        break;
+                    // Le cas "Tous" ne fait rien, on garde la liste complète.
                 }
 
-                // Filtrer par ville si sélectionnée
+                // Filtre par ville
                 if (!string.IsNullOrEmpty(SelectedCity))
                 {
-                    clients = clients.Where(c => c.Ville == SelectedCity);
+                    filteredClients = filteredClients.Where(c => c.Ville == SelectedCity);
                 }
 
-                // Appliquer la recherche
+                // Filtre par recherche texte
                 if (!string.IsNullOrWhiteSpace(SearchText))
                 {
-                    clients = await _clientService.SearchAsync(SearchText);
+                    var searchTextLower = SearchText.ToLower();
+                    filteredClients = filteredClients.Where(c =>
+                        (c.CodeClient?.ToLower().Contains(searchTextLower) ?? false) ||
+                        (c.NomComplet?.ToLower().Contains(searchTextLower) ?? false) ||
+                        (c.TelephonePrincipal?.Contains(searchTextLower) ?? false) ||
+                        (c.Email?.ToLower().Contains(searchTextLower) ?? false) ||
+                        (c.Ville?.ToLower().Contains(searchTextLower) ?? false)
+                    );
                 }
 
                 // Pagination
-                TotalClients = clients.Count();
+                var finalList = filteredClients.ToList();
+                TotalClients = finalList.Count();
                 TotalPages = (int)Math.Ceiling(TotalClients / (double)_pageSize);
+                if (CurrentPage > TotalPages && TotalPages > 0) CurrentPage = TotalPages;
 
-                if (CurrentPage > TotalPages && TotalPages > 0)
-                    CurrentPage = TotalPages;
-
-                var pagedClients = clients
+                var pagedClients = finalList
                     .Skip((CurrentPage - 1) * _pageSize)
                     .Take(_pageSize);
 

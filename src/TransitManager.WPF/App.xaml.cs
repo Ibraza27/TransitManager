@@ -116,6 +116,8 @@ namespace TransitManager.WPF
             services.AddScoped<IBarcodeService, BarcodeService>();
             services.AddScoped<IExportService, ExportService>();
             services.AddScoped<IBackupService, BackupService>();
+			
+			services.AddSingleton<CommunityToolkit.Mvvm.Messaging.IMessenger>(CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default);
 
             // Services UI (Singleton car ils gèrent un état global de l'UI)
             services.AddSingleton<INavigationService, NavigationService>();

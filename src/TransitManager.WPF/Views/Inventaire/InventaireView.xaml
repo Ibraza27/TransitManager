@@ -1,0 +1,68 @@
+<Window x:Class="TransitManager.WPF.Views.Inventaire.InventaireView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d"
+        Title="Inventaire du Colis" Height="600" Width="800"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="ToolWindow">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Formulaire d'ajout -->
+        <materialDesign:Card Grid.Row="0" Padding="10" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" materialDesign:HintAssist.Hint="Désignation" Text="{Binding NewItem.Designation, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
+                <TextBox Grid.Column="1" materialDesign:HintAssist.Hint="Quantité" Text="{Binding NewItem.Quantite, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
+                <TextBox Grid.Column="2" materialDesign:HintAssist.Hint="Valeur" Text="{Binding NewItem.Valeur, UpdateSourceTrigger=PropertyChanged, StringFormat=C}" Margin="0,0,10,0"/>
+                <Button Grid.Column="3" Command="{Binding AddItemCommand}" Style="{StaticResource MaterialDesignFloatingActionMiniButton}">
+                    <materialDesign:PackIcon Kind="Plus" />
+                </Button>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Tableau d'inventaire -->
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Items}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Désignation" Binding="{Binding Designation}" Width="3*"/>
+                <DataGridTextColumn Header="Quantité" Binding="{Binding Quantite}" Width="*"/>
+                <DataGridTextColumn Header="Valeur" Binding="{Binding Valeur, StringFormat=C}" Width="*"/>
+                <DataGridTemplateColumn Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Supprimer">
+                                <materialDesign:PackIcon Kind="Delete" Foreground="Red"/>
+                            </Button>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Récapitulatif -->
+        <materialDesign:Card Grid.Row="2" Padding="10" Margin="0,10,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <TextBlock Text="Total Pièces: " FontWeight="Bold" Margin="0,0,5,0"/>
+                <TextBlock Text="{Binding TotalQuantite}" Margin="0,0,20,0"/>
+                <TextBlock Text="Valeur Totale: " FontWeight="Bold" Margin="0,0,5,0"/>
+                <TextBlock Text="{Binding TotalValeur, StringFormat=C}"/>
+            </StackPanel>
+        </materialDesign:Card>
+
+        <!-- Bouton de fermeture -->
+        <Button Grid.Row="3" Content="Fermer et Appliquer" Click="CloseButton_Click" HorizontalAlignment="Right" Margin="0,16,0,0" IsDefault="True"/>
+    </Grid>
+</Window>

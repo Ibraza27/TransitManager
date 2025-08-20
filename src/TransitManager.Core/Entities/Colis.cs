@@ -42,6 +42,7 @@ namespace TransitManager.Core.Entities
         
         // --- NOUVEAU CHAMP ---
         private string? _numeroPlomb;
+		private string? _inventaireJson;
 
         public virtual ICollection<Barcode> Barcodes { get; set; } = new List<Barcode>();
 
@@ -101,6 +102,8 @@ namespace TransitManager.Core.Entities
         // --- NOUVELLE PROPRIÉTÉ ---
         [StringLength(50)]
         public string? NumeroPlomb { get => _numeroPlomb; set => SetProperty(ref _numeroPlomb, value); }
+		
+		public string? InventaireJson { get => _inventaireJson; set => SetProperty(ref _inventaireJson, value); }
         
         public virtual Client? Client { get; set; }
         public virtual Conteneur? Conteneur { get; set; }

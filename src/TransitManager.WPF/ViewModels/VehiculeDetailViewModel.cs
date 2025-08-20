@@ -165,7 +165,6 @@ namespace TransitManager.WPF.ViewModels
                     LoadRayures();
                     UpdatePlanImage(Vehicule.Type);
 
-                    // --- NOUVELLE LOGIQUE D'INITIALISATION ---
                     await LoadConteneursDisponiblesAsync();
                     if (Vehicule.ConteneurId.HasValue)
                     {
@@ -176,6 +175,12 @@ namespace TransitManager.WPF.ViewModels
                         SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Guid.Empty);
                     }
 					LoadAvailableStatuses();
+
+                    // --- LA CORRECTION EST ICI ---
+                    if (SelectedClient != null && Vehicule.Destinataire == SelectedClient.NomComplet && Vehicule.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
+                    {
+                        DestinataireEstProprietaire = true;
+                    }
                 }
             });
         }

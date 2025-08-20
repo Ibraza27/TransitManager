@@ -21,6 +21,8 @@ namespace TransitManager.Infrastructure.Data.Configurations
             builder.Property(c => c.NumeroReference).IsRequired().HasMaxLength(50);
             builder.Property(c => c.Designation).IsRequired().HasMaxLength(500);
             builder.Property(c => c.NumeroPlomb).HasMaxLength(50); // NOUVELLE LIGNE
+			
+			builder.Property(c => c.InventaireJson).HasColumnType("jsonb");
 
             builder.Property(c => c.Poids).HasPrecision(10, 3).HasDefaultValue(0);
             builder.Property(c => c.Longueur).HasPrecision(10, 2).HasDefaultValue(0);

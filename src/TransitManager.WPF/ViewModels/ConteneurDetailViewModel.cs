@@ -10,6 +10,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Collections.Specialized;
+using CommunityToolkit.Mvvm.Messaging;
+using TransitManager.WPF.Messages;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -21,6 +23,7 @@ namespace TransitManager.WPF.ViewModels
         private readonly IClientService _clientService;
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
+		private readonly IMessenger _messenger; 
 
         private Conteneur? _conteneur;
         public Conteneur? Conteneur
@@ -57,7 +60,7 @@ namespace TransitManager.WPF.ViewModels
 
         public ConteneurDetailViewModel(
             IConteneurService conteneurService, IColisService colisService, IVehiculeService vehiculeService,
-            INavigationService navigationService, IDialogService dialogService, IClientService clientService)
+            INavigationService navigationService, IDialogService dialogService, IClientService clientService, IMessenger messenger)
         {
             _conteneurService = conteneurService;
             _colisService = colisService;
@@ -65,6 +68,7 @@ namespace TransitManager.WPF.ViewModels
             _clientService = clientService;
             _navigationService = navigationService;
             _dialogService = dialogService;
+			_messenger = messenger;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(() => _navigationService.GoBack());
@@ -183,6 +187,7 @@ namespace TransitManager.WPF.ViewModels
 						await _conteneurService.UpdateAsync(Conteneur);
 					}
 					await _dialogService.ShowInformationAsync("Succès", "Le dossier a été enregistré.");
+					_messenger.Send(new ConteneurUpdatedMessage(true));
 					_navigationService.GoBack();
 				}
 				catch (Exception ex)

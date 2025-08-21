@@ -109,8 +109,9 @@
                                 <TextBox Grid.Column="0" Text="{Binding Colis.Poids, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Poids (kg)" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,5,15"/>
                                 <TextBox Grid.Column="1" Text="{Binding Colis.NombrePieces, UpdateSourceTrigger=PropertyChanged}" 
                                          IsReadOnly="{Binding HasInventaire}"
-                                         materialDesign:HintAssist.Hint="Nombre de pièces *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5,0,0,15"/>               
-							</Grid>
+                                         GotFocus="InventaireTextBox_GotFocus"
+                                         materialDesign:HintAssist.Hint="Nombre de pièces *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5,0,0,15"/>
+                            </Grid>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -152,6 +153,7 @@
                             
 							<TextBox Text="{Binding Colis.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged}"
 									 IsReadOnly="{Binding HasInventaire}"
+									 GotFocus="InventaireTextBox_GotFocus"
 									 materialDesign:HintAssist.Hint="Valeur déclarée"
 									 materialDesign:TextFieldAssist.SuffixText="€"
 									 Style="{StaticResource MaterialDesignOutlinedTextBox}"

@@ -105,7 +105,7 @@ namespace TransitManager.WPF.ViewModels
             _navigationService = navigationService;
             _dialogService = dialogService;
             _exportService = exportService;
-            _messenger = messenger;
+            _messenger = messenger; // Ligne ajoutée
             Title = "Gestion des Colis / Marchandises";
 
             NewColisCommand = new AsyncRelayCommand(NewColis);
@@ -115,7 +115,7 @@ namespace TransitManager.WPF.ViewModels
             ExportCommand = new AsyncRelayCommand(ExportAsync);
             EditCommand = new AsyncRelayCommand<Colis>(EditColis);
             DeleteCommand = new AsyncRelayCommand<Colis>(DeleteColis);
-			OpenInventaireFromListCommand = new AsyncRelayCommand<Colis>(OpenInventaireFromList);
+            OpenInventaireFromListCommand = new AsyncRelayCommand<Colis>(OpenInventaireFromList);
 
             InitializeStatutsList();
             _messenger.RegisterAll(this);
@@ -126,12 +126,9 @@ namespace TransitManager.WPF.ViewModels
             if (colis == null) return;
 
             var inventaireViewModel = new InventaireViewModel(colis.InventaireJson);
-            
-            var mainWindow = System.Windows.Application.Current.MainWindow;
-
             var inventaireWindow = new InventaireView(inventaireViewModel)
             {
-                Owner = mainWindow
+                Owner = System.Windows.Application.Current.MainWindow
             };
 
             if (inventaireWindow.ShowDialog() == true)
@@ -140,7 +137,9 @@ namespace TransitManager.WPF.ViewModels
                 colis.NombrePieces = inventaireViewModel.TotalQuantite;
                 colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
 
+                // Sauvegarder directement les changements
                 await _colisService.UpdateAsync(colis);
+                // Rafraîchir la liste pour voir les nouvelles valeurs
                 await LoadColisAsync();
             }
         }		

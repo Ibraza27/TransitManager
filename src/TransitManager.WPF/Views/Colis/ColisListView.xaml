@@ -107,10 +107,10 @@
 					<Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
 						<EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
 						
-                        <Setter Property="ContextMenu">
+						<Setter Property="ContextMenu">
                             <Setter.Value>
                                 <ContextMenu>
-                                    <!-- MODIFICATION SUR TOUTES LES COMMANDES CI-DESSOUS -->
+                                    <!-- La correction est ici : RelativeSource pointe maintenant vers le UserControl -->
                                     <MenuItem Header="Inventaire" Command="{Binding DataContext.OpenInventaireFromListCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
                                         <MenuItem.Icon><materialDesign:PackIcon Kind="ClipboardList" /></MenuItem.Icon>
                                     </MenuItem>

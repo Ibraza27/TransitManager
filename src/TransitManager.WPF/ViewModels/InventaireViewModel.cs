@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using TransitManager.Core.Entities;
 using System.Collections.Specialized;
+using System.Collections.Generic;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -30,37 +31,26 @@ namespace TransitManager.WPF.ViewModels
             RemoveItemCommand = new RelayCommand<InventaireItem>(RemoveItem);
 
             NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
-            
-            // On s'abonne à l'événement de changement de la collection
             Items.CollectionChanged += OnItemsCollectionChanged;
 
             LoadItems(inventaireJson);
         }
 
-        // Nouvelle méthode pour gérer les changements de la collection (ajout/suppression)
         private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            // Se désabonner des anciens éléments
             if (e.OldItems != null)
             {
                 foreach (InventaireItem item in e.OldItems)
-                {
                     item.PropertyChanged -= OnItemPropertyChanged;
-                }
             }
-            // S'abonner aux nouveaux éléments
             if (e.NewItems != null)
             {
                 foreach (InventaireItem item in e.NewItems)
-                {
                     item.PropertyChanged += OnItemPropertyChanged;
-                }
             }
-            // Mettre à jour les totaux dans tous les cas
             UpdateTotals();
         }
 
-        // Nouvelle méthode pour gérer les changements de propriétés d'un élément (Quantité/Valeur)
         private void OnItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(InventaireItem.Quantite) || e.PropertyName == nameof(InventaireItem.Valeur))
@@ -69,7 +59,6 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        // Méthode centralisée pour mettre à jour les totaux
         private void UpdateTotals()
         {
             OnPropertyChanged(nameof(TotalQuantite));
@@ -78,7 +67,10 @@ namespace TransitManager.WPF.ViewModels
 
         private void LoadItems(string? json)
         {
-            Items.Clear(); // Vider la collection existante
+            // On s'assure de se désabonner des anciens items avant de vider la liste
+            foreach(var item in Items) item.PropertyChanged -= OnItemPropertyChanged;
+            Items.Clear();
+
             if (!string.IsNullOrEmpty(json))
             {
                 try
@@ -86,17 +78,13 @@ namespace TransitManager.WPF.ViewModels
                     var items = System.Text.Json.JsonSerializer.Deserialize<List<InventaireItem>>(json);
                     if (items != null)
                     {
-                        // Ajouter les éléments un par un
                         foreach (var item in items)
                         {
-                            Items.Add(item);
+                            Items.Add(item); // L'événement CollectionChanged s'occupera de s'abonner
                         }
                     }
                 }
-                catch
-                {
-                    // Ignorer les erreurs de désérialisation, la liste restera vide
-                }
+                catch { /* Ignorer les erreurs de JSON invalide */ }
             }
         }
 

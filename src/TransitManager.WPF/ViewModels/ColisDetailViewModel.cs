@@ -13,6 +13,8 @@ using System.Text.Json;
 using TransitManager.WPF.Views.Inventaire;
 using CommunityToolkit.Mvvm.Messaging;
 using TransitManager.WPF.Messages;
+using System.Windows; // Directive using ajoutée
+using System.Windows.Input;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -46,14 +48,14 @@ namespace TransitManager.WPF.ViewModels
             {
                 if (_colis != null)
                 {
-                    _colis.PropertyChanging -= OnColisPropertyChanging;
-                    _colis.PropertyChanged -= OnColisPropertyChanged; // Se désabonner aussi de cet événement
+                    // On ne se désabonne QUE de PropertyChanged
+                    _colis.PropertyChanged -= OnColisPropertyChanged;
                 }
                 SetProperty(ref _colis, value);
                 if (_colis != null)
                 {
-                    _colis.PropertyChanging += OnColisPropertyChanging;
-                    _colis.PropertyChanged += OnColisPropertyChanged; // Se réabonner
+                    // On se réabonne uniquement à PropertyChanged
+                    _colis.PropertyChanged += OnColisPropertyChanged;
                 }
             }
         }
@@ -160,9 +162,10 @@ namespace TransitManager.WPF.ViewModels
         #endregion
 		
 		public ObservableCollection<StatutColis> AvailableStatuses { get; } = new();
-		public bool HasInventaire => !string.IsNullOrEmpty(Colis?.InventaireJson) && Colis.InventaireJson != "[]";
+		public bool HasInventaire => Colis != null && !string.IsNullOrEmpty(Colis.InventaireJson) && Colis.InventaireJson != "[]";
 
         #region Commandes
+		public IAsyncRelayCommand CheckInventaireModificationCommand { get; }
         public IAsyncRelayCommand SaveCommand { get; }
         public IRelayCommand CancelCommand { get; }
         public IRelayCommand AddBarcodeCommand { get; }
@@ -185,7 +188,23 @@ namespace TransitManager.WPF.ViewModels
             AddBarcodeCommand = new RelayCommand(AddBarcode, () => !string.IsNullOrWhiteSpace(NewBarcode));
             RemoveBarcodeCommand = new RelayCommand<Barcode>(RemoveBarcode);
 			OpenInventaireCommand = new AsyncRelayCommand(OpenInventaire);
+			CheckInventaireModificationCommand = new AsyncRelayCommand(CheckInventaireModification);
             GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
+        }
+		
+        private async Task CheckInventaireModification()
+        {
+            if (HasInventaire)
+            {
+                var confirm = await _dialogService.ShowConfirmationAsync(
+                    "Modification Manuelle",
+                    "Les valeurs de ce champ sont calculées depuis l'inventaire.\nVoulez-vous ouvrir l'inventaire pour faire vos modifications ?");
+
+                if (confirm)
+                {
+                    await OpenInventaire();
+                }
+            }
         }
 
         private bool CanSave()
@@ -283,35 +302,10 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        private async void OnColisPropertyChanging(object? sender, System.ComponentModel.PropertyChangingEventArgs e)
-        {
-            if (Colis == null || !HasInventaire || Colis.Id == Guid.Empty) return;
-
-            if (e.PropertyName == nameof(Colis.NombrePieces) || e.PropertyName == nameof(Colis.ValeurDeclaree))
-            {
-                var originalColis = await _colisService.GetByIdAsync(Colis.Id);
-                if (originalColis != null)
-                {
-                    // Pour éviter une boucle infinie, on se désabonne temporairement
-                    Colis.PropertyChanging -= OnColisPropertyChanging;
-                    Colis.NombrePieces = originalColis.NombrePieces;
-                    Colis.ValeurDeclaree = originalColis.ValeurDeclaree;
-                    Colis.PropertyChanging += OnColisPropertyChanging;
-                }
-
-                var confirm = await _dialogService.ShowConfirmationAsync(
-                    "Modification Manuelle", 
-                    "Les valeurs de ce champ sont calculées depuis l'inventaire.\nVoulez-vous ouvrir l'inventaire pour faire vos modifications ?");
-                
-                if (confirm)
-                {
-                    await OpenInventaire();
-                } 
-            }
-        }
 
         private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
+            // Garder uniquement cette ligne
             SaveCommand.NotifyCanExecuteChanged();
         }
 
@@ -373,7 +367,8 @@ namespace TransitManager.WPF.ViewModels
                 {
                     Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
                     SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
-                    Colis.PropertyChanged += OnColisPropertyChanged;
+                    Colis.PropertyChanged -= OnColisPropertyChanged;
+					Colis.PropertyChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
                     await LoadConteneursDisponiblesAsync();
 					OnPropertyChanged(nameof(HasInventaire));
                     if (Colis.ConteneurId.HasValue)

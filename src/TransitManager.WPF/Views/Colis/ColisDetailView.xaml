@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:helpers="clr-namespace:TransitManager.WPF.Helpers"
+			 xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1000">
 
@@ -109,8 +110,13 @@
                                 <TextBox Grid.Column="0" Text="{Binding Colis.Poids, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Poids (kg)" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,5,15"/>
                                 <TextBox Grid.Column="1" Text="{Binding Colis.NombrePieces, UpdateSourceTrigger=PropertyChanged}" 
                                          IsReadOnly="{Binding HasInventaire}"
-                                         GotFocus="InventaireTextBox_GotFocus"
-                                         materialDesign:HintAssist.Hint="Nombre de pièces *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5,0,0,15"/>
+                                         materialDesign:HintAssist.Hint="Nombre de pièces *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5,0,0,15">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="GotFocus">
+                                            <i:InvokeCommandAction Command="{Binding CheckInventaireModificationCommand}"/>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </TextBox>
                             </Grid>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -153,11 +159,16 @@
                             
 							<TextBox Text="{Binding Colis.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged}"
 									 IsReadOnly="{Binding HasInventaire}"
-									 GotFocus="InventaireTextBox_GotFocus"
 									 materialDesign:HintAssist.Hint="Valeur déclarée"
 									 materialDesign:TextFieldAssist.SuffixText="€"
 									 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-									 Margin="0,0,0,15"/>
+									 Margin="0,0,0,15">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="GotFocus">
+                                        <i:InvokeCommandAction Command="{Binding CheckInventaireModificationCommand}"/>
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                            </TextBox>
 
                             <CheckBox Content="Colis fragile" IsChecked="{Binding Colis.EstFragile}" Margin="0,0,0,10"/>
                             <CheckBox Content="Manipulation spéciale requise" IsChecked="{Binding Colis.ManipulationSpeciale}" Margin="0,0,0,15"/>

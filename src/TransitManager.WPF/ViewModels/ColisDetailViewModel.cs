@@ -15,6 +15,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using TransitManager.WPF.Messages;
 using System.Windows; // Directive using ajoutée
 using System.Windows.Input;
+using System.ComponentModel;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -41,24 +42,24 @@ namespace TransitManager.WPF.ViewModels
 
         #region Propriétés Publiques
 
-        public Colis? Colis
-        {
-            get => _colis;
-            set
-            {
-                if (_colis != null)
-                {
-                    // On ne se désabonne QUE de PropertyChanged
-                    _colis.PropertyChanged -= OnColisPropertyChanged;
-                }
-                SetProperty(ref _colis, value);
-                if (_colis != null)
-                {
-                    // On se réabonne uniquement à PropertyChanged
-                    _colis.PropertyChanged += OnColisPropertyChanged;
-                }
-            }
-        }
+		public Colis? Colis
+		{
+			get => _colis;
+			set
+			{
+				if (_colis != null)
+				{
+					_colis.PropertyChanged -= OnColisPropertyChanged;
+				}
+				SetProperty(ref _colis, value);
+				if (_colis != null)
+				{
+					_colis.PropertyChanged += OnColisPropertyChanged;
+				}
+				// Notifier le changement de HasInventaire
+				OnPropertyChanged(nameof(HasInventaire));
+			}
+		}
 
         public ObservableCollection<Client> Clients
         {
@@ -164,6 +165,7 @@ namespace TransitManager.WPF.ViewModels
 		public ObservableCollection<StatutColis> AvailableStatuses { get; } = new();
 		public bool HasInventaire => Colis != null && !string.IsNullOrEmpty(Colis.InventaireJson) && Colis.InventaireJson != "[]";
 
+
         #region Commandes
 		public IAsyncRelayCommand CheckInventaireModificationCommand { get; }
         public IAsyncRelayCommand SaveCommand { get; }
@@ -194,7 +196,7 @@ namespace TransitManager.WPF.ViewModels
 		
         private async Task CheckInventaireModification()
         {
-            if (HasInventaire)
+            if (HasInventaire) // Cette condition empêche le dialogue de s'afficher si l'inventaire est vide
             {
                 var confirm = await _dialogService.ShowConfirmationAsync(
                     "Modification Manuelle",
@@ -303,11 +305,16 @@ namespace TransitManager.WPF.ViewModels
         }
 
 
-        private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            // Garder uniquement cette ligne
-            SaveCommand.NotifyCanExecuteChanged();
-        }
+		private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+		{
+			SaveCommand.NotifyCanExecuteChanged();
+			
+			// Notifier HasInventaire quand InventaireJson change
+			if (e.PropertyName == nameof(Colis.InventaireJson))
+			{
+				OnPropertyChanged(nameof(HasInventaire));
+			}
+		}
 
         private void CalculatePrice()
         {
@@ -337,23 +344,25 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        private async Task OpenInventaire()
-        {
-            if (Colis == null) return;
-            var inventaireViewModel = new InventaireViewModel(Colis.InventaireJson);
-            var inventaireWindow = new InventaireView(inventaireViewModel)
-            {
-                Owner = System.Windows.Application.Current.MainWindow
-            };
+		private async Task OpenInventaire()
+		{
+			if (Colis == null) return;
+			var inventaireViewModel = new InventaireViewModel(Colis.InventaireJson);
+			var inventaireWindow = new InventaireView(inventaireViewModel)
+			{
+				Owner = System.Windows.Application.Current.MainWindow
+			};
 
-            if (inventaireWindow.ShowDialog() == true)
-            {
-                Colis.InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items);
-                Colis.NombrePieces = inventaireViewModel.TotalQuantite;
-                Colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
-                OnPropertyChanged(nameof(HasInventaire));
-            }
-        }
+			if (inventaireWindow.ShowDialog() == true)
+			{
+				Colis.InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items);
+				Colis.NombrePieces = inventaireViewModel.TotalQuantite;
+				Colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
+				
+				// Notifier explicitement le changement de HasInventaire
+				OnPropertyChanged(nameof(HasInventaire));
+			}
+		}
 
         public async Task InitializeAsync(Guid colisId)
         {
@@ -371,6 +380,7 @@ namespace TransitManager.WPF.ViewModels
 					Colis.PropertyChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
                     await LoadConteneursDisponiblesAsync();
 					OnPropertyChanged(nameof(HasInventaire));
+					
                     if (Colis.ConteneurId.HasValue)
                     {
                         SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Colis.ConteneurId.Value);

@@ -27,6 +27,8 @@ namespace TransitManager.WPF.ViewModels
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
         private readonly IConteneurService _conteneurService;
+		public Action? CloseAction { get; set; }
+		private bool _isModal = false;
 
         #region Champs Privés
         private Colis? _colis;
@@ -162,6 +164,11 @@ namespace TransitManager.WPF.ViewModels
         }
         #endregion
 		
+        public void SetModalMode()
+        {
+            _isModal = true;
+        }
+		
 		public ObservableCollection<StatutColis> AvailableStatuses { get; } = new();
 		public bool HasInventaire => Colis != null && !string.IsNullOrEmpty(Colis.InventaireJson) && Colis.InventaireJson != "[]";
 
@@ -220,11 +227,10 @@ namespace TransitManager.WPF.ViewModels
                    !IsBusy;
         }
 
-        private async Task SaveAsync()
+		private async Task SaveAsync()
 		{
 			if (!CanSave() || Colis == null || SelectedClient == null) return;
-            
-            // La logique complexe est maintenant dans le service, le ViewModel envoie juste les données.
+			
 			Colis.ClientId = SelectedClient.Id;
 			Colis.Barcodes = Barcodes.ToList();
 
@@ -242,7 +248,15 @@ namespace TransitManager.WPF.ViewModels
 						await _colisService.UpdateAsync(Colis);
 					}
 					await _dialogService.ShowInformationAsync("Succès", "Le colis a été enregistré.");
-					_navigationService.GoBack();
+
+					if (_isModal)
+					{
+						CloseAction?.Invoke();
+					}
+					else
+					{
+						_navigationService.GoBack();
+					}
 				}
 				catch (Exception ex)
 				{
@@ -256,7 +270,17 @@ namespace TransitManager.WPF.ViewModels
             SaveCommand.NotifyCanExecuteChanged();
         }
 
-        private void Cancel() => _navigationService.GoBack();
+		private void Cancel()
+		{
+			if (_isModal)
+			{
+				CloseAction?.Invoke();
+			}
+			else
+			{
+				_navigationService.GoBack();
+			}
+		}
 
         private void AddBarcode()
         {
@@ -364,38 +388,52 @@ namespace TransitManager.WPF.ViewModels
 			}
 		}
 
-        public async Task InitializeAsync(Guid colisId)
-        {
-            Title = "Modifier le Colis";
-            await ExecuteBusyActionAsync(async () =>
-            {
-                _allClients = (await _clientService.GetActiveClientsAsync()).ToList();
-                FilterClients(null);
-                Colis = await _colisService.GetByIdAsync(colisId);
-                if (Colis != null)
-                {
-                    Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
-                    SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
-                    Colis.PropertyChanged -= OnColisPropertyChanged;
-					Colis.PropertyChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
-                    await LoadConteneursDisponiblesAsync();
-					OnPropertyChanged(nameof(HasInventaire));
-					
-                    if (Colis.ConteneurId.HasValue)
-                    {
-                        SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Colis.ConteneurId.Value);
-                    }
-                    LoadAvailableStatuses();
-                    
-                    // --- LA CORRECTION EST ICI ---
-                    // On vérifie si les informations du destinataire correspondent à celles du propriétaire
-                    if (SelectedClient != null && Colis.Destinataire == SelectedClient.NomComplet && Colis.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
-                    {
-                        DestinataireEstProprietaire = true;
-                    }
-                }
-            });
-        }
+		public async Task InitializeAsync(Guid colisId)
+		{
+			Title = "Modifier le Colis";
+			await ExecuteBusyActionAsync(async () =>
+			{
+				// 1. Charger le colis avec son client
+				Colis = await _colisService.GetByIdAsync(colisId);
+				if (Colis?.Client == null)
+				{
+					await _dialogService.ShowErrorAsync("Erreur Critique", "Le colis ou son propriétaire est introuvable.");
+					Cancel();
+					return;
+				}
+
+				// 2. Charger la liste des clients actifs
+				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
+				
+				// 3. Assurer la présence du client propriétaire
+				if (!_allClients.Any(c => c.Id == Colis.ClientId))
+				{
+					 _allClients.Insert(0, Colis.Client);
+				}
+
+				// 4. Mettre à jour l'UI
+				Clients = new ObservableCollection<Client>(_allClients); // <- Remplacer FilterClients(null) par ceci
+				SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId); // <- Sélectionner le client
+
+				// Le reste de la logique est inchangé
+				Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
+				Colis.PropertyChanged -= OnColisPropertyChanged;
+				Colis.PropertyChanged += OnColisPropertyChanged;
+				await LoadConteneursDisponiblesAsync();
+				OnPropertyChanged(nameof(HasInventaire));
+				
+				if (Colis.ConteneurId.HasValue)
+				{
+					SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Colis.ConteneurId.Value);
+				}
+				LoadAvailableStatuses();
+				
+				if (SelectedClient != null && Colis.Destinataire == SelectedClient.NomComplet && Colis.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
+				{
+					DestinataireEstProprietaire = true;
+				}
+			});
+		}
 		
         private void LoadAvailableStatuses()
         {

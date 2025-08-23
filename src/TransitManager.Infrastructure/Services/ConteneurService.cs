@@ -174,11 +174,17 @@ namespace TransitManager.Infrastructure.Services
             await context.SaveChangesAsync();
             return true;
         }
-        public async Task<Conteneur?> GetByIdAsync(Guid id)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Conteneurs.Include(c => c.Colis).ThenInclude(col => col.Client).Include(c => c.Vehicules).ThenInclude(v => v.Client).AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
-        }
+		public async Task<Conteneur?> GetByIdAsync(Guid id)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			return await context.Conteneurs
+				.Include(c => c.Colis) // Charge les colis...
+				.ThenInclude(col => col.Client) // ... et le client de chaque colis
+				.Include(c => c.Vehicules)
+				.ThenInclude(v => v.Client)
+				.AsNoTracking()
+				.FirstOrDefaultAsync(c => c.Id == id);
+		}
         public async Task<IEnumerable<Conteneur>> GetAllAsync()
         {
             await using var context = await _contextFactory.CreateDbContextAsync();

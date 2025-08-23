@@ -106,28 +106,28 @@
 				<DataGrid.Resources>
 					<Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
 						<EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
+						<Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
 						
 						<Setter Property="ContextMenu">
-                            <Setter.Value>
-                                <ContextMenu>
-                                    <!-- La correction est ici : RelativeSource pointe maintenant vers le UserControl -->
-                                    <MenuItem Header="Inventaire" Command="{Binding DataContext.OpenInventaireFromListCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
-                                        <MenuItem.Icon><materialDesign:PackIcon Kind="ClipboardList" /></MenuItem.Icon>
-                                    </MenuItem>
-                                    <Separator />
-                                    <MenuItem Header="Modifier / Voir Détails" Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
-                                        <MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Header="Supprimer" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
-                                        <MenuItem.Icon><materialDesign:PackIcon Kind="Delete" Foreground="Red" /></MenuItem.Icon>
-                                    </MenuItem>
-                                    <Separator />
-                                    <MenuItem Header="Actualiser" Command="{Binding DataContext.RefreshCommand, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                         <MenuItem.Icon><materialDesign:PackIcon Kind="Refresh" /></MenuItem.Icon>
-                                    </MenuItem>
-                                </ContextMenu>
-                            </Setter.Value>
-                        </Setter>
+							<Setter.Value>
+								<ContextMenu>
+									<MenuItem Header="Inventaire" Command="{Binding PlacementTarget.Tag.OpenInventaireFromListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+										<MenuItem.Icon><materialDesign:PackIcon Kind="ClipboardList" /></MenuItem.Icon>
+									</MenuItem>
+									<Separator />
+									<MenuItem Header="Modifier / Voir Détails" Command="{Binding PlacementTarget.Tag.EditCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+										<MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
+									</MenuItem>
+									<MenuItem Header="Supprimer" Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+										<MenuItem.Icon><materialDesign:PackIcon Kind="Delete" Foreground="Red" /></MenuItem.Icon>
+									</MenuItem>
+									<Separator />
+									<MenuItem Header="Actualiser" Command="{Binding PlacementTarget.Tag.RefreshCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+										 <MenuItem.Icon><materialDesign:PackIcon Kind="Refresh" /></MenuItem.Icon>
+									</MenuItem>
+								</ContextMenu>
+							</Setter.Value>
+						</Setter>
 					</Style>
 				</DataGrid.Resources>
 
@@ -181,13 +181,13 @@
 								<StackPanel Orientation="Horizontal">
                                     <!-- Correction: AncestorType est bien UserControl car le DataContext du UserControl est le ViewModel -->
 									<Button Style="{StaticResource MaterialDesignIconButton}"
-											Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+											Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
 											CommandParameter="{Binding}"
 											ToolTip="Modifier / Voir Détails">
 										<materialDesign:PackIcon Kind="Pencil" />
 									</Button>
 									<Button Style="{StaticResource MaterialDesignIconButton}"
-											Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+											Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
 											CommandParameter="{Binding}"
 											ToolTip="Supprimer">
 										<materialDesign:PackIcon Kind="Delete" Foreground="{StaticResource ErrorBrush}" />

@@ -100,6 +100,24 @@
                             </ListBox>
 							<TextBlock Text="Colis Affectés" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,10,0,5"/>
 							<DataGrid ItemsSource="{Binding ColisAffectes}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
+								<DataGrid.Resources>
+									<Style TargetType="DataGridRow">
+										<!-- On stocke le ViewModel principal dans le Tag de la ligne -->
+										<Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+										<Setter Property="ContextMenu">
+											<Setter.Value>
+												<ContextMenu>
+													<MenuItem Header="Ouvrir l'inventaire" Command="{Binding PlacementTarget.Tag.OpenInventaireCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+														<MenuItem.Icon><materialDesign:PackIcon Kind="ClipboardList" /></MenuItem.Icon>
+													</MenuItem>
+													<MenuItem Header="Modifier le colis..." Command="{Binding PlacementTarget.Tag.EditColisInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+														<MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
+													</MenuItem>
+												</ContextMenu>
+											</Setter.Value>
+										</Setter>
+									</Style>
+								</DataGrid.Resources>
 								<DataGrid.Columns>
 									<DataGridTextColumn Header="Référence" Binding="{Binding NumeroReference}" Width="*" FontWeight="Bold"/>
 									<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*"/>

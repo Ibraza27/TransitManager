@@ -12,6 +12,11 @@ using System.ComponentModel;
 using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.Messaging;
 using TransitManager.WPF.Messages;
+using TransitManager.WPF.Views.Inventaire; // <--- NOUVEAU
+using System.Text.Json; // <--- NOUVEAU
+using Microsoft.Extensions.DependencyInjection; // <--- NOUVEAU
+using TransitManager.WPF.Views.Colis; // <--- NOUVEAU
+using TransitManager.WPF.Views;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -23,7 +28,8 @@ namespace TransitManager.WPF.ViewModels
         private readonly IClientService _clientService;
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
-		private readonly IMessenger _messenger; 
+        private readonly IMessenger _messenger;
+        private readonly IServiceProvider _serviceProvider; // <--- NOUVEAU
 
         private Conteneur? _conteneur;
         public Conteneur? Conteneur
@@ -36,11 +42,11 @@ namespace TransitManager.WPF.ViewModels
                 if (_conteneur != null) _conteneur.PropertyChanged += OnConteneurPropertyChanged;
             }
         }
-        
+
         public ObservableCollection<Client> ClientsAffiches { get; } = new();
         public ObservableCollection<Colis> ColisAffectes { get; } = new();
         public ObservableCollection<Vehicule> VehiculesAffectes { get; } = new();
-        
+
         private string _colisSearchText = string.Empty;
         public string ColisSearchText { get => _colisSearchText; set => SetProperty(ref _colisSearchText, value); }
         public ObservableCollection<Colis> ColisSearchResults { get; } = new();
@@ -57,10 +63,12 @@ namespace TransitManager.WPF.ViewModels
         public IAsyncRelayCommand SearchVehiculesCommand { get; }
         public IAsyncRelayCommand<Vehicule> AddVehiculeCommand { get; }
         public IAsyncRelayCommand<Vehicule> RemoveVehiculeCommand { get; }
+        public IAsyncRelayCommand<Colis> OpenInventaireCommand { get; } // <--- NOUVEAU
+        public IAsyncRelayCommand<Colis> EditColisInWindowCommand { get; } // <--- NOUVEAU
 
         public ConteneurDetailViewModel(
             IConteneurService conteneurService, IColisService colisService, IVehiculeService vehiculeService,
-            INavigationService navigationService, IDialogService dialogService, IClientService clientService, IMessenger messenger)
+            INavigationService navigationService, IDialogService dialogService, IClientService clientService, IMessenger messenger, IServiceProvider serviceProvider)
         {
             _conteneurService = conteneurService;
             _colisService = colisService;
@@ -68,7 +76,8 @@ namespace TransitManager.WPF.ViewModels
             _clientService = clientService;
             _navigationService = navigationService;
             _dialogService = dialogService;
-			_messenger = messenger;
+            _messenger = messenger;
+            _serviceProvider = serviceProvider; // <--- NOUVEAU
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(() => _navigationService.GoBack());
@@ -80,11 +89,81 @@ namespace TransitManager.WPF.ViewModels
             SearchVehiculesCommand = new AsyncRelayCommand(SearchVehiculesAsync);
             AddVehiculeCommand = new AsyncRelayCommand<Vehicule>(AddVehiculeAsync);
             RemoveVehiculeCommand = new AsyncRelayCommand<Vehicule>(RemoveVehiculeAsync);
+            
+            OpenInventaireCommand = new AsyncRelayCommand<Colis>(OpenInventaireAsync); // <--- NOUVEAU
+            EditColisInWindowCommand = new AsyncRelayCommand<Colis>(EditColisInWindowAsync); // <--- NOUVEAU
 
             ColisAffectes.CollectionChanged += OnAffectationChanged;
             VehiculesAffectes.CollectionChanged += OnAffectationChanged;
         }
 
+        // <--- NOUVELLE MÉTHODE : OUVRE LA FENÊTRE D'INVENTAIRE --- >
+        private async Task OpenInventaireAsync(Colis? colis)
+        {
+            if (colis == null) return;
+
+            var inventaireViewModel = new InventaireViewModel(colis.InventaireJson);
+            var inventaireWindow = new InventaireView(inventaireViewModel)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+
+            if (inventaireWindow.ShowDialog() == true)
+            {
+                colis.InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items);
+                colis.NombrePieces = inventaireViewModel.TotalQuantite;
+                colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
+                
+                await _colisService.UpdateAsync(colis);
+                await InitializeAsync(Conteneur.Id); // Rafraîchir la vue
+            }
+        }
+
+        // <--- NOUVELLE MÉTHODE : OUVRE LA FENÊTRE DE MODIFICATION DU COLIS --- >
+		private async Task EditColisInWindowAsync(Colis? colisFromList)
+		{
+			if (colisFromList == null) return;
+
+			// Créer le scope et le ViewModel comme avant
+			using var scope = _serviceProvider.CreateScope();
+			var colisDetailViewModel = scope.ServiceProvider.GetRequiredService<ColisDetailViewModel>();
+			
+			// Indiquer au ViewModel qu'il est en mode modal
+			colisDetailViewModel.SetModalMode();
+
+			// Initialiser le ViewModel avec l'ID. Cette méthode est maintenant fiable.
+			await colisDetailViewModel.InitializeAsync(colisFromList.Id);
+			
+			// Vérifier si le chargement a échoué (par exemple, colis supprimé entre-temps)
+			if (colisDetailViewModel.Colis == null)
+			{
+				await _dialogService.ShowErrorAsync("Erreur", "Impossible de charger les détails de ce colis.");
+				return;
+			}
+
+			// Créer la fenêtre
+			var window = new DetailHostWindow
+			{
+				DataContext = colisDetailViewModel,
+				Owner = System.Windows.Application.Current.MainWindow,
+				Title = $"Modifier le Colis - {colisDetailViewModel.Colis.NumeroReference}"
+			};
+
+			// Lier l'action de fermeture
+			colisDetailViewModel.CloseAction = () => window.Close();
+
+			// Afficher la fenêtre en mode dialogue
+			window.ShowDialog();
+
+			// Après la fermeture, rafraîchir la vue du conteneur pour refléter les changements
+			if (Conteneur != null)
+			{
+				await InitializeAsync(Conteneur.Id);
+			}
+		}
+
+        // ... LE RESTE DU FICHIER RESTE INCHANGÉ ...
+        // (CanSave, OnConteneurPropertyChanged, CalculateStatus, etc.)
         private void OnAffectationChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             SaveCommand.NotifyCanExecuteChanged();
@@ -94,15 +173,12 @@ namespace TransitManager.WPF.ViewModels
         {
             if (Conteneur == null || IsBusy) return false;
             
-            // La sauvegarde est possible si l'objet a changé depuis son chargement initial
-            // ou si c'est un nouvel objet avec les champs requis remplis.
             bool isNewAndValid = string.IsNullOrEmpty(Conteneur.CreePar) &&
                                  !string.IsNullOrWhiteSpace(Conteneur.NumeroDossier) &&
                                  !string.IsNullOrWhiteSpace(Conteneur.Destination) &&
                                  !string.IsNullOrWhiteSpace(Conteneur.PaysDestination) &&
                                  Conteneur.DateReception.HasValue;
 
-            // Pour l'instant, on active toujours si les champs sont bons pour simplifier
             return isNewAndValid || !string.IsNullOrEmpty(Conteneur.CreePar);
         }
 
@@ -275,8 +351,6 @@ namespace TransitManager.WPF.ViewModels
             foreach(var client in allClients) ClientsAffiches.Add(client);
         }
 
-        // Le reste des méthodes ne change pas
-        #region Autres méthodes
         private async Task SearchColisAsync()
         {
             if (string.IsNullOrWhiteSpace(ColisSearchText)) { ColisSearchResults.Clear(); return; }
@@ -293,6 +367,5 @@ namespace TransitManager.WPF.ViewModels
             VehiculeSearchResults.Clear();
             foreach (var item in unassigned) VehiculeSearchResults.Add(item);
         }
-        #endregion
     }
 }

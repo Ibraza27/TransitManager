@@ -15,6 +15,7 @@ using TransitManager.Infrastructure.Repositories;
 using TransitManager.Infrastructure.Services;
 using TransitManager.WPF.Helpers;
 using TransitManager.WPF.ViewModels;
+using TransitManager.WPF.Views;
 using TransitManager.WPF.Views.Auth;
 using TransitManager.WPF.Views.Clients;
 using TransitManager.WPF.Views.Colis;
@@ -143,6 +144,7 @@ namespace TransitManager.WPF
             // Views (Transient)
             services.AddTransient<LoginView>();
             services.AddTransient<MainWindow>();
+			services.AddTransient<DetailHostWindow>();
             services.AddTransient<DashboardView>();
             services.AddTransient<ClientListView>();
             services.AddTransient<ClientDetailView>();

@@ -12,18 +12,17 @@ namespace TransitManager.WPF.Views.Colis
             InitializeComponent();
         }
 
-        private void DataGridRow_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (sender is DataGridRow row && row.DataContext is Core.Entities.Colis colis)
-            {
-                if (DataContext is ColisViewModel viewModel)
-                {
-                    if (viewModel.EditCommand.CanExecute(colis))
-                    {
-                        viewModel.EditCommand.Execute(colis);
-                    }
-                }
-            }
-        }
+		private void DataGridRow_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+		{
+			if (sender is DataGridRow row && row.DataContext is Core.Entities.Colis colis)
+			{
+				if (DataContext is ColisViewModel viewModel && viewModel.EditCommand.CanExecute(colis))
+				{
+					// La commande IAsyncRelayCommand gère l'exécution asynchrone elle-même.
+					// Il suffit d'appeler Execute.
+					viewModel.EditCommand.Execute(colis);
+				}
+			}
+		}
     }
 }

@@ -388,54 +388,31 @@ namespace TransitManager.WPF.ViewModels
 			}
 		}
 
+
 		public async Task InitializeAsync(Guid colisId)
 		{
 			Title = "Modifier le Colis";
 			await ExecuteBusyActionAsync(async () =>
 			{
-				// --- ÉTAPE 1 : CHARGEMENT ISOLÉ ET FIABLE ---
-				// On charge le colis SANS ses relations pour obtenir le ClientId. On ignore les filtres au cas où le colis lui-même serait inactif.
-				var colisTemp = await _colisService.GetByIdAsync(colisId); 
-				if (colisTemp == null)
+				var colisComplet = await _colisService.GetByIdAsync(colisId);
+				if (colisComplet?.Client == null)
 				{
-					await _dialogService.ShowErrorAsync("Erreur Critique", "Le colis est introuvable.");
+					await _dialogService.ShowErrorAsync("Erreur Critique", "Le colis ou son propriétaire est introuvable.");
 					Cancel();
 					return;
 				}
-				Colis = colisTemp;
+				Colis = colisComplet;
 				
-				// On récupère l'ID du client. C'est notre source de vérité.
-				var ownerClientId = Colis.ClientId;
-
-				// On charge le client propriétaire SÉPARÉMENT, en utilisant la méthode de ClientService qui ignore les filtres.
-				// C'est la garantie qu'on l'aura, même s'il est inactif.
-				var ownerClient = await _clientService.GetByIdAsync(ownerClientId);
-				if (ownerClient == null)
-				{
-					await _dialogService.ShowErrorAsync("Erreur Critique", $"Le client propriétaire (ID: {ownerClientId}) du colis est introuvable.");
-					Cancel();
-					return;
-				}
-
-				// --- ÉTAPE 2 : CONSTRUCTION DE LA LISTE POUR L'INTERFACE ---
-				// On charge la liste de base des clients actifs pour la ComboBox.
 				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
 				
-				// On vérifie si notre client propriétaire (potentiellement inactif) est déjà dans la liste.
-				if (!_allClients.Any(c => c.Id == ownerClientId))
+				if (Colis.Client != null && !_allClients.Any(c => c.Id == Colis.ClientId))
 				{
-					 // S'il n'y est pas, on l'ajoute (généralement en haut de la liste).
-					 _allClients.Insert(0, ownerClient);
+					 _allClients.Insert(0, Colis.Client);
 				}
 
-				// On peuple la liste observable à laquelle la ComboBox est liée.
 				Clients = new ObservableCollection<Client>(_allClients);
-
-				// --- ÉTAPE 3 : MISE À JOUR DE L'UI ET LE RESTE DE L'INITIALISATION ---
-				// Maintenant que nous sommes certains que le client est dans la liste "Clients", cette ligne ne peut plus échouer.
-				SelectedClient = Clients.FirstOrDefault(c => c.Id == ownerClientId);
-
-				// Le reste du code est maintenant fiable car il s'appuie sur des données fraîchement chargées.
+				SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
+				
 				Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
 				Colis.PropertyChanged -= OnColisPropertyChanged;
 				Colis.PropertyChanged += OnColisPropertyChanged;
@@ -454,39 +431,33 @@ namespace TransitManager.WPF.ViewModels
 					DestinataireEstProprietaire = true;
 				}
 
-				// Forcer la réévaluation de la commande Save, maintenant que SelectedClient est défini.
 				SaveCommand.NotifyCanExecuteChanged();
 			});
 		}
 		
-		// <--- AJOUTER CETTE NOUVELLE MÉTHODE COMPLÈTE --->
+
 		public async Task InitializeAsync(Colis colis)
 		{
 			Title = "Modifier le Colis";
 			await ExecuteBusyActionAsync(async () =>
 			{
-				// 1. Utiliser l'objet colis, maintenant complet (avec Client et Barcodes)
 				Colis = colis;
 
-				// 2. Charger la liste des clients actifs pour la ComboBox
 				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
 				
-				// 3. Assurer la présence du client propriétaire
 				if (Colis.Client != null && !_allClients.Any(c => c.Id == Colis.ClientId))
 				{
 					 _allClients.Insert(0, Colis.Client);
 				}
 
-				// 4. Mettre à jour l'UI
 				Clients = new ObservableCollection<Client>(_allClients);
-				SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId); // La sélection fonctionnera
+				SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
 
-				// 5. Initialiser les codes-barres à partir de l'objet passé
-				Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes); // Les codes-barres seront présents
+				Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
 
-				// Le reste de la logique
 				Colis.PropertyChanged -= OnColisPropertyChanged;
 				Colis.PropertyChanged += OnColisPropertyChanged;
+				
 				await LoadConteneursDisponiblesAsync();
 				OnPropertyChanged(nameof(HasInventaire));
 				

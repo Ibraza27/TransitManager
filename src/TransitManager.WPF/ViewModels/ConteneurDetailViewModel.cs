@@ -119,7 +119,7 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        // <--- NOUVELLE MÉTHODE : OUVRE LA FENÊTRE DE MODIFICATION DU COLIS --- >
+
 		private async Task EditColisInWindowAsync(Colis? colisFromList)
 		{
 			if (colisFromList == null) return;
@@ -129,16 +129,16 @@ namespace TransitManager.WPF.ViewModels
 			
 			colisDetailViewModel.SetModalMode();
 
-			// <--- ON APPELLE MAINTENANT LA BONNE SURCHARGE ---
-			// On passe l'objet Colis complet (qui a maintenant son Client ET ses Barcodes)
+			// On passe l'objet Colis complet et maintenant FIABLE.
+			// Plus besoin de recharger par ID.
 			await colisDetailViewModel.InitializeAsync(colisFromList);
 			
-			// Le reste est correct
 			if (colisDetailViewModel.Colis == null)
 			{
-				await _dialogService.ShowErrorAsync("Erreur", "Impossible de charger les détails de ce colis.");
+				await _dialogService.ShowErrorAsync("Erreur", "Impossible d'initialiser les détails du colis.");
 				return;
 			}
+
 			var window = new DetailHostWindow
 			{
 				DataContext = colisDetailViewModel,
@@ -147,6 +147,7 @@ namespace TransitManager.WPF.ViewModels
 			};
 			colisDetailViewModel.CloseAction = () => window.Close();
 			window.ShowDialog();
+
 			if (Conteneur != null)
 			{
 				await InitializeAsync(Conteneur.Id);

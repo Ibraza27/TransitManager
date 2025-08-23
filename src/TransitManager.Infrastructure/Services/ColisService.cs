@@ -115,7 +115,7 @@ namespace TransitManager.Infrastructure.Services
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
 			return await context.Colis
-				.IgnoreQueryFilters() // <--- AJOUTEZ CETTE LIGNE MAGIQUE
+				.IgnoreQueryFilters() // Indispensable pour obtenir le colis et son client s'ils sont inactifs
 				.Include(c => c.Client)
 				.Include(c => c.Conteneur)
 				.Include(c => c.Barcodes.Where(b => b.Actif))

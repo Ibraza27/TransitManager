@@ -182,11 +182,11 @@ namespace TransitManager.Infrastructure.Services
 				.IgnoreQueryFilters()
 				.Include(c => c.Colis)
 					.ThenInclude(col => col.Client)
-				.Include(c => c.Colis) // On répète l'include sur Colis pour pouvoir chaîner un autre ThenInclude
-					.ThenInclude(col => col.Barcodes.Where(b => b.Actif)) // <--- LA LIGNE CRUCIALE
+				.Include(c => c.Colis)
+					.ThenInclude(col => col.Barcodes.Where(b => b.Actif))
 				.Include(c => c.Vehicules)
 					.ThenInclude(v => v.Client)
-				.AsNoTracking()
+				// .AsNoTracking() // <--- ON A RETIRÉ CETTE LIGNE
 				.FirstOrDefaultAsync(c => c.Id == id);
 		}
 		

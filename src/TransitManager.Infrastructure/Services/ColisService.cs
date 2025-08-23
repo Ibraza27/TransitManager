@@ -114,13 +114,25 @@ namespace TransitManager.Infrastructure.Services
 		public async Task<Colis?> GetByIdAsync(Guid id)
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
-			return await context.Colis
-				.IgnoreQueryFilters() // Indispensable pour obtenir le colis et son client s'ils sont inactifs
-				.Include(c => c.Client)
+			// On charge le colis en ignorant les filtres pour lui-même
+			var colis = await context.Colis
+				.IgnoreQueryFilters() 
 				.Include(c => c.Conteneur)
 				.Include(c => c.Barcodes.Where(b => b.Actif))
 				.AsNoTracking()
 				.FirstOrDefaultAsync(c => c.Id == id);
+
+			if (colis != null)
+			{
+				// Ensuite, on charge son client SÉPARÉMENT, en ignorant les filtres pour le client.
+				// C'est la garantie absolue de l'obtenir.
+				colis.Client = await context.Clients
+					.IgnoreQueryFilters()
+					.AsNoTracking()
+					.FirstOrDefaultAsync(c => c.Id == colis.ClientId);
+			}
+			
+			return colis;
 		}
 
         public async Task<Colis?> GetByBarcodeAsync(string barcode)

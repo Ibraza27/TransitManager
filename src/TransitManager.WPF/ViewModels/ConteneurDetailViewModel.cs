@@ -129,13 +129,12 @@ namespace TransitManager.WPF.ViewModels
 			
 			colisDetailViewModel.SetModalMode();
 
-			// On passe l'objet Colis complet et maintenant FIABLE.
-			// Plus besoin de recharger par ID.
-			await colisDetailViewModel.InitializeAsync(colisFromList);
+			// On passe l'ID. Le ViewModel de détail se chargera de tout récupérer proprement.
+			await colisDetailViewModel.InitializeAsync(colisFromList.Id);
 			
 			if (colisDetailViewModel.Colis == null)
 			{
-				await _dialogService.ShowErrorAsync("Erreur", "Impossible d'initialiser les détails du colis.");
+				await _dialogService.ShowErrorAsync("Erreur", "Impossible de charger les détails de ce colis.");
 				return;
 			}
 
@@ -145,6 +144,7 @@ namespace TransitManager.WPF.ViewModels
 				Owner = System.Windows.Application.Current.MainWindow,
 				Title = $"Modifier le Colis - {colisDetailViewModel.Colis.NumeroReference}"
 			};
+
 			colisDetailViewModel.CloseAction = () => window.Close();
 			window.ShowDialog();
 

@@ -394,8 +394,10 @@ namespace TransitManager.WPF.ViewModels
 			Title = "Modifier le Colis";
 			await ExecuteBusyActionAsync(async () =>
 			{
+				// 1. Appelle notre service maintenant 100% fiable.
 				var colisComplet = await _colisService.GetByIdAsync(colisId);
-				if (colisComplet?.Client == null)
+				
+				if (colisComplet == null || colisComplet.Client == null)
 				{
 					await _dialogService.ShowErrorAsync("Erreur Critique", "Le colis ou son propriétaire est introuvable.");
 					Cancel();
@@ -403,78 +405,40 @@ namespace TransitManager.WPF.ViewModels
 				}
 				Colis = colisComplet;
 				
+				// 2. Préparer la liste des clients pour la ComboBox
 				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
 				
-				if (Colis.Client != null && !_allClients.Any(c => c.Id == Colis.ClientId))
+				// 3. Assurer la présence du client propriétaire
+				if (!_allClients.Any(c => c.Id == Colis.ClientId))
 				{
 					 _allClients.Insert(0, Colis.Client);
 				}
 
+				// 4. Mettre à jour l'UI
 				Clients = new ObservableCollection<Client>(_allClients);
 				SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
-				
 				Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
+
+				// Le reste...
 				Colis.PropertyChanged -= OnColisPropertyChanged;
 				Colis.PropertyChanged += OnColisPropertyChanged;
-				
 				await LoadConteneursDisponiblesAsync();
 				OnPropertyChanged(nameof(HasInventaire));
-				
 				if (Colis.ConteneurId.HasValue)
 				{
 					SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Colis.ConteneurId.Value);
 				}
 				LoadAvailableStatuses();
-				
 				if (SelectedClient != null && Colis.Destinataire == SelectedClient.NomComplet && Colis.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
 				{
 					DestinataireEstProprietaire = true;
 				}
-
 				SaveCommand.NotifyCanExecuteChanged();
 			});
 		}
 		
 
-		public async Task InitializeAsync(Colis colis)
-		{
-			Title = "Modifier le Colis";
-			await ExecuteBusyActionAsync(async () =>
-			{
-				Colis = colis;
 
-				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
-				
-				if (Colis.Client != null && !_allClients.Any(c => c.Id == Colis.ClientId))
-				{
-					 _allClients.Insert(0, Colis.Client);
-				}
-
-				Clients = new ObservableCollection<Client>(_allClients);
-				SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
-
-				Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
-
-				Colis.PropertyChanged -= OnColisPropertyChanged;
-				Colis.PropertyChanged += OnColisPropertyChanged;
-				
-				await LoadConteneursDisponiblesAsync();
-				OnPropertyChanged(nameof(HasInventaire));
-				
-				if (Colis.ConteneurId.HasValue)
-				{
-					SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Colis.ConteneurId.Value);
-				}
-				LoadAvailableStatuses();
-				
-				if (SelectedClient != null && Colis.Destinataire == SelectedClient.NomComplet && Colis.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
-				{
-					DestinataireEstProprietaire = true;
-				}
-
-				SaveCommand.NotifyCanExecuteChanged();
-			});
-		}
 		
         private void LoadAvailableStatuses()
         {

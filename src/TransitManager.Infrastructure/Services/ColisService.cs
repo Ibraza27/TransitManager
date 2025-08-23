@@ -111,11 +111,17 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
-        public async Task<Colis?> GetByIdAsync(Guid id)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
-        }
+		public async Task<Colis?> GetByIdAsync(Guid id)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			return await context.Colis
+				.IgnoreQueryFilters() // <--- AJOUTEZ CETTE LIGNE MAGIQUE
+				.Include(c => c.Client)
+				.Include(c => c.Conteneur)
+				.Include(c => c.Barcodes.Where(b => b.Actif))
+				.AsNoTracking()
+				.FirstOrDefaultAsync(c => c.Id == id);
+		}
 
         public async Task<Colis?> GetByBarcodeAsync(string barcode)
         {

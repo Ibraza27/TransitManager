@@ -124,38 +124,29 @@ namespace TransitManager.WPF.ViewModels
 		{
 			if (colisFromList == null) return;
 
-			// Créer le scope et le ViewModel comme avant
 			using var scope = _serviceProvider.CreateScope();
 			var colisDetailViewModel = scope.ServiceProvider.GetRequiredService<ColisDetailViewModel>();
 			
-			// Indiquer au ViewModel qu'il est en mode modal
 			colisDetailViewModel.SetModalMode();
 
-			// Initialiser le ViewModel avec l'ID. Cette méthode est maintenant fiable.
-			await colisDetailViewModel.InitializeAsync(colisFromList.Id);
+			// <--- ON APPELLE MAINTENANT LA BONNE SURCHARGE ---
+			// On passe l'objet Colis complet (qui a maintenant son Client ET ses Barcodes)
+			await colisDetailViewModel.InitializeAsync(colisFromList);
 			
-			// Vérifier si le chargement a échoué (par exemple, colis supprimé entre-temps)
+			// Le reste est correct
 			if (colisDetailViewModel.Colis == null)
 			{
 				await _dialogService.ShowErrorAsync("Erreur", "Impossible de charger les détails de ce colis.");
 				return;
 			}
-
-			// Créer la fenêtre
 			var window = new DetailHostWindow
 			{
 				DataContext = colisDetailViewModel,
 				Owner = System.Windows.Application.Current.MainWindow,
 				Title = $"Modifier le Colis - {colisDetailViewModel.Colis.NumeroReference}"
 			};
-
-			// Lier l'action de fermeture
 			colisDetailViewModel.CloseAction = () => window.Close();
-
-			// Afficher la fenêtre en mode dialogue
 			window.ShowDialog();
-
-			// Après la fermeture, rafraîchir la vue du conteneur pour refléter les changements
 			if (Conteneur != null)
 			{
 				await InitializeAsync(Conteneur.Id);

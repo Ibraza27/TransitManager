@@ -62,7 +62,25 @@
                 <materialDesign:Card Padding="20" Margin="0,0,0,10">
                     <StackPanel>
                         <TextBlock Text="Clients Concernés" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,10"/>
-                        <DataGrid ItemsSource="{Binding ClientsAffiches}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
+						<DataGrid ItemsSource="{Binding ClientsAffiches}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
+							
+							<!-- SECTION À AJOUTER -->
+							<DataGrid.Resources>
+								<Style TargetType="DataGridRow">
+									<Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+									<Setter Property="ContextMenu">
+										<Setter.Value>
+											<ContextMenu>
+												<MenuItem Header="Voir détails du client..."
+														  Command="{Binding PlacementTarget.Tag.ViewClientDetailsInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+														  CommandParameter="{Binding Id}">
+													<MenuItem.Icon><materialDesign:PackIcon Kind="AccountEye" /></MenuItem.Icon>
+												</MenuItem>
+											</ContextMenu>
+										</Setter.Value>
+									</Setter>
+								</Style>
+							</DataGrid.Resources>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Code" Binding="{Binding CodeClient}" Width="Auto"/>
                                 <DataGridTextColumn Header="Client" Binding="{Binding NomComplet}" Width="*"/>
@@ -77,41 +95,46 @@
                 <materialDesign:Card Padding="20" Margin="0,0,0,10">
                     <Expander Header="Gestion des Colis">
                         <StackPanel>
-                            <Grid Margin="0,10,0,10">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding ColisSearchText, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Rechercher un colis (code-barre, client, désignation)..." />
-                                <Button Grid.Column="1" Content="Rechercher" Command="{Binding SearchColisCommand}" Margin="10,0,0,0"/>
-                            </Grid>
-                            <ListBox ItemsSource="{Binding ColisSearchResults}" MaxHeight="150" Margin="0,0,0,10">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,2">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding AllBarcodes}" FontWeight="Bold"/>
-                                                <TextBlock Text="{Binding Client.NomComplet}"/>
-                                                <TextBlock Text="{Binding Designation}" Opacity="0.7"/>
-                                                <TextBlock Text="{Binding DestinationFinale}" Opacity="0.7" FontStyle="Italic"/>
-                                            </StackPanel>
-                                            <Button Grid.Column="1" Command="{Binding DataContext.AddColisCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}" Content="Ajouter" VerticalAlignment="Center"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+							<!-- NOUVEAU CODE À INSERER -->
+							<Button Style="{StaticResource MaterialDesignRaisedButton}" 
+									Command="{Binding OpenAddColisWindowCommand}" 
+									Margin="0,10,0,10"
+									HorizontalAlignment="Left">
+								<StackPanel Orientation="Horizontal">
+									<materialDesign:PackIcon Kind="PackageVariantPlus" Margin="0,0,8,0"/>
+									<TextBlock Text="Ajouter des Colis..."/>
+								</StackPanel>
+							</Button>
 							<TextBlock Text="Colis Affectés" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,10,0,5"/>
 							<DataGrid ItemsSource="{Binding ColisAffectes}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
 								<DataGrid.Resources>
 									<Style TargetType="DataGridRow">
-										<!-- On stocke le ViewModel principal dans le Tag de la ligne -->
+										<!-- On stocke le ViewModel principal dans le Tag pour que le ContextMenu le trouve -->
 										<Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
 										<Setter Property="ContextMenu">
 											<Setter.Value>
 												<ContextMenu>
-													<MenuItem Header="Ouvrir l'inventaire" Command="{Binding PlacementTarget.Tag.OpenInventaireCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+													<!-- Le code complet et correct pour le premier MenuItem -->
+													<MenuItem Header="Ouvrir l'inventaire" 
+															  Command="{Binding PlacementTarget.Tag.OpenInventaireCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
+															  CommandParameter="{Binding}">
 														<MenuItem.Icon><materialDesign:PackIcon Kind="ClipboardList" /></MenuItem.Icon>
 													</MenuItem>
-													<MenuItem Header="Modifier le colis..." Command="{Binding PlacementTarget.Tag.EditColisInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+
+													<!-- Le code complet et correct pour le deuxième MenuItem -->
+													<MenuItem Header="Modifier le colis..." 
+															  Command="{Binding PlacementTarget.Tag.EditColisInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
+															  CommandParameter="{Binding}">
 														<MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
+													</MenuItem>
+													
+													<Separator />
+
+													<!-- Le MenuItem pour voir le client que nous avons ajouté -->
+													<MenuItem Header="Voir détails du client..."
+															  Command="{Binding PlacementTarget.Tag.ViewClientDetailsInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+															  CommandParameter="{Binding Client.Id}">
+														<MenuItem.Icon><materialDesign:PackIcon Kind="AccountEye" /></MenuItem.Icon>
 													</MenuItem>
 												</ContextMenu>
 											</Setter.Value>
@@ -122,7 +145,31 @@
 									<DataGridTextColumn Header="Référence" Binding="{Binding NumeroReference}" Width="*" FontWeight="Bold"/>
 									<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*"/>
 									<DataGridTextColumn Header="Désignation" Binding="{Binding Designation}" Width="2*"/>
+									
+									<!-- COLONNE DESTINATION AJOUTÉE -->
+									<DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="*"/>
+									
 									<DataGridTextColumn Header="Pièces" Binding="{Binding NombrePieces}" Width="Auto"/>
+									
+									<!-- COLONNES FINANCIÈRES AJOUTÉES AVEC LES COULEURS -->
+									<DataGridTextColumn Header="Prix Total" Binding="{Binding PrixTotal, StringFormat=C}" Width="*">
+										<DataGridTextColumn.ElementStyle>
+											<Style TargetType="TextBlock"><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/></Style>
+										</DataGridTextColumn.ElementStyle>
+									</DataGridTextColumn>
+
+									<DataGridTextColumn Header="Total Payé" Binding="{Binding SommePayee, StringFormat=C}" Width="*">
+										<DataGridTextColumn.ElementStyle>
+											<Style TargetType="TextBlock"><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/></Style>
+										</DataGridTextColumn.ElementStyle>
+									</DataGridTextColumn>
+
+									<DataGridTextColumn Header="Total Restant" Binding="{Binding RestantAPayer, StringFormat=C}" Width="*">
+										<DataGridTextColumn.ElementStyle>
+											<Style TargetType="TextBlock"><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/></Style>
+										</DataGridTextColumn.ElementStyle>
+									</DataGridTextColumn>
+
 									<DataGridTemplateColumn>
 										<DataGridTemplateColumn.CellTemplate>
 											<DataTemplate>
@@ -167,8 +214,33 @@
                             </ListBox>
 
                             <!-- Véhicules affectés -->
-                            <TextBlock Text="Véhicules Affectés" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,10,0,5"/>
-                            <DataGrid ItemsSource="{Binding VehiculesAffectes}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
+							<TextBlock Text="Véhicules Affectés" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,10,0,5"/>
+							<DataGrid ItemsSource="{Binding VehiculesAffectes}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
+								
+								<!-- SECTION À AJOUTER -->
+								<DataGrid.Resources>
+									<Style TargetType="DataGridRow">
+										<!-- On stocke le ViewModel principal dans le Tag pour que le ContextMenu le trouve -->
+										<Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+										<Setter Property="ContextMenu">
+											<Setter.Value>
+												<ContextMenu>
+													<MenuItem Header="Modifier le véhicule..."
+															  Command="{Binding PlacementTarget.Tag.EditVehiculeInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+															  CommandParameter="{Binding}">
+														<MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
+													</MenuItem>
+													<Separator />
+													<MenuItem Header="Voir détails du client..."
+															  Command="{Binding PlacementTarget.Tag.ViewClientDetailsInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+															  CommandParameter="{Binding Client.Id}">
+														<MenuItem.Icon><materialDesign:PackIcon Kind="AccountEye" /></MenuItem.Icon>
+													</MenuItem>
+												</ContextMenu>
+											</Setter.Value>
+										</Setter>
+									</Style>
+								</DataGrid.Resources>
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Immatriculation" Binding="{Binding Immatriculation}" Width="*" FontWeight="Bold"/>
                                     <DataGridTextColumn Header="Marque" Binding="{Binding Marque}" Width="*"/>

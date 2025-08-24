@@ -65,6 +65,9 @@ namespace TransitManager.WPF.ViewModels
         public IAsyncRelayCommand<Vehicule> RemoveVehiculeCommand { get; }
         public IAsyncRelayCommand<Colis> OpenInventaireCommand { get; } // <--- NOUVEAU
         public IAsyncRelayCommand<Colis> EditColisInWindowCommand { get; } // <--- NOUVEAU
+		public IAsyncRelayCommand<Vehicule> EditVehiculeInWindowCommand { get; } // <--- NOUVELLE LIGNE
+		public IAsyncRelayCommand<Guid> ViewClientDetailsInWindowCommand { get; } // <--- NOUVELLE LIGNE
+		public IAsyncRelayCommand OpenAddColisWindowCommand { get; }
 
         public ConteneurDetailViewModel(
             IConteneurService conteneurService, IColisService colisService, IVehiculeService vehiculeService,
@@ -92,10 +95,34 @@ namespace TransitManager.WPF.ViewModels
             
             OpenInventaireCommand = new AsyncRelayCommand<Colis>(OpenInventaireAsync); // <--- NOUVEAU
             EditColisInWindowCommand = new AsyncRelayCommand<Colis>(EditColisInWindowAsync); // <--- NOUVEAU
+			EditVehiculeInWindowCommand = new AsyncRelayCommand<Vehicule>(EditVehiculeInWindowAsync); // <--- NOUVELLE LIGNE
+			ViewClientDetailsInWindowCommand = new AsyncRelayCommand<Guid>(ViewClientDetailsInWindowAsync); // <--- NOUVELLE LIGNE
+			OpenAddColisWindowCommand = new AsyncRelayCommand(OpenAddColisWindowAsync);
 
             ColisAffectes.CollectionChanged += OnAffectationChanged;
             VehiculesAffectes.CollectionChanged += OnAffectationChanged;
         }
+
+		private async Task OpenAddColisWindowAsync()
+		{
+			if (Conteneur == null) return;
+
+			using var scope = _serviceProvider.CreateScope();
+			var vm = scope.ServiceProvider.GetRequiredService<AddColisToConteneurViewModel>();
+			await vm.InitializeAsync(Conteneur.Id);
+
+			var window = new AddColisToConteneurView(vm)
+			{
+				Owner = System.Windows.Application.Current.MainWindow
+			};
+			window.ShowDialog();
+
+			// Si des colis ont été ajoutés dans la fenêtre modale, on rafraîchit la vue principale
+			if (vm.HasMadeChanges)
+			{
+				await InitializeAsync(Conteneur.Id);
+			}
+		}
 
         // <--- NOUVELLE MÉTHODE : OUVRE LA FENÊTRE D'INVENTAIRE --- >
         private async Task OpenInventaireAsync(Colis? colis)
@@ -119,6 +146,40 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
+		private async Task ViewClientDetailsInWindowAsync(Guid clientId)
+		{
+			if (clientId == Guid.Empty) return;
+
+			using var scope = _serviceProvider.CreateScope();
+			var clientDetailViewModel = scope.ServiceProvider.GetRequiredService<ClientDetailViewModel>();
+			
+			clientDetailViewModel.SetModalMode();
+
+			// On utilise directement clientId, plus besoin de .Value
+			await clientDetailViewModel.InitializeAsync(clientId); 
+
+			if (clientDetailViewModel.Client == null)
+			{
+				await _dialogService.ShowErrorAsync("Erreur", "Impossible de charger les détails de ce client.");
+				return;
+			}
+
+			var window = new DetailHostWindow
+			{
+				DataContext = clientDetailViewModel,
+				Owner = System.Windows.Application.Current.MainWindow,
+				Title = $"Détails du Client - {clientDetailViewModel.Client.NomComplet}"
+			};
+			
+			clientDetailViewModel.CloseAction = () => window.Close();
+
+			window.ShowDialog();
+
+			if (Conteneur != null)
+			{
+				await InitializeAsync(Conteneur.Id);
+			}
+		}
 
 		private async Task EditColisInWindowAsync(Colis? colisFromList)
 		{
@@ -129,14 +190,11 @@ namespace TransitManager.WPF.ViewModels
 			
 			colisDetailViewModel.SetModalMode();
 
-			// On passe l'ID. Le ViewModel de détail se chargera de tout récupérer proprement.
+			// On passe simplement l'ID. Le ViewModel de détail s'occupe du reste.
 			await colisDetailViewModel.InitializeAsync(colisFromList.Id);
 			
-			if (colisDetailViewModel.Colis == null)
-			{
-				await _dialogService.ShowErrorAsync("Erreur", "Impossible de charger les détails de ce colis.");
-				return;
-			}
+			// Si l'initialisation a échoué (ex: colis supprimé entre-temps), on n'ouvre pas la fenêtre.
+			if (colisDetailViewModel.Colis == null) return;
 
 			var window = new DetailHostWindow
 			{
@@ -148,14 +206,51 @@ namespace TransitManager.WPF.ViewModels
 			colisDetailViewModel.CloseAction = () => window.Close();
 			window.ShowDialog();
 
+			// Rafraîchir la liste du conteneur après la fermeture de la fenêtre modale.
 			if (Conteneur != null)
 			{
 				await InitializeAsync(Conteneur.Id);
 			}
 		}
 
-        // ... LE RESTE DU FICHIER RESTE INCHANGÉ ...
-        // (CanSave, OnConteneurPropertyChanged, CalculateStatus, etc.)
+		private async Task EditVehiculeInWindowAsync(Vehicule? vehicule)
+		{
+			if (vehicule == null) return;
+
+			using var scope = _serviceProvider.CreateScope();
+			var vehiculeDetailViewModel = scope.ServiceProvider.GetRequiredService<VehiculeDetailViewModel>();
+			
+			vehiculeDetailViewModel.SetModalMode();
+
+			// Il n'y a pas de mode modal spécifique à définir pour ce ViewModel
+			await vehiculeDetailViewModel.InitializeAsync(vehicule.Id);
+
+			if (vehiculeDetailViewModel.Vehicule == null)
+			{
+				await _dialogService.ShowErrorAsync("Erreur", "Impossible de charger les détails de ce véhicule.");
+				return;
+			}
+
+			var window = new DetailHostWindow
+			{
+				DataContext = vehiculeDetailViewModel,
+				Owner = System.Windows.Application.Current.MainWindow,
+				Title = $"Modifier le Véhicule - {vehiculeDetailViewModel.Vehicule.Immatriculation}"
+			};
+			
+			vehiculeDetailViewModel.CloseAction = () => window.Close();
+
+			// Note : VehiculeDetailViewModel n'a pas de CloseAction, la fenêtre se ferme classiquement.
+			window.ShowDialog();
+
+			// Rafraîchir la vue du conteneur au cas où des informations auraient changé
+			if (Conteneur != null)
+			{
+				await InitializeAsync(Conteneur.Id);
+			}
+		}
+
+
         private void OnAffectationChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             SaveCommand.NotifyCanExecuteChanged();

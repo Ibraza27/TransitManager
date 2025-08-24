@@ -11,6 +11,8 @@ using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
 using CommunityToolkit.Mvvm.Messaging;
 using TransitManager.WPF.Messages;
+using Microsoft.Extensions.DependencyInjection; // Assurez-vous que celui-ci est présent
+using TransitManager.WPF.Views; // <--- LIGNE À AJOUTER
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -22,6 +24,7 @@ namespace TransitManager.WPF.ViewModels
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
 		private readonly IMessenger _messenger;
+		private readonly IServiceProvider _serviceProvider;
 
         private ObservableCollection<Vehicule> _vehicules = new();
         public ObservableCollection<Vehicule> Vehicules { get => _vehicules; set => SetProperty(ref _vehicules, value); }
@@ -67,8 +70,12 @@ namespace TransitManager.WPF.ViewModels
         public IRelayCommand ClearFiltersCommand { get; }
         public IAsyncRelayCommand<Vehicule> EditCommand { get; }
         public IAsyncRelayCommand<Vehicule> DeleteCommand { get; }
+		public IAsyncRelayCommand<Vehicule> ViewClientDetailsInWindowCommand { get; }
 
-        public VehiculeViewModel(IVehiculeService vehiculeService, IClientService clientService, IConteneurService conteneurService, INavigationService navigationService, IDialogService dialogService, IMessenger messenger)
+        public VehiculeViewModel(
+			IVehiculeService vehiculeService, IClientService clientService, IConteneurService conteneurService, 
+			INavigationService navigationService, IDialogService dialogService, IMessenger messenger,
+			IServiceProvider serviceProvider)
         {
             _vehiculeService = vehiculeService;
             _clientService = clientService;
@@ -76,6 +83,7 @@ namespace TransitManager.WPF.ViewModels
             _navigationService = navigationService;
             _dialogService = dialogService;
 			_messenger = messenger;
+			_serviceProvider = serviceProvider;
 			_messenger.RegisterAll(this);
             Title = "Gestion des Véhicules";
 
@@ -84,6 +92,7 @@ namespace TransitManager.WPF.ViewModels
             ClearFiltersCommand = new RelayCommand(ClearFilters);
             EditCommand = new AsyncRelayCommand<Vehicule>(EditVehicule);
             DeleteCommand = new AsyncRelayCommand<Vehicule>(DeleteVehicule);
+			ViewClientDetailsInWindowCommand = new AsyncRelayCommand<Vehicule>(ViewClientDetailsInWindowAsync);
             
             StatutsList = new ObservableCollection<string>(Enum.GetNames(typeof(StatutVehicule)));
             StatutsList.Insert(0, "Tous");
@@ -113,6 +122,37 @@ namespace TransitManager.WPF.ViewModels
                 await LoadVehiculesAsync();
             });
         }
+
+		private async Task ViewClientDetailsInWindowAsync(Vehicule? vehicule)
+		{
+			if (vehicule?.Client == null) return;
+
+			using var scope = _serviceProvider.CreateScope();
+			var clientDetailViewModel = scope.ServiceProvider.GetRequiredService<ClientDetailViewModel>();
+
+			// Activer le mode modal et fournir l'action de fermeture
+			clientDetailViewModel.SetModalMode();
+			await clientDetailViewModel.InitializeAsync(vehicule.ClientId);
+
+			if (clientDetailViewModel.Client == null)
+			{
+				await _dialogService.ShowErrorAsync("Erreur", "Impossible de charger les détails de ce client.");
+				return;
+			}
+
+			var window = new DetailHostWindow
+			{
+				DataContext = clientDetailViewModel,
+				Owner = System.Windows.Application.Current.MainWindow,
+				Title = $"Détails du Client - {clientDetailViewModel.Client.NomComplet}"
+			};
+
+			clientDetailViewModel.CloseAction = () => window.Close();
+			window.ShowDialog();
+
+			// Rafraîchir la liste au cas où des infos auraient changé
+			await LoadAsync();
+		}
 
         private async Task LoadVehiculesAsync()
         {

@@ -88,7 +88,39 @@
         <!-- ... reste du fichier inchangé ... -->
         <materialDesign:Card Grid.Row="2" Margin="16,8,16,8">
             <DataGrid ItemsSource="{Binding Vehicules}" SelectedItem="{Binding SelectedVehicule}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" Style="{StaticResource MaterialDesignDataGrid}">
-                <DataGrid.Columns>
+				<DataGrid.Resources>
+					<Style TargetType="DataGridRow">
+						<Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+						<Setter Property="ContextMenu">
+							<Setter.Value>
+								<ContextMenu>
+									<MenuItem Header="Modifier / Voir Détails"
+											  Command="{Binding PlacementTarget.Tag.EditCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+											  CommandParameter="{Binding}">
+										<MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
+									</MenuItem>
+									<MenuItem Header="Voir détails du client..."
+											  Command="{Binding PlacementTarget.Tag.ViewClientDetailsInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+											  CommandParameter="{Binding}">
+										<MenuItem.Icon><materialDesign:PackIcon Kind="AccountEye" /></MenuItem.Icon>
+									</MenuItem>
+									<Separator/>
+									<MenuItem Header="Supprimer"
+											  Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+											  CommandParameter="{Binding}">
+										<MenuItem.Icon><materialDesign:PackIcon Kind="Delete" Foreground="Red" /></MenuItem.Icon>
+									</MenuItem>
+									<Separator/>
+									<MenuItem Header="Actualiser la liste"
+											  Command="{Binding PlacementTarget.Tag.RefreshCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+										 <MenuItem.Icon><materialDesign:PackIcon Kind="Refresh" /></MenuItem.Icon>
+									</MenuItem>
+								</ContextMenu>
+							</Setter.Value>
+						</Setter>
+					</Style>
+				</DataGrid.Resources>                
+				<DataGrid.Columns>
                     <DataGridTextColumn Header="Immatriculation" Binding="{Binding Immatriculation}" Width="1.5*" FontWeight="Bold"/>
                     <DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="2*"/>
                     <DataGridTextColumn Header="Marque" Binding="{Binding Marque}" Width="*"/>

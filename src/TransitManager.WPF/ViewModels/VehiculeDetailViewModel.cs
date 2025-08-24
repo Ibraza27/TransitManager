@@ -22,6 +22,13 @@ namespace TransitManager.WPF.ViewModels
         private readonly IConteneurService _conteneurService; // <-- NOUVEAU : Service injecté
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
+		public Action? CloseAction { get; set; }
+		private bool _isModal = false;
+		
+		public void SetModalMode()
+		{
+			_isModal = true;
+		}
 
         private Vehicule? _vehicule;
         public Vehicule? Vehicule
@@ -149,41 +156,55 @@ namespace TransitManager.WPF.ViewModels
             }
         }
         
-        public async Task InitializeAsync(Guid vehiculeId)
-        {
-            await ExecuteBusyActionAsync(async () =>
-            {
-                _allClients = (await _clientService.GetActiveClientsAsync()).ToList();
-                FilterClients(null);
-                
-                Title = "Modifier le Véhicule";
-                Vehicule = await _vehiculeService.GetByIdAsync(vehiculeId);
-                if (Vehicule != null)
-                {
-                    SelectedClient = Clients.FirstOrDefault(c => c.Id == Vehicule.ClientId);
-                    LoadDamagePoints();
-                    LoadRayures();
-                    UpdatePlanImage(Vehicule.Type);
+		public async Task InitializeAsync(Guid vehiculeId)
+		{
+			await ExecuteBusyActionAsync(async () =>
+			{
+				Title = "Modifier le Véhicule";
+				
+				// 1. Charger le véhicule complet.
+				var vehiculeComplet = await _vehiculeService.GetByIdAsync(vehiculeId);
+				if (vehiculeComplet == null || vehiculeComplet.Client == null)
+				{
+					await _dialogService.ShowErrorAsync("Erreur", "Le véhicule ou son propriétaire est introuvable.");
+					Cancel(); // Appellera la nouvelle logique de fermeture
+					return;
+				}
+				// Le binding sur Vehicule.ClientId va maintenant se charger de la sélection.
+				Vehicule = vehiculeComplet;
 
-                    await LoadConteneursDisponiblesAsync();
-                    if (Vehicule.ConteneurId.HasValue)
-                    {
-                        SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Vehicule.ConteneurId.Value);
-                    }
-                    else
-                    {
-                        SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Guid.Empty);
-                    }
-					LoadAvailableStatuses();
+				// 2. Charger les clients pour la liste déroulante.
+				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
+				
+				// 3. S'assurer que le client propriétaire (même inactif) est dans la liste.
+				if (!_allClients.Any(c => c.Id == Vehicule.ClientId))
+				{
+					_allClients.Insert(0, Vehicule.Client);
+				}
+				Clients = new ObservableCollection<Client>(_allClients);
+				
+				// 4. Synchroniser le ViewModel avec la sélection faite par le XAML.
+				SelectedClient = Clients.FirstOrDefault(c => c.Id == Vehicule.ClientId);
 
-                    // --- LA CORRECTION EST ICI ---
-                    if (SelectedClient != null && Vehicule.Destinataire == SelectedClient.NomComplet && Vehicule.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
-                    {
-                        DestinataireEstProprietaire = true;
-                    }
-                }
-            });
-        }
+				// --- Le reste de l'initialisation ---
+				LoadDamagePoints();
+				LoadRayures();
+				UpdatePlanImage(Vehicule.Type);
+
+				await LoadConteneursDisponiblesAsync();
+				if (Vehicule.ConteneurId.HasValue)
+				{
+					SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Vehicule.ConteneurId.Value);
+				}
+				
+				LoadAvailableStatuses();
+
+				if (SelectedClient != null && Vehicule.Destinataire == SelectedClient.NomComplet && Vehicule.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
+				{
+					DestinataireEstProprietaire = true;
+				}
+			});
+		}
 		
         private void LoadAvailableStatuses()
         {
@@ -294,7 +315,16 @@ namespace TransitManager.WPF.ViewModels
 					}
 
 					await _dialogService.ShowInformationAsync("Succès", "Le véhicule a été enregistré.");
-					_navigationService.GoBack(); // <-- On ferme la fenêtre après l'enregistrement
+					
+					// LOGIQUE DE FERMETURE MODIFIÉE
+					if (_isModal)
+					{
+						CloseAction?.Invoke();
+					}
+					else
+					{
+						_navigationService.GoBack();
+					}
 				}
 				catch (Exception ex)
 				{
@@ -312,7 +342,17 @@ namespace TransitManager.WPF.ViewModels
                    !string.IsNullOrWhiteSpace(Vehicule.Modele) &&
                    !IsBusy;
         }
-        private void Cancel() => _navigationService.GoBack();
+		private void Cancel()
+		{
+			if (_isModal)
+			{
+				CloseAction?.Invoke();
+			}
+			else
+			{
+				_navigationService.GoBack();
+			}
+		}
         private void AddDamagePoint(System.Windows.Point point) => DamagePoints.Add(point);
         private void RemoveDamagePoint(System.Windows.Point point) => DamagePoints.Remove(point);
         private void SerializeDamagePoints()

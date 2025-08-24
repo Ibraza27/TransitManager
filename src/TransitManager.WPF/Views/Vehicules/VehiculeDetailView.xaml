@@ -38,14 +38,17 @@
                     <materialDesign:Card Padding="20" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Informations du Véhicule" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,20"/>
-                            <ComboBox materialDesign:HintAssist.Hint="Client Propriétaire *" 
-                                      ItemsSource="{Binding Clients}" 
-                                      SelectedItem="{Binding SelectedClient}" 
-                                      DisplayMemberPath="NomComplet" 
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}" 
-                                      IsEditable="True"
-                                      Text="{Binding ClientSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                      Margin="0,0,0,15"/>
+							<ComboBox materialDesign:HintAssist.Hint="Client Propriétaire *" 
+									  ItemsSource="{Binding Clients}" 
+									  SelectedItem="{Binding SelectedClient}" 
+									  DisplayMemberPath="NomComplet" 
+									  Style="{StaticResource MaterialDesignOutlinedComboBox}" 
+									  IsEditable="True"
+									  Text="{Binding ClientSearchText, UpdateSourceTrigger=PropertyChanged}"
+									  Margin="0,0,0,15"
+									  SelectedValuePath="Id"
+									  SelectedValue="{Binding Vehicule.ClientId, Mode=OneWay}"/>
+									  
                             <TextBox Text="{Binding Vehicule.Immatriculation, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Immatriculation *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>

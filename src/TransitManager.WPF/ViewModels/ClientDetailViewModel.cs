@@ -15,6 +15,13 @@ namespace TransitManager.WPF.ViewModels
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
 		private readonly IMessenger _messenger;
+		public Action? CloseAction { get; set; }
+		private bool _isModal = false;
+		
+		public void SetModalMode()
+		{
+			_isModal = true;
+		}
 
         private Client? _client;
         public Client? Client
@@ -64,12 +71,19 @@ namespace TransitManager.WPF.ViewModels
                     {
                         await _clientService.UpdateAsync(Client);
                     }
-                    await _dialogService.ShowInformationAsync("Succès", "Le client a été enregistré.");
-                    
-                    // --- ENVOI DU MESSAGE ---
-                    _messenger.Send(new ClientUpdatedMessage(true));
+					
+					await _dialogService.ShowInformationAsync("Succès", "Le client a été enregistré.");
+					_messenger.Send(new ClientUpdatedMessage(true));
 
-                    _navigationService.GoBack();
+					// LOGIQUE DE FERMETURE MODIFIÉE
+					if (_isModal)
+					{
+						CloseAction?.Invoke();
+					}
+					else
+					{
+						_navigationService.GoBack();
+					}
                 }
                 catch (Exception ex)
                 {
@@ -78,10 +92,17 @@ namespace TransitManager.WPF.ViewModels
             });
         }
 
-        private void Cancel()
-        {
-            _navigationService.GoBack();
-        }
+		private void Cancel()
+		{
+			if (_isModal)
+			{
+				CloseAction?.Invoke();
+			}
+			else
+			{
+				_navigationService.GoBack();
+			}
+		}
 
         public async Task InitializeAsync(string newMarker)
         {

@@ -186,7 +186,7 @@ namespace TransitManager.Infrastructure.Services
 					.ThenInclude(col => col.Barcodes.Where(b => b.Actif))
 				.Include(c => c.Vehicules)
 					.ThenInclude(v => v.Client)
-				// .AsNoTracking() // <--- ON A RETIRÉ CETTE LIGNE
+				.AsNoTracking() // <--- CETTE LIGNE EST LA CORRECTION CRUCIALE
 				.FirstOrDefaultAsync(c => c.Id == id);
 		}
 		

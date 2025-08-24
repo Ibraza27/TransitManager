@@ -118,6 +118,12 @@
 									<MenuItem Header="Modifier / Voir Détails" Command="{Binding PlacementTarget.Tag.EditCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
 										<MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
 									</MenuItem>
+									<Separator />
+									<MenuItem Header="Voir détails du client..."
+											  Command="{Binding PlacementTarget.Tag.ViewClientDetailsInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+											  CommandParameter="{Binding}">
+										<MenuItem.Icon><materialDesign:PackIcon Kind="AccountEye" /></MenuItem.Icon>
+									</MenuItem>
 									<MenuItem Header="Supprimer" Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
 										<MenuItem.Icon><materialDesign:PackIcon Kind="Delete" Foreground="Red" /></MenuItem.Icon>
 									</MenuItem>

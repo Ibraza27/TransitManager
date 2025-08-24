@@ -139,12 +139,14 @@ namespace TransitManager.WPF
 			services.AddTransient<VehiculeDetailViewModel>();
             services.AddTransient<ConteneurViewModel>();
 			services.AddTransient<ConteneurDetailViewModel>();
+			services.AddTransient<AddColisToConteneurViewModel>();
             services.AddTransient<NotificationsViewModel>();
 
             // Views (Transient)
             services.AddTransient<LoginView>();
             services.AddTransient<MainWindow>();
 			services.AddTransient<DetailHostWindow>();
+			services.AddTransient<AddColisToConteneurView>();
             services.AddTransient<DashboardView>();
             services.AddTransient<ClientListView>();
             services.AddTransient<ClientDetailView>();

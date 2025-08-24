@@ -57,14 +57,16 @@
                         <StackPanel>
                             <TextBlock Text="Informations Générales" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,20"/>
 
-                            <ComboBox materialDesign:HintAssist.Hint="Client Propriétaire *"
-                                      ItemsSource="{Binding Clients}"
-                                      SelectedItem="{Binding SelectedClient}"
-                                      DisplayMemberPath="NomComplet"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      IsEditable="True"
-                                      Text="{Binding ClientSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                      Margin="0,0,0,15"/>
+							<ComboBox materialDesign:HintAssist.Hint="Client Propriétaire *"
+									  ItemsSource="{Binding Clients}"
+									  SelectedItem="{Binding SelectedClient, Mode=TwoWay}"
+									  DisplayMemberPath="NomComplet"
+									  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+									  IsEditable="True"
+									  Text="{Binding ClientSearchText, UpdateSourceTrigger=PropertyChanged}"
+									  Margin="0,0,0,15"
+									  SelectedValuePath="Id"
+									  SelectedValue="{Binding Colis.ClientId, Mode=OneWay}"/>
                                       
                             <TextBox Text="{Binding Colis.Designation, UpdateSourceTrigger=PropertyChanged}"
                                      materialDesign:HintAssist.Hint="Désignation / Description"
@@ -148,7 +150,7 @@
 									  Margin="0,0,0,15"/>									  
                             <ComboBox materialDesign:HintAssist.Hint="Statut manuel (optionnel)" 
                                       ItemsSource="{Binding AvailableStatuses}"
-                                      SelectedItem="{Binding Colis.Statut, UpdateSourceTrigger=PropertyChanged}" 
+                                      SelectedItem="{Binding SelectedStatut, UpdateSourceTrigger=PropertyChanged}" 
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}" 
                                       Margin="0,0,0,15"/>									  
                             

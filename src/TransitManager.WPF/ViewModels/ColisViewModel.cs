@@ -14,6 +14,8 @@ using CommunityToolkit.Mvvm.Messaging;
 using TransitManager.WPF.Messages;
 using System.Text.Json;
 using TransitManager.WPF.Views.Inventaire;
+using Microsoft.Extensions.DependencyInjection; // Assurez-vous que celui-ci est présent
+using TransitManager.WPF.Views; // <--- LIGNE À AJOUTER
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -27,6 +29,7 @@ namespace TransitManager.WPF.ViewModels
         private readonly IDialogService _dialogService;
         private readonly IExportService _exportService;
         private readonly IMessenger _messenger;
+		private readonly IServiceProvider _serviceProvider;
         #endregion
 
         #region Propriétés
@@ -93,11 +96,12 @@ namespace TransitManager.WPF.ViewModels
         public IAsyncRelayCommand<Colis> EditCommand { get; }
         public IAsyncRelayCommand<Colis> DeleteCommand { get; }
 		public IAsyncRelayCommand<Colis> OpenInventaireFromListCommand { get; }
+		public IAsyncRelayCommand<Colis> ViewClientDetailsInWindowCommand { get; }
         #endregion
 
         public ColisViewModel(
             IColisService colisService, IClientService clientService, IConteneurService conteneurService, 
-            INavigationService navigationService, IDialogService dialogService, IExportService exportService, IMessenger messenger)
+            INavigationService navigationService, IDialogService dialogService, IExportService exportService, IMessenger messenger, IServiceProvider serviceProvider)
         {
             _colisService = colisService;
             _clientService = clientService;
@@ -106,6 +110,7 @@ namespace TransitManager.WPF.ViewModels
             _dialogService = dialogService;
             _exportService = exportService;
             _messenger = messenger; // Ligne ajoutée
+			_serviceProvider = serviceProvider;
             Title = "Gestion des Colis / Marchandises";
 
             NewColisCommand = new AsyncRelayCommand(NewColis);
@@ -116,10 +121,40 @@ namespace TransitManager.WPF.ViewModels
             EditCommand = new AsyncRelayCommand<Colis>(EditColis);
             DeleteCommand = new AsyncRelayCommand<Colis>(DeleteColis);
             OpenInventaireFromListCommand = new AsyncRelayCommand<Colis>(OpenInventaireFromList);
+			ViewClientDetailsInWindowCommand = new AsyncRelayCommand<Colis>(ViewClientDetailsInWindowAsync);
 
             InitializeStatutsList();
             _messenger.RegisterAll(this);
         }
+		
+		private async Task ViewClientDetailsInWindowAsync(Colis? colis)
+		{
+			if (colis?.Client == null) return;
+
+			using var scope = _serviceProvider.CreateScope();
+			var clientDetailViewModel = scope.ServiceProvider.GetRequiredService<ClientDetailViewModel>();
+
+			clientDetailViewModel.SetModalMode();
+			await clientDetailViewModel.InitializeAsync(colis.ClientId);
+
+			if (clientDetailViewModel.Client == null)
+			{
+				await _dialogService.ShowErrorAsync("Erreur", "Impossible de charger les détails de ce client.");
+				return;
+			}
+
+			var window = new DetailHostWindow
+			{
+				DataContext = clientDetailViewModel,
+				Owner = System.Windows.Application.Current.MainWindow,
+				Title = $"Détails du Client - {clientDetailViewModel.Client.NomComplet}"
+			};
+
+			clientDetailViewModel.CloseAction = () => window.Close();
+			window.ShowDialog();
+			
+			await LoadAsync();
+		}
 		
         private async Task OpenInventaireFromList(Colis? colis)
         {

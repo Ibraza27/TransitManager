@@ -131,6 +131,20 @@ namespace TransitManager.WPF.ViewModels
                 }
             }
         }
+		
+		private StatutColis _selectedStatut;
+		public StatutColis SelectedStatut
+		{
+			get => _selectedStatut;
+			set
+			{
+				// On vérifie que la valeur a réellement changé pour éviter les boucles
+				if (SetProperty(ref _selectedStatut, value))
+				{
+					SynchronizeFromStatutChange();
+				}
+			}
+		}
 
 		private Conteneur? _selectedConteneur;
 		public Conteneur? SelectedConteneur
@@ -140,15 +154,63 @@ namespace TransitManager.WPF.ViewModels
 			{
 				if (SetProperty(ref _selectedConteneur, value))
 				{
-					// On ne sauvegarde plus automatiquement.
-					// On met simplement à jour l'ID et on laisse l'utilisateur cliquer sur "Enregistrer".
-					if (Colis != null)
-					{
-						Colis.ConteneurId = (value?.Id == Guid.Empty) ? null : value?.Id;
-						// Le PropertyChanged sur Colis déclenchera la réévaluation de CanSave
-					}
+					SynchronizeFromConteneurChange();
 				}
 			}
+		}
+		
+		private void SynchronizeFromConteneurChange()
+		{
+			if (Colis == null) return;
+
+			var finalStatuses = new[] { StatutColis.Livre, StatutColis.Perdu, StatutColis.Probleme, StatutColis.Retourne };
+			if (finalStatuses.Contains(Colis.Statut))
+			{
+				return; // Si le statut est final, le changement de conteneur ne doit pas changer le statut.
+			}
+
+			var newConteneurId = _selectedConteneur?.Id == Guid.Empty ? null : _selectedConteneur?.Id;
+			Colis.ConteneurId = newConteneurId;
+
+			StatutColis newStatus;
+			if (Colis.ConteneurId == null)
+			{
+				newStatus = StatutColis.EnAttente;
+			}
+			else
+			{
+				newStatus = StatutColis.Affecte;
+			}
+			
+			// On met à jour directement le champ privé et on notifie
+			Colis.Statut = newStatus;
+			SetProperty(ref _selectedStatut, newStatus, nameof(SelectedStatut));
+			
+			// On met à jour la liste des choix possibles
+			LoadAvailableStatuses();
+		}
+
+		private void SynchronizeFromStatutChange()
+		{
+			if (Colis == null) return;
+			
+			// Mettre à jour le modèle avec la nouvelle valeur
+			Colis.Statut = _selectedStatut;
+			
+			var finalStatuses = new[] { StatutColis.Livre, StatutColis.Perdu, StatutColis.Probleme, StatutColis.Retourne };
+
+			if (finalStatuses.Contains(Colis.Statut))
+			{
+				if (Colis.Statut == StatutColis.Retourne)
+				{
+					Colis.ConteneurId = null;
+					// On met à jour la sélection visuelle du conteneur SANS redéclencher la logique
+					SetProperty(ref _selectedConteneur, ConteneursDisponibles.FirstOrDefault(c => c.Id == Guid.Empty), nameof(SelectedConteneur));
+				}
+			}
+			
+			// On met à jour la liste des choix possibles
+			LoadAvailableStatuses();
 		}
 
         public string? ClientSearchText
@@ -331,15 +393,14 @@ namespace TransitManager.WPF.ViewModels
 
 		private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
-			SaveCommand.NotifyCanExecuteChanged();
-			
-			// Notifier HasInventaire quand InventaireJson change
 			if (e.PropertyName == nameof(Colis.InventaireJson))
 			{
 				OnPropertyChanged(nameof(HasInventaire));
 			}
-		}
 
+			SaveCommand.NotifyCanExecuteChanged();
+		}
+		
         private void CalculatePrice()
         {
             if (Colis == null) return;
@@ -389,12 +450,13 @@ namespace TransitManager.WPF.ViewModels
 		}
 
 
+
 		public async Task InitializeAsync(Guid colisId)
 		{
 			Title = "Modifier le Colis";
 			await ExecuteBusyActionAsync(async () =>
 			{
-				// 1. Appelle notre service maintenant 100% fiable.
+				// 1. Charger le colis complet.
 				var colisComplet = await _colisService.GetByIdAsync(colisId);
 				
 				if (colisComplet == null || colisComplet.Client == null)
@@ -403,77 +465,85 @@ namespace TransitManager.WPF.ViewModels
 					Cancel();
 					return;
 				}
+				// Le binding sur Colis.ClientId s'occupera de la sélection dans la ComboBox.
 				Colis = colisComplet;
-				
-				// 2. Préparer la liste des clients pour la ComboBox
+				SelectedStatut = Colis.Statut; 
+
+				// 2. Charger les clients pour remplir la liste.
 				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
 				
-				// 3. Assurer la présence du client propriétaire
+				// 3. S'assurer que le client (même inactif) est présent dans la liste pour l'affichage.
 				if (!_allClients.Any(c => c.Id == Colis.ClientId))
 				{
 					 _allClients.Insert(0, Colis.Client);
 				}
-
-				// 4. Mettre à jour l'UI
 				Clients = new ObservableCollection<Client>(_allClients);
+				
+				// 4. Mettre à jour la propriété SelectedClient (BONNE PRATIQUE).
+				// Le XAML a déjà fait la sélection visuelle, mais on s'assure que le ViewModel est synchronisé.
 				SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
-				Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
 
-				// Le reste...
-				Colis.PropertyChanged -= OnColisPropertyChanged;
+				// 5. Initialiser le reste.
+				Barcodes = new ObservableCollection<Barcode>(Colis.Barcodes);
 				Colis.PropertyChanged += OnColisPropertyChanged;
+				
 				await LoadConteneursDisponiblesAsync();
 				OnPropertyChanged(nameof(HasInventaire));
+
 				if (Colis.ConteneurId.HasValue)
 				{
 					SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Colis.ConteneurId.Value);
 				}
+				
 				LoadAvailableStatuses();
+				
+				// La vérification de la checkbox reste la même.
 				if (SelectedClient != null && Colis.Destinataire == SelectedClient.NomComplet && Colis.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
 				{
 					DestinataireEstProprietaire = true;
 				}
+				
 				SaveCommand.NotifyCanExecuteChanged();
 			});
 		}
-		
 
 
-		
-        private void LoadAvailableStatuses()
-        {
-            AvailableStatuses.Clear();
-            if (Colis == null) return;
+		private void LoadAvailableStatuses()
+		{
+			AvailableStatuses.Clear();
+			if (Colis == null) return;
 
-            var statuses = new HashSet<StatutColis>();
+			var statuses = new HashSet<StatutColis>();
 
-            // 1. Ajouter le statut actuel du colis
-            statuses.Add(Colis.Statut);
-            
-            // 2. Ajouter les statuts manuels importants
-            statuses.Add(StatutColis.Probleme);
-            statuses.Add(StatutColis.Perdu);
-            statuses.Add(StatutColis.Retourne);
-            statuses.Add(StatutColis.Livre);
+			// 1. Toujours ajouter le statut ACTUEL pour qu'il reste sélectionné.
+			statuses.Add(Colis.Statut);
+			
+			// 2. Toujours permettre de basculer vers un statut "final" ou "problématique".
+			statuses.Add(StatutColis.Probleme);
+			statuses.Add(StatutColis.Perdu);
+			statuses.Add(StatutColis.Retourne);
+			statuses.Add(StatutColis.Livre);
 
-            // 3. Ajouter le statut "normal" basé sur les DATES du conteneur (et non plus son statut)
-            if (SelectedConteneur != null && SelectedConteneur.Id != Guid.Empty)
-            {
-                var containerDrivenStatus = GetNormalStatusFromContainerDates(SelectedConteneur);
-                statuses.Add(containerDrivenStatus);
-            }
-            else
-            {
-                // Si pas de conteneur, le statut normal est "EnAttente"
-                statuses.Add(StatutColis.EnAttente);
-            }
+			// 3. LA SOLUTION : Toujours rendre "Affecte" et "EnAttente" disponibles.
+			statuses.Add(StatutColis.Affecte);
+			statuses.Add(StatutColis.EnAttente);
 
-            // Remplir la liste triée pour l'affichage
-            foreach (var s in statuses.OrderBy(s => s.ToString()))
-            {
-                AvailableStatuses.Add(s);
-            }
-        }
+			// 4. Ajouter les statuts pertinents liés au conteneur s'il y en a un.
+			if (Colis.ConteneurId.HasValue && SelectedConteneur != null)
+			{
+				statuses.Add(GetNormalStatusFromContainerDates(SelectedConteneur));
+			}
+
+			// Remplir la liste triée pour l'affichage dans la ComboBox.
+			foreach (var s in statuses.OrderBy(s => s.ToString()))
+			{
+				AvailableStatuses.Add(s);
+			}
+			
+			// S'assurer que la propriété liée à l'UI est synchronisée
+			// sans redéclencher la logique de synchronisation.
+			SetProperty(ref _selectedStatut, Colis.Statut, nameof(SelectedStatut));
+		}
 		
         private StatutColis GetNormalStatusFromContainerDates(Conteneur conteneur)
         {

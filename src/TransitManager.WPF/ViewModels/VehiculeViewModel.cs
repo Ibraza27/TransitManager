@@ -64,6 +64,9 @@ namespace TransitManager.WPF.ViewModels
 
         private decimal _totalRestantGlobal;
         public decimal TotalRestantGlobal { get => _totalRestantGlobal; set => SetProperty(ref _totalRestantGlobal, value); }
+		
+		private int _totalVehicules;
+		public int TotalVehicules { get => _totalVehicules; set => SetProperty(ref _totalVehicules, value); }
 
         public IAsyncRelayCommand NewVehiculeCommand { get; }
         public IAsyncRelayCommand RefreshCommand { get; }
@@ -214,6 +217,7 @@ namespace TransitManager.WPF.ViewModels
 
         private void CalculateStatistics()
         {
+			TotalVehicules = Vehicules.Count; 
             PrixTotalGlobal = Vehicules.Sum(v => v.PrixTotal);
             TotalPayeGlobal = Vehicules.Sum(v => v.SommePayee);
             TotalRestantGlobal = Vehicules.Sum(v => v.RestantAPayer);

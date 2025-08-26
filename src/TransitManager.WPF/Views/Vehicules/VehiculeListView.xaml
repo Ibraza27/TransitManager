@@ -127,6 +127,7 @@
                     <DataGridTextColumn Header="Modèle" Binding="{Binding Modele}" Width="*"/>
                     <DataGridTextColumn Header="Année" Binding="{Binding Annee}" Width="Auto"/>
                     <DataGridTextColumn Header="Conteneur" Binding="{Binding Conteneur.NumeroDossier}" Width="*"/>
+					<DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires}" Width="2*"/>
 					<DataGridTemplateColumn Header="Statut" Width="120">
 						<DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
@@ -171,6 +172,17 @@
         
         <materialDesign:Card Grid.Row="3" Margin="16,0,16,16" Padding="8">
             <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+			
+				<StackPanel Orientation="Horizontal" Margin="8,0">
+					<materialDesign:PackIcon Kind="CarMultiple" VerticalAlignment="Center" Margin="0,0,5,0"/>
+					<TextBlock VerticalAlignment="Center">
+						<Run Text="Total : "/>
+						<Run Text="{Binding TotalVehicules}" FontWeight="Bold"/>
+						<Run Text=" véhicules"/>
+					</TextBlock>
+				</StackPanel>
+				<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />			
+			
                 <StackPanel Orientation="Horizontal" Margin="8,0">
                     <materialDesign:PackIcon Kind="CashMultiple" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                     <TextBlock VerticalAlignment="Center" Text="{Binding PrixTotalGlobal, StringFormat='Prix Total : {0:N2} €'}"/>

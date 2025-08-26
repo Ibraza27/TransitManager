@@ -12,19 +12,50 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- En-tête -->
-        <materialDesign:Card Grid.Row="0" Padding="20" Margin="10">
-            <Grid>
-                <StackPanel>
-                    <TextBlock Text="{Binding Title}" Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
-                    <TextBlock Text="{Binding Conteneur.NumeroDossier}" Opacity="0.6" Style="{StaticResource MaterialDesignSubtitle1TextBlock}"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
-                    <Button Content="Annuler" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
-                </StackPanel>
-            </Grid>
-        </materialDesign:Card>
+		<!-- En-tête -->
+		<materialDesign:Card Grid.Row="0" Padding="20" Margin="10">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<StackPanel Grid.Column="0">
+					<TextBlock Text="{Binding Title}" Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+					<TextBlock Text="{Binding Conteneur.NumeroDossier}" Opacity="0.6" Style="{StaticResource MaterialDesignSubtitle1TextBlock}"/>
+				</StackPanel>
+
+				<!-- NOUVELLE SECTION : STATISTIQUES GLOBALES -->
+				<Border Grid.Column="1" BorderBrush="{DynamicResource MaterialDesignDivider}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="20,0">
+					<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+						<StackPanel Orientation="Horizontal" Margin="10,0">
+							<materialDesign:PackIcon Kind="CashMultiple" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+							<TextBlock Text="Prix Total : "/>
+							<TextBlock Text="{Binding PrixTotalGlobal, StringFormat=C}" FontWeight="Bold"/>
+						</StackPanel>
+						<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+						<StackPanel Orientation="Horizontal" Margin="10,0">
+							<materialDesign:PackIcon Kind="CashCheck" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource SuccessBrush}"/>
+							<TextBlock Text="Total Payé : "/>
+							<TextBlock Text="{Binding TotalPayeGlobal, StringFormat=C}" FontWeight="Bold"/>
+						</StackPanel>
+						<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+						<StackPanel Orientation="Horizontal" Margin="10,0">
+							<materialDesign:PackIcon Kind="CashRemove" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource ErrorBrush}"/>
+							<TextBlock Text="Total Restant : "/>
+							<TextBlock Text="{Binding TotalRestantGlobal, StringFormat=C}" FontWeight="Bold"/>
+						</StackPanel>
+					</WrapPanel>
+				</Border>
+				<!-- FIN DE LA NOUVELLE SECTION -->
+				
+				<StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+					<Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
+					<Button Content="Annuler" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
+				</StackPanel>
+			</Grid>
+		</materialDesign:Card>
 
         <!-- Contenu -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -63,8 +94,6 @@
                     <StackPanel>
                         <TextBlock Text="Clients Concernés" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,10"/>
 						<DataGrid ItemsSource="{Binding ClientsAffiches}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
-							
-							<!-- SECTION À AJOUTER -->
 							<DataGrid.Resources>
 								<Style TargetType="DataGridRow">
 									<Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
@@ -73,21 +102,44 @@
 											<ContextMenu>
 												<MenuItem Header="Voir détails du client..."
 														  Command="{Binding PlacementTarget.Tag.ViewClientDetailsInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-														  CommandParameter="{Binding Id}">
-													<MenuItem.Icon><materialDesign:PackIcon Kind="AccountEye" /></MenuItem.Icon>
-												</MenuItem>
+														  CommandParameter="{Binding Client.Id}"/> <!-- MODIFIÉ : On pointe vers Client.Id -->
 											</ContextMenu>
 										</Setter.Value>
 									</Setter>
 								</Style>
 							</DataGrid.Resources>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Code" Binding="{Binding CodeClient}" Width="Auto"/>
-                                <DataGridTextColumn Header="Client" Binding="{Binding NomComplet}" Width="*"/>
-                                <DataGridTextColumn Header="Téléphone" Binding="{Binding TelephonePrincipal}" Width="*"/>
-                                <DataGridTextColumn Header="Ville" Binding="{Binding Ville}" Width="*"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+							<DataGrid.Columns>
+								<DataGridTextColumn Header="Code" Binding="{Binding Client.CodeClient}" Width="Auto"/>
+								<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*"/>
+								<DataGridTextColumn Header="Téléphone" Binding="{Binding Client.TelephonePrincipal}" Width="*"/>
+								
+								<!-- NOUVELLES COLONNES FINANCIÈRES -->
+								<DataGridTemplateColumn Header="Prix Total" Width="*">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<TextBlock Text="{Binding PrixTotalConteneur, StringFormat=C}" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+
+								<DataGridTemplateColumn Header="Total Payé" Width="*">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<TextBlock Text="{Binding TotalPayeConteneur, StringFormat=C}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+
+								<DataGridTemplateColumn Header="Total Restant" Width="*">
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<TextBlock Text="{Binding TotalRestantConteneur, StringFormat=C}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}"/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+								
+							</DataGrid.Columns>
+						</DataGrid>
                     </StackPanel>
                 </materialDesign:Card>
 
@@ -106,7 +158,7 @@
 								</StackPanel>
 							</Button>
 							<TextBlock Text="Colis Affectés" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,10,0,5"/>
-							<DataGrid ItemsSource="{Binding ColisAffectes}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
+							<DataGrid ItemsSource="{Binding ColisAffectes}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="300">
 								<DataGrid.Resources>
 									<Style TargetType="DataGridRow">
 										<!-- On stocke le ViewModel principal dans le Tag pour que le ContextMenu le trouve -->
@@ -180,7 +232,42 @@
 										</DataGridTemplateColumn.CellTemplate>
 									</DataGridTemplateColumn>
 								</DataGrid.Columns>
+																								
 							</DataGrid>
+							
+							<!-- NOUVELLE SECTION : STATS COLIS -->
+							<materialDesign:Card Margin="0,5,0,0" Padding="8">
+								<WrapPanel HorizontalAlignment="Right">
+									<StackPanel Orientation="Horizontal" Margin="8,0">
+										<materialDesign:PackIcon Kind="Package" VerticalAlignment="Center" Margin="0,0,5,0"/>
+										<TextBlock Text="Total : "/>
+										<TextBlock Text="{Binding TotalColisAffectes}" FontWeight="Bold"/>
+										<TextBlock Text=" colis"/>
+									</StackPanel>
+									<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+									<StackPanel Orientation="Horizontal" Margin="8,0">
+										<materialDesign:PackIcon Kind="Numeric" VerticalAlignment="Center" Margin="0,0,5,0"/>
+										<TextBlock Text="Pièces : "/>
+										<TextBlock Text="{Binding TotalPiecesColis}" FontWeight="Bold"/>
+									</StackPanel>
+									<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="15,0"/>
+									<StackPanel Orientation="Horizontal" Margin="8,0">
+										<materialDesign:PackIcon Kind="CashMultiple" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+										<TextBlock Text="{Binding PrixTotalColis, StringFormat=C}"/>
+									</StackPanel>
+									<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+									<StackPanel Orientation="Horizontal" Margin="8,0">
+										<materialDesign:PackIcon Kind="CashCheck" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource SuccessBrush}"/>
+										<TextBlock Text="{Binding TotalPayeColis, StringFormat=C}"/>
+									</StackPanel>
+									<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+									<StackPanel Orientation="Horizontal" Margin="8,0">
+										<materialDesign:PackIcon Kind="CashRemove" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource ErrorBrush}"/>
+										<TextBlock Text="{Binding TotalRestantColis, StringFormat=C}"/>
+									</StackPanel>
+								</WrapPanel>
+							</materialDesign:Card>
+							
                         </StackPanel>
                     </Expander>
                 </materialDesign:Card>
@@ -190,32 +277,19 @@
                     <Expander Header="Gestion des Véhicules">
                         <StackPanel>
                             <!-- Recherche de véhicules -->
-                            <Grid Margin="0,10,0,10">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding VehiculeSearchText, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Rechercher un véhicule (immatriculation, marque, client...)" />
-                                <Button Grid.Column="1" Content="Rechercher" Command="{Binding SearchVehiculesCommand}" Margin="10,0,0,0"/>
-                            </Grid>
-                            <ListBox ItemsSource="{Binding VehiculeSearchResults}" MaxHeight="150" Margin="0,0,0,10">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,2">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                            <StackPanel>
-                                                <TextBlock FontWeight="Bold">
-                                                    <Run Text="{Binding Immatriculation}"/> (<Run Text="{Binding Marque}"/> <Run Text="{Binding Modele}"/>)
-                                                </TextBlock>
-                                                <TextBlock Text="{Binding Client.NomComplet}"/>
-                                                <TextBlock Text="{Binding DestinationFinale}" Opacity="0.7" FontStyle="Italic"/>
-                                            </StackPanel>
-                                            <Button Grid.Column="1" Command="{Binding DataContext.AddVehiculeCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}" Content="Ajouter" VerticalAlignment="Center"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+							<Button Style="{StaticResource MaterialDesignRaisedButton}" 
+									Command="{Binding OpenAddVehiculeWindowCommand}" 
+									Margin="0,10,0,10"
+									HorizontalAlignment="Left">
+								<StackPanel Orientation="Horizontal">
+									<materialDesign:PackIcon Kind="Car" Margin="0,0,8,0"/>
+									<TextBlock Text="Ajouter des Véhicules..."/>
+								</StackPanel>
+							</Button>
 
                             <!-- Véhicules affectés -->
 							<TextBlock Text="Véhicules Affectés" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,10,0,5"/>
-							<DataGrid ItemsSource="{Binding VehiculesAffectes}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="200">
+							<DataGrid ItemsSource="{Binding VehiculesAffectes}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="300">
 								
 								<!-- SECTION À AJOUTER -->
 								<DataGrid.Resources>
@@ -241,23 +315,83 @@
 										</Setter>
 									</Style>
 								</DataGrid.Resources>
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Immatriculation" Binding="{Binding Immatriculation}" Width="*" FontWeight="Bold"/>
-                                    <DataGridTextColumn Header="Marque" Binding="{Binding Marque}" Width="*"/>
-                                    <DataGridTextColumn Header="Modèle" Binding="{Binding Modele}" Width="*"/>
-                                    <DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="2*"/>
-									<DataGridTextColumn Header="Destination" Binding="{Binding DestinationFinale}" Width="*"/>
-                                    <DataGridTemplateColumn>
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Button Command="{Binding DataContext.RemoveVehiculeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" ToolTip="Retirer du conteneur">
-                                                    <materialDesign:PackIcon Kind="Delete" Foreground="Red"/>
-                                                </Button>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                </DataGrid.Columns>
+								<DataGrid.Columns>
+									<DataGridTextColumn Header="Immatriculation" Binding="{Binding Immatriculation}" Width="*" FontWeight="Bold"/>
+									<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="1.5*"/>
+									<DataGridTextColumn Header="Marque &amp; Modèle" Width="1.5*">
+										<DataGridTextColumn.Binding>
+											<MultiBinding StringFormat="{}{0} {1}">
+												<Binding Path="Marque"/>
+												<Binding Path="Modele"/>
+											</MultiBinding>
+										</DataGridTextColumn.Binding>
+									</DataGridTextColumn>
+									<DataGridTextColumn Header="Année" Binding="{Binding Annee}" Width="Auto"/>
+									<DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires}" Width="2*"/>
+
+									<!-- COLONNES FINANCIÈRES CORRIGÉES -->
+									<DataGridTemplateColumn Header="Prix Total" Width="*">
+										<DataGridTemplateColumn.CellTemplate>
+											<DataTemplate>
+												<TextBlock Text="{Binding PrixTotal, StringFormat=C}" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+											</DataTemplate>
+										</DataGridTemplateColumn.CellTemplate>
+									</DataGridTemplateColumn>
+									<DataGridTemplateColumn Header="Payé" Width="*">
+										<DataGridTemplateColumn.CellTemplate>
+											<DataTemplate>
+												<TextBlock Text="{Binding SommePayee, StringFormat=C}" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"/>
+											</DataTemplate>
+										</DataGridTemplateColumn.CellTemplate>
+									</DataGridTemplateColumn>
+									<DataGridTemplateColumn Header="Restant" Width="*">
+										<DataGridTemplateColumn.CellTemplate>
+											<DataTemplate>
+												<TextBlock Text="{Binding RestantAPayer, StringFormat=C}" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}"/>
+											</DataTemplate>
+										</DataGridTemplateColumn.CellTemplate>
+									</DataGridTemplateColumn>
+									
+									<DataGridTemplateColumn>
+										<DataGridTemplateColumn.CellTemplate>
+											<DataTemplate>
+												<Button Command="{Binding DataContext.RemoveVehiculeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" ToolTip="Retirer du conteneur">
+													<materialDesign:PackIcon Kind="Delete" Foreground="Red"/>
+												</Button>
+											</DataTemplate>
+										</DataGridTemplateColumn.CellTemplate>
+									</DataGridTemplateColumn>
+								</DataGrid.Columns>															
+								
                             </DataGrid>
+							
+							<!-- NOUVELLE SECTION : STATS VÉHICULES -->
+							<materialDesign:Card Margin="0,5,0,0" Padding="8">
+								<WrapPanel HorizontalAlignment="Right">
+									<StackPanel Orientation="Horizontal" Margin="8,0">
+										<materialDesign:PackIcon Kind="CarMultiple" VerticalAlignment="Center" Margin="0,0,5,0"/>
+										<TextBlock Text="Total : "/>
+										<TextBlock Text="{Binding TotalVehiculesAffectes}" FontWeight="Bold"/>
+										<TextBlock Text=" véhicules"/>
+									</StackPanel>
+									<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="15,0"/>
+									<StackPanel Orientation="Horizontal" Margin="8,0">
+										<materialDesign:PackIcon Kind="CashMultiple" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+										<TextBlock Text="{Binding PrixTotalVehicules, StringFormat=C}"/>
+									</StackPanel>
+									<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+									<StackPanel Orientation="Horizontal" Margin="8,0">
+										<materialDesign:PackIcon Kind="CashCheck" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource SuccessBrush}"/>
+										<TextBlock Text="{Binding TotalPayeVehicules, StringFormat=C}"/>
+									</StackPanel>
+									<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+									<StackPanel Orientation="Horizontal" Margin="8,0">
+										<materialDesign:PackIcon Kind="CashRemove" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{StaticResource ErrorBrush}"/>
+										<TextBlock Text="{Binding TotalRestantVehicules, StringFormat=C}"/>
+									</StackPanel>
+								</WrapPanel>
+							</materialDesign:Card>								
+							
                         </StackPanel>
                     </Expander>
                 </materialDesign:Card>

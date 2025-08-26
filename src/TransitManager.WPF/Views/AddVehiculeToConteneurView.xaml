@@ -1,0 +1,86 @@
+<Window x:Class="TransitManager.WPF.Views.AddVehiculeToConteneurView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d"
+        Title="{Binding Title}" Height="700" Width="1200"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBox Grid.Row="0" materialDesign:HintAssist.Hint="Rechercher (immatriculation, client, marque, modèle...)" 
+                 materialDesign:TextFieldAssist.HasClearButton="True" materialDesign:TextFieldAssist.LeadingIcon="Magnify" 
+                 Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+
+        <DataGrid Grid.Row="1" Margin="0,16,0,0" ItemsSource="{Binding UnassignedVehicules}"
+                  AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                  Style="{StaticResource MaterialDesignDataGrid}">
+            <DataGrid.Resources>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <MenuItem Header="Ajouter ce véhicule" Command="{Binding PlacementTarget.Tag.AddSingleVehiculeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+                                    <MenuItem.Icon><materialDesign:PackIcon Kind="Plus" Foreground="Green"/></MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Voir détails du véhicule" Command="{Binding PlacementTarget.Tag.ViewVehiculeDetailsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+                                    <MenuItem.Icon><materialDesign:PackIcon Kind="CarInfo" /></MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Voir détails du client" Command="{Binding PlacementTarget.Tag.ViewClientDetailsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+                                    <MenuItem.Icon><materialDesign:PackIcon Kind="AccountEye" /></MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Actualiser" Command="{Binding PlacementTarget.Tag.RefreshCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                    <MenuItem.Icon><materialDesign:PackIcon Kind="Refresh" /></MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </DataGrid.Resources>
+            
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                
+                <DataGridTextColumn Header="Immatriculation" Binding="{Binding Vehicule.Immatriculation}" Width="*" FontWeight="Bold"/>
+                <DataGridTextColumn Header="Client" Binding="{Binding Vehicule.Client.NomComplet}" Width="1.5*"/>
+                <DataGridTextColumn Header="Marque" Binding="{Binding Vehicule.Marque}" Width="*"/>
+                <DataGridTextColumn Header="Modèle" Binding="{Binding Vehicule.Modele}" Width="*"/>
+                <DataGridTextColumn Header="Année" Binding="{Binding Vehicule.Annee}" Width="Auto"/>
+                <DataGridTextColumn Header="Commentaires" Binding="{Binding Vehicule.Commentaires}" Width="2*"/>
+                <DataGridTextColumn Header="Prix Total" Binding="{Binding Vehicule.PrixTotal, StringFormat=C}" Width="*"/>
+                <DataGridTextColumn Header="Total Payé" Binding="{Binding Vehicule.SommePayee, StringFormat=C}" Width="*"/>
+                <DataGridTextColumn Header="Total Restant" Binding="{Binding Vehicule.RestantAPayer, StringFormat=C}" Width="*"/>
+                <DataGridTemplateColumn Header="Statut" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border Background="{Binding Vehicule.Statut, Converter={StaticResource StatusToColorConverter}}" CornerRadius="12" Padding="8,4">
+                                <TextBlock Text="{Binding Vehicule.Statut}" Foreground="White" FontSize="11" HorizontalAlignment="Center"/>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Ajouter la sélection" Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding AddSelectedCommand}" Margin="0,0,10,0" Background="{StaticResource SuccessBrush}"/>
+            <Button Content="Fermer" Style="{StaticResource MaterialDesignOutlinedButton}" Click="CloseButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -95,10 +95,10 @@ namespace TransitManager.WPF.ViewModels
         // --- NOUVELLES PROPRIÉTÉS POUR L'AFFECTATION ---
         public ObservableCollection<Conteneur> ConteneursDisponibles { get; } = new();
 
-		private Conteneur? _selectedConteneur;
 		
 		public ObservableCollection<StatutVehicule> AvailableStatuses { get; } = new();
 		
+		private Conteneur? _selectedConteneur;
 		public Conteneur? SelectedConteneur
 		{
 			get => _selectedConteneur;
@@ -108,6 +108,7 @@ namespace TransitManager.WPF.ViewModels
 				{
 					if (Vehicule != null)
 					{
+						// On met simplement à jour l'ID. La logique métier sera appliquée à l'enregistrement.
 						Vehicule.ConteneurId = (value?.Id == Guid.Empty) ? null : value?.Id;
 					}
 				}
@@ -162,39 +163,40 @@ namespace TransitManager.WPF.ViewModels
 			{
 				Title = "Modifier le Véhicule";
 				
-				// 1. Charger le véhicule complet.
 				var vehiculeComplet = await _vehiculeService.GetByIdAsync(vehiculeId);
 				if (vehiculeComplet == null || vehiculeComplet.Client == null)
 				{
 					await _dialogService.ShowErrorAsync("Erreur", "Le véhicule ou son propriétaire est introuvable.");
-					Cancel(); // Appellera la nouvelle logique de fermeture
+					Cancel();
 					return;
 				}
-				// Le binding sur Vehicule.ClientId va maintenant se charger de la sélection.
+				
+				// Attacher l'écouteur d'événement
+				vehiculeComplet.PropertyChanged += OnVehiculePropertyChanged;
 				Vehicule = vehiculeComplet;
 
-				// 2. Charger les clients pour la liste déroulante.
 				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
-				
-				// 3. S'assurer que le client propriétaire (même inactif) est dans la liste.
 				if (!_allClients.Any(c => c.Id == Vehicule.ClientId))
 				{
 					_allClients.Insert(0, Vehicule.Client);
 				}
 				Clients = new ObservableCollection<Client>(_allClients);
 				
-				// 4. Synchroniser le ViewModel avec la sélection faite par le XAML.
 				SelectedClient = Clients.FirstOrDefault(c => c.Id == Vehicule.ClientId);
 
-				// --- Le reste de l'initialisation ---
 				LoadDamagePoints();
 				LoadRayures();
 				UpdatePlanImage(Vehicule.Type);
 
 				await LoadConteneursDisponiblesAsync();
+				
 				if (Vehicule.ConteneurId.HasValue)
 				{
 					SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Vehicule.ConteneurId.Value);
+				}
+				else
+				{
+					SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Guid.Empty);
 				}
 				
 				LoadAvailableStatuses();
@@ -281,24 +283,26 @@ namespace TransitManager.WPF.ViewModels
 		private async Task SaveAsync()
 		{
 			if (!CanSave() || Vehicule == null || SelectedClient == null) return;
-			
-			// --- NOUVELLE LOGIQUE DE STATUT ---
-			if (Vehicule.ConteneurId.HasValue && Vehicule.Statut == StatutVehicule.EnAttente)
-			{
-				Vehicule.Statut = StatutVehicule.Affecte;
-			}
-			else if (!Vehicule.ConteneurId.HasValue && Vehicule.Statut != StatutVehicule.EnAttente)
-			{
-				// On ne remet EnAttente que si ce n'est pas un statut "problème"
-				if(Vehicule.Statut != StatutVehicule.Probleme && Vehicule.Statut != StatutVehicule.Retourne)
-				{
-					Vehicule.Statut = StatutVehicule.EnAttente;
-				}
-			}
 					
 			Vehicule.ClientId = SelectedClient.Id;
 			SerializeDamagePoints();
 			SerializeRayures();
+
+			// *** LOGIQUE MÉTIER AJOUTÉE ICI, AVANT LA SAUVEGARDE ***
+			var finalStatuses = new[] { StatutVehicule.Livre, StatutVehicule.Probleme, StatutVehicule.Retourne };
+			
+			// On n'applique la logique automatique que si le statut n'est pas un statut final choisi par l'utilisateur.
+			if (!finalStatuses.Contains(Vehicule.Statut))
+			{
+				Vehicule.Statut = Vehicule.ConteneurId.HasValue ? StatutVehicule.Affecte : StatutVehicule.EnAttente;
+			}
+
+			// Cas particulier : si le statut est "Retourne", on s'assure que le conteneur est bien retiré.
+			if(Vehicule.Statut == StatutVehicule.Retourne)
+			{
+				Vehicule.ConteneurId = null;
+			}
+			// *** FIN DE LA LOGIQUE MÉTIER ***
 
 			await ExecuteBusyActionAsync(async () =>
 			{
@@ -316,7 +320,6 @@ namespace TransitManager.WPF.ViewModels
 
 					await _dialogService.ShowInformationAsync("Succès", "Le véhicule a été enregistré.");
 					
-					// LOGIQUE DE FERMETURE MODIFIÉE
 					if (_isModal)
 					{
 						CloseAction?.Invoke();
@@ -332,7 +335,8 @@ namespace TransitManager.WPF.ViewModels
 				}
 			});
 		}
-        // Le reste du fichier est inchangé
+
+
         #region Reste du code (inchangé)
         private bool CanSave()
         {
@@ -413,14 +417,16 @@ namespace TransitManager.WPF.ViewModels
                 Vehicule.TelephoneDestinataire = SelectedClient.TelephonePrincipal;
             }
         }
-        private void OnVehiculePropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            SaveCommand.NotifyCanExecuteChanged();
-            if (e.PropertyName == nameof(Vehicule.Type) && Vehicule != null)
-            {
-                UpdatePlanImage(Vehicule.Type);
-            }
-        }
+		
+		private void OnVehiculePropertyChanged(object? sender, PropertyChangedEventArgs e)
+		{
+			SaveCommand.NotifyCanExecuteChanged();
+			if (e.PropertyName == nameof(Vehicule.Type) && Vehicule != null)
+			{
+				UpdatePlanImage(Vehicule.Type);
+			}
+		}
+		
         private void UpdatePlanImage(TypeVehicule type)
         {
             PlanImagePath = type switch

@@ -148,11 +148,11 @@
 									  DisplayMemberPath="NumeroDossier"
 									  Style="{StaticResource MaterialDesignOutlinedComboBox}"
 									  Margin="0,0,0,15"/>									  
-                            <ComboBox materialDesign:HintAssist.Hint="Statut manuel (optionnel)" 
-                                      ItemsSource="{Binding AvailableStatuses}"
-                                      SelectedItem="{Binding SelectedStatut, UpdateSourceTrigger=PropertyChanged}" 
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}" 
-                                      Margin="0,0,0,15"/>									  
+							<ComboBox materialDesign:HintAssist.Hint="Statut manuel (optionnel)" 
+									  ItemsSource="{Binding AvailableStatuses}"
+									  SelectedItem="{Binding Colis.Statut, UpdateSourceTrigger=PropertyChanged}" 
+									  Style="{StaticResource MaterialDesignOutlinedComboBox}" 
+									  Margin="0,0,0,15"/>									  
                             
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                 <TextBlock Text="Livraison à domicile ?" VerticalAlignment="Center" Margin="0,0,10,0"/>

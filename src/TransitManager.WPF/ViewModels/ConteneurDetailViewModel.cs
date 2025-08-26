@@ -17,6 +17,7 @@ using System.Text.Json; // <--- NOUVEAU
 using Microsoft.Extensions.DependencyInjection; // <--- NOUVEAU
 using TransitManager.WPF.Views.Colis; // <--- NOUVEAU
 using TransitManager.WPF.Views;
+using TransitManager.WPF.Models;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -43,7 +44,7 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        public ObservableCollection<Client> ClientsAffiches { get; } = new();
+        public ObservableCollection<ClientConteneurStatistiques> ClientsAffiches { get; } = new();
         public ObservableCollection<Colis> ColisAffectes { get; } = new();
         public ObservableCollection<Vehicule> VehiculesAffectes { get; } = new();
 
@@ -68,6 +69,29 @@ namespace TransitManager.WPF.ViewModels
 		public IAsyncRelayCommand<Vehicule> EditVehiculeInWindowCommand { get; } // <--- NOUVELLE LIGNE
 		public IAsyncRelayCommand<Guid> ViewClientDetailsInWindowCommand { get; } // <--- NOUVELLE LIGNE
 		public IAsyncRelayCommand OpenAddColisWindowCommand { get; }
+		public IAsyncRelayCommand OpenAddVehiculeWindowCommand { get; }
+		
+		#region Statistiques
+
+		// Statistiques pour les Colis
+		public int TotalColisAffectes => ColisAffectes.Count;
+		public int TotalPiecesColis => ColisAffectes.Sum(c => c.NombrePieces);
+		public decimal PrixTotalColis => ColisAffectes.Sum(c => c.PrixTotal);
+		public decimal TotalPayeColis => ColisAffectes.Sum(c => c.SommePayee);
+		public decimal TotalRestantColis => ColisAffectes.Sum(c => c.RestantAPayer);
+
+		// Statistiques pour les Véhicules
+		public int TotalVehiculesAffectes => VehiculesAffectes.Count;
+		public decimal PrixTotalVehicules => VehiculesAffectes.Sum(v => v.PrixTotal);
+		public decimal TotalPayeVehicules => VehiculesAffectes.Sum(v => v.SommePayee);
+		public decimal TotalRestantVehicules => VehiculesAffectes.Sum(v => v.RestantAPayer);
+
+		// Statistiques Globales (combinées)
+		public decimal PrixTotalGlobal => PrixTotalColis + PrixTotalVehicules;
+		public decimal TotalPayeGlobal => TotalPayeColis + TotalPayeVehicules;
+		public decimal TotalRestantGlobal => TotalRestantColis + TotalRestantVehicules;
+
+		#endregion
 
         public ConteneurDetailViewModel(
             IConteneurService conteneurService, IColisService colisService, IVehiculeService vehiculeService,
@@ -98,10 +122,31 @@ namespace TransitManager.WPF.ViewModels
 			EditVehiculeInWindowCommand = new AsyncRelayCommand<Vehicule>(EditVehiculeInWindowAsync); // <--- NOUVELLE LIGNE
 			ViewClientDetailsInWindowCommand = new AsyncRelayCommand<Guid>(ViewClientDetailsInWindowAsync); // <--- NOUVELLE LIGNE
 			OpenAddColisWindowCommand = new AsyncRelayCommand(OpenAddColisWindowAsync);
+			OpenAddVehiculeWindowCommand = new AsyncRelayCommand(OpenAddVehiculeWindowAsync);
 
             ColisAffectes.CollectionChanged += OnAffectationChanged;
             VehiculesAffectes.CollectionChanged += OnAffectationChanged;
         }
+		
+		private async Task OpenAddVehiculeWindowAsync()
+		{
+			if (Conteneur == null) return;
+
+			using var scope = _serviceProvider.CreateScope();
+			var vm = scope.ServiceProvider.GetRequiredService<AddVehiculeToConteneurViewModel>();
+			await vm.InitializeAsync(Conteneur.Id);
+
+			var window = new AddVehiculeToConteneurView(vm)
+			{
+				Owner = System.Windows.Application.Current.MainWindow
+			};
+			window.ShowDialog();
+
+			if (vm.HasMadeChanges)
+			{
+				await InitializeAsync(Conteneur.Id);
+			}
+		}
 
 		private async Task OpenAddColisWindowAsync()
 		{
@@ -251,10 +296,26 @@ namespace TransitManager.WPF.ViewModels
 		}
 
 
-        private void OnAffectationChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        {
-            SaveCommand.NotifyCanExecuteChanged();
-        }
+		private void OnAffectationChanged(object? sender, NotifyCollectionChangedEventArgs e)
+		{
+			SaveCommand.NotifyCanExecuteChanged();
+
+			// Notifier toutes les propriétés de statistiques
+			OnPropertyChanged(nameof(TotalColisAffectes));
+			OnPropertyChanged(nameof(TotalPiecesColis));
+			OnPropertyChanged(nameof(PrixTotalColis));
+			OnPropertyChanged(nameof(TotalPayeColis));
+			OnPropertyChanged(nameof(TotalRestantColis));
+
+			OnPropertyChanged(nameof(TotalVehiculesAffectes));
+			OnPropertyChanged(nameof(PrixTotalVehicules));
+			OnPropertyChanged(nameof(TotalPayeVehicules));
+			OnPropertyChanged(nameof(TotalRestantVehicules));
+
+			OnPropertyChanged(nameof(PrixTotalGlobal));
+			OnPropertyChanged(nameof(TotalPayeGlobal));
+			OnPropertyChanged(nameof(TotalRestantGlobal));
+		}
 
         private bool CanSave()
         {
@@ -311,21 +372,48 @@ namespace TransitManager.WPF.ViewModels
                 Conteneur = await _conteneurService.GetByIdAsync(conteneurId);
                 if (Conteneur != null)
                 {
-                    RefreshCollections();
+                    RefreshAggregatedData();
                 }
             });
         }
         
-        private void RefreshCollections()
-        {
-            if (Conteneur == null) return;
-            ClientsAffiches.Clear();
-            foreach(var client in Conteneur.ClientsDistincts) ClientsAffiches.Add(client);
-            ColisAffectes.Clear();
-            foreach(var colis in Conteneur.Colis) ColisAffectes.Add(colis);
-            VehiculesAffectes.Clear();
-            foreach(var vehicule in Conteneur.Vehicules) VehiculesAffectes.Add(vehicule);
-        }
+		private void RefreshAggregatedData()
+		{
+			if (Conteneur == null) return;
+
+			// 1. Mettre à jour les listes de base
+			ColisAffectes.Clear();
+			foreach(var colis in Conteneur.Colis) ColisAffectes.Add(colis);
+			
+			VehiculesAffectes.Clear();
+			foreach(var vehicule in Conteneur.Vehicules) VehiculesAffectes.Add(vehicule);
+
+			// 2. Obtenir les clients uniques
+			var distinctClients = Conteneur.ClientsDistincts.ToList();
+			
+			// 3. Calculer les statistiques pour chaque client
+			var clientStatsList = new List<ClientConteneurStatistiques>();
+			foreach (var client in distinctClients)
+			{
+				var stats = new ClientConteneurStatistiques(client);
+
+				// Calculer les totaux pour ce client, uniquement pour les items dans CE conteneur
+				stats.PrixTotalConteneur = ColisAffectes.Where(c => c.ClientId == client.Id).Sum(c => c.PrixTotal) +
+										   VehiculesAffectes.Where(v => v.ClientId == client.Id).Sum(v => v.PrixTotal);
+
+				stats.TotalPayeConteneur = ColisAffectes.Where(c => c.ClientId == client.Id).Sum(c => c.SommePayee) +
+										   VehiculesAffectes.Where(v => v.ClientId == client.Id).Sum(v => v.SommePayee);
+				
+				clientStatsList.Add(stats);
+			}
+
+			// 4. Mettre à jour la collection liée à l'interface
+			ClientsAffiches.Clear();
+			foreach (var stat in clientStatsList.OrderBy(s => s.Client.NomComplet))
+			{
+				ClientsAffiches.Add(stat);
+			}
+		}
 
 		private async Task SaveAsync()
 		{
@@ -371,7 +459,7 @@ namespace TransitManager.WPF.ViewModels
                 colis.NumeroPlomb = Conteneur.NumeroPlomb;
                 ColisAffectes.Add(colis);
                 ColisSearchResults.Remove(colis);
-                RefreshClientList();
+                RefreshAggregatedData();
             }
             else
             {
@@ -379,20 +467,21 @@ namespace TransitManager.WPF.ViewModels
             }
         }
         
-        private async Task RemoveColisAsync(Colis? colis)
-        {
-            if (colis == null) return;
-            bool success = await _colisService.RemoveFromConteneurAsync(colis.Id);
-            if (success)
-            {
-                ColisAffectes.Remove(colis);
-                RefreshClientList();
-            }
-            else
-            {
-                await _dialogService.ShowErrorAsync("Erreur", "Le colis n'a pas pu être retiré.");
-            }
-        }
+		private async Task RemoveColisAsync(Colis? colis)
+		{
+			if (colis == null) return;
+			bool success = await _colisService.RemoveFromConteneurAsync(colis.Id);
+			if (success)
+			{
+				// On force le rechargement des données du conteneur après la suppression
+				await InitializeAsync(Conteneur.Id);
+				await _dialogService.ShowInformationAsync("Succès", "Le colis a été retiré.");
+			}
+			else
+			{
+				await _dialogService.ShowErrorAsync("Erreur", "Le colis n'a pas pu être retiré.");
+			}
+		}
         
         private async Task AddVehiculeAsync(Vehicule? vehicule)
         {
@@ -405,7 +494,7 @@ namespace TransitManager.WPF.ViewModels
                 vehicule.NumeroPlomb = Conteneur.NumeroPlomb;
                 VehiculesAffectes.Add(vehicule);
                 VehiculeSearchResults.Remove(vehicule);
-                RefreshClientList();
+                RefreshAggregatedData();
             }
             else
             {
@@ -413,30 +502,22 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        private async Task RemoveVehiculeAsync(Vehicule? vehicule)
-        {
-            if (vehicule == null) return;
-            bool success = await _vehiculeService.RemoveFromConteneurAsync(vehicule.Id);
-            if (success)
-            {
-                VehiculesAffectes.Remove(vehicule);
-                RefreshClientList();
-            }
-            else
-            {
-                await _dialogService.ShowErrorAsync("Erreur", "Le véhicule n'a pas pu être retiré.");
-            }
-        }
+		private async Task RemoveVehiculeAsync(Vehicule? vehicule)
+		{
+			if (vehicule == null) return;
+			bool success = await _vehiculeService.RemoveFromConteneurAsync(vehicule.Id);
+			if (success)
+			{
+				// On force le rechargement des données du conteneur après la suppression
+				await InitializeAsync(Conteneur.Id);
+				await _dialogService.ShowInformationAsync("Succès", "Le véhicule a été retiré.");
+			}
+			else
+			{
+				await _dialogService.ShowErrorAsync("Erreur", "Le véhicule n'a pas pu être retiré.");
+			}
+		}
         
-        private void RefreshClientList()
-        {
-            if (Conteneur == null) return;
-            var colisClients = ColisAffectes.Select(c => c.Client);
-            var vehiculeClients = VehiculesAffectes.Select(v => v.Client);
-            var allClients = colisClients.Union(vehiculeClients).Where(c => c != null).Select(c => c!).DistinctBy(c => c.Id).ToList();
-            ClientsAffiches.Clear();
-            foreach(var client in allClients) ClientsAffiches.Add(client);
-        }
 
         private async Task SearchColisAsync()
         {

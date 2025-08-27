@@ -77,18 +77,19 @@
                 </TextBox>
                 
                 <!-- Filtre par statut -->
-                <ComboBox Grid.Column="1"
-                        materialDesign:HintAssist.Hint="Statut"
-                        Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                        Width="150"
-                        Margin="10,0"
-                        SelectedItem="{Binding SelectedStatus}">
-                    <ComboBoxItem>Tous</ComboBoxItem>
-                    <ComboBoxItem>Actifs</ComboBoxItem>
-                    <ComboBoxItem>Inactifs</ComboBoxItem>
-                    <ComboBoxItem>Clients fidèles</ComboBoxItem>
-                    <ComboBoxItem>Avec impayés</ComboBoxItem>
-                </ComboBox>
+				<ComboBox Grid.Column="1"
+						  materialDesign:HintAssist.Hint="Statut"
+						  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+						  Width="150"
+						  Margin="10,0"
+						  SelectedIndex="0"
+						  SelectionChanged="StatusFilter_SelectionChanged">
+					<ComboBoxItem>Tous</ComboBoxItem>
+					<ComboBoxItem>Actifs</ComboBoxItem>
+					<ComboBoxItem>Inactifs</ComboBoxItem>
+					<ComboBoxItem>Clients fidèles</ComboBoxItem>
+					<ComboBoxItem>Avec impayés</ComboBoxItem>
+				</ComboBox>
                 
                 <!-- Filtre par ville -->
                 <ComboBox Grid.Column="2"
@@ -182,42 +183,39 @@
                     </DataGridTemplateColumn>
                     
                     <!-- Nombre d'envois -->
-                    <DataGridTextColumn Header="Envois" 
-                                      Binding="{Binding NombreTotalEnvois}" 
-                                      Width="80">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    
-                    <!-- Balance -->
-                    <DataGridTemplateColumn Header="Balance" Width="120">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock HorizontalAlignment="Right">
-                                    <TextBlock.Text>
-                                        <MultiBinding StringFormat="{}{0:C}">
-                                            <Binding Path="BalanceTotal"/>
-                                        </MultiBinding>
-                                    </TextBlock.Text>
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Path=BalanceTotal, 
-                                                           Converter={StaticResource GreaterThanZeroConverter}}" 
-                                                           Value="True">
-                                                    <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
-                                                    <Setter Property="FontWeight" Value="Medium"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+					<DataGridTextColumn Header="Envois" 
+										  Binding="{Binding NombreConteneursUniques}" 
+										  Width="80">
+						<DataGridTextColumn.ElementStyle>
+							<Style TargetType="TextBlock">
+								<Setter Property="HorizontalAlignment" Value="Center"/>
+							</Style>
+						</DataGridTextColumn.ElementStyle>
+					</DataGridTextColumn>
+
+					<!-- Colonne Impayés (anciennement Balance) -->
+					<DataGridTemplateColumn Header="Impayés" Width="120">
+						<DataGridTemplateColumn.CellTemplate>
+							<DataTemplate>
+								<TextBlock HorizontalAlignment="Right"
+										   Text="{Binding Impayes, StringFormat=C}">
+									<TextBlock.Style>
+										<Style TargetType="TextBlock">
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding Impayes, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+													<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+													<Setter Property="FontWeight" Value="Medium"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</TextBlock.Style>
+								</TextBlock>
+							</DataTemplate>
+						</DataGridTemplateColumn.CellTemplate>
+					</DataGridTemplateColumn>
+
+					<!-- NOUVELLE COLONNE : Commentaires -->
+					<DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires}" Width="2*"/>
                     
                     <!-- Actions -->
                     <DataGridTemplateColumn Header="Actions" Width="150">

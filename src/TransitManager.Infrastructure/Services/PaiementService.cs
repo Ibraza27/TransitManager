@@ -264,15 +264,15 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
         
-        private async Task UpdateClientBalanceAsync(Guid clientId, TransitContext context)
-        {
-            var client = await context.Clients.FindAsync(clientId);
-            if (client != null)
-            {
-                client.BalanceTotal = await CalculateClientBalanceAsync(clientId, context);
-            }
-        }
-        
+		private async Task UpdateClientBalanceAsync(Guid clientId, TransitContext context)
+		{
+			var client = await context.Clients.FindAsync(clientId);
+			if (client != null)
+			{
+				client.Impayes = await CalculateClientBalanceAsync(clientId, context); // MODIFIÉ
+			}
+		}
+				
         private async Task<decimal> CalculateClientBalanceAsync(Guid clientId, TransitContext context)
         {
             var client = await context.Clients

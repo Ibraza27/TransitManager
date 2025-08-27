@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace TransitManager.Core.Entities
 {
@@ -24,7 +25,8 @@ namespace TransitManager.Core.Entities
         private string? _numeroPieceIdentite;
         private bool _estClientFidele;
         private decimal _pourcentageRemise;
-        private decimal _balanceTotal;
+        private decimal _impayes;
+		private int _nombreConteneursUniques;
         private int _nombreTotalEnvois;
         private decimal _volumeTotalExpedie;
 
@@ -84,14 +86,16 @@ namespace TransitManager.Core.Entities
         
         public decimal PourcentageRemise { get => _pourcentageRemise; set => SetProperty(ref _pourcentageRemise, value); }
         
-        public decimal BalanceTotal { get => _balanceTotal; set => SetProperty(ref _balanceTotal, value); }
+        public decimal Impayes { get => _impayes; set => SetProperty(ref _impayes, value); }
         
-        public int NombreTotalEnvois { get => _nombreTotalEnvois; set => SetProperty(ref _nombreTotalEnvois, value); }
+        public int NombreConteneursUniques { get => _nombreConteneursUniques; set => SetProperty(ref _nombreConteneursUniques, value); }
         
         public decimal VolumeTotalExpedié { get => _volumeTotalExpedie; set => SetProperty(ref _volumeTotalExpedie, value); }
+	
 
         // --- Propriétés de navigation ---
         public virtual ICollection<Colis> Colis { get; } = new List<Colis>();
+		public virtual ICollection<Vehicule> Vehicules { get; } = new List<Vehicule>();
         public virtual ICollection<Paiement> Paiements { get; } = new List<Paiement>();
         
         // --- Constructeur et Méthodes ---

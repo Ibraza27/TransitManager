@@ -89,9 +89,9 @@ namespace TransitManager.Infrastructure.Data.Configurations
                 .HasPrecision(5, 2)
                 .HasDefaultValue(0);
 
-            builder.Property(c => c.BalanceTotal)
-                .HasPrecision(18, 2)
-                .HasDefaultValue(0);
+			builder.Property(c => c.Impayes)
+				.HasPrecision(18, 2)
+				.HasDefaultValue(0);
 
             builder.Property(c => c.VolumeTotalExpedié)
                 .HasPrecision(18, 3)
@@ -126,7 +126,7 @@ namespace TransitManager.Infrastructure.Data.Configurations
             builder.Property(c => c.EstClientFidele)
                 .HasDefaultValue(false);
 
-            builder.Property(c => c.NombreTotalEnvois)
+            builder.Property(c => c.NombreConteneursUniques)
                 .HasDefaultValue(0);
         }
     }

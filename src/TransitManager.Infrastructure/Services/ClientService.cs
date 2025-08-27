@@ -133,14 +133,14 @@ namespace TransitManager.Infrastructure.Services
                 throw new InvalidOperationException("Le client que vous essayez de modifier n'a pas été trouvé.");
             }
 
-            // ÉTAPE 2: Copier les propriétés modifiées depuis l'objet de l'UI vers l'objet de la BDD.
-            context.Entry(clientInDb).CurrentValues.SetValues(clientFromUI);
+			// ÉTAPE 2: Copier les propriétés
+			context.Entry(clientInDb).CurrentValues.SetValues(clientFromUI);
 
-            // ÉTAPE 3: Recalculer les statistiques sur l'objet suivi par EF.
-            await UpdateClientStatisticsAsync(clientInDb, context);
+			// FORCER LA MISE À JOUR (sécurité)
+			clientInDb.EstClientFidele = clientFromUI.EstClientFidele;
 
-            // ÉTAPE 4: Sauvegarder les changements. EF sait ce qui a changé sur clientInDb.
-            await context.SaveChangesAsync();
+			// ÉTAPE 3: Recalculer les statistiques
+			await UpdateClientStatisticsAsync(clientInDb, context);
 
             return clientInDb;
         }
@@ -189,9 +189,9 @@ namespace TransitManager.Infrastructure.Services
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Clients
-                .Where(c => c.Actif && c.BalanceTotal > 0)
+                .Where(c => c.Actif && c.Impayes > 0) 
                 .AsNoTracking()
-                .OrderByDescending(c => c.BalanceTotal)
+                .OrderByDescending(c => c.Impayes)
                 .ToListAsync();
         }
 
@@ -200,7 +200,7 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Clients
                 .Where(c => c.Actif)
-                .SumAsync(c => c.BalanceTotal);
+                .SumAsync(c => c.Impayes);
         }
 
         public async Task<IEnumerable<Client>> GetClientsByConteneurAsync(Guid conteneurId)
@@ -247,29 +247,40 @@ namespace TransitManager.Infrastructure.Services
             return code;
         }
 
-        private async Task UpdateClientStatisticsAsync(Client client, TransitContext context)
-        {
-            // La logique est maintenant plus simple car les colis sont déjà chargés avec le client.
-            client.NombreTotalEnvois = client.Colis.Count(c => c.Actif);
-            client.VolumeTotalExpedié = client.Colis.Where(c => c.Actif).Sum(c => c.Volume);
+		private async Task UpdateClientStatisticsAsync(Client client, TransitContext context)
+		{
+			// Charger explicitement les véhicules si ce n'est pas déjà fait
+			await context.Entry(client).Collection(c => c.Vehicules).LoadAsync();
 
-            var totalPaye = await context.Paiements
-                .Where(p => p.ClientId == client.Id && p.Statut == Core.Enums.StatutPaiement.Paye)
-                .SumAsync(p => p.Montant);
+			// Calcul du total dû
+			decimal totalDuColis = client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal);
+			decimal totalDuVehicules = client.Vehicules.Where(v => v.Actif).Sum(v => v.PrixTotal);
+			decimal totalDu = totalDuColis + totalDuVehicules;
 
-            var totalFacture = client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal);
-            client.BalanceTotal = totalFacture - totalPaye;
+			// Calcul du total payé
+			decimal totalPayeColis = client.Colis.Where(c => c.Actif).Sum(c => c.SommePayee);
+			decimal totalPayeVehicules = client.Vehicules.Where(v => v.Actif).Sum(v => v.SommePayee);
+			decimal totalPaye = totalPayeColis + totalPayeVehicules;
 
-            if (client.NombreTotalEnvois >= 10 || client.VolumeTotalExpedié >= 100)
-            {
-                client.EstClientFidele = true;
-                client.PourcentageRemise = 5;
-            }
-            else
-            {
-                client.EstClientFidele = false;
-                client.PourcentageRemise = 0;
-            }
-        }
+			// Mise à jour de la propriété Impayes
+			client.Impayes = totalDu - totalPaye;
+
+			// Calcul du nombre de conteneurs uniques
+			var conteneursColis = client.Colis.Where(c => c.ConteneurId.HasValue).Select(c => c.ConteneurId);
+			var conteneursVehicules = client.Vehicules.Where(v => v.ConteneurId.HasValue).Select(v => v.ConteneurId);
+			client.NombreConteneursUniques = conteneursColis.Union(conteneursVehicules).Distinct().Count();
+			
+			// La logique de fidélité reste la même, mais basée sur les nouvelles valeurs
+			if (client.NombreConteneursUniques >= 10) // Exemple de critère de fidélité
+			{
+				client.EstClientFidele = true;
+				client.PourcentageRemise = 5;
+			}
+			else
+			{
+				client.EstClientFidele = false;
+				client.PourcentageRemise = 0;
+			}
+		}
     }
 }

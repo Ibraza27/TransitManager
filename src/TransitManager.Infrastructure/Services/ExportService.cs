@@ -63,13 +63,13 @@ namespace TransitManager.Infrastructure.Services
                     worksheet.Cell(row, 6).Value = client.Ville;
                     worksheet.Cell(row, 7).Value = client.Pays;
                     worksheet.Cell(row, 8).Value = client.EstClientFidele ? "Oui" : "Non";
-                    worksheet.Cell(row, 9).Value = client.NombreTotalEnvois;
+                    worksheet.Cell(row, 9).Value = client.NombreConteneursUniques;
                     worksheet.Cell(row, 10).Value = client.VolumeTotalExpedié;
-                    worksheet.Cell(row, 11).Value = client.BalanceTotal;
+                    worksheet.Cell(row, 11).Value = client.Impayes;
                     worksheet.Cell(row, 12).Value = client.DateInscription.ToString("dd/MM/yyyy");
 
                     // Colorer les lignes avec balance positive
-                    if (client.BalanceTotal > 0)
+                    if (client.Impayes > 0)
                     {
                         worksheet.Cell(row, 11).Style.Font.FontColor = XLColor.Red;
                         worksheet.Cell(row, 11).Style.Font.Bold = true;

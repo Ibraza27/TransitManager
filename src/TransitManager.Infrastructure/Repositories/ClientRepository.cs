@@ -87,13 +87,13 @@ namespace TransitManager.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Client>> GetClientsWithUnpaidBalanceAsync()
-        {
-            return await _dbSet
-                .Where(c => c.Actif && c.BalanceTotal > 0)
-                .OrderByDescending(c => c.BalanceTotal)
-                .ToListAsync();
-        }
+		public async Task<IEnumerable<Client>> GetClientsWithUnpaidBalanceAsync()
+		{
+			return await _dbSet
+				.Where(c => c.Actif && c.Impayes > 0) // MODIFIÉ
+				.OrderByDescending(c => c.Impayes) // MODIFIÉ
+				.ToListAsync();
+		}
 
         public async Task<bool> IsEmailUniqueAsync(string email, Guid? excludeId = null)
         {

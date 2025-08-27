@@ -103,6 +103,14 @@
                                        materialDesign:HintAssist.Hint="Email"
                                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"
                                        Margin="0,0,0,10"/>
+									   
+								<TextBox Grid.Row="3" Grid.ColumnSpan="2"
+										 Text="{Binding Client.Commentaires, UpdateSourceTrigger=PropertyChanged}"
+										 materialDesign:HintAssist.Hint="Commentaires"
+										 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+										 Height="80" TextWrapping="Wrap" AcceptsReturn="True"
+										 Margin="0,10,0,0"/>
+										 
                             </Grid>
                         </StackPanel>
                     </materialDesign:Card>
@@ -195,30 +203,24 @@
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Nombre d'envois :"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" 
-                                         Text="{Binding Client.NombreTotalEnvois}" 
+                                         Text="{Binding Client.NombreConteneursUniques}" 
                                          FontWeight="Bold"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Volume total :" Margin="0,10,0,0"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" 
-                                         Text="{Binding Client.VolumeTotalExpedié, StringFormat='{}{0:N2} m³'}" 
-                                         FontWeight="Bold" Margin="0,10,0,0"/>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Balance :" Margin="0,10,0,0"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" 
-                                         Text="{Binding Client.BalanceTotal, StringFormat='{}{0:C}'}" 
-                                         FontWeight="Bold" Margin="0,10,0,0">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Path=Client.BalanceTotal, 
-                                                           Converter={StaticResource GreaterThanZeroConverter}}" 
-                                                           Value="True">
-                                                    <Setter Property="Foreground" Value="Red"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+								<TextBlock Grid.Row="2" Grid.Column="0" Text="Impayés :" Margin="0,10,0,0"/>
+								<TextBlock Grid.Row="2" Grid.Column="1" 
+											 Text="{Binding Client.Impayes, StringFormat='{}{0:C}'}"
+											 FontWeight="Bold" Margin="0,10,0,0">
+									<TextBlock.Style>
+										<Style TargetType="TextBlock">
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding Path=Client.Impayes, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+													<Setter Property="Foreground" Value="Red"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</TextBlock.Style>
+								</TextBlock>
 
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Inscrit depuis :" Margin="0,10,0,0"/>
                                 <TextBlock Grid.Row="3" Grid.Column="1" 

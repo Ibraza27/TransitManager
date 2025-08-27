@@ -221,7 +221,7 @@ namespace TransitManager.WPF.ViewModels
                         filteredClients = filteredClients.Where(c => c.EstClientFidele);
                         break;
                     case "Avec impayés":
-                        filteredClients = filteredClients.Where(c => c.BalanceTotal > 0);
+                        filteredClients = filteredClients.Where(c => c.Impayes > 0);
                         break;
                     // Le cas "Tous" ne fait rien, on garde la liste complète.
                 }

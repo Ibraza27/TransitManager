@@ -111,6 +111,11 @@ namespace TransitManager.Infrastructure.Data.Configurations
                 .WithOne(p => p.Client)
                 .HasForeignKey(p => p.ClientId)
                 .OnDelete(DeleteBehavior.Restrict);
+				
+			builder.HasMany(c => c.Vehicules)
+				.WithOne(v => v.Client)
+				.HasForeignKey(v => v.ClientId)
+				.OnDelete(DeleteBehavior.Restrict);
 
             // Propriétés calculées (ignorées par EF)
             builder.Ignore(c => c.NomComplet);

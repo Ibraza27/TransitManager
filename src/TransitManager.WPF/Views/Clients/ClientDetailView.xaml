@@ -189,44 +189,80 @@
                                      Style="{StaticResource MaterialDesignHeadline6TextBlock}"
                                      Margin="0,0,0,20"/>
 
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+							<Grid>
+								<Grid.RowDefinitions>
+									<RowDefinition Height="Auto"/>
+									<RowDefinition Height="Auto"/>
+									<RowDefinition Height="Auto"/>
+									<RowDefinition Height="Auto"/>
+									<RowDefinition Height="Auto"/>
+									<RowDefinition Height="Auto"/>
+								</Grid.RowDefinitions>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="Auto"/>
+								</Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Nombre d'envois :"/>
-                                <TextBlock Grid.Row="0" Grid.Column="1" 
-                                         Text="{Binding Client.NombreConteneursUniques}" 
-                                         FontWeight="Bold"/>
+								<TextBlock Grid.Row="0" Grid.Column="0" Text="Nombre d'envois (conteneurs uniques) :"/>
+								<TextBlock Grid.Row="0" Grid.Column="1" 
+										 Text="{Binding Client.NombreConteneursUniques}" 
+										 FontWeight="Bold"/>
 
-
-								<TextBlock Grid.Row="2" Grid.Column="0" Text="Impayés :" Margin="0,10,0,0"/>
-								<TextBlock Grid.Row="2" Grid.Column="1" 
-											 Text="{Binding Client.Impayes, StringFormat='{}{0:C}'}"
+								<TextBlock Grid.Row="1" Grid.Column="0" Text="Impayés Colis :" Margin="0,10,0,0"/>
+								<TextBlock Grid.Row="1" Grid.Column="1" 
+											 Text="{Binding ImpayesColis, StringFormat='{}{0:C}'}"
 											 FontWeight="Bold" Margin="0,10,0,0">
 									<TextBlock.Style>
-										<Style TargetType="TextBlock">
+										<Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+											<Setter Property="Foreground" Value="{StaticResource MaterialDesignBody}"/>
 											<Style.Triggers>
-												<DataTrigger Binding="{Binding Path=Client.Impayes, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
-													<Setter Property="Foreground" Value="Red"/>
+												<DataTrigger Binding="{Binding ImpayesColis, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+													<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
 												</DataTrigger>
 											</Style.Triggers>
 										</Style>
 									</TextBlock.Style>
 								</TextBlock>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Inscrit depuis :" Margin="0,10,0,0"/>
-                                <TextBlock Grid.Row="3" Grid.Column="1" 
-                                         Text="{Binding Client.DateInscription, StringFormat='{}{0:dd/MM/yyyy}'}" 
-                                         FontWeight="Bold" Margin="0,10,0,0"/>
-                            </Grid>
+								<TextBlock Grid.Row="2" Grid.Column="0" Text="Impayés Véhicules :" Margin="0,5,0,0"/>
+								<TextBlock Grid.Row="2" Grid.Column="1" 
+											 Text="{Binding ImpayesVehicules, StringFormat='{}{0:C}'}"
+											 FontWeight="Bold" Margin="0,5,0,0">
+									<TextBlock.Style>
+										<Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+											<Setter Property="Foreground" Value="{StaticResource MaterialDesignBody}"/>
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding ImpayesVehicules, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+													<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</TextBlock.Style>
+								</TextBlock>
+
+								<Separator Grid.Row="3" Grid.ColumnSpan="2" Margin="0,10"/>
+
+								<TextBlock Grid.Row="4" Grid.Column="0" Text="Total Impayés :" FontWeight="Bold" Margin="0,5,0,0"/>
+								<TextBlock Grid.Row="4" Grid.Column="1" 
+											 Text="{Binding Client.Impayes, StringFormat='{}{0:C}'}"
+											 FontWeight="Bold" FontSize="16" Margin="0,5,0,0">
+									<TextBlock.Style>
+										<Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+											<Setter Property="Foreground" Value="{StaticResource MaterialDesignBody}"/>
+											<Style.Triggers>
+												<DataTrigger Binding="{Binding Client.Impayes, Converter={StaticResource GreaterThanZeroConverter}}" Value="True">
+													<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+												</DataTrigger>
+											</Style.Triggers>
+										</Style>
+									</TextBlock.Style>
+								</TextBlock>
+
+								<TextBlock Grid.Row="5" Grid.Column="0" Text="Inscrit depuis :" Margin="0,10,0,0"/>
+								<TextBlock Grid.Row="5" Grid.Column="1" 
+											 Text="{Binding Client.DateInscription, StringFormat='{}{0:dd/MM/yyyy}'}" 
+											 FontWeight="Bold" Margin="0,10,0,0"/>
+							</Grid>
                         </StackPanel>
                     </materialDesign:Card>
                 </StackPanel>

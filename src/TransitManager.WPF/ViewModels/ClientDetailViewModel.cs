@@ -17,6 +17,8 @@ namespace TransitManager.WPF.ViewModels
 		private readonly IMessenger _messenger;
 		public Action? CloseAction { get; set; }
 		private bool _isModal = false;
+		public decimal ImpayesColis => Client?.Colis.Sum(c => c.RestantAPayer) ?? 0;
+		public decimal ImpayesVehicules => Client?.Vehicules.Sum(v => v.RestantAPayer) ?? 0;
 		
 		public void SetModalMode()
 		{
@@ -115,18 +117,24 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        public async Task InitializeAsync(Guid clientId)
-        {
-            await ExecuteBusyActionAsync(async () =>
-            {
-                Client = await _clientService.GetByIdAsync(clientId);
-                if (Client != null)
-                {
-                    Title = $"Modifier - {Client.NomComplet}";
-                    _isNewClient = false;
-                    Client.PropertyChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
-                }
-            });
-        }
+		public async Task InitializeAsync(Guid clientId)
+		{
+			await ExecuteBusyActionAsync(async () =>
+			{
+				// La ligne suivante doit charger les Colis ET les Véhicules
+				Client = await _clientService.GetByIdAsync(clientId); 
+				if (Client != null)
+				{
+					Title = $"Modifier - {Client.NomComplet}";
+					_isNewClient = false;
+					
+					// On notifie l'interface que les propriétés calculées sont à jour
+					OnPropertyChanged(nameof(ImpayesColis));
+					OnPropertyChanged(nameof(ImpayesVehicules));
+
+					Client.PropertyChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
+				}
+			});
+		}
     }
 }

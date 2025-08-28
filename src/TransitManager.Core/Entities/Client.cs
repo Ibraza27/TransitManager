@@ -28,6 +28,7 @@ namespace TransitManager.Core.Entities
         private decimal _impayes;
 		private int _nombreConteneursUniques;
         private int _nombreTotalEnvois;
+		public int NombreTotalEnvois { get => _nombreTotalEnvois; set => SetProperty(ref _nombreTotalEnvois, value); }
         private decimal _volumeTotalExpedie;
 
         // --- Propriétés publiques utilisant SetProperty ---

@@ -134,10 +134,6 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<decimal>("BalanceTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
                     b.Property<string>("CodeClient")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -177,8 +173,7 @@ namespace TransitManager.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
-                        .HasDefaultValue(0m)
-                        .HasColumnName("BalanceTotal");
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("ModifiePar")
                         .HasColumnType("text");
@@ -189,12 +184,12 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<int>("NombreConteneursUniques")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NombreTotalEnvois")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
+
+                    b.Property<int>("NombreTotalEnvois")
+                        .HasColumnType("integer");
 
                     b.Property<string>("NumeroPieceIdentite")
                         .HasMaxLength(100)
@@ -264,11 +259,7 @@ namespace TransitManager.Infrastructure.Migrations
                     b.HasIndex("Nom", "Prenom")
                         .HasDatabaseName("IX_Clients_NomPrenom");
 
-                    b.ToTable("Clients", null, t =>
-                        {
-                            t.Property("BalanceTotal")
-                                .HasColumnName("BalanceTotal1");
-                        });
+                    b.ToTable("Clients", (string)null);
                 });
 
             modelBuilder.Entity("TransitManager.Core.Entities.Colis", b =>
@@ -1032,12 +1023,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 8, 26, 21, 35, 48, 532, DateTimeKind.Utc).AddTicks(1155),
+                            DateCreation = new DateTime(2025, 8, 27, 21, 36, 38, 895, DateTimeKind.Utc).AddTicks(8319),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$s.OXcLZkodB0lQNZDJFlP.n4dVo3He66.G/aruyNrRGdXF5zqI.IS",
+                            MotDePasseHash = "$2a$11$47CimAPLqf80X5ildRmPXuC0TWgjvHAIA7CeifbveROmjA1zR0dOu",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,
@@ -1063,9 +1054,6 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<Guid>("ClientId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ClientId1")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Commentaires")
@@ -1155,8 +1143,6 @@ namespace TransitManager.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
-
-                    b.HasIndex("ClientId1");
 
                     b.HasIndex("ConteneurId");
 
@@ -1277,14 +1263,10 @@ namespace TransitManager.Infrastructure.Migrations
             modelBuilder.Entity("TransitManager.Core.Entities.Vehicule", b =>
                 {
                     b.HasOne("TransitManager.Core.Entities.Client", "Client")
-                        .WithMany()
+                        .WithMany("Vehicules")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("TransitManager.Core.Entities.Client", null)
-                        .WithMany("Vehicules")
-                        .HasForeignKey("ClientId1");
 
                     b.HasOne("TransitManager.Core.Entities.Conteneur", "Conteneur")
                         .WithMany("Vehicules")

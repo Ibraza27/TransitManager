@@ -12,8 +12,8 @@ namespace TransitManager.Infrastructure.Data.Configurations
             builder.HasKey(v => v.Id);
 
             builder.HasIndex(v => v.Immatriculation).IsUnique();
-            builder.HasIndex(v => v.ConteneurId); // Index pour la recherche par conteneur
-            builder.HasIndex(v => v.Statut); // Index pour la recherche par statut
+            builder.HasIndex(v => v.ConteneurId); 
+            builder.HasIndex(v => v.Statut); 
 
             builder.Property(v => v.Immatriculation).IsRequired().HasMaxLength(50);
             builder.Property(v => v.Marque).IsRequired().HasMaxLength(100);
@@ -28,13 +28,7 @@ namespace TransitManager.Infrastructure.Data.Configurations
             builder.Property(v => v.Type).HasConversion<string>().HasMaxLength(50);
             builder.Property(v => v.Statut).HasConversion<string>().HasMaxLength(50);
 
-            // Relation avec Client
-            builder.HasOne(v => v.Client)
-                .WithMany()
-                .HasForeignKey(v => v.ClientId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Relation avec Conteneur (déjà définie dans ConteneurConfiguration, mais la clé étrangère est ici)
+            // La relation avec Conteneur (déjà définie dans ConteneurConfiguration, mais la clé étrangère est ici)
             builder.HasOne(v => v.Conteneur)
                 .WithMany(c => c.Vehicules)
                 .HasForeignKey(v => v.ConteneurId);

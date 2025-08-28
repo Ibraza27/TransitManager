@@ -16,6 +16,7 @@ namespace TransitManager.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    NombreTotalEnvois = table.Column<int>(type: "integer", nullable: false),
                     CodeClient = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     Nom = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Prenom = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
@@ -34,8 +35,8 @@ namespace TransitManager.Infrastructure.Migrations
                     NumeroPieceIdentite = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     EstClientFidele = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     PourcentageRemise = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
-                    BalanceTotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
-                    NombreTotalEnvois = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    Impayes = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
+                    NombreConteneursUniques = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     VolumeTotalExpedié = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
                     DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -157,6 +158,7 @@ namespace TransitManager.Infrastructure.Migrations
                     PrixTotal = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     SommePayee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     NumeroPlomb = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    InventaireJson = table.Column<string>(type: "jsonb", nullable: true),
                     DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreePar = table.Column<string>(type: "text", nullable: true),
@@ -431,7 +433,7 @@ namespace TransitManager.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Utilisateurs",
                 columns: new[] { "Id", "Actif", "CreePar", "DateCreation", "DateModification", "DateVerrouillage", "DerniereConnexion", "DoitChangerMotDePasse", "Email", "ExpirationToken", "FuseauHoraire", "Langue", "ModifiePar", "MotDePasseHash", "Nom", "NomUtilisateur", "NotificationsActivees", "NotificationsEmail", "NotificationsSMS", "PasswordSalt", "PermissionsSpecifiques", "PhotoProfil", "Preferences", "Prenom", "Role", "RowVersion", "Telephone", "TentativesConnexionEchouees", "Theme", "TokenReinitialisation" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 16, 13, 51, 5, 480, DateTimeKind.Utc).AddTicks(7797), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$lGoMpMpgQju.YkYKz3JoAOziP6xFd/wS5BA0snlEi4a7F8uHsaFEq", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 27, 21, 36, 38, 895, DateTimeKind.Utc).AddTicks(8319), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$47CimAPLqf80X5ildRmPXuC0TWgjvHAIA7CeifbveROmjA1zR0dOu", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UtilisateurId",

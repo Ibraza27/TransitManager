@@ -11,16 +11,19 @@ using System.Windows.Input;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
+using CommunityToolkit.Mvvm.Messaging;
+using TransitManager.WPF.Messages;
 
 namespace TransitManager.WPF.ViewModels
 {
-    public class ClientViewModel : BaseViewModel
+    public class ClientViewModel : BaseViewModel, IRecipient<ClientUpdatedMessage>
     {
         private readonly IClientService _clientService;
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
         private readonly IExportService _exportService;
         private readonly IServiceProvider _serviceProvider;
+		private readonly IMessenger _messenger;
 
         private ObservableCollection<Client> _clients = new();
         private Client? _selectedClient;
@@ -149,32 +152,37 @@ namespace TransitManager.WPF.ViewModels
         public ICommand PreviousPageCommand { get; }
         public ICommand NextPageCommand { get; }
 
-        public ClientViewModel(
-            IClientService clientService,
-            INavigationService navigationService,
-            IDialogService dialogService,
-            IExportService exportService,
-            IServiceProvider serviceProvider)
-        {
-            _clientService = clientService;
-            _navigationService = navigationService;
-            _dialogService = dialogService;
-            _exportService = exportService;
-            _serviceProvider = serviceProvider;
+		// NOUVELLE VERSION CORRIGÉE
+		public ClientViewModel(
+			IClientService clientService,
+			INavigationService navigationService,
+			IDialogService dialogService,
+			IExportService exportService,
+			IServiceProvider serviceProvider,
+			IMessenger messenger) // <-- PARAMÈTRE AJOUTÉ
+		{
+			_clientService = clientService;
+			_navigationService = navigationService;
+			_dialogService = dialogService;
+			_exportService = exportService;
+			_serviceProvider = serviceProvider;
+			_messenger = messenger; // <-- LIGNE D'INITIALISATION AJOUTÉE
 
-            Title = "Gestion des Clients";
+			Title = "Gestion des Clients";
 
-            // Initialiser les commandes
-            NewClientCommand = new RelayCommand(NewClient);
-            EditCommand = new RelayCommand<Client>(EditClient);
-            DeleteCommand = new AsyncRelayCommand<Client>(DeleteClientAsync);
-            ViewDetailsCommand = new RelayCommand<Client>(ViewDetails);
-            ExportCommand = new AsyncRelayCommand(ExportAsync);
-            RefreshCommand = new AsyncRelayCommand(RefreshAsync);
-            SearchCommand = new AsyncRelayCommand(LoadClientsAsync);
-            PreviousPageCommand = new RelayCommand(PreviousPage, () => CanGoPrevious);
-            NextPageCommand = new RelayCommand(NextPage, () => CanGoNext);
-        }
+			// Initialiser les commandes
+			NewClientCommand = new RelayCommand(NewClient);
+			EditCommand = new RelayCommand<Client>(EditClient);
+			DeleteCommand = new AsyncRelayCommand<Client>(DeleteClientAsync);
+			ViewDetailsCommand = new RelayCommand<Client>(ViewDetails);
+			ExportCommand = new AsyncRelayCommand(ExportAsync);
+			RefreshCommand = new AsyncRelayCommand(RefreshAsync);
+			SearchCommand = new AsyncRelayCommand(LoadClientsAsync);
+			PreviousPageCommand = new RelayCommand(PreviousPage, () => CanGoPrevious);
+			NextPageCommand = new RelayCommand(NextPage, () => CanGoNext);
+			
+			_messenger.RegisterAll(this);
+		}
 		
         public override async Task InitializeAsync()
         {
@@ -404,6 +412,15 @@ namespace TransitManager.WPF.ViewModels
                 _ = LoadClientsAsync();
             }
         }
+		
+		public async void Receive(ClientUpdatedMessage message)
+		{
+			// Ce message est reçu quand un client a été créé ou modifié.
+			// On relance simplement le chargement complet de la vue.
+			await LoadAsync();
+		}
+	
+		
     }
 
     // ViewModel pour les options d'export
@@ -412,4 +429,6 @@ namespace TransitManager.WPF.ViewModels
         public string SelectedFormat { get; set; } = "Excel";
         public List<string> AvailableFormats { get; } = new() { "Excel", "CSV", "PDF" };
     }
+	
+
 }

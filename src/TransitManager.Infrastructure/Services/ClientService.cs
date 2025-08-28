@@ -20,16 +20,17 @@ namespace TransitManager.Infrastructure.Services
             _notificationService = notificationService;
         }
 		
-        public async Task<Client?> GetByIdAsync(Guid id)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Clients
+		public async Task<Client?> GetByIdAsync(Guid id)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			return await context.Clients
 				.IgnoreQueryFilters()
-                .Include(c => c.Colis)
-                .Include(c => c.Paiements)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == id);
-        }
+				.Include(c => c.Colis)
+				.Include(c => c.Vehicules) // <-- LIGNE AJOUTÉE
+				.Include(c => c.Paiements)
+				.AsNoTracking()
+				.FirstOrDefaultAsync(c => c.Id == id);
+		}
 
         public async Task<Client?> GetByCodeAsync(string code)
         {
@@ -113,37 +114,38 @@ namespace TransitManager.Infrastructure.Services
             return client;
         }
 
-        public async Task<Client> UpdateAsync(Client clientFromUI)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+		public async Task<Client> UpdateAsync(Client clientFromUI)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
 
-            if (await ExistsAsync(clientFromUI.Email ?? "", clientFromUI.TelephonePrincipal, clientFromUI.Id))
-            {
-                throw new InvalidOperationException("Un autre client avec cet email ou ce téléphone existe déjà.");
-            }
+			if (await ExistsAsync(clientFromUI.Email ?? "", clientFromUI.TelephonePrincipal, clientFromUI.Id))
+			{
+				throw new InvalidOperationException("Un autre client avec cet email ou ce téléphone existe déjà.");
+			}
 
-            // ÉTAPE 1: Charger l'entité originale depuis la BDD (c'est elle qui est "suivie").
-            var clientInDb = await context.Clients
-                                          .IgnoreQueryFilters() // Important pour pouvoir modifier un client inactif
-                                          .Include(c => c.Colis)
-                                          .FirstOrDefaultAsync(c => c.Id == clientFromUI.Id);
+			// ÉTAPE A : Charger l'entité originale depuis la BDD. C'est elle qui est suivie par EF Core.
+			var clientInDb = await context.Clients
+										  .IgnoreQueryFilters() // Important pour pouvoir modifier un client inactif
+										  .Include(c => c.Colis)
+										  .Include(c => c.Vehicules) // On inclut les véhicules
+										  .FirstOrDefaultAsync(c => c.Id == clientFromUI.Id);
 
-            if (clientInDb == null)
-            {
-                throw new InvalidOperationException("Le client que vous essayez de modifier n'a pas été trouvé.");
-            }
+			if (clientInDb == null)
+			{
+				throw new InvalidOperationException("Le client que vous essayez de modifier n'a pas été trouvé.");
+			}
 
-			// ÉTAPE 2: Copier les propriétés
+			// ÉTAPE B : Copier les valeurs modifiées depuis l'interface utilisateur vers l'entité suivie.
 			context.Entry(clientInDb).CurrentValues.SetValues(clientFromUI);
 
-			// FORCER LA MISE À JOUR (sécurité)
-			clientInDb.EstClientFidele = clientFromUI.EstClientFidele;
-
-			// ÉTAPE 3: Recalculer les statistiques
+			// ÉTAPE C : Appeler notre nouvelle méthode pour recalculer toutes les statistiques.
 			await UpdateClientStatisticsAsync(clientInDb, context);
 
-            return clientInDb;
-        }
+			// ÉTAPE D : Sauvegarder toutes les modifications en une seule transaction.
+			await context.SaveChangesAsync();
+			
+			return clientInDb;
+		}
 
         public async Task<bool> DeleteAsync(Guid id)
         {
@@ -246,10 +248,11 @@ namespace TransitManager.Infrastructure.Services
             while (await context.Clients.AnyAsync(c => c.CodeClient == code));
             return code;
         }
-
+		
 		private async Task UpdateClientStatisticsAsync(Client client, TransitContext context)
 		{
-			// Charger explicitement les véhicules si ce n'est pas déjà fait
+			// Charger explicitement les colis et les véhicules si ce n'est pas déjà fait
+			await context.Entry(client).Collection(c => c.Colis).LoadAsync();
 			await context.Entry(client).Collection(c => c.Vehicules).LoadAsync();
 
 			// Calcul du total dû
@@ -269,18 +272,7 @@ namespace TransitManager.Infrastructure.Services
 			var conteneursColis = client.Colis.Where(c => c.ConteneurId.HasValue).Select(c => c.ConteneurId);
 			var conteneursVehicules = client.Vehicules.Where(v => v.ConteneurId.HasValue).Select(v => v.ConteneurId);
 			client.NombreConteneursUniques = conteneursColis.Union(conteneursVehicules).Distinct().Count();
-			
-			// La logique de fidélité reste la même, mais basée sur les nouvelles valeurs
-			if (client.NombreConteneursUniques >= 10) // Exemple de critère de fidélité
-			{
-				client.EstClientFidele = true;
-				client.PourcentageRemise = 5;
-			}
-			else
-			{
-				client.EstClientFidele = false;
-				client.PourcentageRemise = 0;
-			}
 		}
+		
     }
 }

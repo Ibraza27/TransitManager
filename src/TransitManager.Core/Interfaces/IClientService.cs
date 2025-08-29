@@ -7,6 +7,8 @@ namespace TransitManager.Core.Interfaces
 {
     public interface IClientService
     {
+		event Action<Guid> ClientStatisticsUpdated;
+		
         Task<Client?> GetByIdAsync(Guid id);
         Task<Client?> GetByCodeAsync(string code);
         Task<IEnumerable<Client>> GetAllAsync();
@@ -22,5 +24,6 @@ namespace TransitManager.Core.Interfaces
         Task<decimal> GetTotalUnpaidBalanceAsync();
         Task<bool> ExistsAsync(string email, string telephone, Guid? excludeId = null);
         Task<IEnumerable<Client>> GetClientsByConteneurAsync(Guid conteneurId);
+		Task RecalculateAndUpdateClientStatisticsAsync(Guid clientId);
     }
 }

@@ -167,6 +167,8 @@ namespace TransitManager.WPF.ViewModels
 			_exportService = exportService;
 			_serviceProvider = serviceProvider;
 			_messenger = messenger; // <-- LIGNE D'INITIALISATION AJOUTÉE
+			
+			_clientService.ClientStatisticsUpdated += OnClientStatisticsUpdated;
 
 			Title = "Gestion des Clients";
 
@@ -182,6 +184,13 @@ namespace TransitManager.WPF.ViewModels
 			NextPageCommand = new RelayCommand(NextPage, () => CanGoNext);
 			
 			_messenger.RegisterAll(this);
+		}
+		
+		private async void OnClientStatisticsUpdated(Guid clientId)
+		{
+			// L'événement nous donne l'ID du client mis à jour.
+			// Pour une liste, le plus simple est de tout recharger.
+			await LoadAsync();
 		}
 		
         public override async Task InitializeAsync()
@@ -418,6 +427,15 @@ namespace TransitManager.WPF.ViewModels
 			// Ce message est reçu quand un client a été créé ou modifié.
 			// On relance simplement le chargement complet de la vue.
 			await LoadAsync();
+		}
+		
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				_clientService.ClientStatisticsUpdated -= OnClientStatisticsUpdated;
+			}
+			base.Dispose(disposing);
 		}
 	
 		

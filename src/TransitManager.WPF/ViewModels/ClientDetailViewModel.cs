@@ -119,9 +119,9 @@ namespace TransitManager.WPF.ViewModels
 
 		public async Task InitializeAsync(Guid clientId)
 		{
+			// On garde ExecuteBusyActionAsync pour l'indicateur de chargement
 			await ExecuteBusyActionAsync(async () =>
 			{
-				// La ligne suivante doit charger les Colis ET les Véhicules
 				Client = await _clientService.GetByIdAsync(clientId); 
 				if (Client != null)
 				{
@@ -135,6 +135,9 @@ namespace TransitManager.WPF.ViewModels
 					Client.PropertyChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
 				}
 			});
+			// On notifie une nouvelle fois après la fin de IsBusy pour être sûr
+			OnPropertyChanged(nameof(ImpayesColis));
+			OnPropertyChanged(nameof(ImpayesVehicules));
 		}
     }
 }

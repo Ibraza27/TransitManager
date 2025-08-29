@@ -16,12 +16,16 @@ namespace TransitManager.Infrastructure.Services
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;
         private readonly IConteneurService _conteneurService;
+		private readonly IColisService _colisService;
+		private readonly IClientService _clientService;
+		
 
-        public ColisService(IDbContextFactory<TransitContext> contextFactory, INotificationService notificationService, IConteneurService conteneurService)
+        public ColisService(IDbContextFactory<TransitContext> contextFactory, INotificationService notificationService, IConteneurService conteneurService, IClientService clientService)
         {
             _contextFactory = contextFactory;
             _notificationService = notificationService;
             _conteneurService = conteneurService;
+			_clientService = clientService;
         }
 
         public async Task<Colis> CreateAsync(Colis colis)
@@ -29,6 +33,7 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             context.Colis.Add(colis);
             await context.SaveChangesAsync();
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
             
             // Si le colis a été directement affecté à un conteneur à la création
             if (colis.ConteneurId.HasValue)
@@ -68,6 +73,7 @@ namespace TransitManager.Infrastructure.Services
             if (barcodesToAdd.Any()) await context.Barcodes.AddRangeAsync(barcodesToAdd);
             
             await context.SaveChangesAsync();
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(colisInDb.ClientId);
 
             if (originalConteneurId.HasValue)
             {
@@ -176,9 +182,11 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var colis = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Id == id);
             if (colis == null) return false;
+			var clientId = colis.ClientId; 
             colis.Actif = false;
             foreach (var barcode in colis.Barcodes) barcode.Actif = false;
             await context.SaveChangesAsync();
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId);
             return true;
         }
 

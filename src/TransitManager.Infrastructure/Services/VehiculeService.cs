@@ -14,11 +14,13 @@ namespace TransitManager.Infrastructure.Services
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly IConteneurService _conteneurService;
+		private readonly IClientService _clientService;
 
-        public VehiculeService(IDbContextFactory<TransitContext> contextFactory, IConteneurService conteneurService)
+        public VehiculeService(IDbContextFactory<TransitContext> contextFactory, IConteneurService conteneurService, IClientService clientService)
         {
             _contextFactory = contextFactory;
             _conteneurService = conteneurService;
+			_clientService = clientService;
         }
 
         public async Task<Vehicule> CreateAsync(Vehicule vehicule)
@@ -26,6 +28,7 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             context.Vehicules.Add(vehicule);
             await context.SaveChangesAsync();
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
             
             if (vehicule.ConteneurId.HasValue)
             {
@@ -57,6 +60,7 @@ namespace TransitManager.Infrastructure.Services
             vehiculeInDb.ConteneurId = vehicule.ConteneurId;
 
             await context.SaveChangesAsync();
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehiculeInDb.ClientId);
 
             if (originalConteneurId.HasValue)
             {
@@ -123,8 +127,10 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var vehicule = await context.Vehicules.FindAsync(id);
             if (vehicule == null) return false;
+			var clientId = vehicule.ClientId;
             vehicule.Actif = false;
             await context.SaveChangesAsync();
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId);
             return true;
         }
 

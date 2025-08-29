@@ -7,18 +7,21 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
 
+
 namespace TransitManager.Infrastructure.Services
 {
     public class ClientService : IClientService
     {
+		public event Action<Guid> ClientStatisticsUpdated;
+		
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;
 
-        public ClientService(IDbContextFactory<TransitContext> contextFactory, INotificationService notificationService)
-        {
-            _contextFactory = contextFactory;
-            _notificationService = notificationService;
-        }
+		public ClientService(IDbContextFactory<TransitContext> contextFactory, INotificationService notificationService)
+		{
+			_contextFactory = contextFactory;
+			_notificationService = notificationService;
+		}
 		
 		public async Task<Client?> GetByIdAsync(Guid id)
 		{
@@ -272,6 +275,26 @@ namespace TransitManager.Infrastructure.Services
 			var conteneursColis = client.Colis.Where(c => c.ConteneurId.HasValue).Select(c => c.ConteneurId);
 			var conteneursVehicules = client.Vehicules.Where(v => v.ConteneurId.HasValue).Select(v => v.ConteneurId);
 			client.NombreConteneursUniques = conteneursColis.Union(conteneursVehicules).Distinct().Count();
+		}
+		
+		public async Task RecalculateAndUpdateClientStatisticsAsync(Guid clientId)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			// On utilise FindAsync car on va modifier le client, donc on a besoin qu'il soit suivi par le contexte.
+			var client = await context.Clients.FindAsync(clientId);
+			
+			if (client != null)
+			{
+				// On appelle la méthode de calcul que nous avons déjà créée
+				await UpdateClientStatisticsAsync(client, context);
+				
+				// On sauvegarde les nouvelles statistiques dans la base de données
+				await context.SaveChangesAsync();
+				
+
+				ClientStatisticsUpdated?.Invoke(clientId);
+			}
 		}
 		
     }

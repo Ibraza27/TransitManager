@@ -15,15 +15,18 @@ namespace TransitManager.Infrastructure.Services
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;
         private readonly IExportService _exportService;
+		private readonly IClientService _clientService;
 
-        public PaiementService(
-            IDbContextFactory<TransitContext> contextFactory,
-            INotificationService notificationService,
-            IExportService exportService)
+	public PaiementService(
+		IDbContextFactory<TransitContext> contextFactory,
+		INotificationService notificationService,
+		IExportService exportService,
+		IClientService clientService) 
         {
             _contextFactory = contextFactory;
             _notificationService = notificationService;
             _exportService = exportService;
+			_clientService = clientService;
         }
 
         public async Task<Paiement?> GetByIdAsync(Guid id)
@@ -99,6 +102,7 @@ namespace TransitManager.Infrastructure.Services
             context.Paiements.Add(paiement);
             await UpdateClientBalanceAsync(paiement.ClientId, context);
             await context.SaveChangesAsync();
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 
             await _notificationService.NotifyAsync(
                 "Paiement reçu",
@@ -108,14 +112,15 @@ namespace TransitManager.Infrastructure.Services
             return paiement;
         }
 
-        public async Task<Paiement> UpdateAsync(Paiement paiement)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            context.Paiements.Update(paiement);
-            await UpdateClientBalanceAsync(paiement.ClientId, context);
-            await context.SaveChangesAsync();
-            return paiement;
-        }
+		public async Task<Paiement> UpdateAsync(Paiement paiement)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			context.Paiements.Update(paiement);
+			await context.SaveChangesAsync();
+			// Ligne à ajouter/vérifier
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
+			return paiement;
+		}
 
         public async Task<bool> DeleteAsync(Guid id)
         {
@@ -127,24 +132,29 @@ namespace TransitManager.Infrastructure.Services
             {
                 throw new InvalidOperationException("Impossible de supprimer un paiement validé.");
             }
+			
+			var clientId = paiement.ClientId;
 
             // Suppression logique
             paiement.Actif = false;
             await UpdateClientBalanceAsync(paiement.ClientId, context);
             await context.SaveChangesAsync();
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId); 
             return true;
         }
 
-        public async Task<bool> ValidatePaymentAsync(Guid paiementId)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var paiement = await context.Paiements.FindAsync(paiementId);
-            if (paiement == null) return false;
+		public async Task<bool> ValidatePaymentAsync(Guid paiementId)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			var paiement = await context.Paiements.FindAsync(paiementId);
+			if (paiement == null) return false;
 
-            paiement.Statut = StatutPaiement.Paye;
-            await context.SaveChangesAsync();
-            return true;
-        }
+			paiement.Statut = StatutPaiement.Paye;
+			await context.SaveChangesAsync();
+			// Ligne à ajouter/vérifier
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
+			return true;
+		}
 
         public async Task<bool> CancelPaymentAsync(Guid paiementId, string raison)
         {
@@ -152,10 +162,12 @@ namespace TransitManager.Infrastructure.Services
             var paiement = await context.Paiements.FindAsync(paiementId);
             if (paiement == null) return false;
 
-            paiement.Statut = StatutPaiement.Annule;
-            paiement.Commentaires = $"Annulé : {raison}";
-            await context.SaveChangesAsync();
-            return true;
+			paiement.Statut = StatutPaiement.Annule;
+			paiement.Commentaires = $"Annulé : {raison}";
+			await context.SaveChangesAsync();
+			// Ligne à ajouter/vérifier
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
+			return true;
         }
 
         public async Task<decimal> GetMonthlyRevenueAsync(DateTime month)
@@ -203,34 +215,38 @@ namespace TransitManager.Infrastructure.Services
                 .ToDictionaryAsync(g => g.Key, g => g.Sum(p => p.Montant));
         }
 
-        public async Task<bool> SendPaymentReminderAsync(Guid clientId)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var client = await context.Clients.FindAsync(clientId);
-            if (client == null) return false;
+		public async Task<bool> SendPaymentReminderAsync(Guid clientId)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			var client = await context.Clients.FindAsync(clientId);
+			if (client == null) return false;
 
-            var balance = await GetClientBalanceAsync(clientId);
-            if (balance <= 0) return false;
+			var balance = await GetClientBalanceAsync(clientId);
+			if (balance <= 0) return false;
 
-            await _notificationService.NotifyAsync(
-                "Rappel de paiement",
-                $"Rappel: Le client {client.NomComplet} a un solde impayé de {balance:C}",
-                TypeNotification.RetardPaiement,
-                PrioriteNotification.Haute
-            );
+			await _notificationService.NotifyAsync(
+				"Rappel de paiement",
+				$"Rappel: Le client {client.NomComplet} a un solde impayé de {balance:C}",
+				TypeNotification.RetardPaiement,
+				PrioriteNotification.Haute
+			);
 
-            var paiementsEnRetard = await context.Paiements
-                .Where(p => p.ClientId == clientId && p.DateEcheance.HasValue && p.DateEcheance.Value < DateTime.UtcNow)
-                .ToListAsync();
+			var paiementsEnRetard = await context.Paiements
+				.Where(p => p.ClientId == clientId && p.DateEcheance.HasValue && p.DateEcheance.Value < DateTime.UtcNow)
+				.ToListAsync();
 
-            foreach (var paiement in paiementsEnRetard)
-            {
-                paiement.RappelEnvoye = true;
-                paiement.DateDernierRappel = DateTime.UtcNow;
-            }
-            await context.SaveChangesAsync();
-            return true;
-        }
+			foreach (var paiement in paiementsEnRetard)
+			{
+				paiement.RappelEnvoye = true;
+				paiement.DateDernierRappel = DateTime.UtcNow;
+			}
+			await context.SaveChangesAsync();
+			
+			// CORRECTION APPLIQUÉE ICI
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId); 
+			
+			return true;
+		}
 
         public async Task<byte[]> GenerateReceiptAsync(Guid paiementId)
         {
@@ -260,8 +276,11 @@ namespace TransitManager.Infrastructure.Services
                 Statut = StatutPaiement.Valide,
                 DatePaiement = DateTime.UtcNow
             };
-            await CreateAsync(paiement);
-            return true;
+			// La méthode CreateAsync s'occupe déjà d'appeler la mise à jour.
+			// Mais par sécurité, on peut s'assurer qu'elle est bien appelée après la création.
+			await CreateAsync(paiement); 
+			// Pas besoin de rajouter l'appel ici, car CreateAsync le fait déjà.
+			return true;
         }
         
 		private async Task UpdateClientBalanceAsync(Guid clientId, TransitContext context)

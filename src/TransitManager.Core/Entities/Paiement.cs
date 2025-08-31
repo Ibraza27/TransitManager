@@ -4,138 +4,82 @@ using TransitManager.Core.Enums;
 
 namespace TransitManager.Core.Entities
 {
-    /// <summary>
-    /// Représente un paiement dans le système
-    /// </summary>
     public class Paiement : BaseEntity
     {
-        /// <summary>
-        /// Numéro de reçu unique
-        /// </summary>
+        // --- CHAMPS PRIVÉS ---
+        private string _numeroRecu = string.Empty;
+        private Guid _clientId;
+        private Guid? _colisId; // Ajouté pour la nouvelle fonctionnalité
+        private Guid? _conteneurId;
+        private Guid? _factureId;
+        private DateTime _datePaiement;
+        private decimal _montant;
+        private string _devise = "EUR";
+        private decimal _tauxChange = 1;
+        private TypePaiement _modePaiement;
+        private string? _reference;
+        private string? _banque;
+        private StatutPaiement _statut;
+        private string? _description;
+        private string? _commentaires;
+        private string? _recuScanne;
+        private DateTime? _dateEcheance;
+        private bool _rappelEnvoye;
+        private DateTime? _dateDernierRappel;
+
+        // --- PROPRIÉTÉS PUBLIQUES ---
         [Required]
         [StringLength(50)]
-        public string NumeroRecu { get; set; } = string.Empty;
+        public string NumeroRecu { get => _numeroRecu; set => SetProperty(ref _numeroRecu, value); }
 
-        /// <summary>
-        /// ID du client
-        /// </summary>
-        public Guid ClientId { get; set; }
+        public Guid ClientId { get => _clientId; set => SetProperty(ref _clientId, value); }
+        public Guid? ColisId { get => _colisId; set => SetProperty(ref _colisId, value); } // Ajouté
+        public Guid? ConteneurId { get => _conteneurId; set => SetProperty(ref _conteneurId, value); }
+        public Guid? FactureId { get => _factureId; set => SetProperty(ref _factureId, value); }
+        public DateTime DatePaiement { get => _datePaiement; set => SetProperty(ref _datePaiement, value); }
+        public decimal Montant { get => _montant; set => SetProperty(ref _montant, value); }
 
-        /// <summary>
-        /// ID du conteneur (si paiement lié à un conteneur spécifique)
-        /// </summary>
-        public Guid? ConteneurId { get; set; }
-
-        /// <summary>
-        /// ID de la facture associée
-        /// </summary>
-        public Guid? FactureId { get; set; }
-
-        /// <summary>
-        /// Date du paiement
-        /// </summary>
-        public DateTime DatePaiement { get; set; }
-
-        /// <summary>
-        /// Montant du paiement
-        /// </summary>
-        public decimal Montant { get; set; }
-
-        /// <summary>
-        /// Devise
-        /// </summary>
         [Required]
         [StringLength(3)]
-        public string Devise { get; set; } = "EUR";
+        public string Devise { get => _devise; set => SetProperty(ref _devise, value); }
+        public decimal TauxChange { get => _tauxChange; set => SetProperty(ref _tauxChange, value); }
+        public TypePaiement ModePaiement { get => _modePaiement; set => SetProperty(ref _modePaiement, value); }
 
-        /// <summary>
-        /// Taux de change appliqué
-        /// </summary>
-        public decimal TauxChange { get; set; } = 1;
+        [StringLength(100)]
+        public string? Reference { get => _reference; set => SetProperty(ref _reference, value); }
 
-        /// <summary>
-        /// Montant en devise locale
-        /// </summary>
+        [StringLength(100)]
+        public string? Banque { get => _banque; set => SetProperty(ref _banque, value); }
+
+        public StatutPaiement Statut { get => _statut; set => SetProperty(ref _statut, value); }
+
+        [StringLength(500)]
+        public string? Description { get => _description; set => SetProperty(ref _description, value); }
+        public string? Commentaires { get => _commentaires; set => SetProperty(ref _commentaires, value); }
+
+        [StringLength(500)]
+        public string? RecuScanne { get => _recuScanne; set => SetProperty(ref _recuScanne, value); }
+
+        public DateTime? DateEcheance { get => _dateEcheance; set => SetProperty(ref _dateEcheance, value); }
+        public bool RappelEnvoye { get => _rappelEnvoye; set => SetProperty(ref _rappelEnvoye, value); }
+        public DateTime? DateDernierRappel { get => _dateDernierRappel; set => SetProperty(ref _dateDernierRappel, value); }
+
+        // Propriétés calculées
         public decimal MontantLocal => Montant * TauxChange;
-
-        /// <summary>
-        /// Mode de paiement
-        /// </summary>
-        public TypePaiement ModePaiement { get; set; }
-
-        /// <summary>
-        /// Référence du paiement (numéro de chèque, virement, etc.)
-        /// </summary>
-        [StringLength(100)]
-        public string? Reference { get; set; }
-
-        /// <summary>
-        /// Banque (pour chèques et virements)
-        /// </summary>
-        [StringLength(100)]
-        public string? Banque { get; set; }
-
-        /// <summary>
-        /// Statut du paiement
-        /// </summary>
-        public StatutPaiement Statut { get; set; }
-
-        /// <summary>
-        /// Description/objet du paiement
-        /// </summary>
-        [StringLength(500)]
-        public string? Description { get; set; }
-
-        /// <summary>
-        /// Notes/commentaires
-        /// </summary>
-        public string? Commentaires { get; set; }
-
-        /// <summary>
-        /// Chemin vers le reçu scanné
-        /// </summary>
-        [StringLength(500)]
-        public string? RecuScanne { get; set; }
-
-        /// <summary>
-        /// Date d'échéance (pour les paiements différés)
-        /// </summary>
-        public DateTime? DateEcheance { get; set; }
-
-        /// <summary>
-        /// Indique si un rappel a été envoyé
-        /// </summary>
-        public bool RappelEnvoye { get; set; }
-
-        /// <summary>
-        /// Date du dernier rappel
-        /// </summary>
-        public DateTime? DateDernierRappel { get; set; }
+        public bool EstEnRetard => DateEcheance.HasValue && DateEcheance.Value < DateTime.UtcNow && Statut != StatutPaiement.Paye;
 
         // Navigation properties
-        /// <summary>
-        /// Client associé
-        /// </summary>
         public virtual Client? Client { get; set; }
-
-        /// <summary>
-        /// Conteneur associé
-        /// </summary>
+        public virtual Colis? Colis { get; set; }
         public virtual Conteneur? Conteneur { get; set; }
 
-        /// <summary>
-        /// Constructeur
-        /// </summary>
         public Paiement()
         {
-            DatePaiement = DateTime.UtcNow;
+            DatePaiement = DateTime.Now; // Modifié pour la date du jour locale
             NumeroRecu = GenerateNumeroRecu();
             Statut = StatutPaiement.Valide;
         }
 
-        /// <summary>
-        /// Génère un numéro de reçu unique
-        /// </summary>
         private static string GenerateNumeroRecu()
         {
             var year = DateTime.Now.ToString("yyyy");
@@ -144,14 +88,5 @@ namespace TransitManager.Core.Entities
             var random = new Random().Next(1000, 9999);
             return $"REC-{year}{month}{day}-{random}";
         }
-
-        /// <summary>
-        /// Indique si le paiement est en retard
-        /// </summary>
-        public bool EstEnRetard => 
-            DateEcheance.HasValue && 
-            DateEcheance.Value < DateTime.UtcNow && 
-            Statut != StatutPaiement.Paye;
     }
-
 }

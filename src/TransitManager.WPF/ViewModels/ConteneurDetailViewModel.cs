@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection; // <--- NOUVEAU
 using TransitManager.WPF.Views.Colis; // <--- NOUVEAU
 using TransitManager.WPF.Views;
 using TransitManager.WPF.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TransitManager.WPF.ViewModels
 {

@@ -13,6 +13,7 @@ using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
 using TransitManager.WPF.Models;
 using TransitManager.WPF.Views;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TransitManager.WPF.ViewModels
 {

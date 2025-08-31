@@ -27,14 +27,25 @@
                     <TextBlock Text="{Binding Colis.NumeroReference}" Opacity="0.6" Style="{StaticResource MaterialDesignSubtitle1TextBlock}"/>
                 </StackPanel>
 				
-                <Button Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center"
-                        Style="{StaticResource MaterialDesignRaisedButton}"
-                        Command="{Binding OpenInventaireCommand}">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="ClipboardList" Margin="0,0,8,0"/>
-                        <TextBlock Text="Inventaire"/>
-                    </StackPanel>
-                </Button>
+				<Button Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center"
+						Style="{StaticResource MaterialDesignRaisedButton}"
+						Command="{Binding OpenInventaireCommand}"
+						Margin="0,0,160,0">
+					<StackPanel Orientation="Horizontal">
+						<materialDesign:PackIcon Kind="ClipboardList" Margin="0,0,8,0"/>
+						<TextBlock Text="Inventaire"/>
+					</StackPanel>
+				</Button>
+
+				<Button Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center"
+						Style="{StaticResource MaterialDesignRaisedButton}"
+						Command="{Binding OpenPaiementCommand}"
+						Margin="160,0,0,0">
+					<StackPanel Orientation="Horizontal">
+						<materialDesign:PackIcon Kind="CreditCard" Margin="0,0,8,0"/>
+						<TextBlock Text="Paiements"/>
+					</StackPanel>
+				</Button>
 				
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
@@ -241,10 +252,17 @@
 								<StackPanel Grid.Column="1" Margin="5,0">
 									<TextBlock Text="Somme Payée" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,0,0,5"/>
 									<TextBox Text="{Binding Colis.SommePayee, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" 
+											 IsReadOnly="{Binding HasPaiements}"
 											 materialDesign:TextFieldAssist.SuffixText="€"
 											 Style="{StaticResource MaterialDesignOutlinedTextBox}" 
 											 FontWeight="Bold" FontSize="18"
-											 Foreground="{StaticResource SuccessBrush}"/>
+											 Foreground="{StaticResource SuccessBrush}">
+										<i:Interaction.Triggers>
+											<i:EventTrigger EventName="GotFocus">
+												<i:InvokeCommandAction Command="{Binding CheckPaiementModificationCommand}"/>
+											</i:EventTrigger>
+										</i:Interaction.Triggers>
+									</TextBox>
 								</StackPanel>
 
 								<StackPanel Grid.Column="2" Margin="5,0,0,0">

@@ -15,6 +15,7 @@ using TransitManager.WPF.Views.Inventaire;
 using System.Text.Json;
 using System.Windows;
 using TransitManager.WPF.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TransitManager.WPF.ViewModels
 {

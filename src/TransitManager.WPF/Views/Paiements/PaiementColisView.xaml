@@ -1,0 +1,77 @@
+<Window x:Class="TransitManager.WPF.Views.Paiements.PaiementColisView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:helpers="clr-namespace:TransitManager.WPF.Helpers"
+        mc:Ignorable="d"
+        Title="Détails des Paiements" Height="700" Width="900"
+        WindowStartupLocation="CenterOwner" WindowStyle="ToolWindow">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <materialDesign:Card Grid.Row="0" Padding="10" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0" materialDesign:HintAssist.Hint="Type" ItemsSource="{Binding Source={x:Static helpers:EnumValues.TypePaiementValues}}" SelectedItem="{Binding NewPaiement.ModePaiement}" Margin="0,0,10,0"/>
+                <TextBox Grid.Column="1" materialDesign:HintAssist.Hint="Montant" Text="{Binding NewPaiement.Montant, UpdateSourceTrigger=PropertyChanged, StringFormat=C}" Margin="0,0,10,0"/>
+                <DatePicker Grid.Column="2" materialDesign:HintAssist.Hint="Date" SelectedDate="{Binding NewPaiement.DatePaiement}" Margin="0,0,10,0"/>
+                <TextBox Grid.Column="3" materialDesign:HintAssist.Hint="Commentaire (Optionnel)" Text="{Binding NewPaiement.Commentaires, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
+                <Button Grid.Column="4" Command="{Binding AddItemCommand}" Style="{StaticResource MaterialDesignFloatingActionMiniButton}">
+                    <materialDesign:PackIcon Kind="Plus" />
+                </Button>
+            </Grid>
+        </materialDesign:Card>
+
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Items}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="False">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Date" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <DatePicker SelectedDate="{Binding DatePaiement, UpdateSourceTrigger=PropertyChanged}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridComboBoxColumn Header="Type" Width="*"
+                                        ItemsSource="{Binding Source={x:Static helpers:EnumValues.TypePaiementValues}}"
+                                        SelectedItemBinding="{Binding ModePaiement, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <DataGridTextColumn Header="Montant" Binding="{Binding Montant, StringFormat=C, UpdateSourceTrigger=PropertyChanged}" Width="*" FontWeight="Bold"/>
+                <DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires, UpdateSourceTrigger=PropertyChanged}" Width="2*"/>
+                <DataGridTemplateColumn Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Style="{StaticResource MaterialDesignIconButton}" ToolTip="Supprimer">
+                                <materialDesign:PackIcon Kind="Delete" Foreground="Red"/>
+                            </Button>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <materialDesign:Card Grid.Row="2" Padding="10" Margin="0,10,0,0">
+            <WrapPanel HorizontalAlignment="Right">
+                <TextBlock Text="Prix Total: " FontWeight="Bold" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding PrixTotalColis, StringFormat=C}" Margin="0,0,15,0" VerticalAlignment="Center"/>
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
+                <TextBlock Text="Total Payé: " FontWeight="Bold" Margin="15,0,5,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding TotalValeur, StringFormat=C}" Margin="0,0,15,0" VerticalAlignment="Center" Foreground="{StaticResource SuccessBrush}"/>
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
+                <TextBlock Text="Restant à Payer: " FontWeight="Bold" Margin="15,0,5,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding RestantAPayer, StringFormat=C}" Margin="0,0,0,0" VerticalAlignment="Center" FontWeight="Bold" Foreground="{StaticResource ErrorBrush}"/>
+            </WrapPanel>
+        </materialDesign:Card>
+        
+        <Button Grid.Row="3" Content="Fermer et Appliquer" Click="CloseButton_Click" HorizontalAlignment="Right" Margin="0,16,0,0" IsDefault="True"/>
+    </Grid>
+</Window>

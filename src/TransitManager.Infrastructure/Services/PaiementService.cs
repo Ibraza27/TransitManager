@@ -282,7 +282,18 @@ namespace TransitManager.Infrastructure.Services
 			// Pas besoin de rajouter l'appel ici, car CreateAsync le fait déjà.
 			return true;
         }
-        
+		
+		public async Task<IEnumerable<Paiement>> GetByColisAsync(Guid colisId)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			return await context.Paiements
+				.Include(p => p.Client) // On garde le client au cas où
+				.Where(p => p.ColisId == colisId)
+				.AsNoTracking()
+				.OrderByDescending(p => p.DatePaiement)
+				.ToListAsync();
+		}
+				
 		private async Task UpdateClientBalanceAsync(Guid clientId, TransitContext context)
 		{
 			var client = await context.Clients.FindAsync(clientId);

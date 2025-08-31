@@ -12,5 +12,6 @@ namespace TransitManager.WPF.Helpers
 		public static object[] TypeVehiculeValues => Enum.GetValues(typeof(TypeVehicule)).Cast<object>().ToArray(); 
         public static object[] EtatColisValues => Enum.GetValues(typeof(EtatColis)).Cast<object>().ToArray();
 		public static object[] TypeEnvoiValues => Enum.GetValues(typeof(TypeEnvoi)).Cast<object>().ToArray();
+		public static object[] TypePaiementValues => Enum.GetValues(typeof(TypePaiement)).Cast<object>().ToArray();
     }
 }

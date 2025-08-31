@@ -16,6 +16,7 @@ using TransitManager.WPF.Messages;
 using System.Windows; // Directive using ajoutée
 using System.Windows.Input;
 using System.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -27,6 +28,8 @@ namespace TransitManager.WPF.ViewModels
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
         private readonly IConteneurService _conteneurService;
+		private readonly IPaiementService _paiementService;
+		private readonly IServiceProvider _serviceProvider;
 		public Action? CloseAction { get; set; }
 		private bool _isModal = false;
 
@@ -182,6 +185,8 @@ namespace TransitManager.WPF.ViewModels
 		
 		public ObservableCollection<StatutColis> AvailableStatuses { get; } = new();
 		public bool HasInventaire => Colis != null && !string.IsNullOrEmpty(Colis.InventaireJson) && Colis.InventaireJson != "[]";
+		
+		public bool HasPaiements => Colis != null && Colis.Paiements.Any();
 
 
         #region Commandes
@@ -192,25 +197,71 @@ namespace TransitManager.WPF.ViewModels
         public IRelayCommand<Barcode> RemoveBarcodeCommand { get; }
         public IRelayCommand GenerateBarcodeCommand { get; }
 		public IAsyncRelayCommand OpenInventaireCommand { get; }
+		public IAsyncRelayCommand OpenPaiementCommand { get; }
+		public IAsyncRelayCommand CheckPaiementModificationCommand { get; }
         #endregion
 
-        public ColisDetailViewModel(IColisService colisService, IClientService clientService, IBarcodeService barcodeService, INavigationService navigationService, IDialogService dialogService, IConteneurService conteneurService)
-        {
-            _colisService = colisService;
-            _clientService = clientService;
-            _barcodeService = barcodeService;
-            _navigationService = navigationService;
-            _dialogService = dialogService;
-            _conteneurService = conteneurService;
+		public ColisDetailViewModel(IColisService colisService, IClientService clientService, IBarcodeService barcodeService, INavigationService navigationService, IDialogService dialogService, IConteneurService conteneurService, IPaiementService paiementService, IServiceProvider serviceProvider) // <-- AJOUTER IServiceProvider
+		{
+			_colisService = colisService;
+			_clientService = clientService;
+			_barcodeService = barcodeService;
+			_navigationService = navigationService;
+			_dialogService = dialogService;
+			_conteneurService = conteneurService;
+			_paiementService = paiementService; 
+			_serviceProvider = serviceProvider;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
             AddBarcodeCommand = new RelayCommand(AddBarcode, () => !string.IsNullOrWhiteSpace(NewBarcode));
             RemoveBarcodeCommand = new RelayCommand<Barcode>(RemoveBarcode);
 			OpenInventaireCommand = new AsyncRelayCommand(OpenInventaire);
+			OpenPaiementCommand = new AsyncRelayCommand(OpenPaiement);
+			CheckPaiementModificationCommand = new AsyncRelayCommand(CheckPaiementModification);
 			CheckInventaireModificationCommand = new AsyncRelayCommand(CheckInventaireModification);
             GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
         }
+		
+		private async Task OpenPaiement()
+		{
+			if (Colis == null) return;
+
+			using var scope = _serviceProvider.CreateScope();
+			var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementColisViewModel>();
+			
+			// On initialise le ViewModel avec l'objet Colis complet
+			await paiementViewModel.InitializeAsync(Colis);
+
+			var paiementWindow = new Views.Paiements.PaiementColisView(paiementViewModel)
+			{
+				Owner = System.Windows.Application.Current.MainWindow
+			};
+
+			if (paiementWindow.ShowDialog() == true)
+			{
+				// À la fermeture, on récupère la somme calculée par le ViewModel de la fenêtre
+				Colis.SommePayee = paiementViewModel.TotalValeur;
+				
+				// On notifie l'interface pour mettre à jour les champs liés
+				OnPropertyChanged(nameof(HasPaiements));
+			}
+		}
+
+		private async Task CheckPaiementModification()
+		{
+			if (HasPaiements)
+			{
+				var confirm = await _dialogService.ShowConfirmationAsync(
+					"Paiements existants",
+					"Le détail des paiements a déjà été commencé pour ce colis.\nVoulez-vous ouvrir la fenêtre de gestion des paiements ?");
+
+				if (confirm)
+				{
+					await OpenPaiement();
+				}
+			}
+		}
 		
         private async Task CheckInventaireModification()
         {

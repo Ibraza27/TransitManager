@@ -125,6 +125,7 @@ namespace TransitManager.Infrastructure.Services
 				.IgnoreQueryFilters() 
 				.Include(c => c.Conteneur)
 				.Include(c => c.Barcodes.Where(b => b.Actif))
+				.Include(c => c.Paiements)
 				.AsNoTracking()
 				.FirstOrDefaultAsync(c => c.Id == id);
 

@@ -143,6 +143,7 @@ namespace TransitManager.WPF
 			services.AddTransient<AddVehiculeToConteneurViewModel>();
             services.AddTransient<NotificationsViewModel>();
 			services.AddTransient<PaiementColisViewModel>();
+			services.AddTransient<PaiementVehiculeViewModel>();
 
             // Views (Transient)
             services.AddTransient<LoginView>();
@@ -151,6 +152,7 @@ namespace TransitManager.WPF
 			services.AddTransient<AddColisToConteneurView>();
 			services.AddTransient<AddVehiculeToConteneurView>();
 			services.AddTransient<Views.Paiements.PaiementColisView>();
+			services.AddTransient<Views.Paiements.PaiementVehiculeView>();
             services.AddTransient<DashboardView>();
             services.AddTransient<ClientListView>();
             services.AddTransient<ClientDetailView>();

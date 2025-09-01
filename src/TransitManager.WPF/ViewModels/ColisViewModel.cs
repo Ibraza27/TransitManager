@@ -30,6 +30,7 @@ namespace TransitManager.WPF.ViewModels
         private readonly IExportService _exportService;
         private readonly IMessenger _messenger;
 		private readonly IServiceProvider _serviceProvider;
+		private readonly IPaiementService _paiementService;
         #endregion
 
         #region Propriétés
@@ -99,16 +100,18 @@ namespace TransitManager.WPF.ViewModels
 		public IAsyncRelayCommand<Colis> ViewClientDetailsInWindowCommand { get; }
         #endregion
 
-        public ColisViewModel(
-            IColisService colisService, IClientService clientService, IConteneurService conteneurService, 
-            INavigationService navigationService, IDialogService dialogService, IExportService exportService, IMessenger messenger, IServiceProvider serviceProvider)
-        {
+		public ColisViewModel(
+			IColisService colisService, IClientService clientService, IConteneurService conteneurService, 
+			INavigationService navigationService, IDialogService dialogService, IExportService exportService, 
+			IMessenger messenger, IServiceProvider serviceProvider, IPaiementService paiementService) // <-- AJOUTER
+		{
             _colisService = colisService;
             _clientService = clientService;
             _conteneurService = conteneurService;
             _navigationService = navigationService;
             _dialogService = dialogService;
             _exportService = exportService;
+			_paiementService = paiementService;
             _messenger = messenger; // Ligne ajoutée
 			_serviceProvider = serviceProvider;
             Title = "Gestion des Colis / Marchandises";
@@ -122,10 +125,34 @@ namespace TransitManager.WPF.ViewModels
             DeleteCommand = new AsyncRelayCommand<Colis>(DeleteColis);
             OpenInventaireFromListCommand = new AsyncRelayCommand<Colis>(OpenInventaireFromList);
 			ViewClientDetailsInWindowCommand = new AsyncRelayCommand<Colis>(ViewClientDetailsInWindowAsync);
+			OpenPaiementsWindowCommand = new AsyncRelayCommand<Colis>(OpenPaiementsWindowAsync);
 
             InitializeStatutsList();
             _messenger.RegisterAll(this);
         }
+		
+		// ##### NOUVELLE COMMANDE #####
+		public IAsyncRelayCommand<Colis> OpenPaiementsWindowCommand { get; }
+
+		// ##### NOUVELLE MÉTHODE #####
+		private async Task OpenPaiementsWindowAsync(Colis? colis)
+		{
+			if (colis == null) return;
+
+			using var scope = _serviceProvider.CreateScope();
+			var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementColisViewModel>();
+			await paiementViewModel.InitializeAsync(colis);
+
+			var paiementWindow = new Views.Paiements.PaiementColisView(paiementViewModel)
+			{
+				Owner = System.Windows.Application.Current.MainWindow
+			};
+
+			if (paiementWindow.ShowDialog() == true)
+			{
+				await LoadAsync(); // Rafraîchir la liste principale
+			}
+		}
 		
 		private async Task ViewClientDetailsInWindowAsync(Colis? colis)
 		{

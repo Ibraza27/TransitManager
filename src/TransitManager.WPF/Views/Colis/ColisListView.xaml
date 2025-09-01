@@ -114,6 +114,9 @@
 									<MenuItem Header="Inventaire" Command="{Binding PlacementTarget.Tag.OpenInventaireFromListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
 										<MenuItem.Icon><materialDesign:PackIcon Kind="ClipboardList" /></MenuItem.Icon>
 									</MenuItem>
+									<MenuItem Header="Gérer les Paiements" Command="{Binding PlacementTarget.Tag.OpenPaiementsWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+										<MenuItem.Icon><materialDesign:PackIcon Kind="CreditCard" /></MenuItem.Icon>
+									</MenuItem>
 									<Separator />
 									<MenuItem Header="Modifier / Voir Détails" Command="{Binding PlacementTarget.Tag.EditCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
 										<MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>

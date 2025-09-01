@@ -10,6 +10,7 @@ namespace TransitManager.Core.Entities
         private string _numeroRecu = string.Empty;
         private Guid _clientId;
         private Guid? _colisId; // Ajouté pour la nouvelle fonctionnalité
+		private Guid? _vehiculeId;
         private Guid? _conteneurId;
         private Guid? _factureId;
         private DateTime _datePaiement;
@@ -34,7 +35,9 @@ namespace TransitManager.Core.Entities
 
         public Guid ClientId { get => _clientId; set => SetProperty(ref _clientId, value); }
         public Guid? ColisId { get => _colisId; set => SetProperty(ref _colisId, value); } // Ajouté
-        public Guid? ConteneurId { get => _conteneurId; set => SetProperty(ref _conteneurId, value); }
+		//public Guid? VehiculeId { get; private set; }
+		public Guid? VehiculeId { get => _vehiculeId; set => SetProperty(ref _vehiculeId, value); }
+		public Guid? ConteneurId { get => _conteneurId; set => SetProperty(ref _conteneurId, value); }
         public Guid? FactureId { get => _factureId; set => SetProperty(ref _factureId, value); }
         public DateTime DatePaiement { get => _datePaiement; set => SetProperty(ref _datePaiement, value); }
         public decimal Montant { get => _montant; set => SetProperty(ref _montant, value); }
@@ -71,7 +74,8 @@ namespace TransitManager.Core.Entities
         // Navigation properties
         public virtual Client? Client { get; set; }
         public virtual Colis? Colis { get; set; }
-        public virtual Conteneur? Conteneur { get; set; }
+		public virtual Vehicule? Vehicule { get; set; }
+		public virtual Conteneur? Conteneur { get; set; }
 
         public Paiement()
         {

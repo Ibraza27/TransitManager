@@ -166,23 +166,20 @@
 										<Setter Property="ContextMenu">
 											<Setter.Value>
 												<ContextMenu>
-													<!-- Le code complet et correct pour le premier MenuItem -->
 													<MenuItem Header="Ouvrir l'inventaire" 
 															  Command="{Binding PlacementTarget.Tag.OpenInventaireCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
 															  CommandParameter="{Binding}">
 														<MenuItem.Icon><materialDesign:PackIcon Kind="ClipboardList" /></MenuItem.Icon>
 													</MenuItem>
-
-													<!-- Le code complet et correct pour le deuxième MenuItem -->
 													<MenuItem Header="Modifier le colis..." 
 															  Command="{Binding PlacementTarget.Tag.EditColisInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
 															  CommandParameter="{Binding}">
 														<MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
 													</MenuItem>
-													
+													<MenuItem Header="Gérer les Paiements" Command="{Binding PlacementTarget.Tag.OpenColisPaiementsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+														<MenuItem.Icon><materialDesign:PackIcon Kind="CreditCard" /></MenuItem.Icon>
+													</MenuItem>
 													<Separator />
-
-													<!-- Le MenuItem pour voir le client que nous avons ajouté -->
 													<MenuItem Header="Voir détails du client..."
 															  Command="{Binding PlacementTarget.Tag.ViewClientDetailsInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
 															  CommandParameter="{Binding Client.Id}">
@@ -303,6 +300,9 @@
 															  Command="{Binding PlacementTarget.Tag.EditVehiculeInWindowCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
 															  CommandParameter="{Binding}">
 														<MenuItem.Icon><materialDesign:PackIcon Kind="Pencil" /></MenuItem.Icon>
+													</MenuItem>
+													<MenuItem Header="Gérer les Paiements" Command="{Binding PlacementTarget.Tag.OpenVehiculePaiementsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}">
+														<MenuItem.Icon><materialDesign:PackIcon Kind="CreditCard" /></MenuItem.Icon>
 													</MenuItem>
 													<Separator />
 													<MenuItem Header="Voir détails du client..."

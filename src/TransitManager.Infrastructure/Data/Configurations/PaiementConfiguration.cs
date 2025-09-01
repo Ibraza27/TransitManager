@@ -97,6 +97,11 @@ namespace TransitManager.Infrastructure.Data.Configurations
 				.WithMany(c => c.Paiements)
 				.HasForeignKey(p => p.ColisId)
 				.OnDelete(DeleteBehavior.Cascade); // Supprime les paiements si le colis est supprimé
+				
+			builder.HasOne(p => p.Vehicule)
+				.WithMany(v => v.Paiements)
+				.HasForeignKey(p => p.VehiculeId)
+				.OnDelete(DeleteBehavior.Cascade);
 	
 
             // Propriétés calculées (ignorées par EF)

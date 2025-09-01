@@ -104,11 +104,15 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
         
-        public async Task<Vehicule?> GetByIdAsync(Guid id)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Vehicules.Include(v => v.Client).AsNoTracking().FirstOrDefaultAsync(v => v.Id == id);
-        }
+		public async Task<Vehicule?> GetByIdAsync(Guid id)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			return await context.Vehicules
+				.Include(v => v.Client)
+				.Include(v => v.Paiements) // <-- LIGNE À AJOUTER
+				.AsNoTracking()
+				.FirstOrDefaultAsync(v => v.Id == id);
+		}
 
         public async Task<IEnumerable<Vehicule>> GetAllAsync()
         {

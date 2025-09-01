@@ -20,7 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace TransitManager.WPF.ViewModels
 {
-    public class ColisDetailViewModel : BaseViewModel
+    public class ColisDetailViewModel : BaseViewModel, IRecipient<EntityTotalPaidUpdatedMessage>
     {
         private readonly IColisService _colisService;
         private readonly IClientService _clientService;
@@ -30,6 +30,7 @@ namespace TransitManager.WPF.ViewModels
         private readonly IConteneurService _conteneurService;
 		private readonly IPaiementService _paiementService;
 		private readonly IServiceProvider _serviceProvider;
+		private readonly IMessenger _messenger;
 		public Action? CloseAction { get; set; }
 		private bool _isModal = false;
 
@@ -201,7 +202,7 @@ namespace TransitManager.WPF.ViewModels
 		public IAsyncRelayCommand CheckPaiementModificationCommand { get; }
         #endregion
 
-		public ColisDetailViewModel(IColisService colisService, IClientService clientService, IBarcodeService barcodeService, INavigationService navigationService, IDialogService dialogService, IConteneurService conteneurService, IPaiementService paiementService, IServiceProvider serviceProvider) // <-- AJOUTER IServiceProvider
+		public ColisDetailViewModel(IColisService colisService, IClientService clientService, IBarcodeService barcodeService, INavigationService navigationService, IDialogService dialogService, IConteneurService conteneurService, IPaiementService paiementService, IServiceProvider serviceProvider, IMessenger messenger)
 		{
 			_colisService = colisService;
 			_clientService = clientService;
@@ -211,6 +212,9 @@ namespace TransitManager.WPF.ViewModels
 			_conteneurService = conteneurService;
 			_paiementService = paiementService; 
 			_serviceProvider = serviceProvider;
+			_messenger = messenger;
+			
+			_messenger.RegisterAll(this);
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
@@ -222,6 +226,16 @@ namespace TransitManager.WPF.ViewModels
 			CheckInventaireModificationCommand = new AsyncRelayCommand(CheckInventaireModification);
             GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
         }
+		
+		public void Receive(EntityTotalPaidUpdatedMessage message)
+		{
+			// On vérifie si le message concerne bien le colis actuellement affiché.
+			if (Colis != null && Colis.Id == message.EntityId)
+			{
+				// On met à jour la propriété SommePayee, ce qui mettra à jour l'UI en temps réel.
+				Colis.SommePayee = message.NewTotalPaid;
+			}
+		}
 		
 		private async Task OpenPaiement()
 		{

@@ -14,35 +14,36 @@ using TransitManager.WPF.Messages;
 
 namespace TransitManager.WPF.ViewModels
 {
-    public class PaiementColisViewModel : BaseViewModel
+    public class PaiementVehiculeViewModel : BaseViewModel
     {
         private readonly IPaiementService _paiementService;
         private readonly IDialogService _dialogService;
 		private readonly IMessenger _messenger;
         private Guid _clientId;
-        private Guid _colisId;
+        private Guid _vehiculeId;
 
         private Paiement _newPaiement = new();
         public ObservableCollection<Paiement> Items { get; } = new();
 
         public Paiement NewPaiement { get => _newPaiement; set => SetProperty(ref _newPaiement, value); }
 
-        private decimal _prixTotalColis;
-        public decimal PrixTotalColis { get => _prixTotalColis; set => SetProperty(ref _prixTotalColis, value); }
-        
+        private decimal _prixTotalVehicule;
+        public decimal PrixTotalVehicule { get => _prixTotalVehicule; set => SetProperty(ref _prixTotalVehicule, value); }
+
         public int TotalPaiements => Items.Count;
         public decimal TotalValeur => Items.Sum(i => i.Montant);
-        public decimal RestantAPayer => PrixTotalColis - TotalValeur;
+        public decimal RestantAPayer => PrixTotalVehicule - TotalValeur;
 
         public IAsyncRelayCommand AddItemCommand { get; }
         public IAsyncRelayCommand<Paiement> RemoveItemCommand { get; }
         public IAsyncRelayCommand<Paiement> UpdateItemCommand { get; }
 
-        public PaiementColisViewModel(IPaiementService paiementService, IDialogService dialogService, IMessenger messenger) 
+        public PaiementVehiculeViewModel(IPaiementService paiementService, IDialogService dialogService, IMessenger messenger)
         {
             _paiementService = paiementService;
             _dialogService = dialogService;
-			_messenger = messenger; 
+			_messenger = messenger;
+            Title = "Détails des Paiements du Véhicule";
 
             AddItemCommand = new AsyncRelayCommand(AddItem, CanAddItem);
             RemoveItemCommand = new AsyncRelayCommand<Paiement>(RemoveItem);
@@ -52,13 +53,13 @@ namespace TransitManager.WPF.ViewModels
             Items.CollectionChanged += (s, e) => UpdateTotals();
         }
 
-        public async Task InitializeAsync(Colis colis)
+        public async Task InitializeAsync(Vehicule vehicule)
         {
-            _clientId = colis.ClientId;
-            _colisId = colis.Id;
-            PrixTotalColis = colis.PrixTotal;
+            _clientId = vehicule.ClientId;
+            _vehiculeId = vehicule.Id;
+            PrixTotalVehicule = vehicule.PrixTotal;
             
-            var existingPaiements = await _paiementService.GetByColisAsync(_colisId);
+            var existingPaiements = await _paiementService.GetByVehiculeAsync(_vehiculeId);
             Items.Clear();
             foreach (var p in existingPaiements)
             {
@@ -68,13 +69,10 @@ namespace TransitManager.WPF.ViewModels
             ResetNewPaiement();
             UpdateTotals();
         }
-        
+
         private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (sender is Paiement editedPaiement)
-            {
-                UpdateItemCommand.Execute(editedPaiement);
-            }
+            if (sender is Paiement editedPaiement) { UpdateItemCommand.Execute(editedPaiement); }
         }
 
         private void UpdateTotals()
@@ -82,7 +80,7 @@ namespace TransitManager.WPF.ViewModels
             OnPropertyChanged(nameof(TotalPaiements));
             OnPropertyChanged(nameof(TotalValeur));
             OnPropertyChanged(nameof(RestantAPayer));
-			_messenger.Send(new EntityTotalPaidUpdatedMessage(_colisId, TotalValeur));
+			_messenger.Send(new EntityTotalPaidUpdatedMessage(_vehiculeId, TotalValeur));
         }
 
         private bool CanAddItem() => NewPaiement.Montant > 0;
@@ -91,7 +89,7 @@ namespace TransitManager.WPF.ViewModels
         {
             var paiementToAdd = NewPaiement;
             paiementToAdd.ClientId = _clientId;
-            paiementToAdd.ColisId = _colisId;
+            paiementToAdd.VehiculeId = _vehiculeId;
             
             var createdPaiement = await _paiementService.CreateAsync(paiementToAdd);
             createdPaiement.PropertyChanged += OnItemPropertyChanged;
@@ -103,8 +101,7 @@ namespace TransitManager.WPF.ViewModels
         private async Task RemoveItem(Paiement? item)
         {
             if (item == null) return;
-
-            var confirm = await _dialogService.ShowConfirmationAsync("Confirmation", "Voulez-vous vraiment supprimer ce paiement ?");
+            var confirm = await _dialogService.ShowConfirmationAsync("Confirmation", "Supprimer ce paiement ?");
             if (confirm)
             {
                 await _paiementService.DeleteAsync(item.Id);
@@ -122,7 +119,7 @@ namespace TransitManager.WPF.ViewModels
 
         private void ResetNewPaiement()
         {
-            NewPaiement = new Paiement { ClientId = _clientId, ColisId = _colisId };
+            NewPaiement = new Paiement { ClientId = _clientId, VehiculeId = _vehiculeId };
             NewPaiement.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
         }
     }

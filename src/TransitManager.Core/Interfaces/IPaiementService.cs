@@ -13,6 +13,7 @@ namespace TransitManager.Core.Interfaces
         Task<IEnumerable<Paiement>> GetByClientAsync(Guid clientId);
         Task<IEnumerable<Paiement>> GetByConteneurAsync(Guid conteneurId);
 		Task<IEnumerable<Paiement>> GetByColisAsync(Guid colisId);
+		Task<IEnumerable<Paiement>> GetByVehiculeAsync(Guid vehiculeId);
         Task<IEnumerable<Paiement>> GetByPeriodAsync(DateTime debut, DateTime fin);
         Task<Paiement> CreateAsync(Paiement paiement);
         Task<Paiement> UpdateAsync(Paiement paiement);

@@ -293,6 +293,16 @@ namespace TransitManager.Infrastructure.Services
 				.OrderByDescending(p => p.DatePaiement)
 				.ToListAsync();
 		}
+		
+		public async Task<IEnumerable<Paiement>> GetByVehiculeAsync(Guid vehiculeId)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			return await context.Paiements
+				.Where(p => p.VehiculeId == vehiculeId)
+				.AsNoTracking()
+				.OrderByDescending(p => p.DatePaiement)
+				.ToListAsync();
+		}
 				
 		private async Task UpdateClientBalanceAsync(Guid clientId, TransitContext context)
 		{

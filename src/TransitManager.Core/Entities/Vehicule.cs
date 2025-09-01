@@ -84,6 +84,7 @@ namespace TransitManager.Core.Entities
         // --- RELATIONS DE NAVIGATION ---
         public virtual Client? Client { get; set; }
         public virtual Conteneur? Conteneur { get; set; }
+		public virtual ICollection<Paiement> Paiements { get; set; } = new List<Paiement>();
         
         public Vehicule()
         {

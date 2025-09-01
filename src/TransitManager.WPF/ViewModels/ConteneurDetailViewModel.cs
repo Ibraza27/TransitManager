@@ -31,7 +31,8 @@ namespace TransitManager.WPF.ViewModels
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
         private readonly IMessenger _messenger;
-        private readonly IServiceProvider _serviceProvider; // <--- NOUVEAU
+		private readonly IPaiementService _paiementService;
+		private readonly IServiceProvider _serviceProvider;
 
         private Conteneur? _conteneur;
         public Conteneur? Conteneur
@@ -94,18 +95,26 @@ namespace TransitManager.WPF.ViewModels
 
 		#endregion
 
-        public ConteneurDetailViewModel(
-            IConteneurService conteneurService, IColisService colisService, IVehiculeService vehiculeService,
-            INavigationService navigationService, IDialogService dialogService, IClientService clientService, IMessenger messenger, IServiceProvider serviceProvider)
-        {
-            _conteneurService = conteneurService;
-            _colisService = colisService;
-            _vehiculeService = vehiculeService;
-            _clientService = clientService;
-            _navigationService = navigationService;
-            _dialogService = dialogService;
-            _messenger = messenger;
-            _serviceProvider = serviceProvider; // <--- NOUVEAU
+		public ConteneurDetailViewModel(
+			IConteneurService conteneurService, 
+			IColisService colisService, 
+			IVehiculeService vehiculeService,
+			INavigationService navigationService, 
+			IDialogService dialogService, 
+			IClientService clientService, 
+			IMessenger messenger, 
+			IServiceProvider serviceProvider,
+			IPaiementService paiementService)
+		{
+			_conteneurService = conteneurService;
+			_colisService = colisService;
+			_vehiculeService = vehiculeService;
+			_clientService = clientService;
+			_navigationService = navigationService;
+			_dialogService = dialogService;
+			_messenger = messenger;
+			_serviceProvider = serviceProvider;
+			_paiementService = paiementService;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(() => _navigationService.GoBack());
@@ -124,10 +133,38 @@ namespace TransitManager.WPF.ViewModels
 			ViewClientDetailsInWindowCommand = new AsyncRelayCommand<Guid>(ViewClientDetailsInWindowAsync); // <--- NOUVELLE LIGNE
 			OpenAddColisWindowCommand = new AsyncRelayCommand(OpenAddColisWindowAsync);
 			OpenAddVehiculeWindowCommand = new AsyncRelayCommand(OpenAddVehiculeWindowAsync);
+			OpenColisPaiementsCommand = new AsyncRelayCommand<Colis>(OpenColisPaiementsAsync);
+			OpenVehiculePaiementsCommand = new AsyncRelayCommand<Vehicule>(OpenVehiculePaiementsAsync);
 
             ColisAffectes.CollectionChanged += OnAffectationChanged;
             VehiculesAffectes.CollectionChanged += OnAffectationChanged;
         }
+		
+		// ##### NOUVELLES COMMANDES #####
+		public IAsyncRelayCommand<Colis> OpenColisPaiementsCommand { get; }
+		public IAsyncRelayCommand<Vehicule> OpenVehiculePaiementsCommand { get; }
+
+		// ##### NOUVELLES MÉTHODES #####
+		private async Task OpenColisPaiementsAsync(Colis? colis)
+		{
+			if (colis == null || Conteneur == null) return;
+			// La logique est identique aux ViewModels précédents
+			using var scope = _serviceProvider.CreateScope();
+			var vm = scope.ServiceProvider.GetRequiredService<PaiementColisViewModel>();
+			await vm.InitializeAsync(colis);
+			var window = new Views.Paiements.PaiementColisView(vm) { Owner = System.Windows.Application.Current.MainWindow };
+			if (window.ShowDialog() == true) { await InitializeAsync(Conteneur.Id); }
+		}
+
+		private async Task OpenVehiculePaiementsAsync(Vehicule? vehicule)
+		{
+			if (vehicule == null || Conteneur == null) return;
+			using var scope = _serviceProvider.CreateScope();
+			var vm = scope.ServiceProvider.GetRequiredService<PaiementVehiculeViewModel>();
+			await vm.InitializeAsync(vehicule);
+			var window = new Views.Paiements.PaiementVehiculeView(vm) { Owner = System.Windows.Application.Current.MainWindow };
+			if (window.ShowDialog() == true) { await InitializeAsync(Conteneur.Id); }
+		}
 		
 		private async Task OpenAddVehiculeWindowAsync()
 		{

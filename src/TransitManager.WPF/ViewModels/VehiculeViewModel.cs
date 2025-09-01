@@ -25,6 +25,7 @@ namespace TransitManager.WPF.ViewModels
         private readonly IDialogService _dialogService;
 		private readonly IMessenger _messenger;
 		private readonly IServiceProvider _serviceProvider;
+		private readonly IPaiementService _paiementService; 
 
         private ObservableCollection<Vehicule> _vehicules = new();
         public ObservableCollection<Vehicule> Vehicules { get => _vehicules; set => SetProperty(ref _vehicules, value); }
@@ -78,7 +79,7 @@ namespace TransitManager.WPF.ViewModels
         public VehiculeViewModel(
 			IVehiculeService vehiculeService, IClientService clientService, IConteneurService conteneurService, 
 			INavigationService navigationService, IDialogService dialogService, IMessenger messenger,
-			IServiceProvider serviceProvider)
+			IServiceProvider serviceProvider, IPaiementService paiementService)
         {
             _vehiculeService = vehiculeService;
             _clientService = clientService;
@@ -87,6 +88,7 @@ namespace TransitManager.WPF.ViewModels
             _dialogService = dialogService;
 			_messenger = messenger;
 			_serviceProvider = serviceProvider;
+			_paiementService = paiementService;
 			_messenger.RegisterAll(this);
             Title = "Gestion des Véhicules";
 
@@ -96,10 +98,34 @@ namespace TransitManager.WPF.ViewModels
             EditCommand = new AsyncRelayCommand<Vehicule>(EditVehicule);
             DeleteCommand = new AsyncRelayCommand<Vehicule>(DeleteVehicule);
 			ViewClientDetailsInWindowCommand = new AsyncRelayCommand<Vehicule>(ViewClientDetailsInWindowAsync);
+			OpenPaiementsWindowCommand = new AsyncRelayCommand<Vehicule>(OpenPaiementsWindowAsync);
             
             StatutsList = new ObservableCollection<string>(Enum.GetNames(typeof(StatutVehicule)));
             StatutsList.Insert(0, "Tous");
         }
+		
+		// ##### NOUVELLE COMMANDE #####
+		public IAsyncRelayCommand<Vehicule> OpenPaiementsWindowCommand { get; }
+
+		// ##### NOUVELLE MÉTHODE #####
+		private async Task OpenPaiementsWindowAsync(Vehicule? vehicule)
+		{
+			if (vehicule == null) return;
+
+			using var scope = _serviceProvider.CreateScope();
+			var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementVehiculeViewModel>();
+			await paiementViewModel.InitializeAsync(vehicule);
+
+			var paiementWindow = new Views.Paiements.PaiementVehiculeView(paiementViewModel)
+			{
+				Owner = System.Windows.Application.Current.MainWindow
+			};
+
+			if (paiementWindow.ShowDialog() == true)
+			{
+				await LoadAsync(); // Rafraîchir
+			}
+		}
 		
         public async void Receive(ClientUpdatedMessage message)
         {

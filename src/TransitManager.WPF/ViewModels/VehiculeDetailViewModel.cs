@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,17 +13,21 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
-using Microsoft.Extensions.DependencyInjection;
+using CommunityToolkit.Mvvm.Messaging;
+using TransitManager.WPF.Messages;
 
 namespace TransitManager.WPF.ViewModels
 {
-    public class VehiculeDetailViewModel : BaseViewModel
+    public class VehiculeDetailViewModel : BaseViewModel, IRecipient<EntityTotalPaidUpdatedMessage>
     {
         private readonly IVehiculeService _vehiculeService;
         private readonly IClientService _clientService;
-        private readonly IConteneurService _conteneurService; // <-- NOUVEAU : Service injecté
+        private readonly IConteneurService _conteneurService;
         private readonly INavigationService _navigationService;
         private readonly IDialogService _dialogService;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IPaiementService _paiementService;
+		private readonly IMessenger _messenger;
 		public Action? CloseAction { get; set; }
 		private bool _isModal = false;
 		
@@ -116,28 +121,86 @@ namespace TransitManager.WPF.ViewModels
 			}
 		}
         
+        public bool HasPaiements => Vehicule != null && Vehicule.Paiements.Any();
+
         public IAsyncRelayCommand SaveCommand { get; }
         public IRelayCommand CancelCommand { get; }
         public IRelayCommand<System.Windows.Point> AddDamagePointCommand { get; }
         public IRelayCommand<System.Windows.Point> RemoveDamagePointCommand { get; }
+        public IAsyncRelayCommand OpenPaiementCommand { get; }
+        public IAsyncRelayCommand CheckPaiementModificationCommand { get; }
 
         public VehiculeDetailViewModel(IVehiculeService vehiculeService, IClientService clientService, 
-                                       IConteneurService conteneurService, // <-- NOUVEAU : Service injecté
-                                       INavigationService navigationService, IDialogService dialogService)
+                                       IConteneurService conteneurService, INavigationService navigationService, 
+                                       IDialogService dialogService, IServiceProvider serviceProvider, IPaiementService paiementService, IMessenger messenger)
         {
             _vehiculeService = vehiculeService;
             _clientService = clientService;
-            _conteneurService = conteneurService; // <-- NOUVEAU : Service assigné
+            _conteneurService = conteneurService;
             _navigationService = navigationService;
             _dialogService = dialogService;
+            _serviceProvider = serviceProvider;
+            _paiementService = paiementService;
+			_messenger = messenger;
+			_messenger.RegisterAll(this);
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
             AddDamagePointCommand = new RelayCommand<System.Windows.Point>(AddDamagePoint);
             RemoveDamagePointCommand = new RelayCommand<System.Windows.Point>(RemoveDamagePoint);
+            OpenPaiementCommand = new AsyncRelayCommand(OpenPaiement);
+            CheckPaiementModificationCommand = new AsyncRelayCommand(CheckPaiementModification);
             
             DamagePoints.CollectionChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
             Rayures.StrokesChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
+        }
+		
+		public void Receive(EntityTotalPaidUpdatedMessage message)
+		{
+			if (Vehicule != null && Vehicule.Id == message.EntityId)
+			{
+				Vehicule.SommePayee = message.NewTotalPaid;
+			}
+		}
+
+
+        private async Task OpenPaiement()
+        {
+            if (Vehicule == null) return;
+
+            using var scope = _serviceProvider.CreateScope();
+            var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementVehiculeViewModel>();
+            await paiementViewModel.InitializeAsync(Vehicule);
+
+            var paiementWindow = new Views.Paiements.PaiementVehiculeView(paiementViewModel)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+
+            if (paiementWindow.ShowDialog() == true)
+            {
+                var updatedVehicule = await _vehiculeService.GetByIdAsync(Vehicule.Id);
+                if(updatedVehicule != null)
+                {
+                    Vehicule.SommePayee = updatedVehicule.Paiements.Sum(p => p.Montant);
+                }
+                OnPropertyChanged(nameof(HasPaiements));
+            }
+        }
+
+        private async Task CheckPaiementModification()
+        {
+            if (HasPaiements)
+            {
+                var confirm = await _dialogService.ShowConfirmationAsync(
+                    "Paiements existants",
+                    "Le détail des paiements a déjà été commencé pour ce véhicule.\nVoulez-vous ouvrir la fenêtre de gestion des paiements ?");
+
+                if (confirm)
+                {
+                    await OpenPaiement();
+                }
+            }
         }
         
         public async Task InitializeAsync(string newMarker)

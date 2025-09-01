@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:helpers="clr-namespace:TransitManager.WPF.Helpers"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1200">
 
@@ -14,16 +15,24 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- En-tête -->
-        <materialDesign:Card Grid.Row="0" Padding="20" Margin="10">
-            <Grid>
-                <TextBlock Text="{Binding Title}" Style="{StaticResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
-                    <Button Content="Annuler" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
-                </StackPanel>
-            </Grid>
-        </materialDesign:Card>
+		<!-- En-tête -->
+		<materialDesign:Card Grid.Row="0" Padding="20" Margin="10">
+			<Grid>
+				<TextBlock Text="{Binding Title}" Style="{StaticResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center"/>
+				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+					<!-- Bouton Paiements -->
+					<Button Command="{Binding OpenPaiementCommand}" Margin="0,0,20,0" Style="{StaticResource MaterialDesignRaisedButton}">
+						<StackPanel Orientation="Horizontal">
+							<materialDesign:PackIcon Kind="CreditCard" Margin="0,0,8,0"/>
+							<TextBlock Text="Paiements"/>
+						</StackPanel>
+					</Button>
+					<!-- Boutons Enregistrer et Annuler -->
+					<Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
+					<Button Content="Annuler" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
+				</StackPanel>
+			</Grid>
+		</materialDesign:Card>
 
         <!-- Contenu -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -98,8 +107,19 @@
                              <TextBox Text="{Binding Vehicule.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" materialDesign:TextFieldAssist.SuffixText="€" materialDesign:HintAssist.Hint="Valeur Déclarée" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
                              <Grid>
                                  <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                 <TextBox Grid.Column="0" Text="{Binding Vehicule.PrixTotal, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" materialDesign:TextFieldAssist.SuffixText="€" materialDesign:HintAssist.Hint="Prix Total" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,5,0" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                                 <TextBox Grid.Column="1" Text="{Binding Vehicule.SommePayee, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" materialDesign:TextFieldAssist.SuffixText="€" materialDesign:HintAssist.Hint="Somme Payée" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="5,0,5,0" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}"/>
+                                 <TextBox Grid.Column="0" Text="{Binding Vehicule.PrixTotal, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" materialDesign:TextFieldAssist.SuffixText="€" materialDesign:HintAssist.Hint="Prix Total" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,5,0" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>								 
+								<TextBox Grid.Column="1" Text="{Binding Vehicule.SommePayee, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" 
+										 IsReadOnly="{Binding HasPaiements}"
+										 materialDesign:TextFieldAssist.SuffixText="€" 
+										 materialDesign:HintAssist.Hint="Somme Payée" 
+										 Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+										 Margin="5,0,5,0" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}">
+									<i:Interaction.Triggers>
+										<i:EventTrigger EventName="GotFocus">
+											<i:InvokeCommandAction Command="{Binding CheckPaiementModificationCommand}"/>
+										</i:EventTrigger>
+									</i:Interaction.Triggers>
+								</TextBox>								 
                                  <TextBox Grid.Column="2" Text="{Binding Vehicule.RestantAPayer, Mode=OneWay, StringFormat=N2}" materialDesign:TextFieldAssist.SuffixText="€" materialDesign:HintAssist.Hint="Restant à Payer" Style="{StaticResource MaterialDesignOutlinedTextBox}" IsReadOnly="True" Margin="5,0,0,0" FontWeight="Bold" Foreground="{StaticResource ErrorBrush}"/>
                              </Grid>
                              <TextBox Text="{Binding Vehicule.Commentaires, UpdateSourceTrigger=PropertyChanged}"

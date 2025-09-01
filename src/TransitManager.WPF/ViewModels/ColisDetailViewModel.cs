@@ -215,6 +215,7 @@ namespace TransitManager.WPF.ViewModels
 			_messenger = messenger;
 			
 			_messenger.RegisterAll(this);
+			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
@@ -614,5 +615,25 @@ namespace TransitManager.WPF.ViewModels
 
             await InitializeAsync(Colis.Id);
         }
+		
+		// ##### MÉTHODE À AJOUTER DANS LA CLASSE #####
+		private async void OnDataShouldRefresh(Guid clientId)
+		{
+			// On ne recharge la vue que si le message concerne bien le client du colis affiché.
+			if (Colis != null && Colis.ClientId == clientId)
+			{
+				// On utilise InitializeAsync pour recharger proprement toutes les données du colis depuis la BDD.
+				await InitializeAsync(Colis.Id);
+			}
+		}
+		// ##### MÉTHODE À AJOUTER À LA FIN DE LA CLASSE #####
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				_clientService.ClientStatisticsUpdated -= OnDataShouldRefresh;
+			}
+			base.Dispose(disposing);
+		}
     }
 }

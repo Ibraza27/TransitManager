@@ -105,7 +105,7 @@ namespace TransitManager.WPF
             services.AddTransient<IConteneurRepository, ConteneurRepository>();
 
             // Services métier (doivent être Transient car ils dépendent de la DbContextFactory)
-            services.AddTransient<IClientService, ClientService>();
+            services.AddSingleton<IClientService, ClientService>();
             services.AddTransient<IColisService, ColisService>();
 			services.AddTransient<IVehiculeService, VehiculeService>();
             services.AddTransient<IConteneurService, ConteneurService>();

@@ -89,6 +89,7 @@ namespace TransitManager.WPF.ViewModels
 			_messenger = messenger;
 			_serviceProvider = serviceProvider;
 			_paiementService = paiementService;
+			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
 			_messenger.RegisterAll(this);
             Title = "Gestion des Véhicules";
 
@@ -123,10 +124,17 @@ namespace TransitManager.WPF.ViewModels
 
 			if (paiementWindow.ShowDialog() == true)
 			{
-				await LoadAsync(); // Rafraîchir
+				// LIGNE À SUPPRIMER
+				// await LoadAsync();
+
+				// ##### NOUVELLE LOGIQUE CI-DESSOUS #####
+				vehicule.SommePayee = paiementViewModel.TotalValeur;
+
+				// Recalculer les statistiques globales de la liste
+				CalculateStatistics();
 			}
 		}
-		
+				
         public async void Receive(ClientUpdatedMessage message)
         {
             await LoadFilterDataAsync();
@@ -276,5 +284,21 @@ namespace TransitManager.WPF.ViewModels
                 await LoadVehiculesAsync();
             }
         }
+		
+		// ##### MÉTHODE À AJOUTER DANS LA CLASSE #####
+		private async void OnDataShouldRefresh(Guid clientId)
+		{
+			await LoadAsync();
+		}
+		// ##### MÉTHODE À AJOUTER À LA FIN DE LA CLASSE #####
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				_clientService.ClientStatisticsUpdated -= OnDataShouldRefresh;
+			}
+			base.Dispose(disposing);
+		}
+		
     }
 }

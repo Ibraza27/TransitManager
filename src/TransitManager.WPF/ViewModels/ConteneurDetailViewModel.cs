@@ -115,6 +115,7 @@ namespace TransitManager.WPF.ViewModels
 			_messenger = messenger;
 			_serviceProvider = serviceProvider;
 			_paiementService = paiementService;
+			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(() => _navigationService.GoBack());
@@ -148,22 +149,42 @@ namespace TransitManager.WPF.ViewModels
 		private async Task OpenColisPaiementsAsync(Colis? colis)
 		{
 			if (colis == null || Conteneur == null) return;
-			// La logique est identique aux ViewModels précédents
+			
 			using var scope = _serviceProvider.CreateScope();
 			var vm = scope.ServiceProvider.GetRequiredService<PaiementColisViewModel>();
 			await vm.InitializeAsync(colis);
 			var window = new Views.Paiements.PaiementColisView(vm) { Owner = System.Windows.Application.Current.MainWindow };
-			if (window.ShowDialog() == true) { await InitializeAsync(Conteneur.Id); }
-		}
 
+			if (window.ShowDialog() == true) 
+			{ 
+				// LIGNE À SUPPRIMER
+				// await InitializeAsync(Conteneur.Id);
+
+				// ##### NOUVELLE LOGIQUE CI-DESSOUS #####
+				colis.SommePayee = vm.TotalValeur;
+				// On recalcule les statistiques du conteneur qui dépendent des sommes payées.
+				RefreshAggregatedData();
+			}
+		}
 		private async Task OpenVehiculePaiementsAsync(Vehicule? vehicule)
 		{
 			if (vehicule == null || Conteneur == null) return;
+			
 			using var scope = _serviceProvider.CreateScope();
 			var vm = scope.ServiceProvider.GetRequiredService<PaiementVehiculeViewModel>();
 			await vm.InitializeAsync(vehicule);
 			var window = new Views.Paiements.PaiementVehiculeView(vm) { Owner = System.Windows.Application.Current.MainWindow };
-			if (window.ShowDialog() == true) { await InitializeAsync(Conteneur.Id); }
+
+			if (window.ShowDialog() == true) 
+			{ 
+				// LIGNE À SUPPRIMER
+				// await InitializeAsync(Conteneur.Id);
+
+				// ##### NOUVELLE LOGIQUE CI-DESSOUS #####
+				vehicule.SommePayee = vm.TotalValeur;
+				// On recalcule les statistiques du conteneur.
+				RefreshAggregatedData();
+			}
 		}
 		
 		private async Task OpenAddVehiculeWindowAsync()
@@ -573,5 +594,26 @@ namespace TransitManager.WPF.ViewModels
             VehiculeSearchResults.Clear();
             foreach (var item in unassigned) VehiculeSearchResults.Add(item);
         }
+		
+		// ##### MÉTHODE À AJOUTER DANS LA CLASSE #####
+		private async void OnDataShouldRefresh(Guid clientId)
+		{
+			// On ne recharge la vue de détail du conteneur que si un des clients
+			// affectés à ce conteneur a eu ses statistiques modifiées.
+			if (Conteneur != null && ClientsAffiches.Any(c => c.Client.Id == clientId))
+			{
+				await InitializeAsync(Conteneur.Id);
+			}
+		}
+		// ##### MÉTHODE À AJOUTER À LA FIN DE LA CLASSE #####
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				_clientService.ClientStatisticsUpdated -= OnDataShouldRefresh;
+			}
+			base.Dispose(disposing);
+		}
+		
     }
 }

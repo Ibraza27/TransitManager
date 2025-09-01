@@ -112,6 +112,7 @@ namespace TransitManager.WPF.ViewModels
             _dialogService = dialogService;
             _exportService = exportService;
 			_paiementService = paiementService;
+			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
             _messenger = messenger; // Ligne ajoutée
 			_serviceProvider = serviceProvider;
             Title = "Gestion des Colis / Marchandises";
@@ -130,6 +131,7 @@ namespace TransitManager.WPF.ViewModels
             InitializeStatutsList();
             _messenger.RegisterAll(this);
         }
+		
 		
 		// ##### NOUVELLE COMMANDE #####
 		public IAsyncRelayCommand<Colis> OpenPaiementsWindowCommand { get; }
@@ -150,7 +152,16 @@ namespace TransitManager.WPF.ViewModels
 
 			if (paiementWindow.ShowDialog() == true)
 			{
-				await LoadAsync(); // Rafraîchir la liste principale
+				// LIGNE À SUPPRIMER
+				// await LoadAsync(); 
+
+				// ##### NOUVELLE LOGIQUE CI-DESSOUS #####
+				// On met à jour directement l'objet dans la collection.
+				// INotifyPropertyChanged fera le reste pour mettre à jour l'UI.
+				colis.SommePayee = paiementViewModel.TotalValeur;
+
+				// Recalculer les statistiques globales de la liste
+				CalculateStatistics();
 			}
 		}
 		
@@ -328,5 +339,23 @@ namespace TransitManager.WPF.ViewModels
                 }
             });
         }
+		
+		// ##### MÉTHODE À AJOUTER DANS LA CLASSE #####
+		private async void OnDataShouldRefresh(Guid clientId)
+		{
+			// Un paiement a changé, on recharge toute la liste pour être à jour.
+			await LoadAsync();
+		}
+		
+		// ##### MÉTHODE À AJOUTER À LA FIN DE LA CLASSE #####
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				_clientService.ClientStatisticsUpdated -= OnDataShouldRefresh;
+			}
+			base.Dispose(disposing);
+		}
+		
     }
 }

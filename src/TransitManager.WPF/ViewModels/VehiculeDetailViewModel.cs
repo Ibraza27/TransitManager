@@ -143,6 +143,7 @@ namespace TransitManager.WPF.ViewModels
             _paiementService = paiementService;
 			_messenger = messenger;
 			_messenger.RegisterAll(this);
+			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
@@ -504,6 +505,23 @@ namespace TransitManager.WPF.ViewModels
                 _ => "/Resources/Images/vehicule_plan.png"
             };
         }
+		// ##### MÉTHODE À AJOUTER DANS LA CLASSE #####
+		private async void OnDataShouldRefresh(Guid clientId)
+		{
+			if (Vehicule != null && Vehicule.ClientId == clientId)
+			{
+				await InitializeAsync(Vehicule.Id);
+			}
+		}
+		// ##### MÉTHODE À AJOUTER À LA FIN DE LA CLASSE #####
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				_clientService.ClientStatisticsUpdated -= OnDataShouldRefresh;
+			}
+			base.Dispose(disposing);
+		}
         #endregion
     }
 }

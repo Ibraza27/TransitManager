@@ -176,24 +176,27 @@ namespace TransitManager.WPF.ViewModels
             });
         }
 
-        private async Task LoadStatisticsAsync()
-        {
-            // Statistiques clients
-            TotalClients = await _clientService.GetTotalCountAsync();
-            NouveauxClients = await _clientService.GetNewClientsCountAsync(DateTime.Now.AddDays(-30));
+		private async Task LoadStatisticsAsync()
+		{
+			// Statistiques clients
+			TotalClients = await _clientService.GetTotalCountAsync();
+			
+			// ======================= LIGNE MODIFIÉE =======================
+			NouveauxClients = await _clientService.GetNewClientsCountAsync(DateTime.UtcNow.AddDays(-30));
 
-            // Statistiques colis
-            ColisEnAttente = await _colisService.GetCountByStatusAsync(StatutColis.EnAttente);
-            ColisEnTransit = await _colisService.GetCountByStatusAsync(StatutColis.EnTransit);
+			// Statistiques colis
+			ColisEnAttente = await _colisService.GetCountByStatusAsync(StatutColis.EnAttente);
+			ColisEnTransit = await _colisService.GetCountByStatusAsync(StatutColis.EnTransit);
 
-            // Statistiques conteneurs
-            ConteneursActifs = await _conteneurService.GetActiveCountAsync();
-            TauxRemplissageMoyen = await _conteneurService.GetAverageFillingRateAsync();
+			// Statistiques conteneurs
+			ConteneursActifs = await _conteneurService.GetActiveCountAsync();
+			TauxRemplissageMoyen = await _conteneurService.GetAverageFillingRateAsync();
 
-            // Statistiques financières
-            ChiffreAffaireMois = await _paiementService.GetMonthlyRevenueAsync(DateTime.Now);
-            PaiementsEnAttente = await _paiementService.GetPendingAmountAsync();
-        }
+			// Statistiques financières
+			// ======================= LIGNE MODIFIÉE =======================
+			ChiffreAffaireMois = await _paiementService.GetMonthlyRevenueAsync(DateTime.UtcNow);
+			PaiementsEnAttente = await _paiementService.GetPendingAmountAsync();
+		}
 
         private async Task LoadRecentDataAsync()
         {

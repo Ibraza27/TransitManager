@@ -51,6 +51,19 @@
 				<!-- FIN DE LA NOUVELLE SECTION -->
 				
 				<StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+					<Button Content="Exporter PDF" 
+							Command="{Binding ExportPdfCommand}" 
+							Style="{StaticResource MaterialDesignOutlinedButton}" 
+							Margin="0,0,10,0">
+						<Button.ContentTemplate>
+							<DataTemplate>
+								<StackPanel Orientation="Horizontal">
+									<materialDesign:PackIcon Kind="FilePdfBox" Margin="0,0,8,0" VerticalAlignment="Center"/>
+									<TextBlock Text="Exporter PDF"/>
+								</StackPanel>
+							</DataTemplate>
+						</Button.ContentTemplate>
+					</Button>
 					<Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
 					<Button Content="Annuler" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
 				</StackPanel>

@@ -16,7 +16,6 @@ namespace TransitManager.Infrastructure.Services
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;
         private readonly IConteneurService _conteneurService;
-		private readonly IColisService _colisService;
 		private readonly IClientService _clientService;
 		
 

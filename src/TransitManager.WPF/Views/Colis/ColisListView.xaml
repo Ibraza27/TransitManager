@@ -137,6 +137,22 @@
 								</ContextMenu>
 							</Setter.Value>
 						</Setter>
+						<Style.Triggers>
+							<!-- Déclencheur qui s'active quand la propriété EstEnRetard est True -->
+							<DataTrigger Binding="{Binding EstEnRetard}" Value="True">
+								<!-- On applique une couleur de fond rouge très clair -->
+								<Setter Property="Background" Value="#FFEBEE" /> 
+								
+								<!-- On change la couleur du texte pour un meilleur contraste -->
+								<Setter Property="Foreground" Value="#B71C1C" />
+								
+								<!-- On peut aussi mettre le texte en gras pour plus de visibilité -->
+								<Setter Property="FontWeight" Value="Medium" />
+								
+								<!-- Bonus : On ajoute un ToolTip qui explique pourquoi la ligne est colorée -->
+								<Setter Property="ToolTip" Value="Ce colis est en attente depuis plus de 5 jours !"/>
+							</DataTrigger>
+						</Style.Triggers>						
 					</Style>
 				</DataGrid.Resources>
 

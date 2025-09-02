@@ -212,7 +212,6 @@ namespace TransitManager.WPF.ViewModels
 		{
 			await LoadCitiesAsync();
 			await LoadClientsAsync();
-			await LoadStatisticsAsync();
 		}
 
         private async Task LoadClientsAsync()
@@ -264,15 +263,20 @@ namespace TransitManager.WPF.ViewModels
 
                 // Pagination
                 var finalList = filteredClients.ToList();
-                TotalClients = finalList.Count();
-                TotalPages = (int)Math.Ceiling(TotalClients / (double)_pageSize);
-                if (CurrentPage > TotalPages && TotalPages > 0) CurrentPage = TotalPages;
+                
+                // === DÉBUT DES MODIFICATIONS ===
 
+                // 1. Calculer les statistiques sur la liste filtrée
+                CalculateStatistics(finalList);
+
+                // 2. Paginer la liste finale
                 var pagedClients = finalList
                     .Skip((CurrentPage - 1) * _pageSize)
                     .Take(_pageSize);
 
                 Clients = new ObservableCollection<Client>(pagedClients);
+
+                // === FIN DES MODIFICATIONS ===
             });
         }
 
@@ -290,12 +294,11 @@ namespace TransitManager.WPF.ViewModels
 			Cities = new ObservableCollection<string>(cities);
 		}
 
-        private async Task LoadStatisticsAsync()
+        private void CalculateStatistics(List<Client> clientsToAnalyze)
         {
-            var allClients = await _clientService.GetAllAsync();
-            
-            FidelesCount = allClients.Count(c => c.EstClientFidele);
-            TotalImpaye = await _clientService.GetTotalUnpaidBalanceAsync();
+            TotalClients = clientsToAnalyze.Count(); // Met à jour le total affiché
+            FidelesCount = clientsToAnalyze.Count(c => c.EstClientFidele);
+            TotalImpaye = clientsToAnalyze.Sum(c => c.Impayes); // Calcule la somme sur la liste filtrée
         }
 
 		private void NewClient()

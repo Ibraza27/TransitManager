@@ -33,6 +33,8 @@ namespace TransitManager.WPF.ViewModels
         private readonly IMessenger _messenger;
 		private readonly IPaiementService _paiementService;
 		private readonly IServiceProvider _serviceProvider;
+		private readonly IExportService _exportService; 
+
 
         private Conteneur? _conteneur;
         public Conteneur? Conteneur
@@ -72,6 +74,7 @@ namespace TransitManager.WPF.ViewModels
 		public IAsyncRelayCommand<Guid> ViewClientDetailsInWindowCommand { get; } // <--- NOUVELLE LIGNE
 		public IAsyncRelayCommand OpenAddColisWindowCommand { get; }
 		public IAsyncRelayCommand OpenAddVehiculeWindowCommand { get; }
+		public IAsyncRelayCommand ExportPdfCommand { get; }
 		
 		#region Statistiques
 
@@ -104,7 +107,7 @@ namespace TransitManager.WPF.ViewModels
 			IClientService clientService, 
 			IMessenger messenger, 
 			IServiceProvider serviceProvider,
-			IPaiementService paiementService)
+			IPaiementService paiementService, IExportService exportService)
 		{
 			_conteneurService = conteneurService;
 			_colisService = colisService;
@@ -115,6 +118,7 @@ namespace TransitManager.WPF.ViewModels
 			_messenger = messenger;
 			_serviceProvider = serviceProvider;
 			_paiementService = paiementService;
+			_exportService = exportService;
 			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
@@ -134,6 +138,7 @@ namespace TransitManager.WPF.ViewModels
 			ViewClientDetailsInWindowCommand = new AsyncRelayCommand<Guid>(ViewClientDetailsInWindowAsync); // <--- NOUVELLE LIGNE
 			OpenAddColisWindowCommand = new AsyncRelayCommand(OpenAddColisWindowAsync);
 			OpenAddVehiculeWindowCommand = new AsyncRelayCommand(OpenAddVehiculeWindowAsync);
+			ExportPdfCommand = new AsyncRelayCommand(ExportPdfAsync);
 			OpenColisPaiementsCommand = new AsyncRelayCommand<Colis>(OpenColisPaiementsAsync);
 			OpenVehiculePaiementsCommand = new AsyncRelayCommand<Vehicule>(OpenVehiculePaiementsAsync);
 
@@ -613,6 +618,32 @@ namespace TransitManager.WPF.ViewModels
 				_clientService.ClientStatisticsUpdated -= OnDataShouldRefresh;
 			}
 			base.Dispose(disposing);
+		}
+		
+		private async Task ExportPdfAsync()
+		{
+			if (Conteneur == null) return;
+
+			var savePath = _dialogService.ShowSaveFileDialog(
+				"Fichiers PDF (*.pdf)|*.pdf",
+				$"Dossier_{Conteneur.NumeroDossier}_{DateTime.Now:yyyyMMdd}.pdf"
+			);
+
+			if (string.IsNullOrEmpty(savePath)) return;
+
+			await ExecuteBusyActionAsync(async () =>
+			{
+				try
+				{
+					var pdfData = await _exportService.ExportConteneurDetailToPdfAsync(Conteneur);
+					await System.IO.File.WriteAllBytesAsync(savePath, pdfData);
+					await _dialogService.ShowInformationAsync("Exportation Réussie", $"Le document a été enregistré ici : \n{savePath}");
+				}
+				catch (Exception ex)
+				{
+					await _dialogService.ShowErrorAsync("Erreur d'Exportation", $"Une erreur est survenue lors de la création du PDF : {ex.Message}");
+				}
+			});
 		}
 		
     }

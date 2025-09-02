@@ -102,11 +102,34 @@ namespace TransitManager.Infrastructure.Data
         // --- L'ANCIENNE MÉTHODE HandleAudit A ÉTÉ RENOMMÉE ET MODIFIÉE ---
         private void HandleAuditAndDates()
         {
-            // ÉTAPE 1 (NOUVEAU) : Convertir toutes les dates en UTC
-            ConvertDatesToUtc();
+            // ======================= DÉBUT DE LA MODIFICATION =======================
 
-            // ÉTAPE 2 (EXISTANT) : Gérer l'audit
             var entries = ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
+
+            foreach (var entry in entries)
+            {
+                var properties = entry.Properties
+                    .Where(p => p.Metadata.ClrType == typeof(DateTime) || p.Metadata.ClrType == typeof(DateTime?));
+
+                foreach (var property in properties)
+                {
+                    if (property.CurrentValue is DateTime dateTimeValue && dateTimeValue.Kind != DateTimeKind.Utc)
+                    {
+                        // Logique améliorée :
+                        // 1. Si la date est 'Unspecified', on la traite comme une date locale.
+                        // 2. Ensuite, on la convertit en UTC.
+                        // Cela couvre à la fois les cas 'Local' et 'Unspecified'.
+                        property.CurrentValue = DateTime.SpecifyKind(dateTimeValue, DateTimeKind.Local).ToUniversalTime();
+                    }
+                }
+            }
+
+            // ======================== FIN DE LA MODIFICATION ========================
+
+
+            // Le reste de la méthode pour l'audit ne change pas
+            var auditEntries = ChangeTracker.Entries()
                 .Where(e => e.Entity is BaseEntity &&
                             e.Entity.GetType() != typeof(AuditLog) &&
                             (e.State == EntityState.Added ||
@@ -117,7 +140,7 @@ namespace TransitManager.Infrastructure.Data
             var now = DateTime.UtcNow;
             var user = _currentUser ?? "System";
 
-            foreach (var entry in entries)
+            foreach (var entry in auditEntries)
             {
                 var entity = (BaseEntity)entry.Entity;
 
@@ -128,7 +151,7 @@ namespace TransitManager.Infrastructure.Data
                         entity.CreePar = user;
                         CreateAuditLog(entry, "CREATE");
                         break;
-
+                    // ... (le reste de la méthode est identique)
                     case EntityState.Modified:
                         entity.DateModification = now;
                         entity.ModifiePar = user;

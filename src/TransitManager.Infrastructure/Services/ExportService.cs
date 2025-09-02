@@ -11,6 +11,8 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using QuestPDF.Fluent;
 using TransitManager.Core.Interfaces;
+using System.Text.Json;
+using QuestPDF.Elements;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -554,6 +556,254 @@ namespace TransitManager.Infrastructure.Services
                 _ => "Autre"
             };
         }
+		
+		
+		public async Task<byte[]> ExportConteneurDetailToPdfAsync(Conteneur conteneur)
+		{
+			return await Task.Run(() =>
+			{
+				var document = PdfDocument.Create(container =>
+				{
+					container.Page(page =>
+					{
+						page.Size(PageSizes.A4);
+						page.Margin(1.5f, Unit.Centimetre);
+						// MODIFICATION 1 : Police par défaut légèrement réduite
+						page.DefaultTextStyle(x => x.FontSize(9)); 
+
+						page.Header().Element(ComposeHeader);
+						page.Content().Element(container => ComposeContent(container, conteneur));
+						page.Footer().AlignCenter().Text(x =>
+						{
+							x.Span("Page ");
+							x.CurrentPageNumber();
+							x.Span(" / ");
+							x.TotalPages();
+						});
+					});
+				});
+
+				return document.GeneratePdf();
+			});
+
+			// Fonctions d'aide pour la composition du document
+			void ComposeHeader(IContainer container)
+			{
+				container.Row(row =>
+				{
+					row.RelativeItem().Column(column =>
+					{
+						column.Item().Text($"Dossier Conteneur : {conteneur.NumeroDossier}")
+							.SemiBold().FontSize(20).FontColor(Colors.Blue.Darken2);
+						column.Item().Text($"Destination : {conteneur.Destination}");
+					});
+					row.ConstantItem(150).AlignRight().Column(column =>
+					{
+						column.Item().Text($"Exporté le :").FontSize(8);
+						column.Item().Text($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}").SemiBold();
+					});
+				});
+			}
+
+			void ComposeContent(IContainer container, Conteneur data)
+			{
+				container.PaddingVertical(20).Column(column =>
+				{
+					column.Spacing(20);
+
+					// Section Infos générales et Dates
+					column.Item().Row(row =>
+					{
+						row.RelativeItem().Element(Block).Column(col => ComposeInfoGenerales(col, data));
+						row.ConstantItem(20); // Espace
+						row.RelativeItem().Element(Block).Column(col => ComposeDatesCles(col, data));
+					});
+
+					// Section Commentaires
+					if (!string.IsNullOrWhiteSpace(data.Commentaires))
+					{
+						column.Item().Element(Block).Column(col =>
+						{
+							col.Item().PaddingBottom(5).Text("Commentaires").SemiBold().FontSize(12);
+							col.Item().Text(data.Commentaires);
+						});
+					}
+
+					// Section Colis
+					if (data.Colis.Any())
+					{
+						column.Item().Element(container => ComposeTableColis(container, data.Colis));
+					}
+					
+					// Section Véhicules
+					if (data.Vehicules.Any())
+					{
+						column.Item().Element(container => ComposeTableVehicules(container, data.Vehicules));
+					}
+				});
+			}
+
+			void ComposeInfoGenerales(ColumnDescriptor column, Conteneur data)
+			{
+				column.Item().PaddingBottom(5).Text("Informations Générales").SemiBold().FontSize(12);
+				column.Item().Grid(grid =>
+				{
+					grid.Columns(2);
+					grid.Item(1).Text("N° Plomb:"); grid.Item(1).Text(data.NumeroPlomb ?? "N/A").SemiBold();
+					grid.Item(1).Text("Compagnie:"); grid.Item(1).Text(data.NomCompagnie ?? "N/A").SemiBold();
+					grid.Item(1).Text("Transitaire:"); grid.Item(1).Text(data.NomTransitaire ?? "N/A").SemiBold();
+					grid.Item(1).Text("Pays Dest.:"); grid.Item(1).Text(data.PaysDestination).SemiBold();
+				});
+			}
+
+			void ComposeDatesCles(ColumnDescriptor column, Conteneur data)
+			{
+				column.Item().PaddingBottom(5).Text("Dates Clés").SemiBold().FontSize(12);
+				column.Item().Grid(grid =>
+				{
+					grid.Columns(2);
+					grid.Item(1).Text("Réception:"); grid.Item(1).Text(data.DateReception?.ToString("dd/MM/yyyy") ?? "-").SemiBold();
+					grid.Item(1).Text("Chargement:"); grid.Item(1).Text(data.DateChargement?.ToString("dd/MM/yyyy") ?? "-").SemiBold();
+					grid.Item(1).Text("Départ:"); grid.Item(1).Text(data.DateDepart?.ToString("dd/MM/yyyy") ?? "-").SemiBold();
+					grid.Item(1).Text("Arrivée:"); grid.Item(1).Text(data.DateArriveeDestination?.ToString("dd/MM/yyyy") ?? "-").SemiBold();
+					grid.Item(1).Text("Dédouanement:"); grid.Item(1).Text(data.DateDedouanement?.ToString("dd/MM/yyyy") ?? "-").SemiBold();
+					grid.Item(1).Text("Clôture:"); grid.Item(1).Text(data.DateCloture?.ToString("dd/MM/yyyy") ?? "-").SemiBold();
+				});
+			}
+
+			void ComposeTableColis(IContainer container, ICollection<Colis> colisList)
+			{
+				container.Table(table =>
+				{
+					table.ColumnsDefinition(columns =>
+					{
+						columns.RelativeColumn(1.5f);
+						columns.RelativeColumn(1.5f);
+						columns.RelativeColumn(3);
+						columns.ConstantColumn(40);
+						columns.RelativeColumn(1);
+						// MODIFICATION 2 : Ajout de la colonne pour le restant
+						columns.RelativeColumn(1); 
+					});
+
+					table.Header(header =>
+					{
+						header.Cell().Element(CellStyle).Text("Référence");
+						header.Cell().Element(CellStyle).Text("Client");
+						header.Cell().Element(CellStyle).Text("Désignation");
+						header.Cell().Element(CellStyle).AlignCenter().Text("Pièces");
+						header.Cell().Element(CellStyle).AlignRight().Text("Prix");
+						// MODIFICATION 2 : Ajout de l'en-tête
+						header.Cell().Element(CellStyle).AlignRight().Text("Restant");
+					});
+
+					foreach (var colis in colisList)
+					{
+						table.Cell().Element(CellStyle).Text(colis.NumeroReference);
+						table.Cell().Element(CellStyle).Text(colis.Client?.NomComplet ?? "N/A");
+						table.Cell().Element(CellStyle).Text(colis.Designation);
+						table.Cell().Element(CellStyle).AlignCenter().Text(colis.NombrePieces.ToString());
+						table.Cell().Element(CellStyle).AlignRight().Text($"{colis.PrixTotal:C}");
+						
+						// MODIFICATION 2 : Ajout de la cellule avec couleur conditionnelle
+						var restant = colis.RestantAPayer;
+						var color = restant > 0 ? Colors.Red.Medium : Colors.Black;
+						table.Cell().Element(CellStyle).AlignRight().Text(text =>
+						{
+							text.Span($"{restant:C}").FontColor(color);
+						});
+
+						// Logique pour l'inventaire
+						if (!string.IsNullOrWhiteSpace(colis.InventaireJson) && colis.InventaireJson != "[]")
+						{
+							try
+							{
+								var items = JsonSerializer.Deserialize<List<InventaireItem>>(colis.InventaireJson);
+								if (items != null && items.Any())
+								{
+									// On étend sur 6 colonnes maintenant
+									table.Cell().ColumnSpan(6).PaddingLeft(20).PaddingTop(5).PaddingBottom(10)
+										.Element(container => ComposeTableInventaire(container, items));
+								}
+							}
+							catch { /* Ignorer JSON invalide */ }
+						}
+					}
+				});
+			}
+			
+			void ComposeTableInventaire(IContainer container, List<InventaireItem> items)
+			{
+				container.Table(table =>
+				{
+					// MODIFICATION 3 : On retire la 3ème colonne pour la valeur
+					table.ColumnsDefinition(columns =>
+					{
+						columns.RelativeColumn(3);
+						columns.ConstantColumn(50);
+					});
+					
+					foreach (var item in items)
+					{
+						table.Cell().Padding(1).Text(item.Designation).FontSize(8).Italic();
+						table.Cell().Padding(1).AlignCenter().Text(item.Quantite.ToString()).FontSize(8).Italic();
+						// MODIFICATION 3 : On retire la cellule de la valeur
+					}
+				});
+			}
+
+			void ComposeTableVehicules(IContainer container, ICollection<Vehicule> vehiculesList)
+			{
+				container.PaddingTop(15).Table(table =>
+				{
+					table.ColumnsDefinition(columns =>
+					{
+						columns.RelativeColumn(1.5f);
+						columns.RelativeColumn(1.5f);
+						columns.RelativeColumn(2);
+						columns.RelativeColumn(1);
+						// MODIFICATION 2 : Ajout de la colonne pour le restant
+						columns.RelativeColumn(1);
+					});
+
+					table.Header(header =>
+					{
+						header.Cell().Element(CellStyle).Text("Immatriculation");
+						header.Cell().Element(CellStyle).Text("Client");
+						header.Cell().Element(CellStyle).Text("Marque & Modèle");
+						header.Cell().Element(CellStyle).AlignRight().Text("Prix");
+						// MODIFICATION 2 : Ajout de l'en-tête
+						header.Cell().Element(CellStyle).AlignRight().Text("Restant");
+					});
+					
+					foreach(var vehicule in vehiculesList)
+					{
+						table.Cell().Element(CellStyle).Text(vehicule.Immatriculation);
+						table.Cell().Element(CellStyle).Text(vehicule.Client?.NomComplet ?? "N/A");
+						table.Cell().Element(CellStyle).Text($"{vehicule.Marque} {vehicule.Modele}");
+						table.Cell().Element(CellStyle).AlignRight().Text($"{vehicule.PrixTotal:C}");
+
+						// MODIFICATION 2 : Ajout de la cellule avec couleur conditionnelle
+						var restant = vehicule.RestantAPayer;
+						var color = restant > 0 ? Colors.Red.Medium : Colors.Black;
+						table.Cell().Element(CellStyle).AlignRight().Text(text =>
+						{
+							text.Span($"{restant:C}").FontColor(color);
+						});
+					}
+				});
+			}
+
+			// Styles réutilisables
+			IContainer Block(IContainer container) => container.Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10);
+			
+			// MODIFICATION 1 : Ajout du PaddingHorizontal
+			IContainer CellStyle(IContainer container) => container
+				.BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
+				.PaddingVertical(5).PaddingHorizontal(5); 
+		}
+		
+		
     }
 
 }

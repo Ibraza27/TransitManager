@@ -12,7 +12,7 @@ namespace TransitManager.Infrastructure.Services
 {
     public class ClientService : IClientService
     {
-		public event Action<Guid> ClientStatisticsUpdated;
+		public event Action<Guid>? ClientStatisticsUpdated;
 		
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;

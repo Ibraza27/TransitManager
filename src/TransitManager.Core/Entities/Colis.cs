@@ -113,6 +113,14 @@ namespace TransitManager.Core.Entities
         public decimal Volume => (Longueur * Largeur * Hauteur) / 1000000m;
         public decimal PoidsVolumetrique => Volume * 167;
         public decimal PoidsFacturable => Math.Max(Poids, PoidsVolumetrique);
+		
+        /// <summary>
+        /// Propriété calculée qui indique si le colis est en attente depuis plus de 5 jours.
+        /// Non mappée en base de données.
+        /// </summary>
+        public bool EstEnRetard => 
+            Statut == StatutColis.EnAttente && (DateTime.UtcNow - DateArrivee).TotalDays > 5;
+
 
         public Colis()
         {

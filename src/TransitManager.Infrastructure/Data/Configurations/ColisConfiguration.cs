@@ -51,6 +51,10 @@ namespace TransitManager.Infrastructure.Data.Configurations
                 .WithMany(co => co.Colis)
                 .HasForeignKey(c => c.ConteneurId)
                 .OnDelete(DeleteBehavior.SetNull);
+				
+
+            // On indique à EF d'ignorer cette propriété pour la base de données
+            builder.Ignore(c => c.EstEnRetard);
 
             builder.Ignore(c => c.Volume);
             builder.Ignore(c => c.PoidsVolumetrique);

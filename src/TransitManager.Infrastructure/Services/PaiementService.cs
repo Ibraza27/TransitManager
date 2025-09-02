@@ -170,16 +170,26 @@ namespace TransitManager.Infrastructure.Services
 			return true;
         }
 
-        public async Task<decimal> GetMonthlyRevenueAsync(DateTime month)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var debut = new DateTime(month.Year, month.Month, 1);
-            var fin = debut.AddMonths(1).AddDays(-1);
+		public async Task<decimal> GetMonthlyRevenueAsync(DateTime month)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
 
-            return await context.Paiements
-                .Where(p => p.DatePaiement >= debut && p.DatePaiement <= fin && p.Statut == StatutPaiement.Paye)
-                .SumAsync(p => p.Montant);
-        }
+			// ======================= DÉBUT DE LA CORRECTION =======================
+
+			// On s'assure que le mois de référence est bien en UTC
+			var monthUtc = DateTime.SpecifyKind(month, DateTimeKind.Utc);
+
+			var debut = new DateTime(monthUtc.Year, monthUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+			var fin = debut.AddMonths(1).AddDays(-1);
+			// Pour être exhaustif, on peut spécifier l'heure de fin de journée
+			fin = new DateTime(fin.Year, fin.Month, fin.Day, 23, 59, 59, DateTimeKind.Utc);
+
+			// ======================== FIN DE LA CORRECTION ========================
+
+			return await context.Paiements
+				.Where(p => p.DatePaiement >= debut && p.DatePaiement <= fin && p.Statut == StatutPaiement.Paye)
+				.SumAsync(p => p.Montant);
+		}
 
         public async Task<decimal> GetPendingAmountAsync()
         {

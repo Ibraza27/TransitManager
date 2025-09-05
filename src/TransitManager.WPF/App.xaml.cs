@@ -63,7 +63,8 @@ namespace TransitManager.WPF
                     .ConfigureAppConfiguration((context, config) =>
                     {
                         config.SetBasePath(Directory.GetCurrentDirectory())
-                              .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                              .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+							  .AddJsonFile("appsettings.override.json", optional: true, reloadOnChange: true);
                     })
                     .ConfigureServices((context, services) => ConfigureServices(context.Configuration, services))
                     .UseSerilog()

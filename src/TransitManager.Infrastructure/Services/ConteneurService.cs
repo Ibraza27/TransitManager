@@ -7,6 +7,7 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using TransitManager.Core.Exceptions;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -48,6 +49,8 @@ namespace TransitManager.Infrastructure.Services
             var oldStatus = conteneurInDb.Statut;
             
             context.Entry(conteneurInDb).CurrentValues.SetValues(conteneurFromUI);
+			
+			context.Entry(conteneurInDb).Property("RowVersion").OriginalValue = conteneurFromUI.RowVersion;
 
             // La logique de mise à jour du statut est maintenant dans une méthode séparée
             await UpdateAndSaveConteneurStatus(conteneurInDb, context, oldStatus);
@@ -93,7 +96,23 @@ namespace TransitManager.Infrastructure.Services
                 await UpdateChildrenStatus(conteneur, context);
             }
             
-            await context.SaveChangesAsync();
+			try
+			{
+				await context.SaveChangesAsync();
+			}
+			catch (DbUpdateConcurrencyException ex)
+			{
+				var entry = ex.Entries.Single();
+				var databaseValues = await entry.GetDatabaseValuesAsync();
+				if (databaseValues == null)
+				{
+					throw new ConcurrencyException("Ce dossier conteneur a été supprimé par un autre utilisateur.");
+				}
+				else
+				{
+					throw new ConcurrencyException("Ce dossier conteneur a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
+				}
+			}
         }
 
         private StatutConteneur CalculateStatusFromDates(Conteneur conteneur)

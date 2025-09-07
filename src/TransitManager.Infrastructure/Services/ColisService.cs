@@ -8,6 +8,7 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using TransitManager.Core.Exceptions;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -59,6 +60,11 @@ namespace TransitManager.Infrastructure.Services
             context.Entry(colisInDb).CurrentValues.SetValues(colis);
             colisInDb.ClientId = colis.ClientId;
             colisInDb.ConteneurId = colis.ConteneurId;
+			
+		   // ======================= DÉBUT DE L'AJOUT (Concurrence) =======================
+			// On attache la RowVersion de l'UI pour qu'EF puisse vérifier la concurrence
+			context.Entry(colisInDb).Property("RowVersion").OriginalValue = colis.RowVersion;
+			// ======================== FIN DE L'AJOUT (Concurrence) ========================
             
             var submittedBarcodeValues = new HashSet<string>(colis.Barcodes.Select(b => b.Value));
             var dbBarcodes = colisInDb.Barcodes.ToList();
@@ -71,7 +77,26 @@ namespace TransitManager.Infrastructure.Services
                 
             if (barcodesToAdd.Any()) await context.Barcodes.AddRangeAsync(barcodesToAdd);
             
-            await context.SaveChangesAsync();
+			// ======================= DÉBUT DE LA MODIFICATION (try...catch) =======================
+			try
+			{
+				await context.SaveChangesAsync();
+			}
+			catch (DbUpdateConcurrencyException ex)
+			{
+				var entry = ex.Entries.Single();
+				var databaseValues = await entry.GetDatabaseValuesAsync();
+				if (databaseValues == null)
+				{
+					throw new ConcurrencyException("Ce colis a été supprimé par un autre utilisateur.");
+				}
+				else
+				{
+					throw new ConcurrencyException("Ce colis a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
+				}
+			}
+			// ======================== FIN DE LA MODIFICATION (try...catch) ========================
+	
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(colisInDb.ClientId);
 
             if (originalConteneurId.HasValue)

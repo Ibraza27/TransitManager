@@ -19,6 +19,7 @@ using TransitManager.WPF.Views.Colis; // <--- NOUVEAU
 using TransitManager.WPF.Views;
 using TransitManager.WPF.Models;
 using Microsoft.Extensions.DependencyInjection;
+using TransitManager.Core.Exceptions;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -505,6 +506,21 @@ namespace TransitManager.WPF.ViewModels
 					_messenger.Send(new ConteneurUpdatedMessage(true));
 					_navigationService.GoBack();
 				}
+				
+				// ======================= DÉBUT DE L'AJOUT =======================
+				catch (ConcurrencyException cex)
+				{
+					var refresh = await _dialogService.ShowConfirmationAsync(
+						"Conflit de Données",
+						$"{cex.Message}\n\nVoulez-vous rafraîchir les données pour voir les dernières modifications ? (Vos changements actuels seront perdus)");
+
+					if (refresh && Conteneur != null)
+					{
+						await InitializeAsync(Conteneur.Id); // Recharge les données
+					}
+				}
+				// ======================== FIN DE L'AJOUT ========================
+				
 				catch (Exception ex)
 				{
 					await _dialogService.ShowErrorAsync("Erreur d'enregistrement", $"{ex.Message}\n\nDétails: {ex.InnerException?.Message}");

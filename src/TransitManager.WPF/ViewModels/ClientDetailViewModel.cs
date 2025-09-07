@@ -6,6 +6,7 @@ using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
 using CommunityToolkit.Mvvm.Messaging;
 using TransitManager.WPF.Messages;
+using TransitManager.Core.Exceptions;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -57,27 +58,26 @@ namespace TransitManager.WPF.ViewModels
                    !IsBusy;
         }
 
-        private async Task SaveAsync()
-        {
-            if (!CanSave() || Client == null) return;
+		private async Task SaveAsync()
+		{
+			if (!CanSave() || Client == null) return;
 
-            await ExecuteBusyActionAsync(async () =>
-            {
-                try
-                {
-                    if (_isNewClient)
-                    {
-                        await _clientService.CreateAsync(Client);
-                    }
-                    else
-                    {
-                        await _clientService.UpdateAsync(Client);
-                    }
+			await ExecuteBusyActionAsync(async () =>
+			{
+				try
+				{
+					if (_isNewClient)
+					{
+						await _clientService.CreateAsync(Client);
+					}
+					else
+					{
+						await _clientService.UpdateAsync(Client);
+					}
 					
 					await _dialogService.ShowInformationAsync("Succès", "Le client a été enregistré.");
 					_messenger.Send(new ClientUpdatedMessage(true));
 
-					// LOGIQUE DE FERMETURE MODIFIÉE
 					if (_isModal)
 					{
 						CloseAction?.Invoke();
@@ -86,13 +86,27 @@ namespace TransitManager.WPF.ViewModels
 					{
 						_navigationService.GoBack();
 					}
-                }
-                catch (Exception ex)
-                {
-                    await _dialogService.ShowErrorAsync("Erreur", $"Une erreur est survenue : {ex.Message}");
-                }
-            });
-        }
+				}
+				// ======================= DÉBUT DE LA MODIFICATION =======================
+				catch (ConcurrencyException cex)
+				{
+					var refresh = await _dialogService.ShowConfirmationAsync(
+						"Conflit de Données",
+						$"{cex.Message}\n\nVoulez-vous rafraîchir les données pour voir les dernières modifications ? (Vos changements actuels seront perdus)");
+
+					if (refresh && Client != null)
+					{
+						// Recharge les données depuis la BDD pour écraser les changements locaux.
+						await InitializeAsync(Client.Id);
+					}
+				}
+				// ======================== FIN DE LA MODIFICATION ========================
+				catch (Exception ex)
+				{
+					await _dialogService.ShowErrorAsync("Erreur", $"Une erreur est survenue : {ex.Message}");
+				}
+			});
+		}
 
 		private void Cancel()
 		{

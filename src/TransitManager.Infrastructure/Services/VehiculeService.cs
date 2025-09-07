@@ -7,6 +7,7 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using TransitManager.Core.Exceptions;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -59,7 +60,28 @@ namespace TransitManager.Infrastructure.Services
             vehiculeInDb.ClientId = vehicule.ClientId;
             vehiculeInDb.ConteneurId = vehicule.ConteneurId;
 
-            await context.SaveChangesAsync();
+			// ======================= DÉBUT DE L'AJOUT (Concurrence) =======================
+			context.Entry(vehiculeInDb).Property("RowVersion").OriginalValue = vehicule.RowVersion;
+			// ======================== FIN DE L'AJOUT (Concurrence) ========================
+
+			try
+			{
+				await context.SaveChangesAsync();
+			}
+			catch (DbUpdateConcurrencyException ex)
+			{
+				var entry = ex.Entries.Single();
+				var databaseValues = await entry.GetDatabaseValuesAsync();
+				if (databaseValues == null)
+				{
+					throw new ConcurrencyException("Ce véhicule a été supprimé par un autre utilisateur.");
+				}
+				else
+				{
+					throw new ConcurrencyException("Ce véhicule a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
+				}
+			}
+	
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehiculeInDb.ClientId);
 
             if (originalConteneurId.HasValue)

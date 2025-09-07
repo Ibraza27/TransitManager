@@ -1,0 +1,55 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <!-- Framework & EF Core -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.7" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.7" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
+
+    <!-- Microsoft Extensions (versions alignées) -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+    
+    <!-- API & SignalR -->
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
+
+    <!-- UI - WPF -->
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageVersion Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc2" />
+    <PackageVersion Include="MahApps.Metro" Version="2.4.10" />
+    <PackageVersion Include="MaterialDesignThemes" Version="4.9.0" />
+    <PackageVersion Include="MaterialDesignThemes.MahApps" Version="0.3.0" />
+    <PackageVersion Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageVersion Include="ToastNotifications" Version="2.5.1" />
+    <PackageVersion Include="ToastNotifications.Messages" Version="2.5.1" />
+    <PackageVersion Include="AForge.Video" Version="2.2.5" />
+    <PackageVersion Include="AForge.Video.DirectShow" Version="2.2.5" />
+    <PackageVersion Include="FontAwesome.WPF" Version="4.7.0.9" />
+
+    <!-- Outils & Utilitaires -->
+    <PackageVersion Include="AutoMapper" Version="13.0.1" />
+    <PackageVersion Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageVersion Include="ClosedXML" Version="0.102.2" />
+    <PackageVersion Include="FluentValidation" Version="11.9.0" />
+    <PackageVersion Include="QuestPDF" Version="2024.3.3" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageVersion Include="System.ComponentModel.Annotations" Version="5.0.0" />
+    <PackageVersion Include="System.Diagnostics.Process" Version="4.3.0" />
+    <PackageVersion Include="System.Drawing.Common" Version="8.0.6" />
+    <PackageVersion Include="ZXing.Net" Version="0.16.9" />
+    <PackageVersion Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.12" />
+  </ItemGroup>
+</Project>

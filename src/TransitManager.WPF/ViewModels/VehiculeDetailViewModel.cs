@@ -15,6 +15,7 @@ using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
 using CommunityToolkit.Mvvm.Messaging;
 using TransitManager.WPF.Messages;
+using TransitManager.Core.Exceptions;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -394,6 +395,21 @@ namespace TransitManager.WPF.ViewModels
 						_navigationService.GoBack();
 					}
 				}
+				
+				// ======================= DÉBUT DE L'AJOUT =======================
+				catch (ConcurrencyException cex)
+				{
+					var refresh = await _dialogService.ShowConfirmationAsync(
+						"Conflit de Données",
+						$"{cex.Message}\n\nVoulez-vous rafraîchir les données pour voir les dernières modifications ? (Vos changements actuels seront perdus)");
+
+					if (refresh && Vehicule != null)
+					{
+						await InitializeAsync(Vehicule.Id); // Recharge les données
+					}
+				}
+				// ======================== FIN DE L'AJOUT ========================
+				
 				catch (Exception ex)
 				{
 					await _dialogService.ShowErrorAsync("Erreur", $"Erreur d'enregistrement : {ex.Message}\n{ex.InnerException?.Message}");

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using TransitManager.Core.Exceptions;
 
 
 namespace TransitManager.Infrastructure.Services
@@ -16,11 +17,13 @@ namespace TransitManager.Infrastructure.Services
 		
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;
+		private readonly INotificationHubService _notificationHubService;
 
-		public ClientService(IDbContextFactory<TransitContext> contextFactory, INotificationService notificationService)
+		public ClientService(IDbContextFactory<TransitContext> contextFactory, INotificationService notificationService, INotificationHubService notificationHubService)
 		{
 			_contextFactory = contextFactory;
 			_notificationService = notificationService;
+			_notificationHubService = notificationHubService;
 		}
 		
 		public async Task<Client?> GetByIdAsync(Guid id)
@@ -108,6 +111,7 @@ namespace TransitManager.Infrastructure.Services
 
             context.Clients.Add(client);
             await context.SaveChangesAsync();
+			await _notificationHubService.NotifyClientUpdated(client.Id);
 
             await _notificationService.NotifyAsync(
                 "Nouveau client",
@@ -138,14 +142,40 @@ namespace TransitManager.Infrastructure.Services
 				throw new InvalidOperationException("Le client que vous essayez de modifier n'a pas été trouvé.");
 			}
 
-			// ÉTAPE B : Copier les valeurs modifiées depuis l'interface utilisateur vers l'entité suivie.
 			context.Entry(clientInDb).CurrentValues.SetValues(clientFromUI);
+			
+			// ======================= DÉBUT DE LA MODIFICATION =======================
+			// On attache la RowVersion reçue de l'UI pour la vérification de concurrence
+			context.Entry(clientInDb).Property("RowVersion").OriginalValue = clientFromUI.RowVersion;
+			// ======================== FIN DE LA MODIFICATION ========================
 
-			// ÉTAPE C : Appeler notre nouvelle méthode pour recalculer toutes les statistiques.
 			await UpdateClientStatisticsAsync(clientInDb, context);
 
-			// ÉTAPE D : Sauvegarder toutes les modifications en une seule transaction.
-			await context.SaveChangesAsync();
+			// ======================= DÉBUT DE LA MODIFICATION =======================
+			try
+			{
+				await context.SaveChangesAsync();
+				await _notificationHubService.NotifyClientUpdated(clientFromUI.Id);
+			}
+			catch (DbUpdateConcurrencyException ex)
+			{
+				// Un conflit de concurrence s'est produit !
+				var entry = ex.Entries.Single();
+				var databaseValues = await entry.GetDatabaseValuesAsync();
+
+				if (databaseValues == null)
+				{
+					// L'entité a été supprimée par un autre utilisateur.
+					throw new ConcurrencyException("Le client a été supprimé par un autre utilisateur. Impossible de sauvegarder.");
+				}
+				else
+				{
+					// L'entité a été modifiée. On peut recharger les valeurs de la BDD pour les comparer si besoin.
+					// Pour l'instant, on envoie un message générique.
+					throw new ConcurrencyException("Ce client a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
+				}
+			}
+			// ======================== FIN DE LA MODIFICATION ========================
 			
 			return clientInDb;
 		}

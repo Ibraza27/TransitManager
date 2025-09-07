@@ -72,6 +72,12 @@ namespace TransitManager.WPF
 
                 await _host.StartAsync();
                 _notifier = _host.Services.GetRequiredService<Notifier>();
+				
+				// ======================= DÉBUT DE L'AJOUT =======================
+				// Démarrer le client SignalR
+				var signalRClient = _host.Services.GetRequiredService<SignalRClientService>();
+				await signalRClient.StartAsync();
+				// ======================== FIN DE L'AJOUT ========================
 
                 var mainWindow = _host.Services.GetRequiredService<MainWindow>();
                 Current.MainWindow = mainWindow;
@@ -113,6 +119,7 @@ namespace TransitManager.WPF
             services.AddTransient<IPaiementService, PaiementService>();
             services.AddTransient<INotificationService, NotificationService>();
             services.AddTransient<IAuthenticationService, AuthenticationService>();
+			services.AddSingleton<INotificationHubService, NotificationHubService>();
             
             // Services d'infrastructure (Scoped est ok ici car pas de DbContext)
             services.AddScoped<IBarcodeService, BarcodeService>();
@@ -124,6 +131,7 @@ namespace TransitManager.WPF
             // Services UI (Singleton car ils gèrent un état global de l'UI)
             services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<IDialogService, DialogService>();
+			services.AddSingleton<SignalRClientService>();
 
             // AutoMapper
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

@@ -17,10 +17,11 @@ namespace TransitManager.Core.Entities
         private TypeColis _type;
         private int _nombrePieces = 1;
         private string _designation = string.Empty;
-        private decimal _poids;
-        private decimal _longueur;
-        private decimal _largeur;
-        private decimal _hauteur;
+        // private decimal _poids; // SUPPRIMÉ
+        // private decimal _longueur; // SUPPRIMÉ
+        // private decimal _largeur; // SUPPRIMÉ
+        // private decimal _hauteur; // SUPPRIMÉ
+        private decimal _volume; // AJOUTÉ
         private decimal _valeurDeclaree;
         private bool _estFragile;
         private bool _manipulationSpeciale;
@@ -61,10 +62,12 @@ namespace TransitManager.Core.Entities
         [StringLength(500)]
         public string Designation { get => _designation; set => SetProperty(ref _designation, value); }
 
-        public decimal Poids { get => _poids; set => SetProperty(ref _poids, value); }
-        public decimal Longueur { get => _longueur; set => SetProperty(ref _longueur, value); }
-        public decimal Largeur { get => _largeur; set => SetProperty(ref _largeur, value); }
-        public decimal Hauteur { get => _hauteur; set => SetProperty(ref _hauteur, value); }
+        // public decimal Poids { get => _poids; set => SetProperty(ref _poids, value); } // SUPPRIMÉ
+        // public decimal Longueur { get => _longueur; set => SetProperty(ref _longueur, value); } // SUPPRIMÉ
+        // public decimal Largeur { get => _largeur; set => SetProperty(ref _largeur, value); } // SUPPRIMÉ
+        // public decimal Hauteur { get => _hauteur; set => SetProperty(ref _hauteur, value); } // SUPPRIMÉ
+        public decimal Volume { get => _volume; set => SetProperty(ref _volume, value); } // AJOUTÉ
+
         public decimal ValeurDeclaree { get => _valeurDeclaree; set => SetProperty(ref _valeurDeclaree, value); }
         public bool EstFragile { get => _estFragile; set => SetProperty(ref _estFragile, value); }
         public bool ManipulationSpeciale { get => _manipulationSpeciale; set => SetProperty(ref _manipulationSpeciale, value); }
@@ -110,9 +113,9 @@ namespace TransitManager.Core.Entities
 		
 		public virtual ICollection<Paiement> Paiements { get; set; } = new List<Paiement>();
 
-        public decimal Volume => (Longueur * Largeur * Hauteur) / 1000000m;
-        public decimal PoidsVolumetrique => Volume * 167;
-        public decimal PoidsFacturable => Math.Max(Poids, PoidsVolumetrique);
+        // public decimal Volume => (Longueur * Largeur * Hauteur) / 1000000m; // MODIFIÉ (devient une propriété normale)
+        // public decimal PoidsVolumetrique => Volume * 167; // SUPPRIMÉ ou commenté
+        // public decimal PoidsFacturable => Math.Max(Poids, PoidsVolumetrique); // SUPPRIMÉ ou commenté
 		
         /// <summary>
         /// Propriété calculée qui indique si le colis est en attente depuis plus de 5 jours.

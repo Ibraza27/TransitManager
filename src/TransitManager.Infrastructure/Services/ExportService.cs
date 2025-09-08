@@ -110,19 +110,19 @@ namespace TransitManager.Infrastructure.Services
                 using var workbook = new XLWorkbook();
                 var worksheet = workbook.Worksheets.Add("Colis");
 
-                // En-têtes
-                worksheet.Cell(1, 1).Value = "Code-barres";
-                worksheet.Cell(1, 2).Value = "Référence";
-                worksheet.Cell(1, 3).Value = "Client";
-                worksheet.Cell(1, 4).Value = "Conteneur";
-                worksheet.Cell(1, 5).Value = "Désignation";
-                worksheet.Cell(1, 6).Value = "Poids (kg)";
-                worksheet.Cell(1, 7).Value = "Volume (m³)";
-                worksheet.Cell(1, 8).Value = "Statut";
-                worksheet.Cell(1, 9).Value = "Date d'arrivée";
-                worksheet.Cell(1, 10).Value = "Valeur déclarée (€)";
-                worksheet.Cell(1, 11).Value = "Fragile";
-                worksheet.Cell(1, 12).Value = "Localisation";
+				// En-têtes
+				worksheet.Cell(1, 1).Value = "Code-barres";
+				worksheet.Cell(1, 2).Value = "Référence";
+				worksheet.Cell(1, 3).Value = "Client";
+				worksheet.Cell(1, 4).Value = "Conteneur";
+				worksheet.Cell(1, 5).Value = "Désignation";
+				// worksheet.Cell(1, 6).Value = "Poids (kg)"; // SUPPRIMÉ
+				worksheet.Cell(1, 6).Value = "Volume (m³)"; // MODIFIÉ (indice 6 au lieu de 7)
+				worksheet.Cell(1, 7).Value = "Statut"; // MODIFIÉ (indice 7 au lieu de 8)
+				worksheet.Cell(1, 8).Value = "Date d'arrivée"; // MODIFIÉ (indice 8 au lieu de 9)
+				worksheet.Cell(1, 9).Value = "Valeur déclarée (€)"; // MODIFIÉ (indice 9 au lieu de 10)
+				worksheet.Cell(1, 10).Value = "Fragile"; // MODIFIÉ (indice 10 au lieu de 11)
+				worksheet.Cell(1, 11).Value = "Localisation"; // MODIFIÉ (indice 11 au lieu de 12)
 
                 // Style des en-têtes
                 var headerRange = worksheet.Range(1, 1, 1, 12);
@@ -131,21 +131,21 @@ namespace TransitManager.Infrastructure.Services
                 headerRange.Style.Font.FontColor = XLColor.White;
 
                 // Données
-                int row = 2;
-                foreach (var item in colis)
-                {
-                    worksheet.Cell(row, 1).Value = string.Join(", ", item.Barcodes.Select(b => b.Value));
-                    worksheet.Cell(row, 2).Value = item.NumeroReference;
-                    worksheet.Cell(row, 3).Value = item.Client?.NomComplet ?? "N/A";
-                    worksheet.Cell(row, 4).Value = item.Conteneur?.NumeroDossier ?? "Non affecté";
-                    worksheet.Cell(row, 5).Value = item.Designation;
-                    worksheet.Cell(row, 6).Value = item.Poids;
-                    worksheet.Cell(row, 7).Value = item.Volume;
-                    worksheet.Cell(row, 8).Value = item.Statut.ToString();
-                    worksheet.Cell(row, 9).Value = item.DateArrivee.ToString("dd/MM/yyyy");
-                    worksheet.Cell(row, 10).Value = item.ValeurDeclaree;
-                    worksheet.Cell(row, 11).Value = item.EstFragile ? "Oui" : "Non";
-                    worksheet.Cell(row, 12).Value = item.LocalisationActuelle ?? "";
+				int row = 2;
+				foreach (var item in colis)
+				{
+					worksheet.Cell(row, 1).Value = string.Join(", ", item.Barcodes.Select(b => b.Value));
+					worksheet.Cell(row, 2).Value = item.NumeroReference;
+					worksheet.Cell(row, 3).Value = item.Client?.NomComplet ?? "N/A";
+					worksheet.Cell(row, 4).Value = item.Conteneur?.NumeroDossier ?? "Non affecté";
+					worksheet.Cell(row, 5).Value = item.Designation;
+					// worksheet.Cell(row, 6).Value = item.Poids; // SUPPRIMÉ
+					worksheet.Cell(row, 6).Value = item.Volume; // MODIFIÉ (indice 6)
+					worksheet.Cell(row, 7).Value = item.Statut.ToString(); // MODIFIÉ (indice 7)
+					worksheet.Cell(row, 8).Value = item.DateArrivee.ToString("dd/MM/yyyy"); // MODIFIÉ (indice 8)
+					worksheet.Cell(row, 9).Value = item.ValeurDeclaree; // MODIFIÉ (indice 9)
+					worksheet.Cell(row, 10).Value = item.EstFragile ? "Oui" : "Non"; // MODIFIÉ (indice 10)
+					worksheet.Cell(row, 11).Value = item.LocalisationActuelle ?? ""; // MODIFIÉ (indice 11)
 
                     // Colorer selon le statut
                     var statusColor = item.Statut switch
@@ -230,7 +230,7 @@ namespace TransitManager.Infrastructure.Services
 										header.Cell().Element(CellStyle).Text("Code-barres");
 										header.Cell().Element(CellStyle).Text("Client");
 										header.Cell().Element(CellStyle).Text("Désignation");
-										header.Cell().Element(CellStyle).Text("Poids");
+										header.Cell().Element(CellStyle).Text("Volume");
 
 										static IContainer CellStyle(IContainer container)
 										{
@@ -245,7 +245,8 @@ namespace TransitManager.Infrastructure.Services
 										table.Cell().Element(CellStyle).Text(colis.AllBarcodes);
 										table.Cell().Element(CellStyle).Text(colis.Client?.NomComplet ?? "N/A");
 										table.Cell().Element(CellStyle).Text(colis.Designation);
-										table.Cell().Element(CellStyle).Text($"{colis.Poids:N2} kg");
+										// CORRECTION : On affiche le Volume à la place du Poids
+										table.Cell().Element(CellStyle).Text($"{colis.Volume:N3} m³"); 
 
 										static IContainer CellStyle(IContainer container)
 										{
@@ -347,18 +348,20 @@ namespace TransitManager.Infrastructure.Services
                                         }
                                     });
 
-                                    decimal sousTotal = 0;
-                                    foreach (var item in colis)
-                                    {
-                                        var tarif = item.PoidsFacturable * 2.5m;
-                                        sousTotal += tarif;
+									decimal sousTotal = 0;
+									foreach (var item in colis)
+									{
+										// var tarif = item.PoidsFacturable * 2.5m; // ANCIENNE LIGNE
+										var tarif = item.PrixTotal; // NOUVELLE LIGNE
+										sousTotal += tarif;
 
-                                        table.Cell().Text(item.NumeroReference);
-                                        table.Cell().Text(item.Designation);
-                                        table.Cell().Text($"{item.Poids:N2} kg");
-                                        table.Cell().Text($"{item.Volume:N2} m³");
-                                        table.Cell().AlignRight().Text($"{tarif:C}");
-                                    }
+										table.Cell().Text(item.NumeroReference);
+										table.Cell().Text(item.Designation);
+										// table.Cell().Text($"{item.Poids:N2} kg"); // SUPPRIMER CETTE LIGNE
+										table.Cell().Text(""); // On laisse une cellule vide pour le poids
+										table.Cell().Text($"{item.Volume:N2} m³");
+										table.Cell().AlignRight().Text($"{tarif:C}");
+									}
                                 });
 
                                 // Totaux

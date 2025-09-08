@@ -24,10 +24,16 @@ namespace TransitManager.Infrastructure.Data.Configurations
 			
 			builder.Property(c => c.InventaireJson).HasColumnType("jsonb");
 
-            builder.Property(c => c.Poids).HasPrecision(10, 3).HasDefaultValue(0);
-            builder.Property(c => c.Longueur).HasPrecision(10, 2).HasDefaultValue(0);
-            builder.Property(c => c.Largeur).HasPrecision(10, 2).HasDefaultValue(0);
-            builder.Property(c => c.Hauteur).HasPrecision(10, 2).HasDefaultValue(0);
+
+            // ===== SECTION MODIFIÉE =====
+            // On supprime les anciennes propriétés et on ajoute Volume
+            // builder.Property(c => c.Poids).HasPrecision(10, 3).HasDefaultValue(0); // SUPPRIMÉ
+            // builder.Property(c => c.Longueur).HasPrecision(10, 2).HasDefaultValue(0); // SUPPRIMÉ
+            // builder.Property(c => c.Largeur).HasPrecision(10, 2).HasDefaultValue(0); // SUPPRIMÉ
+            // builder.Property(c => c.Hauteur).HasPrecision(10, 2).HasDefaultValue(0); // SUPPRIMÉ
+            builder.Property(c => c.Volume).HasPrecision(18, 3).HasDefaultValue(0); // AJOUTÉ
+            // ===== FIN DE LA SECTION MODIFIÉE =====
+
             builder.Property(c => c.ValeurDeclaree).HasPrecision(18, 2).HasDefaultValue(0);
             builder.Property(c => c.InstructionsSpeciales).HasMaxLength(1000);
             builder.Property(c => c.Photos).HasColumnType("text");
@@ -56,9 +62,12 @@ namespace TransitManager.Infrastructure.Data.Configurations
             // On indique à EF d'ignorer cette propriété pour la base de données
             builder.Ignore(c => c.EstEnRetard);
 
-            builder.Ignore(c => c.Volume);
-            builder.Ignore(c => c.PoidsVolumetrique);
-            builder.Ignore(c => c.PoidsFacturable);
+            // ===== SECTION MODIFIÉE =====
+            // On retire l'ignorance de Volume et on supprime les autres
+            // builder.Ignore(c => c.Volume); // SUPPRIMÉ car Volume est maintenant dans la BDD
+            // builder.Ignore(c => c.PoidsVolumetrique); // SUPPRIMÉ
+            // builder.Ignore(c => c.PoidsFacturable); // SUPPRIMÉ
+            // ===== FIN DE LA SECTION MODIFIÉE =====
 
             builder.Property(c => c.DateArrivee).HasDefaultValueSql("CURRENT_TIMESTAMP");
             builder.Property(c => c.Actif).HasDefaultValue(true);

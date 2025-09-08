@@ -332,18 +332,19 @@ namespace TransitManager.Infrastructure.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == clientId);
 
-            if (client == null) return 0;
+			if (client == null) return 0;
 
-            decimal totalDu = 0;
-            if (client.Colis != null)
-            {
-                totalDu = client.Colis.Where(c => c.Actif).Sum(c => c.PoidsFacturable * 2.5m); // Simplification, à adapter à vos règles de facturation
-            }
+			decimal totalDu = 0;
+			if (client.Colis != null)
+			{
+				// totalDu = client.Colis.Where(c => c.Actif).Sum(c => c.PoidsFacturable * 2.5m); // ANCIENNE LIGNE
+				totalDu = client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal); // NOUVELLE LIGNE
+			}
 
-            var totalPaye = client.Paiements?.Where(p => p.Statut == StatutPaiement.Paye).Sum(p => p.Montant) ?? 0;
+			var totalPaye = client.Paiements?.Where(p => p.Statut == StatutPaiement.Paye).Sum(p => p.Montant) ?? 0;
 
-            return totalDu - totalPaye;
-        }
+			return totalDu - totalPaye;
+		}
         
         private async Task<string> GenerateUniqueReceiptNumberAsync(TransitContext context)
         {

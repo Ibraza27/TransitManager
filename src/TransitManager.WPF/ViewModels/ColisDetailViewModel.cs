@@ -45,6 +45,7 @@ namespace TransitManager.WPF.ViewModels
         private bool _destinataireEstProprietaire;
         private Client? _selectedClient;
         private string? _clientSearchText;
+		private decimal _prixMetreCube;
         #endregion
 
         #region Propriétés Publiques
@@ -137,12 +138,31 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 		
+		public decimal PrixMetreCube
+		{
+			get => _prixMetreCube;
+			set
+			{
+				if (SetProperty(ref _prixMetreCube, value))
+				{
+					OnPropertyChanged(nameof(PrixEstime)); // Notifier que le prix estimé doit être recalculé
+				}
+			}
+		}
+
+		public decimal PrixEstime => (Colis?.Volume ?? 0) * PrixMetreCube;
 		
 		private void OnColisPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
 			if (e.PropertyName == nameof(Colis.InventaireJson))
 			{
 				OnPropertyChanged(nameof(HasInventaire));
+			}
+
+			// AJOUTER CETTE CONDITION
+			if (e.PropertyName == nameof(Colis.Volume))
+			{
+				OnPropertyChanged(nameof(PrixEstime));
 			}
 			
 			// On notifie juste que quelque chose a changé pour que le bouton Enregistrer s'active/désactive
@@ -341,17 +361,22 @@ namespace TransitManager.WPF.ViewModels
 					}
 					await _dialogService.ShowInformationAsync("Succès", "Le colis a été enregistré.");
 
+					// ==== MODIFICATION ICI ====
 					if (_isModal)
 					{
-						CloseAction?.Invoke();
+						// On ne ferme plus automatiquement, sauf si on décide de garder ce comportement pour les modales
+						// CloseAction?.Invoke(); 
 					}
 					else
 					{
-						_navigationService.GoBack();
+						// On ne revient plus en arrière
+						// _navigationService.GoBack(); 
 					}
+
+					// On recharge les données pour avoir l'état le plus récent après sauvegarde
+					await InitializeAsync(Colis.Id); 
+					// ==== FIN DE LA MODIFICATION ====
 				}
-				
-				// ======================= DÉBUT DE L'AJOUT =======================
 				catch (ConcurrencyException cex)
 				{
 					var refresh = await _dialogService.ShowConfirmationAsync(
@@ -363,7 +388,7 @@ namespace TransitManager.WPF.ViewModels
 						await InitializeAsync(Colis.Id); // Recharge les données
 					}
 				}
-				// ======================== FIN DE L'AJOUT ========================
+
 				
 				catch (Exception ex)
 				{
@@ -435,18 +460,6 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-
-
-		
-        private void CalculatePrice()
-        {
-            if (Colis == null) return;
-            decimal prix = 0;
-            prix += Colis.Poids * 2.5m;
-            if (Colis.TypeEnvoi == TypeEnvoi.AvecDedouanement) prix += 50m; else prix += 10m;
-            if (Colis.LivraisonADomicile) prix += 15m;
-            Colis.PrixTotal = prix;
-        }
 
         public async Task InitializeAsync(string newMarker)
         {

@@ -9,6 +9,7 @@ namespace TransitManager.Core.Entities
         private string _designation = string.Empty;
         private int _quantite = 1;
         private decimal _valeur;
+		private DateTime _date = DateTime.Today; // AJOUTÉ
 
         public string Designation
         {
@@ -27,6 +28,13 @@ namespace TransitManager.Core.Entities
             get => _valeur;
             set => SetProperty(ref _valeur, value);
         }
+
+		public DateTime Date
+		{
+			get => _date;
+			set => SetProperty(ref _date, value);
+		}
+
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

@@ -296,7 +296,7 @@ namespace TransitManager.WPF.ViewModels
         private void CalculateStatistics() 
         { 
             TotalColis = Colis.Count; 
-            PoidsTotal = Colis.Sum(c => c.Poids); 
+            //PoidsTotal = Colis.Sum(c => c.Poids); 
             VolumeTotal = Colis.Sum(c => c.Volume);
             TotalPieces = Colis.Sum(c => c.NombrePieces);
             PrixTotalGlobal = Colis.Sum(c => c.PrixTotal);

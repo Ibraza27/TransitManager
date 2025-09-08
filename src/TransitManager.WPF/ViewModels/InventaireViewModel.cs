@@ -93,12 +93,12 @@ namespace TransitManager.WPF.ViewModels
             return !string.IsNullOrWhiteSpace(NewItem.Designation) && NewItem.Quantite > 0;
         }
 
-        private void AddItem()
-        {
-            Items.Add(NewItem);
-            NewItem = new InventaireItem();
-            NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
-        }
+		private void AddItem()
+		{
+			Items.Add(NewItem);
+			NewItem = new InventaireItem(); // Cette ligne crée un nouvel item avec la date du jour
+			NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
+		}
 
         private void RemoveItem(InventaireItem? item)
         {

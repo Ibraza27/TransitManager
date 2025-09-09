@@ -203,6 +203,8 @@ namespace TransitManager.WPF.ViewModels
                     var searchTextLower = SearchText.ToLower();
                     filteredVehicules = filteredVehicules.Where(v => 
                         (v.Immatriculation.ToLower().Contains(searchTextLower)) ||
+						(v.Marque.ToLower().Contains(searchTextLower)) ||
+						(v.Modele.ToLower().Contains(searchTextLower)) ||
                         (v.Client?.NomComplet.ToLower().Contains(searchTextLower) == true) ||
                         (v.Conteneur?.NumeroDossier.ToLower().Contains(searchTextLower) == true) ||
                         (v.DestinationFinale.ToLower().Contains(searchTextLower))

@@ -49,7 +49,7 @@
 				
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
-                    <Button Content="Annuler" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                    <Button Content="Retour" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
                 </StackPanel>
             </Grid>
         </materialDesign:Card>

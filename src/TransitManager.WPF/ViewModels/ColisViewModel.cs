@@ -256,6 +256,7 @@ namespace TransitManager.WPF.ViewModels
                     filteredColis = filteredColis.Where(c => 
                         c.AllBarcodes.ToLower().Contains(searchTextLower) ||
                         c.NumeroReference.ToLower().Contains(searchTextLower) ||
+						c.Designation.ToLower().Contains(searchTextLower) ||
                         (c.Client?.NomComplet.ToLower().Contains(searchTextLower) == true) ||
                         (c.Conteneur?.NumeroDossier.ToLower().Contains(searchTextLower) == true) ||
                         (c.DestinationFinale.ToLower().Contains(searchTextLower))

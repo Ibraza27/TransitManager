@@ -109,6 +109,14 @@
                                      materialDesign:HintAssist.Hint="Téléphone du destinataire"
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      Margin="0,0,0,15"/>
+									 
+							<TextBox Text="{Binding Colis.AdresseLivraison, UpdateSourceTrigger=PropertyChanged}"
+									 IsEnabled="{Binding DestinataireEstProprietaire, Converter={StaticResource InvertedBooleanConverter}}"
+									 materialDesign:HintAssist.Hint="Adresse de livraison"
+									 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+									 TextWrapping="Wrap" AcceptsReturn="True" Height="80"
+									 Margin="0,0,0,15"/>
+									 
                         </StackPanel>
                     </materialDesign:Card>
                     

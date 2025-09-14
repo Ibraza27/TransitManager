@@ -24,13 +24,6 @@ namespace TransitManager.Infrastructure.Data.Configurations
 			
 			builder.Property(c => c.InventaireJson).HasColumnType("jsonb");
 
-
-            // ===== SECTION MODIFIÉE =====
-            // On supprime les anciennes propriétés et on ajoute Volume
-            // builder.Property(c => c.Poids).HasPrecision(10, 3).HasDefaultValue(0); // SUPPRIMÉ
-            // builder.Property(c => c.Longueur).HasPrecision(10, 2).HasDefaultValue(0); // SUPPRIMÉ
-            // builder.Property(c => c.Largeur).HasPrecision(10, 2).HasDefaultValue(0); // SUPPRIMÉ
-            // builder.Property(c => c.Hauteur).HasPrecision(10, 2).HasDefaultValue(0); // SUPPRIMÉ
             builder.Property(c => c.Volume).HasPrecision(18, 3).HasDefaultValue(0); // AJOUTÉ
             // ===== FIN DE LA SECTION MODIFIÉE =====
 
@@ -42,6 +35,7 @@ namespace TransitManager.Infrastructure.Data.Configurations
             builder.Property(c => c.Destinataire).HasMaxLength(200);
             builder.Property(c => c.SignatureReception).HasColumnType("text");
             builder.Property(c => c.Commentaires).HasColumnType("text");
+			builder.Property(c => c.AdresseLivraison).HasMaxLength(500);
 
             builder.Property(c => c.Statut).HasConversion<string>().HasMaxLength(50);
             builder.Property(c => c.Etat).HasConversion<string>().HasMaxLength(50);

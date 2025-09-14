@@ -46,30 +46,71 @@ namespace TransitManager.WPF.ViewModels
 		private bool _showFilters = true;
 		public bool ShowFilters { get => _showFilters; set => SetProperty(ref _showFilters, value); }
 
-        private string? _selectedStatut = "Tous";
-        public string? SelectedStatut { get => _selectedStatut; set { if (SetProperty(ref _selectedStatut, value)) { _ = LoadColisAsync(); } } }
+		private string? _selectedStatut = "Tous";
+		public string? SelectedStatut
+		{
+			get => _selectedStatut;
+			set
+			{
+				if (SetProperty(ref _selectedStatut, value))
+				{
+					_ = LoadColisAsync();
+				}
+			}
+		}
 
-        private Client? _selectedClient;
-        public Client? SelectedClient { get => _selectedClient; set { if (SetProperty(ref _selectedClient, value)) { _ = LoadColisAsync(); } } }
+		private Client? _selectedClient;
+		public Client? SelectedClient
+		{
+			get => _selectedClient;
+			set
+			{
+				if (SetProperty(ref _selectedClient, value))
+				{
+					_ = LoadColisAsync();
+				}
+			}
+		}
+		
         private List<Client> _fullClientsList = new();
+		
         public ObservableCollection<Client> ClientsList { get; } = new();
 
-        private Conteneur? _selectedConteneur;
-        public Conteneur? SelectedConteneur { get => _selectedConteneur; set { if (SetProperty(ref _selectedConteneur, value)) { _ = LoadColisAsync(); } } }
+		private Conteneur? _selectedConteneur;
+		public Conteneur? SelectedConteneur
+		{
+			get => _selectedConteneur;
+			set
+			{
+				if (SetProperty(ref _selectedConteneur, value))
+				{
+					_ = LoadColisAsync();
+				}
+			}
+		}
+		
+		
         private List<Conteneur> _fullConteneursList = new();
         public ObservableCollection<Conteneur> ConteneursList { get; } = new();
 
-        private DateTime? _selectedDate;
-        public DateTime? SelectedDate { get => _selectedDate; set { if (SetProperty(ref _selectedDate, value)) { _ = LoadColisAsync(); } } }
+		private DateTime? _selectedDate;
+		public DateTime? SelectedDate
+		{
+			get => _selectedDate;
+			set
+			{
+				if (SetProperty(ref _selectedDate, value))
+				{
+					_ = LoadColisAsync();
+				}
+			}
+		}
         
         private ObservableCollection<string> _statutsList = new();
         public ObservableCollection<string> StatutsList { get => _statutsList; set => SetProperty(ref _statutsList, value); }
 
         private int _totalColis;
         public int TotalColis { get => _totalColis; set => SetProperty(ref _totalColis, value); }
-
-        private decimal _poidsTotal;
-        public decimal PoidsTotal { get => _poidsTotal; set => SetProperty(ref _poidsTotal, value); }
 
         private decimal _volumeTotal;
         public decimal VolumeTotal { get => _volumeTotal; set => SetProperty(ref _volumeTotal, value); }
@@ -120,7 +161,7 @@ namespace TransitManager.WPF.ViewModels
             NewColisCommand = new AsyncRelayCommand(NewColis);
             RefreshCommand = new AsyncRelayCommand(LoadAsync);
             SearchCommand = new AsyncRelayCommand(LoadColisAsync);
-            ClearFiltersCommand = new RelayCommand(ClearFilters);
+            ClearFiltersCommand = new AsyncRelayCommand(ClearFiltersAsync);
             ExportCommand = new AsyncRelayCommand(ExportAsync);
             EditCommand = new AsyncRelayCommand<Colis>(EditColis);
             DeleteCommand = new AsyncRelayCommand<Colis>(DeleteColis);
@@ -227,22 +268,38 @@ namespace TransitManager.WPF.ViewModels
             await LoadFilterDataAsync();
         }
         
-        public override async Task InitializeAsync()
+		public override async Task InitializeAsync()
 		{
-			ClearFilters();
-			await LoadAsync();
+			// 1. On charge les données des filtres UNE SEULE FOIS.
+			await InitializeFiltersAsync();
+			
+			// 2. On réinitialise les filtres et on charge la liste des colis.
+			await ClearFiltersAsync();
 		}
 
-        public override async Task LoadAsync()
-        {
-            await ExecuteBusyActionAsync(async () =>
-            {
-                StatusMessage = "Chargement des données...";
-                await LoadFilterDataAsync();
-                await LoadColisAsync();
-                StatusMessage = "";
-            });
-        }
+		// CETTE MÉTHODE EST MAINTENANT DÉDIÉE AU RECHARGEMENT DE LA LISTE DE COLIS
+		public override async Task LoadAsync()
+		{
+			await ExecuteBusyActionAsync(async () =>
+			{
+				StatusMessage = "Chargement des colis...";
+				await LoadColisAsync();
+				StatusMessage = "";
+			});
+		}
+		
+
+		// NOUVELLE MÉTHODE POUR INITIALISER LES FILTRES
+		private async Task InitializeFiltersAsync()
+		{
+			await ExecuteBusyActionAsync(async () =>
+			{
+				StatusMessage = "Chargement des filtres...";
+				await LoadFilterDataAsync();
+				StatusMessage = "";
+			});
+		}
+
         
         private async Task LoadColisAsync()
         {
@@ -297,7 +354,6 @@ namespace TransitManager.WPF.ViewModels
         private void CalculateStatistics() 
         { 
             TotalColis = Colis.Count; 
-            //PoidsTotal = Colis.Sum(c => c.Poids); 
             VolumeTotal = Colis.Sum(c => c.Volume);
             TotalPieces = Colis.Sum(c => c.NombrePieces);
             PrixTotalGlobal = Colis.Sum(c => c.PrixTotal);
@@ -305,14 +361,19 @@ namespace TransitManager.WPF.ViewModels
             TotalRestantGlobal = Colis.Sum(c => c.RestantAPayer);
         }
         
-        private void ClearFilters()
-        {
-            SelectedClient = null;
-            SelectedConteneur = null;
-            SelectedDate = null;
-            SelectedStatut = "Tous";
-            _ = LoadColisAsync();
-        }
+		// NOUVELLE MÉTHODE ASYNCHRONE
+		private async Task ClearFiltersAsync()
+		{
+			// On modifie les champs privés directement pour ne pas déclencher les rechargements multiples
+			SetProperty(ref _searchText, string.Empty, nameof(SearchText));
+			SetProperty(ref _selectedClient, null, nameof(SelectedClient));
+			SetProperty(ref _selectedConteneur, null, nameof(SelectedConteneur));
+			SetProperty(ref _selectedDate, null, nameof(SelectedDate));
+			SetProperty(ref _selectedStatut, "Tous", nameof(SelectedStatut));
+
+			// On ne recharge QUE la liste des colis. Les filtres sont déjà chargés.
+			await LoadColisAsync();
+		}
 
         private Task NewColis() { _navigationService.NavigateTo("ColisDetail", "new"); return Task.CompletedTask; }
         private Task EditColis(Colis? colis) { if (colis != null) { _navigationService.NavigateTo("ColisDetail", colis.Id); } return Task.CompletedTask; }

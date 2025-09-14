@@ -17,10 +17,6 @@ namespace TransitManager.Core.Entities
         private TypeColis _type;
         private int _nombrePieces = 1;
         private string _designation = string.Empty;
-        // private decimal _poids; // SUPPRIMÉ
-        // private decimal _longueur; // SUPPRIMÉ
-        // private decimal _largeur; // SUPPRIMÉ
-        // private decimal _hauteur; // SUPPRIMÉ
         private decimal _volume; // AJOUTÉ
         private decimal _valeurDeclaree;
         private bool _estFragile;
@@ -35,6 +31,7 @@ namespace TransitManager.Core.Entities
         private string? _signatureReception;
         private string? _commentaires;
         private string? _telephoneDestinataire;
+		private string? _adresseLivraison;
         private string _destinationFinale = string.Empty;
         private TypeEnvoi _typeEnvoi;
         private bool _livraisonADomicile;
@@ -58,22 +55,27 @@ namespace TransitManager.Core.Entities
         public TypeColis Type { get => _type; set => SetProperty(ref _type, value); }
         public int NombrePieces { get => _nombrePieces; set => SetProperty(ref _nombrePieces, value); }
         
-        [Required]
-        [StringLength(500)]
-        public string Designation { get => _designation; set => SetProperty(ref _designation, value); }
+		[Required]
+		[StringLength(500)]
+		public string Designation 
+		{ 
+			get => _designation; 
+			// MODIFIER LE SETTER
+			set => SetProperty(ref _designation, value?.ToUpper()); 
+		}
 
-        // public decimal Poids { get => _poids; set => SetProperty(ref _poids, value); } // SUPPRIMÉ
-        // public decimal Longueur { get => _longueur; set => SetProperty(ref _longueur, value); } // SUPPRIMÉ
-        // public decimal Largeur { get => _largeur; set => SetProperty(ref _largeur, value); } // SUPPRIMÉ
-        // public decimal Hauteur { get => _hauteur; set => SetProperty(ref _hauteur, value); } // SUPPRIMÉ
         public decimal Volume { get => _volume; set => SetProperty(ref _volume, value); } // AJOUTÉ
 
         public decimal ValeurDeclaree { get => _valeurDeclaree; set => SetProperty(ref _valeurDeclaree, value); }
         public bool EstFragile { get => _estFragile; set => SetProperty(ref _estFragile, value); }
         public bool ManipulationSpeciale { get => _manipulationSpeciale; set => SetProperty(ref _manipulationSpeciale, value); }
         
-        [StringLength(1000)]
-        public string? InstructionsSpeciales { get => _instructionsSpeciales; set => SetProperty(ref _instructionsSpeciales, value); }
+		public string? InstructionsSpeciales 
+		{ 
+			get => _instructionsSpeciales; 
+			// MODIFIER LE SETTER
+			set => SetProperty(ref _instructionsSpeciales, value?.ToUpper()); 
+		}
         
         public string? Photos { get => _photos; set => SetProperty(ref _photos, value); }
         public DateTime? DateDernierScan { get => _dateDernierScan; set => SetProperty(ref _dateDernierScan, value); }
@@ -89,10 +91,22 @@ namespace TransitManager.Core.Entities
         
         [StringLength(20)]
         public string? TelephoneDestinataire { get => _telephoneDestinataire; set => SetProperty(ref _telephoneDestinataire, value); }
+		
+		[StringLength(500)]
+		public string? AdresseLivraison 
+		{ 
+			get => _adresseLivraison; 
+			set => SetProperty(ref _adresseLivraison, value?.ToUpper()); 
+		}		
         
-        [Required]
-        [StringLength(200)]
-        public string DestinationFinale { get => _destinationFinale; set => SetProperty(ref _destinationFinale, value); }
+		[Required]
+		[StringLength(200)]
+		public string DestinationFinale 
+		{ 
+			get => _destinationFinale; 
+			// MODIFIER LE SETTER
+			set => SetProperty(ref _destinationFinale, value?.ToUpper()); 
+		}
 
         public TypeEnvoi TypeEnvoi { get => _typeEnvoi; set => SetProperty(ref _typeEnvoi, value); }
         public bool LivraisonADomicile { get => _livraisonADomicile; set => SetProperty(ref _livraisonADomicile, value); }

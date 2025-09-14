@@ -95,7 +95,7 @@ namespace TransitManager.WPF.ViewModels
 
             NewVehiculeCommand = new AsyncRelayCommand(NewVehicule);
             RefreshCommand = new AsyncRelayCommand(LoadAsync);
-            ClearFiltersCommand = new RelayCommand(ClearFilters);
+            ClearFiltersCommand = new AsyncRelayCommand(ClearFiltersAsync);
             EditCommand = new AsyncRelayCommand<Vehicule>(EditVehicule);
             DeleteCommand = new AsyncRelayCommand<Vehicule>(DeleteVehicule);
 			ViewClientDetailsInWindowCommand = new AsyncRelayCommand<Vehicule>(ViewClientDetailsInWindowAsync);
@@ -140,25 +140,42 @@ namespace TransitManager.WPF.ViewModels
             await LoadFilterDataAsync();
         }
 
-        public async void Receive(ConteneurUpdatedMessage message)
-        {
-            await LoadFilterDataAsync();
-        }
+		public async void Receive(ConteneurUpdatedMessage message)
+		{
+			// On change ici aussi pour ne recharger que les filtres
+			await InitializeFiltersAsync();
+		}
 
 		public override async Task InitializeAsync()
 		{
-			ClearFilters();
-			await LoadAsync();
+			// 1. Charger les données des filtres (ComboBox) une seule fois au début.
+			await InitializeFiltersAsync();
+			// 2. Réinitialiser les sélections et charger la liste des véhicules.
+			await ClearFiltersAsync();
 		}
 
-        public override async Task LoadAsync()
-        {
-            await ExecuteBusyActionAsync(async () =>
-            {
-                await LoadFilterDataAsync();
-                await LoadVehiculesAsync();
-            });
-        }
+		// CETTE MÉTHODE EST MAINTENANT DÉDIÉE AU RECHARGEMENT DE LA LISTE PRINCIPALE
+		public override async Task LoadAsync()
+		{
+			await ExecuteBusyActionAsync(async () =>
+			{
+				StatusMessage = "Chargement des véhicules...";
+				await LoadVehiculesAsync();
+				StatusMessage = "";
+			});
+		}
+
+		// NOUVELLE MÉTHODE POUR INITIALISER LES DONNÉES DES FILTRES
+		private async Task InitializeFiltersAsync()
+		{
+			await ExecuteBusyActionAsync(async () =>
+			{
+				StatusMessage = "Chargement des filtres...";
+				await LoadFilterDataAsync();
+				StatusMessage = "";
+			});
+		}
+
 
 		private async Task ViewClientDetailsInWindowAsync(Vehicule? vehicule)
 		{
@@ -241,15 +258,19 @@ namespace TransitManager.WPF.ViewModels
             foreach(var conteneur in _fullConteneursList) ConteneursList.Add(conteneur);
         }
 
-        private void ClearFilters()
-        {
-            SearchText = string.Empty;
-            SelectedClient = null;
-            SelectedConteneur = null;
-            SelectedStatut = "Tous";
-			SelectedDate = null;
-            _ = LoadVehiculesAsync();
-        }
+		// NOUVELLE MÉTHODE ASYNCHRONE
+		private async Task ClearFiltersAsync()
+		{
+			// On modifie les champs privés directement pour éviter les rechargements multiples
+			SetProperty(ref _searchText, string.Empty, nameof(SearchText));
+			SetProperty(ref _selectedClient, null, nameof(SelectedClient));
+			SetProperty(ref _selectedConteneur, null, nameof(SelectedConteneur));
+			SetProperty(ref _selectedDate, null, nameof(SelectedDate));
+			SetProperty(ref _selectedStatut, "Tous", nameof(SelectedStatut));
+
+			// On recharge uniquement la liste des véhicules
+			await LoadVehiculesAsync();
+		}
 
         private void CalculateStatistics()
         {

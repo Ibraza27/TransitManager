@@ -110,8 +110,13 @@
                                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                      Margin="0,0,0,15"/>
 									 
+							<StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+								<TextBlock Text="Livraison à domicile ?" VerticalAlignment="Center" Margin="0,0,10,0"/>
+								<ToggleButton IsChecked="{Binding Colis.LivraisonADomicile}" Style="{StaticResource MaterialDesignSwitchToggleButton}"/>
+							</StackPanel>
+							
+							<!-- 2. MODIFIEZ LE TEXTBOX CI-DESSOUS EN SUPPRIMANT IsEnabled -->
 							<TextBox Text="{Binding Colis.AdresseLivraison, UpdateSourceTrigger=PropertyChanged}"
-									 IsEnabled="{Binding DestinataireEstProprietaire, Converter={StaticResource InvertedBooleanConverter}}"
 									 materialDesign:HintAssist.Hint="Adresse de livraison"
 									 Style="{StaticResource MaterialDesignOutlinedTextBox}"
 									 TextWrapping="Wrap" AcceptsReturn="True" Height="80"
@@ -196,10 +201,7 @@
 									  Style="{StaticResource MaterialDesignOutlinedComboBox}" 
 									  Margin="0,0,0,15"/>									  
                             
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                <TextBlock Text="Livraison à domicile ?" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <ToggleButton IsChecked="{Binding Colis.LivraisonADomicile}" Style="{StaticResource MaterialDesignSwitchToggleButton}"/>
-                            </StackPanel>
+
                             
 							<TextBox Text="{Binding Colis.ValeurDeclaree, UpdateSourceTrigger=PropertyChanged}"
 									 IsReadOnly="{Binding HasInventaire}"

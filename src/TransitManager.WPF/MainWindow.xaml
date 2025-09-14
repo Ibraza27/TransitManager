@@ -24,16 +24,21 @@
                 </Grid.RowDefinitions>
 
                 <!-- En-tête du menu -->
-                <StackPanel Grid.Row="0" Margin="16">
-                    <Image Source="/Resources/Images/logo.png" Height="60" Margin="0,10,0,10"/>
-                    <TextBlock Text="TRANSIT MANAGER" HorizontalAlignment="Center" FontWeight="Bold" FontSize="16" />
-                </StackPanel>
+				<StackPanel Grid.Row="0" Margin="16">
+					<!-- Image du logo ajoutée -->
+					<Image Source="/Resources/Images/logo.jpg" Height="80" Margin="0,10,0,10"/>
+					
+					<TextBlock Text="HIPPOCAMPE" HorizontalAlignment="Center" FontWeight="Bold" FontSize="16" />
+					<TextBlock Text="IMPORT-EXPORT" HorizontalAlignment="Center" FontSize="12" Opacity="0.8"/>
+				</StackPanel>
 
                 <!-- Items du menu -->
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <ListBox x:Name="MenuListBox"
-                             Style="{StaticResource MaterialDesignNavigationListBox}"
-                             SelectedIndex="0">
+				<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+					<!-- MODIFIEZ LA LIGNE SUIVANTE -->
+					<ListBox x:Name="MenuListBox"
+							 Style="{StaticResource MaterialDesignNavigationListBox}"
+							 HorizontalContentAlignment="Stretch" 
+							 SelectedIndex="0">
                         
                         <ListBoxItem ToolTip="Tableau de bord">
                             <RadioButton GroupName="MenuItems" IsChecked="True"

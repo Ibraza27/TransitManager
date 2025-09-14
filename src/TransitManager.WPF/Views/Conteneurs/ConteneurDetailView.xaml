@@ -4,8 +4,15 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+			 xmlns:converters="clr-namespace:TransitManager.WPF.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1200">
+			 
+    <!-- AJOUTER CETTE SECTION DE RESSOURCES -->
+    <UserControl.Resources>
+        <converters:ToUpperConverter x:Key="ToUpperConverter" />
+    </UserControl.Resources>
+			 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -340,7 +347,16 @@
 										</DataGridTextColumn.Binding>
 									</DataGridTextColumn>
 									<DataGridTextColumn Header="Année" Binding="{Binding Annee}" Width="Auto"/>
-									<DataGridTextColumn Header="Commentaires" Binding="{Binding Commentaires}" Width="2*"/>
+                                    <DataGridTemplateColumn Header="Commentaires" Width="2*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Commentaires, Converter={StaticResource ToUpperConverter}}"
+                                                           Foreground="{StaticResource ErrorBrush}"
+                                                           FontWeight="Bold"
+                                                           TextWrapping="Wrap"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
 
 									<!-- COLONNES FINANCIÈRES CORRIGÉES -->
 									<DataGridTemplateColumn Header="Prix Total" Width="*">

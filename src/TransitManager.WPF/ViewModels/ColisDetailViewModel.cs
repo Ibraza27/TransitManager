@@ -32,6 +32,7 @@ namespace TransitManager.WPF.ViewModels
 		private readonly IPaiementService _paiementService;
 		private readonly IServiceProvider _serviceProvider;
 		private readonly IMessenger _messenger;
+		private readonly IExportService _exportService;
 		public Action? CloseAction { get; set; }
 		private bool _isModal = false;
 
@@ -221,9 +222,15 @@ namespace TransitManager.WPF.ViewModels
 		public IAsyncRelayCommand OpenInventaireCommand { get; }
 		public IAsyncRelayCommand OpenPaiementCommand { get; }
 		public IAsyncRelayCommand CheckPaiementModificationCommand { get; }
+		public IAsyncRelayCommand OpenPrintPreviewCommand { get; }
         #endregion
 
-		public ColisDetailViewModel(IColisService colisService, IClientService clientService, IBarcodeService barcodeService, INavigationService navigationService, IDialogService dialogService, IConteneurService conteneurService, IPaiementService paiementService, IServiceProvider serviceProvider, IMessenger messenger)
+        public ColisDetailViewModel(
+            IColisService colisService, IClientService clientService, IBarcodeService barcodeService, 
+            INavigationService navigationService, IDialogService dialogService, IConteneurService conteneurService, 
+            IPaiementService paiementService, IServiceProvider serviceProvider, IMessenger messenger,
+            IExportService exportService // AJOUTER CE PARAMÈTRE
+        )
 		{
 			_colisService = colisService;
 			_clientService = clientService;
@@ -234,6 +241,7 @@ namespace TransitManager.WPF.ViewModels
 			_paiementService = paiementService; 
 			_serviceProvider = serviceProvider;
 			_messenger = messenger;
+            _exportService = exportService; // AJOUTER CETTE LIGNE D'ASSIGNATION
 			
 			_messenger.RegisterAll(this);
 			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
@@ -247,7 +255,51 @@ namespace TransitManager.WPF.ViewModels
 			CheckPaiementModificationCommand = new AsyncRelayCommand(CheckPaiementModification);
 			CheckInventaireModificationCommand = new AsyncRelayCommand(CheckInventaireModification);
             GenerateBarcodeCommand = new RelayCommand(GenerateBarcode);
+			OpenPrintPreviewCommand = new AsyncRelayCommand(OpenPrintPreviewAsync, CanPrint);
         }
+		
+        // AJOUTER CETTE MÉTHODE pour activer/désactiver le bouton
+        private bool CanPrint()
+        {
+            // On peut imprimer seulement si le colis n'est pas nouveau (il a déjà été sauvegardé au moins une fois)
+            return Colis != null && !string.IsNullOrEmpty(Colis.CreePar);
+        }
+        
+        // AJOUTER CETTE NOUVELLE MÉTHODE
+        private async Task OpenPrintPreviewAsync()
+        {
+            if (Colis == null) return;
+
+            await ExecuteBusyActionAsync(async () =>
+            {
+                try
+                {
+                    // 1. Générer le PDF en mémoire (Cette ligne est maintenant correcte car _exportService existe)
+                    var pdfData = await _exportService.GenerateColisTicketPdfAsync(Colis);
+
+                    // 2. Créer la vue et le ViewModel de l'aperçu
+                    using var scope = _serviceProvider.CreateScope();
+                    var previewViewModel = scope.ServiceProvider.GetRequiredService<PrintPreviewViewModel>();
+                    
+                    // 3. Charger le PDF dans le ViewModel et initialiser
+                    previewViewModel.LoadPdf(pdfData);
+                    await previewViewModel.InitializeAsync();
+
+                    // 4. Ouvrir la fenêtre modale
+                    var previewWindow = new Views.PrintPreviewView(previewViewModel)
+                    {
+                        // CORRECTION POUR L'AMBIGUÏTÉ
+                        Owner = System.Windows.Application.Current.MainWindow
+                    };
+
+                    previewWindow.ShowDialog();
+                }
+                catch (Exception ex)
+                {
+                    await _dialogService.ShowErrorAsync("Erreur de génération", $"Impossible de générer l'étiquette : {ex.Message}");
+                }
+            });
+        }		
 		
 		public void Receive(EntityTotalPaidUpdatedMessage message)
 		{
@@ -374,7 +426,8 @@ namespace TransitManager.WPF.ViewModels
 					}
 
 					// On recharge les données pour avoir l'état le plus récent après sauvegarde
-					await InitializeAsync(Colis.Id); 
+					await InitializeAsync(Colis.Id);
+					OpenPrintPreviewCommand.NotifyCanExecuteChanged();
 					// ==== FIN DE LA MODIFICATION ====
 				}
 				catch (ConcurrencyException cex)
@@ -550,6 +603,7 @@ namespace TransitManager.WPF.ViewModels
 				}
 				
 				SaveCommand.NotifyCanExecuteChanged();
+				OpenPrintPreviewCommand.NotifyCanExecuteChanged();
 			});
 		}
 

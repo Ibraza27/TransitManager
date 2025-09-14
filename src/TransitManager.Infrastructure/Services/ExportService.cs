@@ -806,7 +806,86 @@ namespace TransitManager.Infrastructure.Services
 				.PaddingVertical(5).PaddingHorizontal(5); 
 		}
 		
-		
+		public async Task<byte[]> GenerateColisTicketPdfAsync(Colis colis)
+		{
+			var barcodeService = new BarcodeService();
+			var firstBarcode = colis.Barcodes.FirstOrDefault()?.Value ?? colis.NumeroReference;
+			var barcodeImage = await barcodeService.GenerateBarcodeImageAsync(firstBarcode, width: 350, height: 80);
+
+			return await Task.Run(() =>
+			{
+				return PdfDocument.Create(container =>
+				{
+					// Boucle pour créer autant de pages que nécessaire
+					for (int i = 0; i < colis.NombrePieces; i += 2)
+					{
+						container.Page(page =>
+						{
+							page.Size(100, 150, Unit.Millimetre);
+							page.Margin(0);
+
+							page.Content().Column(column =>
+							{
+								// Ticket 1 (pièce i + 1)
+								var pieceNumber1 = i + 1;
+								column.Item().Height(75, Unit.Millimetre).Element(cont => ComposeTicket(cont, colis, barcodeImage, pieceNumber1));
+								
+								// Ticket 2 (pièce i + 2), seulement s'il existe
+								if (i + 2 <= colis.NombrePieces)
+								{
+									var pieceNumber2 = i + 2;
+									column.Item().Height(75, Unit.Millimetre).Element(cont => ComposeTicket(cont, colis, barcodeImage, pieceNumber2));
+								}
+							});
+						});
+					}
+				}).GeneratePdf();
+			});
+
+			// La méthode ComposeTicket accepte maintenant le numéro de la pièce
+			static void ComposeTicket(IContainer container, Colis colis, byte[] barcodeImage, int pieceNumber)
+			{
+				container
+					.Border(1)
+					.PaddingVertical(3, Unit.Millimetre) 
+					.PaddingHorizontal(5, Unit.Millimetre)
+					.Column(column =>
+					{
+						column.Spacing(1); 
+
+						column.Item().AlignCenter().Text(colis.Destinataire).FontSize(22).ExtraBold();
+						column.Item().AlignCenter().Text($"Tel : {colis.TelephoneDestinataire}").FontSize(12);
+
+						if (colis.LivraisonADomicile)
+						{
+							column.Item().AlignCenter().PaddingTop(4).Background(Colors.Grey.Lighten2).PaddingHorizontal(5).Text("À LIVRER À DOMICILE").Bold().FontSize(12);
+						}
+
+						if (!string.IsNullOrWhiteSpace(colis.AdresseLivraison))
+						{
+							column.Item().PaddingTop(4).Text(text =>
+							{
+								text.DefaultTextStyle(x => x.FontSize(9));
+								text.Span("Adresse : ").SemiBold();
+								text.Span(colis.AdresseLivraison);
+							});
+						}
+						
+						column.Item().PaddingTop(4).Text(text =>
+						{
+							text.DefaultTextStyle(x => x.FontSize(9));
+							text.Span("Destination : ").SemiBold();
+							text.Span(colis.DestinationFinale);
+						});
+						
+						// Modification ici pour afficher "Pièce X / Total"
+						column.Item().PaddingTop(4).AlignCenter().Text($"Colis: {pieceNumber} / {colis.NombrePieces}").FontSize(11).SemiBold();
+
+						column.Item().PaddingTop(4).ExtendHorizontal().AlignCenter().Image(barcodeImage, ImageScaling.FitWidth);
+					});
+			}
+		}
+
     }
 
 }

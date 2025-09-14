@@ -4,9 +4,16 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+		xmlns:converters="clr-namespace:TransitManager.WPF.Converters"
         mc:Ignorable="d"
         Title="{Binding Title}" Height="700" Width="1200"
         WindowStartupLocation="CenterOwner">
+		
+    <!-- AJOUTER CETTE SECTION DE RESSOURCES -->
+    <Window.Resources>
+        <converters:ToUpperConverter x:Key="ToUpperConverter" />
+    </Window.Resources>
+	
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -62,10 +69,47 @@
                 <DataGridTextColumn Header="Marque" Binding="{Binding Vehicule.Marque}" Width="*"/>
                 <DataGridTextColumn Header="Modèle" Binding="{Binding Vehicule.Modele}" Width="*"/>
                 <DataGridTextColumn Header="Année" Binding="{Binding Vehicule.Annee}" Width="Auto"/>
-                <DataGridTextColumn Header="Commentaires" Binding="{Binding Vehicule.Commentaires}" Width="2*"/>
-                <DataGridTextColumn Header="Prix Total" Binding="{Binding Vehicule.PrixTotal, StringFormat=C}" Width="*"/>
-                <DataGridTextColumn Header="Total Payé" Binding="{Binding Vehicule.SommePayee, StringFormat=C}" Width="*"/>
-                <DataGridTextColumn Header="Total Restant" Binding="{Binding Vehicule.RestantAPayer, StringFormat=C}" Width="*"/>
+                <!-- MODIFICATION : Colonne Commentaires -->
+                <DataGridTemplateColumn Header="Commentaires" Width="2*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Vehicule.Commentaires, Converter={StaticResource ToUpperConverter}}"
+                                       Foreground="{StaticResource ErrorBrush}"
+                                       FontWeight="Bold"
+                                       TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- MODIFICATION : Colonne Prix Total -->
+                <DataGridTextColumn Header="Prix Total" Binding="{Binding Vehicule.PrixTotal, StringFormat=C}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- MODIFICATION : Colonne Total Payé -->
+                <DataGridTextColumn Header="Total Payé" Binding="{Binding Vehicule.SommePayee, StringFormat=C}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- MODIFICATION : Colonne Total Restant -->
+                <DataGridTextColumn Header="Total Restant" Binding="{Binding Vehicule.RestantAPayer, StringFormat=C}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
                 <DataGridTemplateColumn Header="Statut" Width="120">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>

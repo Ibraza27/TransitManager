@@ -125,6 +125,7 @@ namespace TransitManager.WPF
             services.AddScoped<IBarcodeService, BarcodeService>();
             services.AddScoped<IExportService, ExportService>();
             services.AddScoped<IBackupService, BackupService>();
+			services.AddScoped<IPrintingService, PrintingService>();
 			
 			services.AddSingleton<CommunityToolkit.Mvvm.Messaging.IMessenger>(CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default);
 
@@ -153,6 +154,7 @@ namespace TransitManager.WPF
             services.AddTransient<NotificationsViewModel>();
 			services.AddTransient<PaiementColisViewModel>();
 			services.AddTransient<PaiementVehiculeViewModel>();
+			services.AddTransient<PrintPreviewViewModel>();
 
             // Views (Transient)
             services.AddTransient<LoginView>();
@@ -162,6 +164,7 @@ namespace TransitManager.WPF
 			services.AddTransient<AddVehiculeToConteneurView>();
 			services.AddTransient<Views.Paiements.PaiementColisView>();
 			services.AddTransient<Views.Paiements.PaiementVehiculeView>();
+			services.AddTransient<PrintPreviewView>();
             services.AddTransient<DashboardView>();
             services.AddTransient<ClientListView>();
             services.AddTransient<ClientDetailView>();

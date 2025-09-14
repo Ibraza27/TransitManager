@@ -17,6 +17,7 @@ namespace TransitManager.Core.Interfaces
         Task<byte[]> ExportFinancialReportAsync(DateTime startDate, DateTime endDate, IEnumerable<Paiement> paiements);
         Task<string> ExportToCsvAsync<T>(IEnumerable<T> data, string fileName);
 		Task<byte[]> ExportConteneurDetailToPdfAsync(Conteneur conteneur);
+		Task<byte[]> GenerateColisTicketPdfAsync(Colis colis);
     }
 
 

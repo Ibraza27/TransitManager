@@ -48,6 +48,21 @@
 				</Button>
 				
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+					<!-- AJOUTER LE BOUTON D'IMPRESSION CI-DESSOUS -->
+					<Button Content="Imprimer Étiquette" 
+							Command="{Binding OpenPrintPreviewCommand}"
+							Style="{StaticResource MaterialDesignRaisedLightButton}"
+							Margin="0,0,20,0">
+						<Button.ContentTemplate>
+							<DataTemplate>
+								<StackPanel Orientation="Horizontal">
+									<materialDesign:PackIcon Kind="Printer" Margin="0,0,8,0"/>
+									<TextBlock Text="Imprimer Étiquette"/>
+								</StackPanel>
+							</DataTemplate>
+						</Button.ContentTemplate>
+					</Button>
+					<!-- FIN DE L'AJOUT -->
                     <Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
                     <Button Content="Retour" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
                 </StackPanel>

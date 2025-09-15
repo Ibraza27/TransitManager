@@ -110,15 +110,16 @@
 	<Style x:Key="DataGridAmountColumnStyle" TargetType="TextBlock" BasedOn="{StaticResource DataGridTextColumnStyle}">
 		<Setter Property="HorizontalAlignment" Value="Right"/>
 		<Setter Property="FontFamily" Value="Consolas"/>
-		<!-- DataTrigger commenté temporairement car GreaterThanZeroConverter n'existe pas -->
-		<!--
+		
+		<!-- DataTrigger -->
+
 		<Style.Triggers>
 			<DataTrigger Binding="{Binding Path=., Converter={StaticResource GreaterThanZeroConverter}}" Value="False">
 				<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
 				<Setter Property="FontWeight" Value="Medium"/>
 			</DataTrigger>
 		</Style.Triggers>
-		-->
+
 	</Style>
 
     <!-- Style pour les colonnes de statut -->

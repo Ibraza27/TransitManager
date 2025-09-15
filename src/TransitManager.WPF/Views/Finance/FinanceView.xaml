@@ -1,0 +1,258 @@
+﻿<UserControl x:Class="TransitManager.WPF.Views.Finance.FinanceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+			 xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1200">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- En-tête de la page -->
+        <materialDesign:Card Grid.Row="0" Padding="16" Margin="16,16,16,8">
+            <Grid>
+                <TextBlock Text="Gestion Financière" 
+                           Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                           VerticalAlignment="Center"/>
+                <Button Command="{Binding RefreshCommand}" 
+                        Style="{StaticResource MaterialDesignIconButton}" 
+                        HorizontalAlignment="Right" 
+                        ToolTip="Actualiser les données">
+                    <materialDesign:PackIcon Kind="Refresh" />
+                </Button>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Contenu avec les onglets -->
+        <TabControl Grid.Row="1" Margin="16,8,16,16" Style="{StaticResource MaterialDesignNavigationRailTabControl}">
+            
+            <!-- Onglet 1: Tableau de Bord -->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="ViewDashboard" Margin="0 0 8 0"/>
+                        <TextBlock Text="Tableau de bord"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Indicateurs Clés (KPIs) -->
+                        <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,16">
+                            <materialDesign:Card Padding="16" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="CA du Mois" Style="{StaticResource MaterialDesignCaptionTextBlock}" Opacity="0.7"/>
+                                    <TextBlock Text="{Binding ChiffreAffaireMois, StringFormat=C}" Style="{StaticResource MaterialDesignHeadline4TextBlock}" Margin="0,8,0,0" Foreground="{StaticResource SuccessBrush}"/>
+                                </StackPanel>
+                            </materialDesign:Card>
+                            <materialDesign:Card Padding="16" Margin="8,0">
+                                <StackPanel>
+                                    <TextBlock Text="Total des Impayés" Style="{StaticResource MaterialDesignCaptionTextBlock}" Opacity="0.7"/>
+                                    <TextBlock Text="{Binding TotalImpayes, StringFormat=C}" Style="{StaticResource MaterialDesignHeadline4TextBlock}" Margin="0,8,0,0" Foreground="{StaticResource ErrorBrush}"/>
+                                </StackPanel>
+                            </materialDesign:Card>
+                            <materialDesign:Card Padding="16" Margin="8,0">
+                                <StackPanel>
+                                    <TextBlock Text="Reçus Aujourd'hui" Style="{StaticResource MaterialDesignCaptionTextBlock}" Opacity="0.7"/>
+                                    <TextBlock Text="{Binding PaiementsRecusAujourdhui, StringFormat=C}" Style="{StaticResource MaterialDesignHeadline4TextBlock}" Margin="0,8,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                </StackPanel>
+                            </materialDesign:Card>
+                            <materialDesign:Card Padding="16" Margin="8,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Paiements en Retard" Style="{StaticResource MaterialDesignCaptionTextBlock}" Opacity="0.7"/>
+                                    <TextBlock Text="{Binding PaiementsEnRetard}" Style="{StaticResource MaterialDesignHeadline4TextBlock}" Margin="0,8,0,0" Foreground="{StaticResource WarningBrush}"/>
+                                </StackPanel>
+                            </materialDesign:Card>
+                        </UniformGrid>
+
+                        <!-- Graphique -->
+                        <materialDesign:Card Grid.Row="1" Padding="16">
+                            <StackPanel>
+                                <TextBlock Text="Revenus des 6 derniers mois" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Margin="0,0,0,16"/>
+                                <lvc:CartesianChart Series="{Binding SeriesChiffreAffaires}" XAxes="{Binding XAxes}" Height="400" LegendPosition="Bottom"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+                        
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Onglet 2: Historique -->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="History" Margin="0 0 8 0"/>
+                        <TextBlock Text="Historique"/>
+                    </StackPanel>
+                </TabItem.Header>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+
+					<!-- Barre de filtres -->
+					<materialDesign:Card Grid.Row="0" Margin="16" Padding="10">
+						<WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+							<TextBox materialDesign:HintAssist.Hint="Rechercher (N° reçu, client...)"
+									 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+									 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+									 materialDesign:TextFieldAssist.HasClearButton="True"
+									 Width="250" Margin="0,0,10,0"/>
+
+							<DatePicker materialDesign:HintAssist.Hint="Date de début"
+										SelectedDate="{Binding DateDebut}"
+										Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+										Width="140" Margin="0,0,10,0"/>
+
+							<DatePicker materialDesign:HintAssist.Hint="Date de fin"
+										SelectedDate="{Binding DateFin}"
+										Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+										Width="140" Margin="0,0,10,0"/>
+							
+							<ComboBox Grid.Column="1"
+									  materialDesign:HintAssist.Hint="Client"
+									  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+									  Width="200" Margin="0,0,10,0"
+									  ItemsSource="{Binding ClientsList}"
+									  SelectedItem="{Binding SelectedClient}"
+									  DisplayMemberPath="NomComplet"
+									  IsEditable="True"/>
+
+							<ComboBox materialDesign:HintAssist.Hint="Statut"
+									  ItemsSource="{Binding StatutsList}"
+									  SelectedItem="{Binding SelectedStatut}"
+									  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+									  Width="120" Margin="0,0,10,0"/>
+
+							<Button Content="Effacer" 
+									Command="{Binding ClearFiltersCommand}"
+									Style="{StaticResource MaterialDesignTextButton}"
+									Margin="10,8,0,0"/>
+						</WrapPanel>
+					</materialDesign:Card>
+
+					<!-- Liste des paiements -->
+					<DataGrid Grid.Row="1" Margin="16,0,16,16"
+							  ItemsSource="{Binding HistoriquePaiements}"
+							  Style="{StaticResource CustomDataGridStyle}">
+						<DataGrid.Columns>
+							<DataGridTextColumn Header="Date" Binding="{Binding DatePaiement, StringFormat='dd/MM/yyyy'}" Width="100"/>
+							<DataGridTextColumn Header="N° Reçu" Binding="{Binding NumeroRecu}" Width="150" FontWeight="Bold"/>
+							<DataGridTextColumn Header="Client" Binding="{Binding Client.NomComplet}" Width="*"/>
+							<DataGridTextColumn Header="Mode" Binding="{Binding ModePaiement}" Width="100"/>
+							
+							<!-- Montant -->
+							<DataGridTextColumn Header="Montant" 
+											  Binding="{Binding Montant, StringFormat='{}{0:C}'}" 
+											  Width="120">
+								<DataGridTextColumn.ElementStyle>
+									<Style TargetType="TextBlock">
+										<Setter Property="FontWeight" Value="Bold"/>
+										<Setter Property="HorizontalAlignment" Value="Right"/>
+										<!-- On peut ajouter la couleur ici si on veut -->
+										<Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+									</Style>
+								</DataGridTextColumn.ElementStyle>
+							</DataGridTextColumn>
+
+							<DataGridTemplateColumn Header="Statut" Width="120">
+								<DataGridTemplateColumn.CellTemplate>
+									<DataTemplate>
+										<Border Style="{StaticResource StatusBadgeStyle}" Background="{Binding Statut, Converter={StaticResource StatusToColorConverter}}">
+											<TextBlock Text="{Binding Statut}" Foreground="White" FontSize="11"/>
+										</Border>
+									</DataTemplate>
+								</DataGridTemplateColumn.CellTemplate>
+							</DataGridTemplateColumn>
+
+							<DataGridTextColumn Header="Description / Concerne" Binding="{Binding Description}" Width="2*"/>
+
+							<!-- Actions à ajouter plus tard -->
+							<DataGridTemplateColumn Header="Actions" Width="Auto">
+								<DataGridTemplateColumn.CellTemplate>
+									<DataTemplate>
+										<Button Style="{StaticResource MaterialDesignIconButton}" ToolTip="Générer le reçu">
+											<materialDesign:PackIcon Kind="FilePdfBox"/>
+										</Button>
+									</DataTemplate>
+								</DataGridTemplateColumn.CellTemplate>
+							</DataGridTemplateColumn>
+						</DataGrid.Columns>
+					</DataGrid>
+				</Grid>
+			</TabItem>
+
+            <!-- Onglet 3: Impayés -->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="CreditCardRemoveOutline" Margin="0 0 8 0"/>
+                        <TextBlock Text="Impayés"/>
+                    </StackPanel>
+                </TabItem.Header>
+				<Grid>
+					<DataGrid Margin="16"
+							  ItemsSource="{Binding ClientsAvecImpayes}"
+							  Style="{StaticResource CustomDataGridStyle}">
+						
+						<DataGrid.Columns>
+							<DataGridTextColumn Header="Code Client" Binding="{Binding CodeClient}" Width="Auto"/>
+							<DataGridTextColumn Header="Nom Complet" Binding="{Binding NomComplet}" Width="2*" FontWeight="Bold"/>
+							<DataGridTextColumn Header="Téléphone" Binding="{Binding TelephonePrincipal}" Width="*"/>
+							<DataGridTextColumn Header="Ville" Binding="{Binding Ville}" Width="*"/>
+							
+							<DataGridTextColumn Header="Solde Impayé" Binding="{Binding Impayes, StringFormat=C}" Width="*">
+								<DataGridTextColumn.ElementStyle>
+									<Style TargetType="TextBlock">
+										<Setter Property="FontWeight" Value="Bold"/>
+										<Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+										<Setter Property="HorizontalAlignment" Value="Right"/>
+									</Style>
+								</DataGridTextColumn.ElementStyle>
+							</DataGridTextColumn>
+
+							<DataGridTemplateColumn Header="Actions" Width="Auto">
+								<DataGridTemplateColumn.CellTemplate>
+									<DataTemplate>
+										<StackPanel Orientation="Horizontal">
+											<Button Command="{Binding DataContext.ViewClientDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+													CommandParameter="{Binding}"
+													Style="{StaticResource MaterialDesignFlatButton}"
+													ToolTip="Voir la Fiche Client">
+												<materialDesign:PackIcon Kind="AccountEye"/>
+											</Button>
+											<Button Command="{Binding DataContext.AddNewPaymentForClientCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+													CommandParameter="{Binding}"
+													Style="{StaticResource MaterialDesignFlatButton}"
+													ToolTip="Enregistrer un nouveau paiement">
+												<materialDesign:PackIcon Kind="CashPlus" Foreground="{StaticResource SuccessBrush}"/>
+											</Button>
+										</StackPanel>
+									</DataTemplate>
+								</DataGridTemplateColumn.CellTemplate>
+							</DataGridTemplateColumn>
+
+						</DataGrid.Columns>
+					</DataGrid>
+				</Grid>
+			</TabItem>
+
+        </TabControl>
+        
+        <!-- Indicateur de chargement global -->
+        <Grid Grid.RowSpan="2" Background="#80FFFFFF" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" IsIndeterminate="True" Width="50" Height="50"/>
+        </Grid>
+        
+    </Grid>
+</UserControl>

@@ -10,6 +10,7 @@
              xmlns:viewsVehicules="clr-namespace:TransitManager.WPF.Views.Vehicules"
              xmlns:viewsConteneurs="clr-namespace:TransitManager.WPF.Views.Conteneurs"
              xmlns:conteneurs="clr-namespace:TransitManager.WPF.Views.Conteneurs"
+			 xmlns:viewsFinance="clr-namespace:TransitManager.WPF.Views.Finance"
 			 xmlns:viewsNotifications="clr-namespace:TransitManager.WPF.Views.Notifications"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
 
@@ -84,6 +85,10 @@
             <DataTemplate DataType="{x:Type viewModels:NotificationsViewModel}">
                 <viewsNotifications:NotificationsView />
             </DataTemplate>
+			
+			<DataTemplate DataType="{x:Type viewModels:FinanceViewModel}">
+				<viewsFinance:FinanceView />
+			</DataTemplate>
 
         </ResourceDictionary>
     </Application.Resources>

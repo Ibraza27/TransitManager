@@ -247,11 +247,6 @@
 						<TextBlock VerticalAlignment="Center" Text="{Binding TotalPieces, StringFormat='Pièces : {0}'}"/>
 					</StackPanel>
 					<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
-					<!-- Poids -->
-					<StackPanel Orientation="Horizontal" Margin="8,0">
-						<materialDesign:PackIcon Kind="WeightKilogram" VerticalAlignment="Center" Margin="0,0,5,0"/>
-						<TextBlock VerticalAlignment="Center" Text="{Binding PoidsTotal, StringFormat='Poids : {0:N0} kg'}"/>
-					</StackPanel>
 					<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
 					<!-- Volume -->
 					<StackPanel Orientation="Horizontal" Margin="8,0">

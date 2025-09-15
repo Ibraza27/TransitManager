@@ -155,6 +155,7 @@ namespace TransitManager.WPF
 			services.AddTransient<PaiementColisViewModel>();
 			services.AddTransient<PaiementVehiculeViewModel>();
 			services.AddTransient<PrintPreviewViewModel>();
+			services.AddTransient<FinanceViewModel>();
 
             // Views (Transient)
             services.AddTransient<LoginView>();
@@ -177,6 +178,7 @@ namespace TransitManager.WPF
             services.AddTransient<PaiementView>();
             services.AddTransient<FactureView>();
             services.AddTransient<NotificationsView>();
+			services.AddTransient<FinanceView>();
 
             // Service de Notification (Toast)
             services.AddSingleton(provider => new Notifier(cfg =>

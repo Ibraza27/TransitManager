@@ -847,23 +847,22 @@ namespace TransitManager.Infrastructure.Services
 			{
 				container
 					.Border(1)
-					.PaddingVertical(3, Unit.Millimetre) 
+					.PaddingVertical(2, Unit.Millimetre) 
 					.PaddingHorizontal(5, Unit.Millimetre)
 					.Column(column =>
 					{
-						column.Spacing(1); 
-
+						column.Spacing(2); // Augmenter l'espacement entre les lignes
 						column.Item().AlignCenter().Text(colis.Destinataire).FontSize(22).ExtraBold();
 						column.Item().AlignCenter().Text($"Tel : {colis.TelephoneDestinataire}").FontSize(12);
 
 						if (colis.LivraisonADomicile)
 						{
-							column.Item().AlignCenter().PaddingTop(4).Background(Colors.Grey.Lighten2).PaddingHorizontal(5).Text("À LIVRER À DOMICILE").Bold().FontSize(12);
+							column.Item().AlignCenter().PaddingTop(2).Background(Colors.Grey.Lighten2).PaddingHorizontal(5).Text("À LIVRER À DOMICILE").Bold().FontSize(12);
 						}
 
 						if (!string.IsNullOrWhiteSpace(colis.AdresseLivraison))
 						{
-							column.Item().PaddingTop(4).Text(text =>
+							column.Item().PaddingTop(2).Text(text =>
 							{
 								text.DefaultTextStyle(x => x.FontSize(9));
 								text.Span("Adresse : ").SemiBold();
@@ -871,17 +870,18 @@ namespace TransitManager.Infrastructure.Services
 							});
 						}
 						
-						column.Item().PaddingTop(4).Text(text =>
+						column.Item().PaddingTop(2).Text(text =>
 						{
 							text.DefaultTextStyle(x => x.FontSize(9));
 							text.Span("Destination : ").SemiBold();
 							text.Span(colis.DestinationFinale);
 						});
 						
-						// Modification ici pour afficher "Pièce X / Total"
-						column.Item().PaddingTop(4).AlignCenter().Text($"Colis: {pieceNumber} / {colis.NombrePieces}").FontSize(11).SemiBold();
-
-						column.Item().PaddingTop(4).ExtendHorizontal().AlignCenter().Image(barcodeImage, ImageScaling.FitWidth);
+						column.Item().PaddingTop(2).AlignCenter().Text($"Colis: {pieceNumber} / {colis.NombrePieces}").FontSize(11).SemiBold();
+						column.Item().PaddingTop(2).ExtendHorizontal().AlignCenter().Image(barcodeImage, ImageScaling.FitWidth);
+						
+						// Réduire l'espacement au-dessus du nom de l'entreprise
+						column.Item().AlignCenter().PaddingTop(1).Background(Colors.Grey.Lighten2).PaddingHorizontal(5).Text("HIPPOCAMPE IMPORT-EXPORT").Bold().FontSize(12);
 					});
 			}
 		}

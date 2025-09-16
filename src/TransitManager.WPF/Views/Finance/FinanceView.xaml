@@ -7,6 +7,25 @@
 			 xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1200">
+
+    <!-- DÉBUT DE LA CORRECTION DÉFINITIVE -->
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 1. On charge le thème COMPLET de Material Design localement -->
+                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="Blue" SecondaryColor="Teal" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
+
+                <!-- 2. Ensuite, on charge nos dictionnaires personnalisés qui en dépendent -->
+                <ResourceDictionary Source="/Resources/Converters/Converters.xaml"/>
+                <ResourceDictionary Source="/Resources/Styles/Colors.xaml"/>
+                <ResourceDictionary Source="/Resources/Styles/Buttons.xaml"/>
+                <ResourceDictionary Source="/Resources/Styles/DataGrids.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <!-- FIN DE LA CORRECTION DÉFINITIVE -->
+			 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -121,7 +140,7 @@
 							
 							<ComboBox Grid.Column="1"
 									  materialDesign:HintAssist.Hint="Client"
-									  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+									  Style="{StaticResource MaterialDesignComboBox}"
 									  Width="200" Margin="0,0,10,0"
 									  ItemsSource="{Binding ClientsList}"
 									  SelectedItem="{Binding SelectedClient}"
@@ -131,7 +150,7 @@
 							<ComboBox materialDesign:HintAssist.Hint="Statut"
 									  ItemsSource="{Binding StatutsList}"
 									  SelectedItem="{Binding SelectedStatut}"
-									  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+									  Style="{StaticResource MaterialDesignComboBox}"
 									  Width="120" Margin="0,0,10,0"/>
 
 							<Button Content="Effacer" 

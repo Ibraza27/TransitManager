@@ -2,10 +2,6 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
 					
-    <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="/Resources/Styles/Colors.xaml"/>
-        <ResourceDictionary Source="/Resources/Converters/Converters.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
 
     <!-- Style de DataGrid personnalisé -->
     <Style x:Key="CustomDataGridStyle" TargetType="DataGrid" BasedOn="{StaticResource MaterialDesignDataGrid}">

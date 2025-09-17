@@ -10,7 +10,7 @@ using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
 using CommunityToolkit.Mvvm.Messaging;
-using TransitManager.WPF.Messages;
+using TransitManager.Core.Messages;
 
 namespace TransitManager.WPF.ViewModels
 {

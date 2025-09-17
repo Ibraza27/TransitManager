@@ -12,7 +12,7 @@ using TransitManager.WPF.Helpers;
 using System.Text.Json;
 using TransitManager.WPF.Views.Inventaire;
 using CommunityToolkit.Mvvm.Messaging;
-using TransitManager.WPF.Messages;
+using TransitManager.Core.Messages;
 using System.Windows; // Directive using ajoutée
 using System.Windows.Input;
 using System.ComponentModel;

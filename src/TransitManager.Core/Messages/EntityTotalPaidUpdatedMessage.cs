@@ -1,6 +1,6 @@
 using System;
 
-namespace TransitManager.WPF.Messages
+namespace TransitManager.Core.Messages
 {
     /// <summary>
     /// Message envoyé lorsque le total payé pour une entité (Colis, Véhicule) est mis à jour.

@@ -11,7 +11,7 @@ using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
 // --- LIGNES À AJOUTER ---
 using CommunityToolkit.Mvvm.Messaging;
-using TransitManager.WPF.Messages;
+using TransitManager.Core.Messages;
 using System.Text.Json;
 using TransitManager.WPF.Views.Inventaire;
 using Microsoft.Extensions.DependencyInjection; // Assurez-vous que celui-ci est présent

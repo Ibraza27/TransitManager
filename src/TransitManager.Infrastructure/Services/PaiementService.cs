@@ -7,6 +7,8 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using CommunityToolkit.Mvvm.Messaging;
+using TransitManager.Core.Messages;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -16,17 +18,20 @@ namespace TransitManager.Infrastructure.Services
         private readonly INotificationService _notificationService;
         private readonly IExportService _exportService;
 		private readonly IClientService _clientService;
+		private readonly IMessenger _messenger;
 
-	public PaiementService(
-		IDbContextFactory<TransitContext> contextFactory,
-		INotificationService notificationService,
-		IExportService exportService,
-		IClientService clientService) 
+        public PaiementService(
+            IDbContextFactory<TransitContext> contextFactory,
+            INotificationService notificationService,
+            IExportService exportService,
+            IClientService clientService,
+            IMessenger messenger)
         {
             _contextFactory = contextFactory;
             _notificationService = notificationService;
             _exportService = exportService;
 			_clientService = clientService;
+            _messenger = messenger;
         }
 
         public async Task<Paiement?> GetByIdAsync(Guid id)
@@ -72,17 +77,22 @@ namespace TransitManager.Infrastructure.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Paiement>> GetByPeriodAsync(DateTime debut, DateTime fin)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Paiements
-                .Include(p => p.Client)
-                .Include(p => p.Conteneur)
-                .Where(p => p.DatePaiement >= debut && p.DatePaiement <= fin)
-                .AsNoTracking()
-                .OrderByDescending(p => p.DatePaiement)
-                .ToListAsync();
-        }
+		public async Task<IEnumerable<Paiement>> GetByPeriodAsync(DateTime debut, DateTime fin)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+
+			// On s'assure que les dates sont en UTC pour la comparaison
+			var debutUtc = debut.ToUniversalTime();
+			var finUtc = fin.ToUniversalTime();
+
+			return await context.Paiements
+				.Include(p => p.Client)
+				.Include(p => p.Conteneur)
+				.Where(p => p.DatePaiement >= debutUtc && p.DatePaiement <= finUtc) // La condition est correcte ici
+				.AsNoTracking()
+				.OrderByDescending(p => p.DatePaiement)
+				.ToListAsync();
+		}
 
         public async Task<Paiement> CreateAsync(Paiement paiement)
         {
@@ -102,6 +112,7 @@ namespace TransitManager.Infrastructure.Services
             context.Paiements.Add(paiement);
             await UpdateClientBalanceAsync(paiement.ClientId, context);
             await context.SaveChangesAsync();
+			 _messenger.Send(new PaiementUpdatedMessage());
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 
             await _notificationService.NotifyAsync(
@@ -117,6 +128,7 @@ namespace TransitManager.Infrastructure.Services
 			await using var context = await _contextFactory.CreateDbContextAsync();
 			context.Paiements.Update(paiement);
 			await context.SaveChangesAsync();
+			 _messenger.Send(new PaiementUpdatedMessage());
 			// Ligne à ajouter/vérifier
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 			return paiement;
@@ -139,6 +151,7 @@ namespace TransitManager.Infrastructure.Services
             paiement.Actif = false;
             await UpdateClientBalanceAsync(paiement.ClientId, context);
             await context.SaveChangesAsync();
+			 _messenger.Send(new PaiementUpdatedMessage());
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId); 
             return true;
         }
@@ -151,6 +164,7 @@ namespace TransitManager.Infrastructure.Services
 
 			paiement.Statut = StatutPaiement.Paye;
 			await context.SaveChangesAsync();
+			 _messenger.Send(new PaiementUpdatedMessage());
 			// Ligne à ajouter/vérifier
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 			return true;
@@ -165,6 +179,7 @@ namespace TransitManager.Infrastructure.Services
 			paiement.Statut = StatutPaiement.Annule;
 			paiement.Commentaires = $"Annulé : {raison}";
 			await context.SaveChangesAsync();
+			 _messenger.Send(new PaiementUpdatedMessage());
 			// Ligne à ajouter/vérifier
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 			return true;
@@ -174,20 +189,14 @@ namespace TransitManager.Infrastructure.Services
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
 
-			// ======================= DÉBUT DE LA CORRECTION =======================
-
-			// On s'assure que le mois de référence est bien en UTC
-			var monthUtc = DateTime.SpecifyKind(month, DateTimeKind.Utc);
-
-			var debut = new DateTime(monthUtc.Year, monthUtc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-			var fin = debut.AddMonths(1).AddDays(-1);
-			// Pour être exhaustif, on peut spécifier l'heure de fin de journée
-			fin = new DateTime(fin.Year, fin.Month, fin.Day, 23, 59, 59, DateTimeKind.Utc);
-
-			// ======================== FIN DE LA CORRECTION ========================
+			// On s'assure que la date de début est bien le premier jour du mois à minuit, en UTC
+			var debutMois = new DateTime(month.Year, month.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+			var debutMoisSuivant = debutMois.AddMonths(1);
 
 			return await context.Paiements
-				.Where(p => p.DatePaiement >= debut && p.DatePaiement <= fin && p.Statut == StatutPaiement.Paye)
+				.Where(p => p.Statut == StatutPaiement.Paye && 
+							p.DatePaiement >= debutMois && 
+							p.DatePaiement < debutMoisSuivant) // Utiliser "<" est plus sûr
 				.SumAsync(p => p.Montant);
 		}
 
@@ -251,6 +260,7 @@ namespace TransitManager.Infrastructure.Services
 				paiement.DateDernierRappel = DateTime.UtcNow;
 			}
 			await context.SaveChangesAsync();
+			 _messenger.Send(new PaiementUpdatedMessage());
 			
 			// CORRECTION APPLIQUÉE ICI
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId); 

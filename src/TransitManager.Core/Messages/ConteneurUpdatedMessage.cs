@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging.Messages;
 
-namespace TransitManager.WPF.Messages
+namespace TransitManager.Core.Messages
 {
     public class ConteneurUpdatedMessage : ValueChangedMessage<bool>
     {

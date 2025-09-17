@@ -8,23 +8,6 @@
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1200">
 
-    <!-- DÉBUT DE LA CORRECTION DÉFINITIVE -->
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <!-- 1. On charge le thème COMPLET de Material Design localement -->
-                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="Blue" SecondaryColor="Teal" />
-                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Defaults.xaml" />
-
-                <!-- 2. Ensuite, on charge nos dictionnaires personnalisés qui en dépendent -->
-                <ResourceDictionary Source="/Resources/Converters/Converters.xaml"/>
-                <ResourceDictionary Source="/Resources/Styles/Colors.xaml"/>
-                <ResourceDictionary Source="/Resources/Styles/Buttons.xaml"/>
-                <ResourceDictionary Source="/Resources/Styles/DataGrids.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
-    <!-- FIN DE LA CORRECTION DÉFINITIVE -->
 			 
     <Grid>
         <Grid.RowDefinitions>
@@ -48,7 +31,7 @@
         </materialDesign:Card>
 
         <!-- Contenu avec les onglets -->
-        <TabControl Grid.Row="1" Margin="16,8,16,16" Style="{StaticResource MaterialDesignNavigationRailTabControl}">
+        <TabControl Grid.Row="1" Margin="16,8,16,16" Style="{StaticResource MaterialDesignTabControl}">
             
             <!-- Onglet 1: Tableau de Bord -->
             <TabItem>
@@ -155,7 +138,7 @@
 
 							<Button Content="Effacer" 
 									Command="{Binding ClearFiltersCommand}"
-									Style="{StaticResource MaterialDesignTextButton}"
+									Style="{StaticResource MaterialDesignFlatButton}"
 									Margin="10,8,0,0"/>
 						</WrapPanel>
 					</materialDesign:Card>

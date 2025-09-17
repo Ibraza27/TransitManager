@@ -10,7 +10,7 @@ using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.WPF.Helpers;
 using CommunityToolkit.Mvvm.Messaging;
-using TransitManager.WPF.Messages;
+using TransitManager.Core.Messages;
 using Microsoft.Extensions.DependencyInjection; // Assurez-vous que celui-ci est présent
 using TransitManager.WPF.Views; // <--- LIGNE À AJOUTER
 

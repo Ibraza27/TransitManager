@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Collections.Specialized;
 using CommunityToolkit.Mvvm.Messaging;
-using TransitManager.WPF.Messages;
+using TransitManager.Core.Messages;
 using TransitManager.WPF.Views.Inventaire; // <--- NOUVEAU
 using System.Text.Json; // <--- NOUVEAU
 using Microsoft.Extensions.DependencyInjection; // <--- NOUVEAU

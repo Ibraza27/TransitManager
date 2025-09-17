@@ -14,6 +14,9 @@ using System.Linq;
 using TransitManager.Core.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using TransitManager.WPF.Views;
+using CommunityToolkit.Mvvm.Messaging; // <-- AJOUTER CE USING
+using TransitManager.Core.Messages; // <-- CHANGER DE .WPF.Messages À .Core.Messages
+
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -22,6 +25,7 @@ namespace TransitManager.WPF.ViewModels
         private readonly IPaiementService _paiementService;
         private readonly IClientService _clientService;
 		private readonly IServiceProvider _serviceProvider;
+		private readonly IMessenger _messenger;
 
         #region Propriétés Tableau de Bord
         private decimal _chiffreAffaireMois;
@@ -68,21 +72,31 @@ namespace TransitManager.WPF.ViewModels
 		public IAsyncRelayCommand<Client> AddNewPaymentForClientCommand { get; } // AJOUTER CETTE LIGNE
 		#endregion
 
-		public FinanceViewModel(IPaiementService paiementService, IClientService clientService, IServiceProvider serviceProvider) // AJOUTER IServiceProvider
+		public FinanceViewModel(IPaiementService paiementService, IClientService clientService, IServiceProvider serviceProvider, IMessenger messenger) // AJOUTER IMessenger
 		{
 			_paiementService = paiementService;
 			_clientService = clientService;
-			_serviceProvider = serviceProvider; // AJOUTER CETTE LIGNE
+			_serviceProvider = serviceProvider;
+			_messenger = messenger; // AJOUTER cette ligne
 			Title = "Gestion Financière";
 
 			RefreshCommand = new AsyncRelayCommand(LoadAsync);
 			ClearFiltersCommand = new RelayCommand(ClearFilters);
 			ViewClientDetailsCommand = new AsyncRelayCommand<Client>(ViewClientDetailsAsync); // AJOUTER CETTE LIGNE
 			AddNewPaymentForClientCommand = new AsyncRelayCommand<Client>(AddNewPaymentForClientAsync); // AJOUTER CETTE LIGNE
+			
+			_messenger.RegisterAll(this); // S'abonner aux messages
 
 			StatutsList = new ObservableCollection<string>(Enum.GetNames(typeof(StatutPaiement)));
 			StatutsList.Insert(0, "Tous");
 		}
+		
+		// AJOUTER CETTE MÉTHODE pour recevoir le message
+		public async void Receive(PaiementUpdatedMessage message)
+		{
+			// Quand un paiement change, on recharge tout
+			await LoadAsync();
+		}		
 
 		public override async Task LoadAsync()
 		{

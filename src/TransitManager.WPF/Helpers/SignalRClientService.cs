@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Threading.Tasks;
-using TransitManager.WPF.Messages;
+using TransitManager.Core.Messages;
 
 namespace TransitManager.WPF.Helpers
 {

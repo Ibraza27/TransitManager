@@ -8,8 +8,11 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <!-- DÉBUT DE L'AJOUT -->
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <!-- FIN DE L'AJOUT -->
+
     <!-- Packages NuGet pour la logique métier -->
-    <!-- On retire les attributs Version="..." -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="System.ComponentModel.Annotations" />

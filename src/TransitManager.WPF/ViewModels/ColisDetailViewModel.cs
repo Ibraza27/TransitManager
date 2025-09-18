@@ -244,7 +244,6 @@ namespace TransitManager.WPF.ViewModels
             _exportService = exportService; // AJOUTER CETTE LIGNE D'ASSIGNATION
 			
 			_messenger.RegisterAll(this);
-			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
@@ -318,8 +317,7 @@ namespace TransitManager.WPF.ViewModels
 			using var scope = _serviceProvider.CreateScope();
 			var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementColisViewModel>();
 			
-			// On initialise le ViewModel avec l'objet Colis complet
-			await paiementViewModel.InitializeAsync(Colis);
+			await paiementViewModel.InitializeAsync(Colis.Id, Colis.ClientId, Colis.PrixTotal);
 
 			var paiementWindow = new Views.Paiements.PaiementColisView(paiementViewModel)
 			{
@@ -328,10 +326,7 @@ namespace TransitManager.WPF.ViewModels
 
 			if (paiementWindow.ShowDialog() == true)
 			{
-				// À la fermeture, on récupère la somme calculée par le ViewModel de la fenêtre
 				Colis.SommePayee = paiementViewModel.TotalValeur;
-				
-				// On notifie l'interface pour mettre à jour les champs liés
 				OnPropertyChanged(nameof(HasPaiements));
 			}
 		}
@@ -698,25 +693,5 @@ namespace TransitManager.WPF.ViewModels
 
             await InitializeAsync(Colis.Id);
         }
-		
-		// ##### MÉTHODE À AJOUTER DANS LA CLASSE #####
-		private async void OnDataShouldRefresh(Guid clientId)
-		{
-			// On ne recharge la vue que si le message concerne bien le client du colis affiché.
-			if (Colis != null && Colis.ClientId == clientId)
-			{
-				// On utilise InitializeAsync pour recharger proprement toutes les données du colis depuis la BDD.
-				await InitializeAsync(Colis.Id);
-			}
-		}
-		// ##### MÉTHODE À AJOUTER À LA FIN DE LA CLASSE #####
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing)
-			{
-				_clientService.ClientStatisticsUpdated -= OnDataShouldRefresh;
-			}
-			base.Dispose(disposing);
-		}
     }
 }

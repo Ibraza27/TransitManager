@@ -53,11 +53,11 @@ namespace TransitManager.WPF.ViewModels
             Items.CollectionChanged += (s, e) => UpdateTotals();
         }
 
-        public async Task InitializeAsync(Vehicule vehicule)
+        public async Task InitializeAsync(Guid vehiculeId, Guid clientId, decimal prixTotalVehicule)
         {
-            _clientId = vehicule.ClientId;
-            _vehiculeId = vehicule.Id;
-            PrixTotalVehicule = vehicule.PrixTotal;
+            _vehiculeId = vehiculeId;
+            _clientId = clientId;
+            PrixTotalVehicule = prixTotalVehicule;
             
             var existingPaiements = await _paiementService.GetByVehiculeAsync(_vehiculeId);
             Items.Clear();

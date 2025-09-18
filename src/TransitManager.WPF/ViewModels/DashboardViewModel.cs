@@ -13,6 +13,7 @@ using System.Windows.Input;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
+using System.Globalization;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -45,6 +46,7 @@ namespace TransitManager.WPF.ViewModels
         public ISeries[] SeriesEvolutionClients { get; set; } = Array.Empty<ISeries>();
         public Axis[] AxesX { get; set; } = Array.Empty<Axis>();
         public Axis[] AxesY { get; set; } = Array.Empty<Axis>();
+        public Axis[] ClientAxesX { get; set; } = Array.Empty<Axis>();
 
         #region Propriétés
 
@@ -150,7 +152,7 @@ namespace TransitManager.WPF.ViewModels
             InitializeCharts();
         }
 
-        public override async Task LoadAsync()
+        public override async Task InitializeAsync()
         {
             await RefreshDataAsync();
         }
@@ -180,8 +182,6 @@ namespace TransitManager.WPF.ViewModels
 		{
 			// Statistiques clients
 			TotalClients = await _clientService.GetTotalCountAsync();
-			
-			// ======================= LIGNE MODIFIÉE =======================
 			NouveauxClients = await _clientService.GetNewClientsCountAsync(DateTime.UtcNow.AddDays(-30));
 
 			// Statistiques colis
@@ -193,7 +193,6 @@ namespace TransitManager.WPF.ViewModels
 			TauxRemplissageMoyen = await _conteneurService.GetAverageFillingRateAsync();
 
 			// Statistiques financières
-			// ======================= LIGNE MODIFIÉE =======================
 			ChiffreAffaireMois = await _paiementService.GetMonthlyRevenueAsync(DateTime.UtcNow);
 			PaiementsEnAttente = await _paiementService.GetPendingAmountAsync();
 		}
@@ -215,67 +214,95 @@ namespace TransitManager.WPF.ViewModels
 
         private async Task LoadChartsDataAsync()
         {
-            await Task.Run(() =>
+            // Chiffre d'affaires des 12 derniers mois
+            var revenueData = new List<decimal>();
+            var monthLabels = new List<string>();
+            for (int i = 11; i >= 0; i--)
             {
-                // Graphique chiffre d'affaires (12 derniers mois)
-                var revenueData = new[] { 45000, 52000, 48000, 61000, 58000, 72000, 
-                                         68000, 75000, 82000, 79000, 85000, 92000 };
-                
-                SeriesChiffreAffaires = new ISeries[]
-                {
-                    new ColumnSeries<decimal>
-                    {
-                        Values = revenueData.Select(x => (decimal)x).ToArray(),
-                        Name = "Chiffre d'affaires",
-                        Fill = new SolidColorPaint(SKColors.Blue)
-                    }
-                };
+                var month = DateTime.UtcNow.AddMonths(-i);
+                var firstDayOfMonth = new DateTime(month.Year, month.Month, 1);
+                revenueData.Add(await _paiementService.GetMonthlyRevenueAsync(firstDayOfMonth));
+                monthLabels.Add(firstDayOfMonth.ToString("MMM yy"));
+            }
 
-                // Graphique répartition des colis
-                SeriesRepartitionColis = new ISeries[]
+            SeriesChiffreAffaires = new ISeries[]
+            {
+                new ColumnSeries<decimal>
                 {
-                    new PieSeries<double> { Values = new double[] { 45 }, Name = "En attente", Fill = new SolidColorPaint(SKColors.Orange) },
-                    new PieSeries<double> { Values = new double[] { 30 }, Name = "En transit", Fill = new SolidColorPaint(SKColors.Blue) },
-                    new PieSeries<double> { Values = new double[] { 20 }, Name = "Livrés", Fill = new SolidColorPaint(SKColors.Green) },
-                    new PieSeries<double> { Values = new double[] { 5 }, Name = "Problème", Fill = new SolidColorPaint(SKColors.Red) }
-                };
+                    Values = revenueData,
+                    Name = "Chiffre d'affaires",
+                    Fill = new SolidColorPaint(SKColors.DodgerBlue)
+                }
+            };
+            OnPropertyChanged(nameof(SeriesChiffreAffaires));
 
-                // Graphique évolution clients
-                var clientsData = new[] { 150, 162, 175, 189, 205, 218, 235 };
-                SeriesEvolutionClients = new ISeries[]
-                {
-                    new LineSeries<int>
-                    {
-                        Values = clientsData,
-                        Name = "Nombre de clients",
-                        GeometrySize = 10,
-                        GeometryStroke = new SolidColorPaint(SKColors.Blue) { StrokeThickness = 2 },
-                        Stroke = new SolidColorPaint(SKColors.Blue) { StrokeThickness = 2 },
-                        Fill = null
-                    }
-                };
+            // Répartition des colis par statut
+            var colisStats = await _colisService.GetStatisticsByStatusAsync();
+            var statusColors = new Dictionary<StatutColis, SKColor>
+            {
+                { StatutColis.EnAttente, SKColors.Orange },
+                { StatutColis.Affecte, SKColors.CornflowerBlue },
+                { StatutColis.EnTransit, SKColors.DodgerBlue },
+                { StatutColis.Arrive, SKColors.LightGreen },
+                { StatutColis.EnDedouanement, SKColors.DarkOrange },
+                { StatutColis.Livre, SKColors.Green },
+                { StatutColis.Probleme, SKColors.Red },
+                { StatutColis.Perdu, SKColors.Gray },
+                { StatutColis.Retourne, SKColors.Brown }
+            };
 
-                // Configuration des axes
-                AxesX = new Axis[]
+            SeriesRepartitionColis = colisStats
+                .Where(kvp => kvp.Value > 0) // N'afficher que les sections avec une valeur
+                .Select(kvp => new PieSeries<int>
                 {
-                    new Axis
-                    {
-                        Labels = new[] { "Jan", "Fév", "Mar", "Avr", "Mai", "Jun", 
-                                       "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc" },
-                        LabelsRotation = 0,
-                        SeparatorsPaint = new SolidColorPaint(SKColors.LightGray) { StrokeThickness = 1 }
-                    }
-                };
+                    Values = new[] { kvp.Value },
+                    Name = kvp.Key.ToString(),
+                    Fill = new SolidColorPaint(statusColors.GetValueOrDefault(kvp.Key, SKColors.Gray))
+                }).ToArray();
+            OnPropertyChanged(nameof(SeriesRepartitionColis));
+            
+            // Évolution des clients
+            var clientEvolutionData = await _clientService.GetNewClientsPerMonthAsync(6);
+            SeriesEvolutionClients = new ISeries[]
+            {
+                new LineSeries<int>
+                {
+                    Values = clientEvolutionData.Values,
+                    Name = "Nouveaux clients",
+                    GeometrySize = 10,
+                    GeometryStroke = new SolidColorPaint(SKColors.Blue) { StrokeThickness = 2 },
+                    Stroke = new SolidColorPaint(SKColors.Blue) { StrokeThickness = 2 },
+                    Fill = null
+                }
+            };
+            ClientAxesX = new Axis[]
+            {
+                new Axis { Labels = clientEvolutionData.Keys.ToArray() }
+            };
+            OnPropertyChanged(nameof(SeriesEvolutionClients));
+            OnPropertyChanged(nameof(ClientAxesX));
 
-                AxesY = new Axis[]
+            // Configuration des axes
+            AxesX = new Axis[]
+            {
+                new Axis
                 {
-                    new Axis
-                    {
-                        Labeler = value => value.ToString("C0"),
-                        SeparatorsPaint = new SolidColorPaint(SKColors.LightGray) { StrokeThickness = 1 }
-                    }
-                };
-            });
+                    Labels = monthLabels,
+                    LabelsRotation = 45,
+                    SeparatorsPaint = new SolidColorPaint(SKColors.LightGray) { StrokeThickness = 1 }
+                }
+            };
+            OnPropertyChanged(nameof(AxesX));
+
+            AxesY = new Axis[]
+            {
+                new Axis
+                {
+                    Labeler = value => value.ToString("C0", CultureInfo.GetCultureInfo("fr-FR")),
+                    SeparatorsPaint = new SolidColorPaint(SKColors.LightGray) { StrokeThickness = 1 }
+                }
+            };
+            OnPropertyChanged(nameof(AxesY));
         }
 
         private async Task LoadAlertsAsync()

@@ -326,6 +326,26 @@ namespace TransitManager.Infrastructure.Services
 				ClientStatisticsUpdated?.Invoke(clientId);
 			}
 		}
-		
+
+        public async Task<Dictionary<string, int>> GetNewClientsPerMonthAsync(int months)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var result = new Dictionary<string, int>();
+            
+            for (int i = months - 1; i >= 0; i--)
+            {
+                var date = DateTime.UtcNow.AddMonths(-i);
+                // ======================= DÉBUT DE LA CORRECTION =======================
+                var firstDayOfMonth = new DateTime(date.Year, date.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                // ======================== FIN DE LA CORRECTION ========================
+                var firstDayOfNextMonth = firstDayOfMonth.AddMonths(1);
+
+                var count = await context.Clients
+                    .CountAsync(c => c.DateInscription >= firstDayOfMonth && c.DateInscription < firstDayOfNextMonth);
+                
+                result.Add(firstDayOfMonth.ToString("MMM yy"), count);
+            }
+            return result;
+        }
     }
 }

@@ -98,6 +98,11 @@ namespace TransitManager.WPF.ViewModels
 			await LoadAsync();
 		}		
 
+		public override async Task InitializeAsync()
+        {
+            await LoadAsync();
+        }
+
 		public override async Task LoadAsync()
 		{
 			await ExecuteBusyActionAsync(async () =>
@@ -122,11 +127,12 @@ namespace TransitManager.WPF.ViewModels
             var today = DateTime.UtcNow;
             var startOfMonth = new DateTime(today.Year, today.Month, 1);
             var startOfToday = today.Date;
+            var startOfTomorrow = startOfToday.AddDays(1);
 
             ChiffreAffaireMois = await _paiementService.GetMonthlyRevenueAsync(startOfMonth);
             TotalImpayes = await _clientService.GetTotalUnpaidBalanceAsync();
 
-            var paiementsDuJour = await _paiementService.GetByPeriodAsync(startOfToday, today);
+            var paiementsDuJour = await _paiementService.GetByPeriodAsync(startOfToday, startOfTomorrow);
             PaiementsRecusAujourdhui = paiementsDuJour.Where(p => p.Statut == StatutPaiement.Paye).Sum(p => p.Montant);
 
             var paiementsEnRetardList = await _paiementService.GetOverduePaymentsAsync();

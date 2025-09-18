@@ -184,7 +184,8 @@ namespace TransitManager.WPF.ViewModels
 
 			using var scope = _serviceProvider.CreateScope();
 			var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementColisViewModel>();
-			await paiementViewModel.InitializeAsync(colis);
+			
+			await paiementViewModel.InitializeAsync(colis.Id, colis.ClientId, colis.PrixTotal);
 
 			var paiementWindow = new Views.Paiements.PaiementColisView(paiementViewModel)
 			{
@@ -193,15 +194,20 @@ namespace TransitManager.WPF.ViewModels
 
 			if (paiementWindow.ShowDialog() == true)
 			{
-				// LIGNE À SUPPRIMER
-				// await LoadAsync(); 
-
-				// ##### NOUVELLE LOGIQUE CI-DESSOUS #####
-				// On met à jour directement l'objet dans la collection.
-				// INotifyPropertyChanged fera le reste pour mettre à jour l'UI.
 				colis.SommePayee = paiementViewModel.TotalValeur;
 
-				// Recalculer les statistiques globales de la liste
+                // ======================= DÉBUT DE LA MODIFICATION =======================
+                // On sauvegarde le colis pour persister la nouvelle SommePayee
+                try
+                {
+                    await _colisService.UpdateAsync(colis);
+                }
+                catch (Exception ex)
+                {
+                    await _dialogService.ShowErrorAsync("Erreur de sauvegarde", $"Impossible de mettre à jour le total payé pour le colis : {ex.Message}");
+                }
+                // ======================== FIN DE LA MODIFICATION ========================
+
 				CalculateStatistics();
 			}
 		}

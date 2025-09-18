@@ -25,5 +25,6 @@ namespace TransitManager.Core.Interfaces
         Task<bool> ExistsAsync(string email, string telephone, Guid? excludeId = null);
         Task<IEnumerable<Client>> GetClientsByConteneurAsync(Guid conteneurId);
 		Task RecalculateAndUpdateClientStatisticsAsync(Guid clientId);
+        Task<Dictionary<string, int>> GetNewClientsPerMonthAsync(int months);
     }
 }

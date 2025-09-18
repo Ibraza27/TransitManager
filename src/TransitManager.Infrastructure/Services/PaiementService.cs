@@ -88,7 +88,7 @@ namespace TransitManager.Infrastructure.Services
 			return await context.Paiements
 				.Include(p => p.Client)
 				.Include(p => p.Conteneur)
-				.Where(p => p.DatePaiement >= debutUtc && p.DatePaiement <= finUtc) // La condition est correcte ici
+				.Where(p => p.DatePaiement >= debutUtc && p.DatePaiement < finUtc) // Utiliser "<" est plus sûr pour la date de fin
 				.AsNoTracking()
 				.OrderByDescending(p => p.DatePaiement)
 				.ToListAsync();
@@ -347,14 +347,13 @@ namespace TransitManager.Infrastructure.Services
 			decimal totalDu = 0;
 			if (client.Colis != null)
 			{
-				// totalDu = client.Colis.Where(c => c.Actif).Sum(c => c.PoidsFacturable * 2.5m); // ANCIENNE LIGNE
-				totalDu = client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal); // NOUVELLE LIGNE
+				totalDu = client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal);
 			}
 
 			var totalPaye = client.Paiements?.Where(p => p.Statut == StatutPaiement.Paye).Sum(p => p.Montant) ?? 0;
 
 			return totalDu - totalPaye;
-		}
+        }
         
         private async Task<string> GenerateUniqueReceiptNumberAsync(TransitContext context)
         {

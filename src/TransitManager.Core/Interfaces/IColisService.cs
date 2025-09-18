@@ -26,5 +26,6 @@ namespace TransitManager.Core.Interfaces
         Task<IEnumerable<Colis>> GetColisWaitingLongTimeAsync(int days);
         Task<bool> MarkAsDeliveredAsync(Guid colisId, string signature);
         Task<IEnumerable<Colis>> SearchAsync(string searchTerm);
+        Task<Dictionary<StatutColis, int>> GetStatisticsByStatusAsync();
     }
 }

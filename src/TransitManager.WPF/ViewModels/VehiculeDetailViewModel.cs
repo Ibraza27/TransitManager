@@ -144,7 +144,6 @@ namespace TransitManager.WPF.ViewModels
             _paiementService = paiementService;
 			_messenger = messenger;
 			_messenger.RegisterAll(this);
-			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
@@ -172,7 +171,8 @@ namespace TransitManager.WPF.ViewModels
 
             using var scope = _serviceProvider.CreateScope();
             var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementVehiculeViewModel>();
-            await paiementViewModel.InitializeAsync(Vehicule);
+            
+            await paiementViewModel.InitializeAsync(Vehicule.Id, Vehicule.ClientId, Vehicule.PrixTotal);
 
             var paiementWindow = new Views.Paiements.PaiementVehiculeView(paiementViewModel)
             {
@@ -181,11 +181,7 @@ namespace TransitManager.WPF.ViewModels
 
             if (paiementWindow.ShowDialog() == true)
             {
-                var updatedVehicule = await _vehiculeService.GetByIdAsync(Vehicule.Id);
-                if(updatedVehicule != null)
-                {
-                    Vehicule.SommePayee = updatedVehicule.Paiements.Sum(p => p.Montant);
-                }
+                Vehicule.SommePayee = paiementViewModel.TotalValeur;
                 OnPropertyChanged(nameof(HasPaiements));
             }
         }
@@ -521,23 +517,6 @@ namespace TransitManager.WPF.ViewModels
                 _ => "/Resources/Images/vehicule_plan.png"
             };
         }
-		// ##### MÉTHODE À AJOUTER DANS LA CLASSE #####
-		private async void OnDataShouldRefresh(Guid clientId)
-		{
-			if (Vehicule != null && Vehicule.ClientId == clientId)
-			{
-				await InitializeAsync(Vehicule.Id);
-			}
-		}
-		// ##### MÉTHODE À AJOUTER À LA FIN DE LA CLASSE #####
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing)
-			{
-				_clientService.ClientStatisticsUpdated -= OnDataShouldRefresh;
-			}
-			base.Dispose(disposing);
-		}
         #endregion
     }
 }

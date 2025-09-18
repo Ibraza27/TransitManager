@@ -120,7 +120,6 @@ namespace TransitManager.WPF.ViewModels
 			_serviceProvider = serviceProvider;
 			_paiementService = paiementService;
 			_exportService = exportService;
-			_clientService.ClientStatisticsUpdated += OnDataShouldRefresh;
 
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(() => _navigationService.GoBack());
@@ -147,6 +146,7 @@ namespace TransitManager.WPF.ViewModels
             VehiculesAffectes.CollectionChanged += OnAffectationChanged;
         }
 		
+		
 		// ##### NOUVELLES COMMANDES #####
 		public IAsyncRelayCommand<Colis> OpenColisPaiementsCommand { get; }
 		public IAsyncRelayCommand<Vehicule> OpenVehiculePaiementsCommand { get; }
@@ -158,18 +158,27 @@ namespace TransitManager.WPF.ViewModels
 			
 			using var scope = _serviceProvider.CreateScope();
 			var vm = scope.ServiceProvider.GetRequiredService<PaiementColisViewModel>();
-			await vm.InitializeAsync(colis);
+			await vm.InitializeAsync(colis.Id, colis.ClientId, colis.PrixTotal);
 			var window = new Views.Paiements.PaiementColisView(vm) { Owner = System.Windows.Application.Current.MainWindow };
 
 			if (window.ShowDialog() == true) 
 			{ 
-				// LIGNE À SUPPRIMER
-				// await InitializeAsync(Conteneur.Id);
-
-				// ##### NOUVELLE LOGIQUE CI-DESSOUS #####
 				colis.SommePayee = vm.TotalValeur;
-				// On recalcule les statistiques du conteneur qui dépendent des sommes payées.
-				RefreshAggregatedData();
+
+                // ======================= DÉBUT DE LA MODIFICATION =======================
+                // Sauvegarder le colis pour persister la nouvelle SommePayee
+                try
+                {
+                    await _colisService.UpdateAsync(colis);
+                }
+                catch (Exception ex)
+                {
+                    await _dialogService.ShowErrorAsync("Erreur de sauvegarde", $"Impossible de mettre à jour le total payé pour le colis : {ex.Message}");
+                }
+                
+                // Recalculer et notifier les totaux globaux de la vue
+                RecalculateAndNotifyTotals();
+                // ======================== FIN DE LA MODIFICATION ========================
 			}
 		}
 		private async Task OpenVehiculePaiementsAsync(Vehicule? vehicule)
@@ -178,20 +187,51 @@ namespace TransitManager.WPF.ViewModels
 			
 			using var scope = _serviceProvider.CreateScope();
 			var vm = scope.ServiceProvider.GetRequiredService<PaiementVehiculeViewModel>();
-			await vm.InitializeAsync(vehicule);
+			await vm.InitializeAsync(vehicule.Id, vehicule.ClientId, vehicule.PrixTotal);
 			var window = new Views.Paiements.PaiementVehiculeView(vm) { Owner = System.Windows.Application.Current.MainWindow };
 
 			if (window.ShowDialog() == true) 
 			{ 
-				// LIGNE À SUPPRIMER
-				// await InitializeAsync(Conteneur.Id);
-
-				// ##### NOUVELLE LOGIQUE CI-DESSOUS #####
 				vehicule.SommePayee = vm.TotalValeur;
-				// On recalcule les statistiques du conteneur.
-				RefreshAggregatedData();
+
+                // ======================= DÉBUT DE LA MODIFICATION =======================
+                // Sauvegarder le véhicule pour persister la nouvelle SommePayee
+                try
+                {
+                    await _vehiculeService.UpdateAsync(vehicule);
+                }
+                catch (Exception ex)
+                {
+                    await _dialogService.ShowErrorAsync("Erreur de sauvegarde", $"Impossible de mettre à jour le total payé pour le véhicule : {ex.Message}");
+                }
+
+                // Recalculer et notifier les totaux globaux de la vue
+                RecalculateAndNotifyTotals();
+                // ======================== FIN DE LA MODIFICATION ========================
 			}
 		}
+
+        // ======================= NOUVELLE MÉTHODE =======================
+        private void RecalculateAndNotifyTotals()
+        {
+            // Cette méthode notifie simplement l'UI de recalculer les totaux
+            // Les getters des propriétés font le calcul eux-mêmes
+            OnPropertyChanged(nameof(TotalColisAffectes));
+            OnPropertyChanged(nameof(TotalPiecesColis));
+            OnPropertyChanged(nameof(PrixTotalColis));
+            OnPropertyChanged(nameof(TotalPayeColis));
+            OnPropertyChanged(nameof(TotalRestantColis));
+
+            OnPropertyChanged(nameof(TotalVehiculesAffectes));
+            OnPropertyChanged(nameof(PrixTotalVehicules));
+            OnPropertyChanged(nameof(TotalPayeVehicules));
+            OnPropertyChanged(nameof(TotalRestantVehicules));
+
+            OnPropertyChanged(nameof(PrixTotalGlobal));
+            OnPropertyChanged(nameof(TotalPayeGlobal));
+            OnPropertyChanged(nameof(TotalRestantGlobal));
+        }
+        // ======================== FIN DE LA NOUVELLE MÉTHODE ========================
 		
 		private async Task OpenAddVehiculeWindowAsync()
 		{
@@ -364,22 +404,7 @@ namespace TransitManager.WPF.ViewModels
 		private void OnAffectationChanged(object? sender, NotifyCollectionChangedEventArgs e)
 		{
 			SaveCommand.NotifyCanExecuteChanged();
-
-			// Notifier toutes les propriétés de statistiques
-			OnPropertyChanged(nameof(TotalColisAffectes));
-			OnPropertyChanged(nameof(TotalPiecesColis));
-			OnPropertyChanged(nameof(PrixTotalColis));
-			OnPropertyChanged(nameof(TotalPayeColis));
-			OnPropertyChanged(nameof(TotalRestantColis));
-
-			OnPropertyChanged(nameof(TotalVehiculesAffectes));
-			OnPropertyChanged(nameof(PrixTotalVehicules));
-			OnPropertyChanged(nameof(TotalPayeVehicules));
-			OnPropertyChanged(nameof(TotalRestantVehicules));
-
-			OnPropertyChanged(nameof(PrixTotalGlobal));
-			OnPropertyChanged(nameof(TotalPayeGlobal));
-			OnPropertyChanged(nameof(TotalRestantGlobal));
+            RecalculateAndNotifyTotals();
 		}
 
         private bool CanSave()
@@ -446,23 +471,19 @@ namespace TransitManager.WPF.ViewModels
 		{
 			if (Conteneur == null) return;
 
-			// 1. Mettre à jour les listes de base
 			ColisAffectes.Clear();
 			foreach(var colis in Conteneur.Colis) ColisAffectes.Add(colis);
 			
 			VehiculesAffectes.Clear();
 			foreach(var vehicule in Conteneur.Vehicules) VehiculesAffectes.Add(vehicule);
 
-			// 2. Obtenir les clients uniques
 			var distinctClients = Conteneur.ClientsDistincts.ToList();
 			
-			// 3. Calculer les statistiques pour chaque client
 			var clientStatsList = new List<ClientConteneurStatistiques>();
 			foreach (var client in distinctClients)
 			{
 				var stats = new ClientConteneurStatistiques(client);
 
-				// Calculer les totaux pour ce client, uniquement pour les items dans CE conteneur
 				stats.PrixTotalConteneur = ColisAffectes.Where(c => c.ClientId == client.Id).Sum(c => c.PrixTotal) +
 										   VehiculesAffectes.Where(v => v.ClientId == client.Id).Sum(v => v.PrixTotal);
 
@@ -472,12 +493,13 @@ namespace TransitManager.WPF.ViewModels
 				clientStatsList.Add(stats);
 			}
 
-			// 4. Mettre à jour la collection liée à l'interface
 			ClientsAffiches.Clear();
 			foreach (var stat in clientStatsList.OrderBy(s => s.Client.NomComplet))
 			{
 				ClientsAffiches.Add(stat);
 			}
+
+            RecalculateAndNotifyTotals();
 		}
 
 		private async Task SaveAsync()
@@ -507,7 +529,6 @@ namespace TransitManager.WPF.ViewModels
 					_navigationService.GoBack();
 				}
 				
-				// ======================= DÉBUT DE L'AJOUT =======================
 				catch (ConcurrencyException cex)
 				{
 					var refresh = await _dialogService.ShowConfirmationAsync(
@@ -519,7 +540,6 @@ namespace TransitManager.WPF.ViewModels
 						await InitializeAsync(Conteneur.Id); // Recharge les données
 					}
 				}
-				// ======================== FIN DE L'AJOUT ========================
 				
 				catch (Exception ex)
 				{
@@ -549,11 +569,10 @@ namespace TransitManager.WPF.ViewModels
         
 		private async Task RemoveColisAsync(Colis? colis)
 		{
-			if (colis == null) return;
+			if (colis == null || Conteneur == null) return;
 			bool success = await _colisService.RemoveFromConteneurAsync(colis.Id);
 			if (success)
 			{
-				// On force le rechargement des données du conteneur après la suppression
 				await InitializeAsync(Conteneur.Id);
 				await _dialogService.ShowInformationAsync("Succès", "Le colis a été retiré.");
 			}
@@ -584,11 +603,10 @@ namespace TransitManager.WPF.ViewModels
 
 		private async Task RemoveVehiculeAsync(Vehicule? vehicule)
 		{
-			if (vehicule == null) return;
+			if (vehicule == null || Conteneur == null) return;
 			bool success = await _vehiculeService.RemoveFromConteneurAsync(vehicule.Id);
 			if (success)
 			{
-				// On force le rechargement des données du conteneur après la suppression
 				await InitializeAsync(Conteneur.Id);
 				await _dialogService.ShowInformationAsync("Succès", "Le véhicule a été retiré.");
 			}
@@ -615,26 +633,6 @@ namespace TransitManager.WPF.ViewModels
             VehiculeSearchResults.Clear();
             foreach (var item in unassigned) VehiculeSearchResults.Add(item);
         }
-		
-		// ##### MÉTHODE À AJOUTER DANS LA CLASSE #####
-		private async void OnDataShouldRefresh(Guid clientId)
-		{
-			// On ne recharge la vue de détail du conteneur que si un des clients
-			// affectés à ce conteneur a eu ses statistiques modifiées.
-			if (Conteneur != null && ClientsAffiches.Any(c => c.Client.Id == clientId))
-			{
-				await InitializeAsync(Conteneur.Id);
-			}
-		}
-		// ##### MÉTHODE À AJOUTER À LA FIN DE LA CLASSE #####
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing)
-			{
-				_clientService.ClientStatisticsUpdated -= OnDataShouldRefresh;
-			}
-			base.Dispose(disposing);
-		}
 		
 		private async Task ExportPdfAsync()
 		{

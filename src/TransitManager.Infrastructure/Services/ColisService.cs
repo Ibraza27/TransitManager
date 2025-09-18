@@ -267,5 +267,14 @@ namespace TransitManager.Infrastructure.Services
             searchTerm = searchTerm.ToLower();
             return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.Actif && (c.Barcodes.Any(b => b.Value.ToLower().Contains(searchTerm)) || c.NumeroReference.ToLower().Contains(searchTerm) || c.Designation.ToLower().Contains(searchTerm) || (c.Client != null && (c.Client.Nom + " " + c.Client.Prenom).ToLower().Contains(searchTerm)) || (c.Conteneur != null && c.Conteneur.NumeroDossier.ToLower().Contains(searchTerm)))).AsNoTracking().OrderByDescending(c => c.DateArrivee).ToListAsync();
         }
+
+        public async Task<Dictionary<StatutColis, int>> GetStatisticsByStatusAsync()
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Colis
+                .Where(c => c.Actif)
+                .GroupBy(c => c.Statut)
+                .ToDictionaryAsync(g => g.Key, g => g.Count());
+        }
     }
 }

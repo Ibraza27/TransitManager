@@ -105,6 +105,7 @@ namespace TransitManager.WPF.ViewModels
             StatutsList.Insert(0, "Tous");
         }
 		
+		
 		// ##### NOUVELLE COMMANDE #####
 		public IAsyncRelayCommand<Vehicule> OpenPaiementsWindowCommand { get; }
 
@@ -115,7 +116,7 @@ namespace TransitManager.WPF.ViewModels
 
 			using var scope = _serviceProvider.CreateScope();
 			var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementVehiculeViewModel>();
-			await paiementViewModel.InitializeAsync(vehicule);
+			await paiementViewModel.InitializeAsync(vehicule.Id, vehicule.ClientId, vehicule.PrixTotal);
 
 			var paiementWindow = new Views.Paiements.PaiementVehiculeView(paiementViewModel)
 			{
@@ -124,13 +125,20 @@ namespace TransitManager.WPF.ViewModels
 
 			if (paiementWindow.ShowDialog() == true)
 			{
-				// LIGNE À SUPPRIMER
-				// await LoadAsync();
-
-				// ##### NOUVELLE LOGIQUE CI-DESSOUS #####
 				vehicule.SommePayee = paiementViewModel.TotalValeur;
 
-				// Recalculer les statistiques globales de la liste
+                // ======================= DÉBUT DE LA MODIFICATION =======================
+                // On sauvegarde le véhicule pour persister la nouvelle SommePayee
+                try
+                {
+                    await _vehiculeService.UpdateAsync(vehicule);
+                }
+                catch (Exception ex)
+                {
+                    await _dialogService.ShowErrorAsync("Erreur de sauvegarde", $"Impossible de mettre à jour le total payé pour le véhicule : {ex.Message}");
+                }
+                // ======================== FIN DE LA MODIFICATION ========================
+
 				CalculateStatistics();
 			}
 		}
@@ -313,6 +321,7 @@ namespace TransitManager.WPF.ViewModels
 		{
 			await LoadAsync();
 		}
+		
 		// ##### MÉTHODE À AJOUTER À LA FIN DE LA CLASSE #####
 		protected override void Dispose(bool disposing)
 		{

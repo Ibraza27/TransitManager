@@ -15,7 +15,7 @@ using TransitManager.Core.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using TransitManager.WPF.Views;
 using CommunityToolkit.Mvvm.Messaging; // <-- AJOUTER CE USING
-using TransitManager.Core.Messages; // <-- CHANGER DE .WPF.Messages À .Core.Messages
+using TransitManager.Core.Messages;
 
 
 namespace TransitManager.WPF.ViewModels

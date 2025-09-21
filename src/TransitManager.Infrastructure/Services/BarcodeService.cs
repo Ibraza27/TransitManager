@@ -1,15 +1,17 @@
 using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
-using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using ZXing;
 using ZXing.Common;
 using ZXing.QrCode;
 using ZXing.Windows.Compatibility;
+
+#if WINDOWS
+using System.Drawing;
+using System.Drawing.Imaging;
+#endif
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -59,13 +61,13 @@ namespace TransitManager.Infrastructure.Services
             return $"{timestamp}{random}";
         }
 
+#if WINDOWS
         public Task<byte[]> GenerateBarcodeImageAsync(string barcodeText, int width = 300, int height = 100)
         {
             return Task.Run(() =>
             {
                 _barcodeWriter.Options.Width = width;
                 _barcodeWriter.Options.Height = height;
-
                 using var bitmap = _barcodeWriter.Write(barcodeText);
                 using var stream = new MemoryStream();
                 bitmap.Save(stream, ImageFormat.Png);
@@ -88,7 +90,6 @@ namespace TransitManager.Infrastructure.Services
                         ErrorCorrection = ZXing.QrCode.Internal.ErrorCorrectionLevel.H
                     }
                 };
-
                 using var bitmap = qrWriter.Write(data);
                 using var stream = new MemoryStream();
                 bitmap.Save(stream, ImageFormat.Png);
@@ -118,7 +119,6 @@ namespace TransitManager.Infrastructure.Services
         {
             if (!File.Exists(filePath))
                 return null;
-
             var imageData = await File.ReadAllBytesAsync(filePath);
             return await ScanBarcodeAsync(imageData);
         }
@@ -129,33 +129,55 @@ namespace TransitManager.Infrastructure.Services
             {
                 using var bitmap = new Bitmap(400, 600);
                 using var graphics = Graphics.FromImage(bitmap);
-                
-                graphics.Clear(Color.White);
 
+                graphics.Clear(Color.White);
                 var titleFont = new Font("Arial", 16, FontStyle.Bold);
                 var normalFont = new Font("Arial", 10);
-                
+
                 graphics.DrawString("TRANSIT MANAGER", titleFont, Brushes.Black, new PointF(10, 10));
                 graphics.DrawLine(new Pen(Color.Black, 2), 10, 40, 390, 40);
-
                 int y = 50;
                 graphics.DrawString($"Référence: {colis.NumeroReference}", normalFont, Brushes.Black, new PointF(10, y));
                 y += 25;
                 graphics.DrawString($"Client: {colis.Client?.NomComplet ?? "N/A"}", normalFont, Brushes.Black, new PointF(10, y));
-                
+
                 var barcodeWriter = new BarcodeWriter
                 {
                     Format = BarcodeFormat.CODE_128,
                     Options = new EncodingOptions { Height = 80, Width = 380, Margin = 0, PureBarcode = true }
                 };
-
-				using var barcodeBitmap = barcodeWriter.Write(colis.NumeroReference); // Corrigé
-				graphics.DrawImage(barcodeBitmap, new Point(10, 200));
-
-				var labelPath = Path.Combine("Labels", $"{colis.NumeroReference}_label.png"); // Corrigé
+                using var barcodeBitmap = barcodeWriter.Write(colis.NumeroReference);
+                graphics.DrawImage(barcodeBitmap, new Point(10, 200));
+                var labelPath = Path.Combine("Labels", $"{colis.NumeroReference}_label.png");
                 Directory.CreateDirectory("Labels");
                 bitmap.Save(labelPath, ImageFormat.Png);
             });
         }
+#else
+        public Task<byte[]> GenerateBarcodeImageAsync(string barcodeText, int width = 300, int height = 100)
+        {
+            return Task.FromException<byte[]>(new NotImplementedException("GenerateBarcodeImageAsync requires a platform-specific implementation."));
+        }
+
+        public Task<byte[]> GenerateQRCodeAsync(string data, int size = 200)
+        {
+            return Task.FromException<byte[]>(new NotImplementedException("GenerateQRCodeAsync requires a platform-specific implementation."));
+        }
+
+        public Task<string?> ScanBarcodeAsync(byte[] imageData)
+        {
+            return Task.FromException<string?>(new NotImplementedException("ScanBarcodeAsync requires a platform-specific implementation."));
+        }
+
+        public Task<string?> ScanBarcodeFromFileAsync(string filePath)
+        {
+            return Task.FromException<string?>(new NotImplementedException("ScanBarcodeFromFileAsync requires a platform-specific implementation."));
+        }
+
+        public Task GenerateLabelAsync(Colis colis)
+        {
+            return Task.FromException(new NotImplementedException("GenerateLabelAsync requires a platform-specific implementation."));
+        }
+#endif
     }
 }

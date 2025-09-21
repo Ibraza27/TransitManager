@@ -11,4 +11,9 @@
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\TransitManager.Core\TransitManager.Core.csproj" />
+    <ProjectReference Include="..\TransitManager.Infrastructure\TransitManager.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

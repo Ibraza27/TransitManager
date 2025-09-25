@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             x:DataType="viewmodels:ClientDetailViewModel"
+             x:Class="TransitManager.Mobile.Views.ClientDetailPage"
+             Title="Détails du Client">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="10" Padding="20">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+
+            <Label Text="{Binding Client.NomComplet}" FontSize="Header" FontAttributes="Bold"/>
+            <Label Text="{Binding Client.CodeClient}" FontSize="Small" TextColor="Gray"/>
+
+            <Frame Margin="0,20,0,0" Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Contact" FontSize="Title" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto" RowSpacing="5">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Principal :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Client.TelephonePrincipal}" />
+                        <Label Grid.Row="1" Grid.Column="0" Text="Secondaire :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Client.TelephoneSecondaire}" />
+                        <Label Grid.Row="2" Grid.Column="0" Text="Email :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Client.Email}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Adresse" FontSize="Title" FontAttributes="Bold" />
+                    <Label Text="{Binding Client.AdressePrincipale}" />
+                    <Label>
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="{Binding Client.CodePostal}" />
+                                <Span Text=" " />
+                                <Span Text="{Binding Client.Ville}" />
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
+                    <Label Text="{Binding Client.Pays}" />
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- D'autres sections (statistiques, etc.) peuvent être ajoutées ici -->
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

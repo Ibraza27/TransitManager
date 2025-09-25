@@ -5,6 +5,7 @@ using TransitManager.Infrastructure.Data;
 using TransitManager.Infrastructure.Repositories;
 using TransitManager.Infrastructure.Services;
 using CommunityToolkit.Mvvm.Messaging;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,7 +45,15 @@ builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 
 
 // --- CONFIGURATION DES SERVICES WEB API ---
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Gère les boucles de référence (Client -> Colis -> Client)
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+        
+        // Ignore les propriétés nulles lors de la sérialisation pour un JSON plus propre
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.API.Controllers
 {
@@ -19,12 +20,24 @@ namespace TransitManager.API.Controllers
 
         // GET: api/clients
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Client>>> GetClients()
+        // MODIFICATION : La méthode retourne maintenant une liste de DTOs
+        public async Task<ActionResult<IEnumerable<ClientListItemDto>>> GetClients()
         {
             try
             {
                 var clients = await _clientService.GetActiveClientsAsync();
-                return Ok(clients);
+
+                // Mappage de l'entité vers le DTO
+                var clientDtos = clients.Select(c => new ClientListItemDto
+                {
+                    Id = c.Id,
+                    CodeClient = c.CodeClient,
+                    NomComplet = c.NomComplet,
+                    TelephonePrincipal = c.TelephonePrincipal,
+                    Email = c.Email
+                });
+
+                return Ok(clientDtos);
             }
             catch (Exception ex)
             {

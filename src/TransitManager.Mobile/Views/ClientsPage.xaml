@@ -2,29 +2,30 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
-             xmlns:core="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
+             xmlns:core="clr-namespace:TransitManager.Core.DTOs;assembly=TransitManager.Core"
              x:DataType="viewmodels:ClientsViewModel"
              x:Class="TransitManager.Mobile.Views.ClientsPage"
              Title="Clients">
 
     <Grid RowDefinitions="Auto, *">
         
-        <!-- Indicateur de chargement -->
         <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                            HorizontalOptions="Center" VerticalOptions="Center" Grid.RowSpan="2" />
 
-        <!-- Barre de commandes -->
         <HorizontalStackLayout Grid.Row="0" Padding="10" Spacing="10">
             <Button Text="Actualiser" Command="{Binding LoadClientsCommand}" />
-            <!-- D'autres boutons (Ajouter, etc.) viendront ici -->
         </HorizontalStackLayout>
 
-        <!-- Liste des clients -->
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Clients}">
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Clients}" SelectionMode="None">
             <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type core:Client}"
-                              xmlns:core="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core">
+                <DataTemplate x:DataType="{x:Type core:ClientListItemDto}">
                     <Frame Margin="10" Padding="10" BorderColor="LightGray" CornerRadius="5">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer 
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ClientsViewModel}}, Path=GoToDetailsCommand}"
+                                CommandParameter="{Binding .}" />
+                        </Frame.GestureRecognizers>
+                        
                         <VerticalStackLayout>
                             <Label Text="{Binding NomComplet}" FontSize="Medium" FontAttributes="Bold" />
                             <Label Text="{Binding TelephonePrincipal}" FontSize="Small" />

@@ -88,6 +88,18 @@
 	  <MauiXaml Update="Views\AddEditColisPage.xaml">
 		<Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\VehiculesPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\VehiculeDetailPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\AddEditVehiculePage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	</ItemGroup>
 
 </Project>

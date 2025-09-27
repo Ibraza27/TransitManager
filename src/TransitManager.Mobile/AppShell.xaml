@@ -21,6 +21,12 @@
             Icon="box_icon.png"
             ContentTemplate="{DataTemplate local:ColisPage}"
             Route="ColisPage" />
+			
+        <ShellContent
+            Title="Véhicules"
+            Icon="car_icon.png"
+            ContentTemplate="{DataTemplate local:VehiculesPage}"
+            Route="VehiculesPage" />
     </TabBar>
 
 </Shell>

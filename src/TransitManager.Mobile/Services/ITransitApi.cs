@@ -39,5 +39,17 @@ namespace TransitManager.Mobile.Services
 
 		[Delete("/api/colis/{id}")]
 		Task DeleteColisAsync(Guid id);
+		
+		[Get("/api/vehicules")]
+		Task<IEnumerable<VehiculeListItemDto>> GetVehiculesAsync();
+		
+		[Get("/api/vehicules/{id}")]
+		Task<Vehicule> GetVehiculeByIdAsync(Guid id);
+		
+		[Post("/api/vehicules")]
+		Task<Vehicule> CreateVehiculeAsync([Body] Vehicule vehicule);
+
+		[Put("/api/vehicules/{id}")]
+		Task UpdateVehiculeAsync(Guid id, [Body] Vehicule vehicule);
     }
 }

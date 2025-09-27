@@ -131,7 +131,8 @@ namespace TransitManager.Infrastructure.Services
 			await using var context = await _contextFactory.CreateDbContextAsync();
 			return await context.Vehicules
 				.Include(v => v.Client)
-				.Include(v => v.Paiements) // <-- LIGNE À AJOUTER
+				.Include(v => v.Paiements)
+                .Include(v => v.Conteneur) // <--- LIGNE AJOUTÉE IMPORTANTE
 				.AsNoTracking()
 				.FirstOrDefaultAsync(v => v.Id == id);
 		}

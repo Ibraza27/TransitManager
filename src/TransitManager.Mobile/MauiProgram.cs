@@ -81,6 +81,15 @@ namespace TransitManager.Mobile
 			builder.Services.AddTransient<AddEditColisPage>();
 			builder.Services.AddTransient<AddEditColisViewModel>();
 			
+			builder.Services.AddSingleton<VehiculesPage>();
+			builder.Services.AddSingleton<VehiculesViewModel>();
+			
+			builder.Services.AddTransient<VehiculeDetailPage>();
+			builder.Services.AddTransient<VehiculeDetailViewModel>();
+			
+			builder.Services.AddTransient<AddEditVehiculePage>();
+			builder.Services.AddTransient<AddEditVehiculeViewModel>();
+			
             return builder.Build();
         }
     }

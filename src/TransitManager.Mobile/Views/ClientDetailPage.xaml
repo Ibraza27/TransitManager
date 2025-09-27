@@ -43,6 +43,11 @@
                     <Label Text="{Binding Client.Pays}" />
                 </VerticalStackLayout>
             </Frame>
+			<!-- ... dans le VerticalStackLayout principal, après les Frames -->
+			<HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
+				<Button Text="Modifier" Command="{Binding EditCommand}"/>
+				<Button Text="Supprimer" Command="{Binding DeleteCommand}" BackgroundColor="Red"/>
+			</HorizontalStackLayout>
             
             <!-- D'autres sections (statistiques, etc.) peuvent être ajoutées ici -->
 

@@ -68,9 +68,25 @@
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  
-	  <!-- AJOUTER CETTE SECTION POUR LA NOUVELLE PAGE -->
 	  <MauiXaml Update="Views\ClientDetailPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <!-- VÉRIFIEZ QUE CETTE SECTION EST BIEN PRÉSENTE -->
+	  <MauiXaml Update="Views\AddEditClientPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\ColisPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\ColisDetailPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\AddEditColisPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	</ItemGroup>
 

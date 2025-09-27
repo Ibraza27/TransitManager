@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:dto="clr-namespace:TransitManager.Core.DTOs;assembly=TransitManager.Core"
+             x:DataType="viewmodels:ColisViewModel"
+             x:Class="TransitManager.Mobile.Views.ColisPage"
+             Title="Colis">
+
+    <Grid RowDefinitions="Auto, *">
+		<HorizontalStackLayout Grid.Row="0" Margin="10" Spacing="10">
+			<Button Text="Actualiser" Command="{Binding LoadColisCommand}" />
+			<Button Text="Nouveau Colis" Command="{Binding AddColisCommand}" />
+		</HorizontalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding ColisList}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="dto:ColisListItemDto">
+                    <Frame Margin="10" Padding="10" BorderColor="LightGray" CornerRadius="5">
+						<Frame.GestureRecognizers>
+							<TapGestureRecognizer 
+								Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ColisViewModel}}, Path=GoToDetailsCommand}"
+								CommandParameter="{Binding .}" />
+						</Frame.GestureRecognizers>
+                        <VerticalStackLayout>
+                            <Label Text="{Binding NumeroReference}" FontSize="Medium" FontAttributes="Bold"/>
+                            <Label Text="{Binding Designation}" FontSize="Small" />
+                            <Label TextColor="Gray">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="Client: "/>
+                                        <Span Text="{Binding ClientNomComplet}" FontAttributes="Italic"/>
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                            <Label Text="{Binding Statut}" FontSize="Micro" HorizontalOptions="End"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

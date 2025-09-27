@@ -61,5 +61,25 @@ namespace TransitManager.Mobile.ViewModels
                 IsBusy = false;
             }
         }
+		[RelayCommand]
+		async Task EditAsync()
+		{
+			if (Client == null) return;
+			// Naviguer vers la page d'édition avec l'ID du client
+			await Shell.Current.GoToAsync($"AddEditClientPage?clientId={Client.Id}");
+		}
+
+		[RelayCommand]
+		async Task DeleteAsync()
+		{
+			if (Client == null) return;
+
+			bool confirm = await Shell.Current.DisplayAlert("Supprimer", $"Êtes-vous sûr de vouloir supprimer {Client.NomComplet} ?", "Oui", "Non");
+			if (confirm)
+			{
+				await _transitApi.DeleteClientAsync(Client.Id);
+				await Shell.Current.GoToAsync(".."); // Revenir à la liste
+			}
+		}
     }
 }

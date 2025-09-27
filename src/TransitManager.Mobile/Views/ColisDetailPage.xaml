@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             x:DataType="viewmodels:ColisDetailViewModel"
+             x:Class="TransitManager.Mobile.Views.ColisDetailPage"
+             Title="Détails du Colis">
+    <ScrollView>
+        <VerticalStackLayout Spacing="15" Padding="20">
+            <!-- EN-TÊTE -->
+            <Label Text="{Binding Colis.NumeroReference}" FontSize="Header" FontAttributes="Bold"/>
+            <Label Text="{Binding Colis.Designation}" FontSize="Title" Opacity="0.8"/>
+            <BoxView HeightRequest="1" Color="LightGray" Margin="0,10"/>
+
+            <!-- INFORMATIONS PRINCIPALES -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Informations Principales" FontSize="Large" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto, Auto, Auto" RowSpacing="8">
+                        
+                        <Label Grid.Row="0" Grid.Column="0" Text="Client :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Colis.Client.NomComplet}" />
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Conteneur :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Colis.Conteneur.NumeroDossier, TargetNullValue='Non affecté'}" />
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Statut :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Colis.Statut}" />
+                        
+                        <Label Grid.Row="3" Grid.Column="0" Text="Date d'arrivée :" FontAttributes="Bold"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding Colis.DateArrivee, StringFormat='{0:dd/MM/yyyy HH:mm}'}" />
+                        
+                        <Label Grid.Row="4" Grid.Column="0" Text="Destination :" FontAttributes="Bold"/>
+                        <Label Grid.Row="4" Grid.Column="1" Text="{Binding Colis.DestinationFinale}" />
+                        
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- DÉTAILS FINANCIERS -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Détails Financiers" FontSize="Large" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto" RowSpacing="8">
+                        
+                        <Label Grid.Row="0" Grid.Column="0" Text="Prix Total :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Colis.PrixTotal, StringFormat='{0:C}'}" TextColor="Blue"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Somme Payée :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Colis.SommePayee, StringFormat='{0:C}'}" TextColor="Green"/>
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Restant à Payer :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Colis.RestantAPayer, StringFormat='{0:C}'}" TextColor="Red" FontAttributes="Bold"/>
+                        
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+            
+			<HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
+				<Button Text="Modifier" Command="{Binding EditCommand}"/>
+				<Button Text="Supprimer" Command="{Binding DeleteCommand}" BackgroundColor="Red"/>
+			</HorizontalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

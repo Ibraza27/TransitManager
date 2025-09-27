@@ -56,5 +56,11 @@ namespace TransitManager.Mobile.ViewModels
             
             await Shell.Current.GoToAsync($"ClientDetailPage?clientId={client.Id}");
         }
+		[RelayCommand]
+		private async Task AddClientAsync()
+		{
+			// Naviguer vers la page d'ajout (sans ID)
+			await Shell.Current.GoToAsync("AddEditClientPage");
+		}
     }
 }

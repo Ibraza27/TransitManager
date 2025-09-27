@@ -14,6 +14,7 @@
 
         <HorizontalStackLayout Grid.Row="0" Padding="10" Spacing="10">
             <Button Text="Actualiser" Command="{Binding LoadClientsCommand}" />
+			<Button Text="Nouveau Client" Command="{Binding AddClientCommand}" />
         </HorizontalStackLayout>
 
         <CollectionView Grid.Row="1" ItemsSource="{Binding Clients}" SelectionMode="None">

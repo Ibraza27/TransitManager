@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             x:DataType="viewmodels:AddEditColisViewModel"
+             x:Class="TransitManager.Mobile.Views.AddEditColisPage"
+             Title="{Binding PageTitle}">
+    <ScrollView>
+        <VerticalStackLayout Spacing="10" Padding="20">
+            <Label Text="Informations Générales" FontSize="Large" FontAttributes="Bold"/>
+            
+            <Picker Title="Client Propriétaire *" 
+                    ItemsSource="{Binding Clients}"
+                    ItemDisplayBinding="{Binding NomComplet}"
+                    SelectedItem="{Binding SelectedClient}"/>
+            
+            <Entry Placeholder="Désignation / Description" Text="{Binding Colis.Designation}"/>
+            <Entry Placeholder="Destination Finale" Text="{Binding Colis.DestinationFinale}"/>
+
+            <Label Text="Détails" FontSize="Large" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <Entry Placeholder="Nombre de Pièces" Text="{Binding Colis.NombrePieces}" Keyboard="Numeric"/>
+            <Entry Placeholder="Volume (m³)" Text="{Binding Colis.Volume}" Keyboard="Numeric"/>
+            <Entry Placeholder="Valeur Déclarée (€)" Text="{Binding Colis.ValeurDeclaree}" Keyboard="Numeric"/>
+            
+            <Label Text="Finances" FontSize="Large" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <Entry Placeholder="Prix Total (€)" Text="{Binding Colis.PrixTotal}" Keyboard="Numeric"/>
+
+            <Button Text="Enregistrer" Command="{Binding SaveCommand}" Margin="0,30,0,0"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

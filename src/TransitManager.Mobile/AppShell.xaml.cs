@@ -10,6 +10,9 @@ namespace TransitManager.Mobile
 
             // --- AJOUTER CETTE LIGNE ---
             Routing.RegisterRoute(nameof(ClientDetailPage), typeof(ClientDetailPage));
+			Routing.RegisterRoute(nameof(AddEditClientPage), typeof(AddEditClientPage));
+			Routing.RegisterRoute(nameof(ColisDetailPage), typeof(ColisDetailPage));
+			Routing.RegisterRoute(nameof(AddEditColisPage), typeof(AddEditColisPage));
         }
     }
 }

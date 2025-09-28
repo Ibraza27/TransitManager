@@ -96,6 +96,8 @@
             <HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
                 <Button Text="Modifier" Command="{Binding EditCommand}"/>
             </HorizontalStackLayout>
+			
+			<Button Text="Voir l'État des Lieux" Command="{Binding ViewEtatDesLieuxCommand}" Margin="0,20,0,0"/>		
 
         </VerticalStackLayout>
 		

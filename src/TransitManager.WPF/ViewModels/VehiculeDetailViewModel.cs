@@ -9,6 +9,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Ink;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
@@ -28,14 +30,14 @@ namespace TransitManager.WPF.ViewModels
         private readonly IDialogService _dialogService;
         private readonly IServiceProvider _serviceProvider;
         private readonly IPaiementService _paiementService;
-		private readonly IMessenger _messenger;
-		public Action? CloseAction { get; set; }
-		private bool _isModal = false;
-		
-		public void SetModalMode()
-		{
-			_isModal = true;
-		}
+        private readonly IMessenger _messenger;
+        public Action? CloseAction { get; set; }
+        private bool _isModal = false;
+
+        public void SetModalMode()
+        {
+            _isModal = true;
+        }
 
         private Vehicule? _vehicule;
         public Vehicule? Vehicule
@@ -48,13 +50,13 @@ namespace TransitManager.WPF.ViewModels
                 if (_vehicule != null) _vehicule.PropertyChanged += OnVehiculePropertyChanged;
             }
         }
-        
-        private string _planImagePath = "/Resources/Images/vehicule_plan.png";
-        public string PlanImagePath { get => _planImagePath; set => SetProperty(ref _planImagePath, value); }
+
+        private ImageSource? _planImageSource;
+        public ImageSource? PlanImageSource { get => _planImageSource; set => SetProperty(ref _planImageSource, value); }
 
         private ObservableCollection<Client> _clients = new();
         public ObservableCollection<Client> Clients { get => _clients; set => SetProperty(ref _clients, value); }
-        
+
         private Client? _selectedClient;
         public Client? SelectedClient
         {
@@ -98,32 +100,29 @@ namespace TransitManager.WPF.ViewModels
 
         public ObservableCollection<System.Windows.Point> DamagePoints { get; set; } = new();
         public StrokeCollection Rayures { get; set; } = new StrokeCollection();
-
         // --- NOUVELLES PROPRIÉTÉS POUR L'AFFECTATION ---
         public ObservableCollection<Conteneur> ConteneursDisponibles { get; } = new();
 
-		
-		public ObservableCollection<StatutVehicule> AvailableStatuses { get; } = new();
-		
-		private Conteneur? _selectedConteneur;
-		public Conteneur? SelectedConteneur
-		{
-			get => _selectedConteneur;
-			set 
-			{
-				if (SetProperty(ref _selectedConteneur, value))
-				{
-					if (Vehicule != null)
-					{
-						// On met simplement à jour l'ID. La logique métier sera appliquée à l'enregistrement.
-						Vehicule.ConteneurId = (value?.Id == Guid.Empty) ? null : value?.Id;
-					}
-				}
-			}
-		}
-        
-        public bool HasPaiements => Vehicule != null && Vehicule.Paiements.Any();
+        public ObservableCollection<StatutVehicule> AvailableStatuses { get; } = new();
 
+        private Conteneur? _selectedConteneur;
+        public Conteneur? SelectedConteneur
+        {
+            get => _selectedConteneur;
+            set
+            {
+                if (SetProperty(ref _selectedConteneur, value))
+                {
+                    if (Vehicule != null)
+                    {
+                        // On met simplement à jour l'ID. La logique métier sera appliquée à l'enregistrement.
+                        Vehicule.ConteneurId = (value?.Id == Guid.Empty) ? null : value?.Id;
+                    }
+                }
+            }
+        }
+
+        public bool HasPaiements => Vehicule != null && Vehicule.Paiements.Any();
         public IAsyncRelayCommand SaveCommand { get; }
         public IRelayCommand CancelCommand { get; }
         public IRelayCommand<System.Windows.Point> AddDamagePointCommand { get; }
@@ -131,8 +130,8 @@ namespace TransitManager.WPF.ViewModels
         public IAsyncRelayCommand OpenPaiementCommand { get; }
         public IAsyncRelayCommand CheckPaiementModificationCommand { get; }
 
-        public VehiculeDetailViewModel(IVehiculeService vehiculeService, IClientService clientService, 
-                                       IConteneurService conteneurService, INavigationService navigationService, 
+        public VehiculeDetailViewModel(IVehiculeService vehiculeService, IClientService clientService,
+                                       IConteneurService conteneurService, INavigationService navigationService,
                                        IDialogService dialogService, IServiceProvider serviceProvider, IPaiementService paiementService, IMessenger messenger)
         {
             _vehiculeService = vehiculeService;
@@ -142,43 +141,38 @@ namespace TransitManager.WPF.ViewModels
             _dialogService = dialogService;
             _serviceProvider = serviceProvider;
             _paiementService = paiementService;
-			_messenger = messenger;
-			_messenger.RegisterAll(this);
-
+            _messenger = messenger;
+            _messenger.RegisterAll(this);
             SaveCommand = new AsyncRelayCommand(SaveAsync, CanSave);
             CancelCommand = new RelayCommand(Cancel);
             AddDamagePointCommand = new RelayCommand<System.Windows.Point>(AddDamagePoint);
             RemoveDamagePointCommand = new RelayCommand<System.Windows.Point>(RemoveDamagePoint);
             OpenPaiementCommand = new AsyncRelayCommand(OpenPaiement);
             CheckPaiementModificationCommand = new AsyncRelayCommand(CheckPaiementModification);
-            
+
             DamagePoints.CollectionChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
             Rayures.StrokesChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
         }
-		
-		public void Receive(EntityTotalPaidUpdatedMessage message)
-		{
-			if (Vehicule != null && Vehicule.Id == message.EntityId)
-			{
-				Vehicule.SommePayee = message.NewTotalPaid;
-			}
-		}
 
+        public void Receive(EntityTotalPaidUpdatedMessage message)
+        {
+            if (Vehicule != null && Vehicule.Id == message.EntityId)
+            {
+                Vehicule.SommePayee = message.NewTotalPaid;
+            }
+        }
 
         private async Task OpenPaiement()
         {
             if (Vehicule == null) return;
-
             using var scope = _serviceProvider.CreateScope();
             var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementVehiculeViewModel>();
-            
-            await paiementViewModel.InitializeAsync(Vehicule.Id, Vehicule.ClientId, Vehicule.PrixTotal);
 
+            await paiementViewModel.InitializeAsync(Vehicule.Id, Vehicule.ClientId, Vehicule.PrixTotal);
             var paiementWindow = new Views.Paiements.PaiementVehiculeView(paiementViewModel)
             {
                 Owner = System.Windows.Application.Current.MainWindow
             };
-
             if (paiementWindow.ShowDialog() == true)
             {
                 Vehicule.SommePayee = paiementViewModel.TotalValeur;
@@ -193,14 +187,13 @@ namespace TransitManager.WPF.ViewModels
                 var confirm = await _dialogService.ShowConfirmationAsync(
                     "Paiements existants",
                     "Le détail des paiements a déjà été commencé pour ce véhicule.\nVoulez-vous ouvrir la fenêtre de gestion des paiements ?");
-
                 if (confirm)
                 {
                     await OpenPaiement();
                 }
             }
         }
-        
+
         public async Task InitializeAsync(string newMarker)
         {
             if (newMarker == "new")
@@ -212,79 +205,71 @@ namespace TransitManager.WPF.ViewModels
                     Title = "Nouveau Véhicule";
                     Vehicule = new Vehicule();
                     DestinataireEstProprietaire = true;
-                    
+
                     await LoadConteneursDisponiblesAsync(); // <-- NOUVEAU
-					LoadAvailableStatuses();
+                    LoadAvailableStatuses();
                 });
             }
         }
-        
-		public async Task InitializeAsync(Guid vehiculeId)
-		{
-			await ExecuteBusyActionAsync(async () =>
-			{
-				Title = "Modifier le Véhicule";
-				
-				var vehiculeComplet = await _vehiculeService.GetByIdAsync(vehiculeId);
-				if (vehiculeComplet == null || vehiculeComplet.Client == null)
-				{
-					await _dialogService.ShowErrorAsync("Erreur", "Le véhicule ou son propriétaire est introuvable.");
-					Cancel();
-					return;
-				}
-				
-				// Attacher l'écouteur d'événement
-				vehiculeComplet.PropertyChanged += OnVehiculePropertyChanged;
-				Vehicule = vehiculeComplet;
 
-				_allClients = (await _clientService.GetActiveClientsAsync()).ToList();
-				if (!_allClients.Any(c => c.Id == Vehicule.ClientId))
-				{
-					_allClients.Insert(0, Vehicule.Client);
-				}
-				Clients = new ObservableCollection<Client>(_allClients);
-				
-				SelectedClient = Clients.FirstOrDefault(c => c.Id == Vehicule.ClientId);
+        public async Task InitializeAsync(Guid vehiculeId)
+        {
+            await ExecuteBusyActionAsync(async () =>
+            {
+                Title = "Modifier le Véhicule";
 
-				LoadDamagePoints();
-				LoadRayures();
-				UpdatePlanImage(Vehicule.Type);
+                var vehiculeComplet = await _vehiculeService.GetByIdAsync(vehiculeId);
+                if (vehiculeComplet == null || vehiculeComplet.Client == null)
+                {
+                    await _dialogService.ShowErrorAsync("Erreur", "Le véhicule ou son propriétaire est introuvable.");
+                    Cancel();
+                    return;
+                }
 
-				await LoadConteneursDisponiblesAsync();
-				
-				if (Vehicule.ConteneurId.HasValue)
-				{
-					SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Vehicule.ConteneurId.Value);
-				}
-				else
-				{
-					SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Guid.Empty);
-				}
-				
-				LoadAvailableStatuses();
+                // Attacher l'écouteur d'événement
+                vehiculeComplet.PropertyChanged += OnVehiculePropertyChanged;
+                Vehicule = vehiculeComplet;
+                _allClients = (await _clientService.GetActiveClientsAsync()).ToList();
+                if (!_allClients.Any(c => c.Id == Vehicule.ClientId))
+                {
+                    _allClients.Insert(0, Vehicule.Client);
+                }
+                Clients = new ObservableCollection<Client>(_allClients);
 
-				if (SelectedClient != null && Vehicule.Destinataire == SelectedClient.NomComplet && Vehicule.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
-				{
-					DestinataireEstProprietaire = true;
-				}
-			});
-		}
-		
+                SelectedClient = Clients.FirstOrDefault(c => c.Id == Vehicule.ClientId);
+                LoadDamagePoints();
+                LoadRayures();
+                UpdatePlanImage(Vehicule.Type);
+                await LoadConteneursDisponiblesAsync();
+
+                if (Vehicule.ConteneurId.HasValue)
+                {
+                    SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Vehicule.ConteneurId.Value);
+                }
+                else
+                {
+                    SelectedConteneur = ConteneursDisponibles.FirstOrDefault(c => c.Id == Guid.Empty);
+                }
+
+                LoadAvailableStatuses();
+                if (SelectedClient != null && Vehicule.Destinataire == SelectedClient.NomComplet && Vehicule.TelephoneDestinataire == SelectedClient.TelephonePrincipal)
+                {
+                    DestinataireEstProprietaire = true;
+                }
+            });
+        }
+
         private void LoadAvailableStatuses()
         {
             AvailableStatuses.Clear();
             if (Vehicule == null) return;
-
             var statuses = new HashSet<StatutVehicule>();
-
             // 1. Ajouter le statut actuel du véhicule
             statuses.Add(Vehicule.Statut);
-
             // 2. Ajouter les statuts manuels importants
             statuses.Add(StatutVehicule.Probleme);
             statuses.Add(StatutVehicule.Retourne);
             statuses.Add(StatutVehicule.Livre);
-
             // 3. Ajouter le statut "normal" basé sur les DATES du conteneur
             if (SelectedConteneur != null && SelectedConteneur.Id != Guid.Empty)
             {
@@ -295,13 +280,12 @@ namespace TransitManager.WPF.ViewModels
             {
                 statuses.Add(StatutVehicule.EnAttente);
             }
-
             // Remplir la liste triée
             foreach (var s in statuses.OrderBy(s => s.ToString()))
             {
                 AvailableStatuses.Add(s);
             }
-        }	
+        }
 
         private StatutVehicule GetNormalStatusFromContainerDates(Conteneur conteneur)
         {
@@ -309,7 +293,6 @@ namespace TransitManager.WPF.ViewModels
             if (conteneur.DateDedouanement.HasValue) return StatutVehicule.EnDedouanement;
             if (conteneur.DateArriveeDestination.HasValue) return StatutVehicule.Arrive;
             if (conteneur.DateDepart.HasValue) return StatutVehicule.EnTransit;
-
             return StatutVehicule.Affecte;
         }
 
@@ -318,14 +301,12 @@ namespace TransitManager.WPF.ViewModels
         {
             // On charge tous les conteneurs qui peuvent recevoir des véhicules
             var conteneurs = (await _conteneurService.GetAllAsync())
-                .Where(c => c.Statut == StatutConteneur.Reçu || 
+                .Where(c => c.Statut == StatutConteneur.Reçu ||
                             c.Statut == StatutConteneur.EnPreparation ||
                             c.Statut == StatutConteneur.Probleme)
                 .ToList();
-
             ConteneursDisponibles.Clear();
             ConteneursDisponibles.Add(new Conteneur { Id = Guid.Empty, NumeroDossier = "Aucun" });
-
             // S'assurer que le conteneur actuel du véhicule est dans la liste, même si son statut a changé
             if (Vehicule?.ConteneurId.HasValue == true && !conteneurs.Any(c => c.Id == Vehicule.ConteneurId.Value))
             {
@@ -335,84 +316,78 @@ namespace TransitManager.WPF.ViewModels
                     conteneurs.Add(currentConteneur);
                 }
             }
-            
+
             foreach (var c in conteneurs.OrderBy(c => c.NumeroDossier))
             {
                 ConteneursDisponibles.Add(c);
             }
         }
-        
-		private async Task SaveAsync()
-		{
-			if (!CanSave() || Vehicule == null || SelectedClient == null) return;
-					
-			Vehicule.ClientId = SelectedClient.Id;
-			SerializeDamagePoints();
-			SerializeRayures();
 
-			// *** LOGIQUE MÉTIER AJOUTÉE ICI, AVANT LA SAUVEGARDE ***
-			var finalStatuses = new[] { StatutVehicule.Livre, StatutVehicule.Probleme, StatutVehicule.Retourne };
-			
-			// On n'applique la logique automatique que si le statut n'est pas un statut final choisi par l'utilisateur.
-			if (!finalStatuses.Contains(Vehicule.Statut))
-			{
-				Vehicule.Statut = Vehicule.ConteneurId.HasValue ? StatutVehicule.Affecte : StatutVehicule.EnAttente;
-			}
+        private async Task SaveAsync()
+        {
+            if (!CanSave() || Vehicule == null || SelectedClient == null) return;
 
-			// Cas particulier : si le statut est "Retourne", on s'assure que le conteneur est bien retiré.
-			if(Vehicule.Statut == StatutVehicule.Retourne)
-			{
-				Vehicule.ConteneurId = null;
-			}
-			// *** FIN DE LA LOGIQUE MÉTIER ***
+            Vehicule.ClientId = SelectedClient.Id;
+            SerializeDamagePoints();
+            SerializeRayures();
+            // *** LOGIQUE MÉTIER AJOUTÉE ICI, AVANT LA SAUVEGARDE ***
+            var finalStatuses = new[] { StatutVehicule.Livre, StatutVehicule.Probleme, StatutVehicule.Retourne };
 
-			await ExecuteBusyActionAsync(async () =>
-			{
-				try
-				{
-					bool isNew = string.IsNullOrEmpty(Vehicule.CreePar);
-					if (isNew)
-					{
-						await _vehiculeService.CreateAsync(Vehicule);
-					}
-					else
-					{
-						await _vehiculeService.UpdateAsync(Vehicule);
-					}
+            // On n'applique la logique automatique que si le statut n'est pas un statut final choisi par l'utilisateur.
+            if (!finalStatuses.Contains(Vehicule.Statut))
+            {
+                Vehicule.Statut = Vehicule.ConteneurId.HasValue ? StatutVehicule.Affecte : StatutVehicule.EnAttente;
+            }
+            // Cas particulier : si le statut est "Retourne", on s'assure que le conteneur est bien retiré.
+            if(Vehicule.Statut == StatutVehicule.Retourne)
+            {
+                Vehicule.ConteneurId = null;
+            }
+            // *** FIN DE LA LOGIQUE MÉTIER ***
+            await ExecuteBusyActionAsync(async () =>
+            {
+                try
+                {
+                    bool isNew = string.IsNullOrEmpty(Vehicule.CreePar);
+                    if (isNew)
+                    {
+                        await _vehiculeService.CreateAsync(Vehicule);
+                    }
+                    else
+                    {
+                        await _vehiculeService.UpdateAsync(Vehicule);
+                    }
+                    await _dialogService.ShowInformationAsync("Succès", "Le véhicule a été enregistré.");
 
-					await _dialogService.ShowInformationAsync("Succès", "Le véhicule a été enregistré.");
-					
-					if (_isModal)
-					{
-						CloseAction?.Invoke();
-					}
-					else
-					{
-						_navigationService.GoBack();
-					}
-				}
-				
-				// ======================= DÉBUT DE L'AJOUT =======================
-				catch (ConcurrencyException cex)
-				{
-					var refresh = await _dialogService.ShowConfirmationAsync(
-						"Conflit de Données",
-						$"{cex.Message}\n\nVoulez-vous rafraîchir les données pour voir les dernières modifications ? (Vos changements actuels seront perdus)");
+                    if (_isModal)
+                    {
+                        CloseAction?.Invoke();
+                    }
+                    else
+                    {
+                        _navigationService.GoBack();
+                    }
+                }
 
-					if (refresh && Vehicule != null)
-					{
-						await InitializeAsync(Vehicule.Id); // Recharge les données
-					}
-				}
-				// ======================== FIN DE L'AJOUT ========================
-				
-				catch (Exception ex)
-				{
-					await _dialogService.ShowErrorAsync("Erreur", $"Erreur d'enregistrement : {ex.Message}\n{ex.InnerException?.Message}");
-				}
-			});
-		}
+                // ======================= DÉBUT DE L'AJOUT =======================
+                catch (ConcurrencyException cex)
+                {
+                    var refresh = await _dialogService.ShowConfirmationAsync(
+                        "Conflit de Données",
+                        $"{cex.Message}\n\nVoulez-vous rafraîchir les données pour voir les dernières modifications ? (Vos changements actuels seront perdus)");
+                    if (refresh && Vehicule != null)
+                    {
+                        await InitializeAsync(Vehicule.Id); // Recharge les données
+                    }
+                }
+                // ======================== FIN DE L'AJOUT ========================
 
+                catch (Exception ex)
+                {
+                    await _dialogService.ShowErrorAsync("Erreur", $"Erreur d'enregistrement : {ex.Message}\n{ex.InnerException?.Message}");
+                }
+            });
+        }
 
         #region Reste du code (inchangé)
         private bool CanSave()
@@ -423,55 +398,108 @@ namespace TransitManager.WPF.ViewModels
                    !string.IsNullOrWhiteSpace(Vehicule.Modele) &&
                    !IsBusy;
         }
-		private void Cancel()
-		{
-			if (_isModal)
-			{
-				CloseAction?.Invoke();
-			}
-			else
-			{
-				_navigationService.GoBack();
-			}
-		}
+
+        private void Cancel()
+        {
+            if (_isModal)
+            {
+                CloseAction?.Invoke();
+            }
+            else
+            {
+                _navigationService.GoBack();
+            }
+        }
+
         private void AddDamagePoint(System.Windows.Point point) => DamagePoints.Add(point);
         private void RemoveDamagePoint(System.Windows.Point point) => DamagePoints.Remove(point);
+
         private void SerializeDamagePoints()
         {
-            if (Vehicule != null) Vehicule.EtatDesLieux = JsonSerializer.Serialize(DamagePoints);
+            if (Vehicule == null) return;
+            double referenceWidth = 1024.0;
+            double referenceHeight = 1024.0;
+            var normalizedPoints = DamagePoints.Select(p => new SerializablePoint
+            {
+                X = p.X / referenceWidth,
+                Y = p.Y / referenceHeight
+            }).ToList();
+
+            Vehicule.EtatDesLieux = JsonSerializer.Serialize(normalizedPoints);
         }
+
         private void SerializeRayures()
         {
             if (Vehicule == null) return;
-            using var memoryStream = new MemoryStream();
-            Rayures.Save(memoryStream);
-            Vehicule.EtatDesLieuxRayures = Convert.ToBase64String(memoryStream.ToArray());
+            double referenceWidth = 1024.0;
+            double referenceHeight = 1024.0;
+            var strokesAsListsOfPoints = new List<List<SerializablePoint>>();
+            foreach (var stroke in Rayures)
+            {
+                var points = stroke.StylusPoints
+                                   .Select(p => new SerializablePoint
+                                   {
+                                       X = p.X / referenceWidth,
+                                       Y = p.Y / referenceHeight
+                                   })
+                                   .ToList();
+                strokesAsListsOfPoints.Add(points);
+            }
+
+            Vehicule.EtatDesLieuxRayures = JsonSerializer.Serialize(strokesAsListsOfPoints);
         }
+
         private void LoadDamagePoints()
         {
             DamagePoints.Clear();
-            if (Vehicule != null && !string.IsNullOrEmpty(Vehicule.EtatDesLieux))
+            if (Vehicule == null || string.IsNullOrEmpty(Vehicule.EtatDesLieux)) return;
+            double referenceWidth = 1024.0;
+            double referenceHeight = 1024.0;
+            try
             {
-                try
+                var points = JsonSerializer.Deserialize<List<SerializablePoint>>(Vehicule.EtatDesLieux);
+                if (points != null)
                 {
-                    var points = JsonSerializer.Deserialize<List<System.Windows.Point>>(Vehicule.EtatDesLieux);
-                    if (points != null) foreach (var p in points) DamagePoints.Add(p);
-                } catch { /* Ignorer */ }
+                    foreach (var p in points)
+                    {
+                        // Convertir de % en coordonnées absolues
+                        DamagePoints.Add(new System.Windows.Point(p.X * referenceWidth, p.Y * referenceHeight));
+                    }
+                }
             }
+            catch { /* Ignorer */ }
         }
+
         private void LoadRayures()
         {
             Rayures.Clear();
-            if (Vehicule != null && !string.IsNullOrEmpty(Vehicule.EtatDesLieuxRayures))
+            if (Vehicule == null || string.IsNullOrEmpty(Vehicule.EtatDesLieuxRayures)) return;
+            double referenceWidth = 1024.0;
+            double referenceHeight = 1024.0;
+            try
             {
-                try
+                var strokesAsListsOfPoints = JsonSerializer.Deserialize<List<List<SerializablePoint>>>(Vehicule.EtatDesLieuxRayures);
+                if (strokesAsListsOfPoints != null)
                 {
-                    byte[] bytes = Convert.FromBase64String(Vehicule.EtatDesLieuxRayures);
-                    using var memoryStream = new MemoryStream(bytes);
-                    Rayures.Add(new StrokeCollection(memoryStream));
-                } catch { /* Ignorer */ }
+                    var newStrokes = new System.Windows.Ink.StrokeCollection();
+                    foreach (var pointList in strokesAsListsOfPoints)
+                    {
+                        var stylusPoints = pointList.Select(p => new System.Windows.Input.StylusPoint(p.X * referenceWidth, p.Y * referenceHeight));
+                        var newStroke = new System.Windows.Ink.Stroke(new System.Windows.Input.StylusPointCollection(stylusPoints));
+
+                        // --- CORRECTION COULEUR WPF ---
+                        newStroke.DrawingAttributes.Color = System.Windows.Media.Colors.Red;
+                        newStroke.DrawingAttributes.Width = 3;
+                        newStroke.DrawingAttributes.Height = 3;
+                        // --- FIN CORRECTION ---
+                        newStrokes.Add(newStroke);
+                    }
+                    Rayures.Add(newStrokes);
+                }
             }
+            catch (JsonException) { /* Gérer l'ancien format si nécessaire */ }
         }
+
         private void FilterClients(string? searchText)
         {
             if (string.IsNullOrWhiteSpace(searchText))
@@ -485,6 +513,7 @@ namespace TransitManager.WPF.ViewModels
                 Clients = new ObservableCollection<Client>(filtered);
             }
         }
+
         private void UpdateDestinataire()
         {
             if (Vehicule == null) return;
@@ -494,28 +523,36 @@ namespace TransitManager.WPF.ViewModels
                 Vehicule.TelephoneDestinataire = SelectedClient.TelephonePrincipal;
             }
         }
-		
-		private void OnVehiculePropertyChanged(object? sender, PropertyChangedEventArgs e)
-		{
-			SaveCommand.NotifyCanExecuteChanged();
-			if (e.PropertyName == nameof(Vehicule.Type) && Vehicule != null)
-			{
-				UpdatePlanImage(Vehicule.Type);
-			}
-		}
-		
+
+        private void OnVehiculePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            SaveCommand.NotifyCanExecuteChanged();
+            if (e.PropertyName == nameof(Vehicule.Type) && Vehicule != null)
+            {
+                UpdatePlanImage(Vehicule.Type);
+            }
+        }
+
         private void UpdatePlanImage(TypeVehicule type)
         {
-            PlanImagePath = type switch
+            string path = type switch
             {
-                TypeVehicule.Voiture => "/Resources/Images/voiture_plan.png",
-                TypeVehicule.Moto => "/Resources/Images/moto_plan.png",
-                TypeVehicule.Scooter => "/Resources/Images/moto_plan.png",
-                TypeVehicule.Camion => "/Resources/Images/camion_plan.png",
-                TypeVehicule.Bus => "/Resources/Images/camion_plan.png",
-                TypeVehicule.Van => "/Resources/Images/camion_plan.png",
-                _ => "/Resources/Images/vehicule_plan.png"
+                TypeVehicule.Voiture => "pack://application:,,,/Resources/Images/voiture_plan.png",
+                TypeVehicule.Moto => "pack://application:,,,/Resources/Images/moto_plan.png",
+                TypeVehicule.Scooter => "pack://application:,,,/Resources/Images/moto_plan.png",
+                TypeVehicule.Camion => "pack://application:,,,/Resources/Images/camion_plan.png",
+                TypeVehicule.Bus => "pack://application:,,,/Resources/Images/camion_plan.png",
+                TypeVehicule.Van => "pack://application:,,,/Resources/Images/van_plan.png",
+                _ => "pack://application:,,,/Resources/Images/vehicule_plan.png"
             };
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.UriSource = new Uri(path, UriKind.Absolute);
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            bitmap.EndInit();
+            bitmap.Freeze(); // Optimisation
+            PlanImageSource = bitmap;
         }
         #endregion
     }

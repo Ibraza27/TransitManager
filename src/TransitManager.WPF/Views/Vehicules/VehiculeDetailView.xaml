@@ -156,47 +156,52 @@
 						<TextBlock Text="Cliquez pour un impact, dessinez pour une rayure, utilisez la gomme pour effacer." Opacity="0.7" TextWrapping="Wrap" Margin="0,10,0,15"/>
 						 
 						<Border BorderBrush="Gray" BorderThickness="1">
-							<InkCanvas x:Name="InkCanvasEtatDesLieux"
-									   Strokes="{Binding Rayures}"
-									   Background="Transparent"
-									   MouseLeftButtonDown="InkCanvas_MouseLeftButtonDown"
-									   MouseLeftButtonUp="InkCanvas_MouseLeftButtonUp">
-								
-								<!-- Le mode d'édition est maintenant lié aux RadioButtons -->
-								<InkCanvas.EditingMode>
-									<Binding ElementName="DrawModeButton" Path="IsChecked">
-										<Binding.Converter>
-											<helpers:BoolToInkCanvasEditingModeConverter Ink="Ink" Erase="EraseByStroke"/>
-										</Binding.Converter>
-									</Binding>
-								</InkCanvas.EditingMode>
-								
-								<InkCanvas.DefaultDrawingAttributes>
-									<DrawingAttributes Color="Red" Width="3" Height="3" IsHighlighter="False"/>
-								</InkCanvas.DefaultDrawingAttributes>
-
-								<Image Source="{Binding PlanImagePath}" Stretch="Uniform"/>
-								
-								<ItemsControl ItemsSource="{Binding DamagePoints}">
-									<ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-									<ItemsControl.ItemContainerStyle>
-										<Style TargetType="ContentPresenter">
-											<Setter Property="Canvas.Left" Value="{Binding X}"/>
-											<Setter Property="Canvas.Top" Value="{Binding Y}"/>
-										</Style>
-									</ItemsControl.ItemContainerStyle>
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<Ellipse Width="15" Height="15" Fill="#A0FF0000" Stroke="Red" StrokeThickness="1" ToolTip="Impact">
-												<Ellipse.RenderTransform><TranslateTransform X="-7.5" Y="-7.5"/></Ellipse.RenderTransform>
-												<Ellipse.InputBindings>
-													<MouseBinding MouseAction="LeftClick" Command="{Binding DataContext.RemoveDamagePointCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
-												</Ellipse.InputBindings>
-											</Ellipse>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</InkCanvas>
+                            <!-- AJOUT : Le Viewbox va gérer la mise à l'échelle -->
+                            <Viewbox Stretch="Uniform">
+                                <!-- Le Grid interne assure que l'InkCanvas est exactement de la même taille que l'image -->
+                                <Grid Width="1024" Height="1024">
+                                    <Image Source="{Binding PlanImageSource}" />
+                                    
+                                    <InkCanvas x:Name="InkCanvasEtatDesLieux"
+                                               Strokes="{Binding Rayures}"
+                                               Background="Transparent"
+                                               MouseLeftButtonDown="InkCanvas_MouseLeftButtonDown"
+                                               MouseLeftButtonUp="InkCanvas_MouseLeftButtonUp">
+                                        
+                                        <InkCanvas.EditingMode>
+                                            <Binding ElementName="DrawModeButton" Path="IsChecked">
+                                                <Binding.Converter>
+                                                    <helpers:BoolToInkCanvasEditingModeConverter Ink="Ink" Erase="EraseByStroke"/>
+                                                </Binding.Converter>
+                                            </Binding>
+                                        </InkCanvas.EditingMode>
+                                        
+                                        <InkCanvas.DefaultDrawingAttributes>
+                                            <DrawingAttributes Color="Red" Width="3" Height="3" IsHighlighter="False"/>
+                                        </InkCanvas.DefaultDrawingAttributes>
+                                        
+                                        <ItemsControl ItemsSource="{Binding DamagePoints}">
+                                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                                    <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                                </Style>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Ellipse Width="15" Height="15" Fill="#A0FF0000" Stroke="Red" StrokeThickness="1" ToolTip="Impact">
+                                                        <Ellipse.RenderTransform><TranslateTransform X="-7.5" Y="-7.5"/></Ellipse.RenderTransform>
+                                                        <Ellipse.InputBindings>
+                                                            <MouseBinding MouseAction="LeftClick" Command="{Binding DataContext.RemoveDamagePointCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                                        </Ellipse.InputBindings>
+                                                    </Ellipse>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </InkCanvas>
+                                </Grid>
+                            </Viewbox>
 						</Border>
 					</StackPanel>
 				</materialDesign:Card>

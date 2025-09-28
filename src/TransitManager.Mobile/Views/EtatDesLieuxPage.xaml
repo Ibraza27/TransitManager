@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             x:DataType="viewmodels:EtatDesLieuxViewModel"
+             x:Class="TransitManager.Mobile.Views.EtatDesLieuxPage"
+             Title="État des Lieux">
+    <Grid>
+        <!-- Image du plan du véhicule en arrière-plan -->
+        <Image Source="{Binding PlanImagePath}" Aspect="AspectFit"/>
+
+        <!-- GraphicsView pour dessiner les points de dégât par-dessus -->
+        <GraphicsView x:Name="DamageGraphicsView" Drawable="{Binding}" InputTransparent="True"/>
+    </Grid>
+</ContentPage>

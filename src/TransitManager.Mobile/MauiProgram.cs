@@ -90,6 +90,9 @@ namespace TransitManager.Mobile
 			builder.Services.AddTransient<AddEditVehiculePage>();
 			builder.Services.AddTransient<AddEditVehiculeViewModel>();
 			
+			builder.Services.AddTransient<EtatDesLieuxPage>();
+			builder.Services.AddTransient<EtatDesLieuxViewModel>();
+			
             return builder.Build();
         }
     }

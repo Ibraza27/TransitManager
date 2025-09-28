@@ -41,6 +41,28 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Remove="Resources\Images\camion_plan.png" />
+	  <None Remove="Resources\Images\dotnet_bot.png" />
+	  <None Remove="Resources\Images\logo.jpg" />
+	  <None Remove="Resources\Images\moto_plan.png" />
+	  <None Remove="Resources\Images\quad_plan.png" />
+	  <None Remove="Resources\Images\van_plan.png" />
+	  <None Remove="Resources\Images\vehicule_plan.png" />
+	  <None Remove="Resources\Images\voiture_plan.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiImage Include="Resources\Images\camion_plan.png" />
+	  <MauiImage Include="Resources\Images\dotnet_bot.png" />
+	  <MauiImage Include="Resources\Images\logo.jpg" />
+	  <MauiImage Include="Resources\Images\moto_plan.png" />
+	  <MauiImage Include="Resources\Images\quad_plan.png" />
+	  <MauiImage Include="Resources\Images\van_plan.png" />
+	  <MauiImage Include="Resources\Images\vehicule_plan.png" />
+	  <MauiImage Include="Resources\Images\voiture_plan.png" />
+	</ItemGroup>
+
 	<!--
 	MODIFICATION : Toutes les références de package sont ici, SANS attribut de version,
 	car les versions sont gérées par le fichier Directory.Packages.props.
@@ -100,6 +122,10 @@
 	  <MauiXaml Update="Views\AddEditVehiculePage.xaml">
 		<Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
+	  
+      <MauiXaml Update="Views\EtatDesLieuxPage.xaml">
+        <Generator>MSBuild:Compile</Generator>
+      </MauiXaml>
 	</ItemGroup>
 
 </Project>

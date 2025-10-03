@@ -93,11 +93,18 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
-                <Button Text="Modifier" Command="{Binding EditCommand}"/>
+            <Label Text="Actions" FontSize="Large" FontAttributes="Bold" Margin="0,20,0,0"/>
+            
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="CenterAndExpand">
+                <Button Text="Voir État des Lieux" Command="{Binding ViewEtatDesLieuxCommand}"/>
+                <Button Text="Modifier État des Lieux" Command="{Binding EditEtatDesLieuxCommand}"/>
             </HorizontalStackLayout>
-			
-			<Button Text="Voir l'État des Lieux" Command="{Binding ViewEtatDesLieuxCommand}" Margin="0,20,0,0"/>		
+            
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="CenterAndExpand" Margin="0,10,0,0">
+                <Button Text="Modifier Fiche" Command="{Binding EditCommand}"/>
+                <Button Text="Actualiser" Command="{Binding RefreshCommand}"/>
+				<Button Text="Paiements" Command="{Binding GoToPaiementsCommand}"/>
+            </HorizontalStackLayout>
 
         </VerticalStackLayout>
 		

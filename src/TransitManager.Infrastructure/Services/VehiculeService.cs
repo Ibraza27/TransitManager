@@ -168,5 +168,30 @@ namespace TransitManager.Infrastructure.Services
             var searchTermLower = searchTerm.ToLower();
             return await context.Vehicules.Include(v => v.Client).Where(v => v.Immatriculation.ToLower().Contains(searchTermLower) || v.Marque.ToLower().Contains(searchTermLower) || v.Modele.ToLower().Contains(searchTermLower) || (v.Commentaires != null && v.Commentaires.ToLower().Contains(searchTermLower)) || (v.Client != null && (v.Client.Nom + " " + v.Client.Prenom).ToLower().Contains(searchTermLower))).AsNoTracking().OrderByDescending(v => v.DateCreation).ToListAsync();
         }
-    }
+	
+        public async Task RecalculateAndUpdateVehiculeStatisticsAsync(Guid vehiculeId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            // 1. On charge le véhicule SANS inclure les paiements pour l'instant
+            var vehicule = await context.Vehicules.FirstOrDefaultAsync(v => v.Id == vehiculeId);
+
+            if (vehicule != null)
+            {
+                // 2. On calcule la somme des paiements directement en base de données
+                // C'est la méthode la plus fiable et performante.
+                var totalPaye = await context.Paiements
+                    .Where(p => p.VehiculeId == vehiculeId && 
+                                p.Actif && 
+                                p.Statut == StatutPaiement.Paye)
+                    .SumAsync(p => p.Montant);
+
+                // 3. On met à jour la propriété et on sauvegarde
+                vehicule.SommePayee = totalPaye;
+                await context.SaveChangesAsync();
+                
+                // 4. On notifie le service client que ses propres stats doivent être recalculées
+                await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
+            }
+        }
+	}
 }

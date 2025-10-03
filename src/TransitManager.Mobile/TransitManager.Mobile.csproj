@@ -33,6 +33,7 @@
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
 
 		<!-- Images -->
+		<MauiImage Include="Resources\Images\*" />
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
@@ -43,25 +44,18 @@
 
 	<ItemGroup>
 	  <None Remove="Resources\Images\camion_plan.png" />
+	  <None Remove="Resources\Images\clear_icon.png" />
 	  <None Remove="Resources\Images\dotnet_bot.png" />
+	  <None Remove="Resources\Images\eraser_icon.png" />
 	  <None Remove="Resources\Images\logo.jpg" />
 	  <None Remove="Resources\Images\moto_plan.png" />
+	  <None Remove="Resources\Images\pencil_icon.png" />
 	  <None Remove="Resources\Images\quad_plan.png" />
 	  <None Remove="Resources\Images\van_plan.png" />
 	  <None Remove="Resources\Images\vehicule_plan.png" />
 	  <None Remove="Resources\Images\voiture_plan.png" />
 	</ItemGroup>
-
-	<ItemGroup>
-	  <MauiImage Include="Resources\Images\camion_plan.png" />
-	  <MauiImage Include="Resources\Images\dotnet_bot.png" />
-	  <MauiImage Include="Resources\Images\logo.jpg" />
-	  <MauiImage Include="Resources\Images\moto_plan.png" />
-	  <MauiImage Include="Resources\Images\quad_plan.png" />
-	  <MauiImage Include="Resources\Images\van_plan.png" />
-	  <MauiImage Include="Resources\Images\vehicule_plan.png" />
-	  <MauiImage Include="Resources\Images\voiture_plan.png" />
-	</ItemGroup>
+	
 
 	<!--
 	MODIFICATION : Toutes les références de package sont ici, SANS attribut de version,
@@ -126,6 +120,19 @@
       <MauiXaml Update="Views\EtatDesLieuxPage.xaml">
         <Generator>MSBuild:Compile</Generator>
       </MauiXaml>
+	  
+      <MauiXaml Update="Views\EditEtatDesLieuxPage.xaml">
+        <Generator>MSBuild:Compile</Generator>
+      </MauiXaml>
+	  
+	  <MauiXaml Update="Views\PaiementVehiculePage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\AddEditPaiementPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
 	</ItemGroup>
 
 </Project>

@@ -20,6 +20,8 @@ namespace TransitManager.Mobile.ViewModels
         {
             _transitApi = transitApi;
         }
+		
+		public bool IsDataLoaded { get; private set; }
 
         [RelayCommand]
         private async Task LoadColisAsync()
@@ -34,6 +36,7 @@ namespace TransitManager.Mobile.ViewModels
                 {
                     ColisList.Add(c);
                 }
+				IsDataLoaded = true;
             }
             catch (System.Exception ex)
             {

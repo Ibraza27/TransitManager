@@ -21,6 +21,8 @@ namespace TransitManager.Mobile.ViewModels
         {
             _transitApi = transitApi;
         }
+		
+		public bool IsDataLoaded { get; private set; }
 
         [RelayCommand]
         private async Task LoadClientsAsync()
@@ -36,6 +38,7 @@ namespace TransitManager.Mobile.ViewModels
                 {
                     Clients.Add(client);
                 }
+				IsDataLoaded = true;
             }
             catch (System.Exception ex)
             {

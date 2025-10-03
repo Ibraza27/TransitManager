@@ -20,6 +20,8 @@ namespace TransitManager.Mobile.ViewModels
         {
             _transitApi = transitApi;
         }
+		
+		public bool IsDataLoaded { get; private set; }
 
         [RelayCommand]
         private async Task LoadVehiculesAsync()
@@ -34,6 +36,7 @@ namespace TransitManager.Mobile.ViewModels
                 {
                     VehiculesList.Add(v);
                 }
+				IsDataLoaded = true;
             }
             catch (System.Exception ex)
             {

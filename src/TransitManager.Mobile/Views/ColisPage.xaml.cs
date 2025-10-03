@@ -12,9 +12,12 @@ public partial class ColisPage : ContentPage
         BindingContext = _viewModel;
     }
 
-    protected override async void OnAppearing()
-    {
-        base.OnAppearing();
-        await _viewModel.LoadColisCommand.ExecuteAsync(null);
-    }
+	protected override async void OnAppearing()
+	{
+		base.OnAppearing();
+		if (_viewModel != null)
+		{
+			await _viewModel.LoadColisCommand.ExecuteAsync(null);
+		}
+	}
 }

@@ -9,4 +9,17 @@ public partial class VehiculeDetailPage : ContentPage
         InitializeComponent();
         BindingContext = viewModel;
     }
+	
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        if (BindingContext is VehiculeDetailViewModel vm)
+        {
+            // La commande Refresh existe maintenant, on peut l'appeler
+            if (vm.RefreshCommand.CanExecute(null))
+            {
+                await vm.RefreshCommand.ExecuteAsync(null);
+            }
+        }
+    }
 }

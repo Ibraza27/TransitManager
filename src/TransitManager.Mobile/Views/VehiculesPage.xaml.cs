@@ -12,9 +12,12 @@ public partial class VehiculesPage : ContentPage
         BindingContext = _viewModel;
     }
 
-    protected override async void OnAppearing()
-    {
-        base.OnAppearing();
-        await _viewModel.LoadVehiculesCommand.ExecuteAsync(null);
-    }
+	protected override async void OnAppearing()
+	{
+		base.OnAppearing();
+		if (_viewModel != null)
+		{
+			await _viewModel.LoadVehiculesCommand.ExecuteAsync(null);
+		}
+	}
 }

@@ -19,19 +19,22 @@ namespace TransitManager.Infrastructure.Services
         private readonly IExportService _exportService;
 		private readonly IClientService _clientService;
 		private readonly IMessenger _messenger;
+		private readonly IVehiculeService _vehiculeService;
 
-        public PaiementService(
-            IDbContextFactory<TransitContext> contextFactory,
-            INotificationService notificationService,
-            IExportService exportService,
-            IClientService clientService,
-            IMessenger messenger)
-        {
+		public PaiementService(
+			IDbContextFactory<TransitContext> contextFactory,
+			INotificationService notificationService,
+			IExportService exportService,
+			IClientService clientService,
+			IMessenger messenger,
+			IVehiculeService vehiculeService)
+		{
             _contextFactory = contextFactory;
             _notificationService = notificationService;
             _exportService = exportService;
 			_clientService = clientService;
             _messenger = messenger;
+			_vehiculeService = vehiculeService;
         }
 
         public async Task<Paiement?> GetByIdAsync(Guid id)
@@ -129,12 +132,18 @@ namespace TransitManager.Infrastructure.Services
 			context.Paiements.Update(paiement);
 			await context.SaveChangesAsync();
 			 _messenger.Send(new PaiementUpdatedMessage());
-			// Ligne à ajouter/vérifier
+			
+            // --- AJOUTER CETTE LOGIQUE ---
+            if (paiement.VehiculeId.HasValue)
+            {
+                await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(paiement.VehiculeId.Value);
+            }
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 			return paiement;
 		}
 
-        public async Task<bool> DeleteAsync(Guid id)
+
+		public async Task<bool> DeleteAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             var paiement = await context.Paiements.FindAsync(id);
@@ -146,12 +155,16 @@ namespace TransitManager.Infrastructure.Services
             }
 			
 			var clientId = paiement.ClientId;
+            var vehiculeId = paiement.VehiculeId; // CORRECTION ICI
 
-            // Suppression logique
             paiement.Actif = false;
-            await UpdateClientBalanceAsync(paiement.ClientId, context);
             await context.SaveChangesAsync();
 			 _messenger.Send(new PaiementUpdatedMessage());
+            
+            if (vehiculeId.HasValue)
+            {
+                await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(vehiculeId.Value);
+            }
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId); 
             return true;
         }

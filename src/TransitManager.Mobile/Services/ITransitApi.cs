@@ -51,5 +51,17 @@ namespace TransitManager.Mobile.Services
 
 		[Put("/api/vehicules/{id}")]
 		Task UpdateVehiculeAsync(Guid id, [Body] Vehicule vehicule);
+		
+		[Get("/api/paiements/vehicule/{vehiculeId}")]
+		Task<IEnumerable<Paiement>> GetPaiementsForVehiculeAsync(Guid vehiculeId);
+
+		[Post("/api/paiements")]
+		Task<Paiement> CreatePaiementAsync([Body] Paiement paiement);
+		
+		[Put("/api/paiements/{id}")]
+		Task UpdatePaiementAsync(Guid id, [Body] Paiement paiement);
+
+		[Delete("/api/paiements/{id}")]
+		Task DeletePaiementAsync(Guid id);
     }
 }

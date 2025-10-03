@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:EditEtatDesLieuxViewModel"
+             x:Class="TransitManager.Mobile.Views.EditEtatDesLieuxPage"
+             Title="Modifier l'État des Lieux">
+    <ContentPage.Resources>
+        <converters:EnumToBoolConverter x:Key="EnumToBoolConverter" />
+    </ContentPage.Resources>
+    <Grid RowDefinitions="*, Auto">
+        
+        <!-- Zone de dessin principale -->
+        <Grid Grid.Row="0">
+            <Image Source="{Binding PlanImagePath}" Aspect="AspectFit"/>
+            <GraphicsView x:Name="DamageGraphicsView" Drawable="{Binding}" />
+        </Grid>
+        <!-- Barre d'outils et bouton Enregistrer -->
+        <VerticalStackLayout Grid.Row="1" Padding="10" Spacing="10">
+            <Frame Padding="8" BorderColor="LightGray" CornerRadius="25">
+				<HorizontalStackLayout Spacing="10" HorizontalOptions="Center" VerticalOptions="Center">
+                    
+                    <!-- Outils -->
+                    <RadioButton GroupName="DrawingTools" 
+                                 IsChecked="{Binding SelectedTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static viewmodels:DrawingTool.Pen}}" 
+                                 Content="Crayon" />
+                                 
+                    <RadioButton GroupName="DrawingTools" 
+                                 IsChecked="{Binding SelectedTool, Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static viewmodels:DrawingTool.Eraser}}" 
+                                 Content="Gomme" />
+                    
+                    <BoxView WidthRequest="1" BackgroundColor="LightGray" HeightRequest="30" VerticalOptions="Center"/>
+                    
+                    <!-- Bouton Effacer Tout -->
+                    <Button Text="Effacer Tout" 
+                            Command="{Binding ClearAllCommand}" 
+                            BackgroundColor="Transparent"
+                            TextColor="Red"/>
+
+                </HorizontalStackLayout>
+            </Frame>
+            <Button Text="Enregistrer" Command="{Binding SaveCommand}"/>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

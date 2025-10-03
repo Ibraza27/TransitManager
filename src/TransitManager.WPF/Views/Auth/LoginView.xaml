@@ -52,7 +52,7 @@
                 <StackPanel Grid.Row="0" 
                           Margin="30,30,30,20"
                           HorizontalAlignment="Center">
-                    <Image Source="/Resources/Images/logo.png" 
+                    <Image Source="/Resources/Images/logo.jpg" 
                          Height="80" 
                          Margin="0,0,0,10"/>
                     <TextBlock Text="TRANSIT MANAGER" 

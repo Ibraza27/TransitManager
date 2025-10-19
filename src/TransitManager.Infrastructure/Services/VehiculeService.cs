@@ -161,12 +161,34 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
-        public async Task<IEnumerable<Vehicule>> SearchAsync(string searchTerm)
+		public async Task<IEnumerable<Vehicule>> SearchAsync(string searchTerm)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             if (string.IsNullOrWhiteSpace(searchTerm)) return await GetAllAsync();
-            var searchTermLower = searchTerm.ToLower();
-            return await context.Vehicules.Include(v => v.Client).Where(v => v.Immatriculation.ToLower().Contains(searchTermLower) || v.Marque.ToLower().Contains(searchTermLower) || v.Modele.ToLower().Contains(searchTermLower) || (v.Commentaires != null && v.Commentaires.ToLower().Contains(searchTermLower)) || (v.Client != null && (v.Client.Nom + " " + v.Client.Prenom).ToLower().Contains(searchTermLower))).AsNoTracking().OrderByDescending(v => v.DateCreation).ToListAsync();
+
+            // 1. Diviser le terme de recherche en mots individuels, ignorer les vides, et tout mettre en minuscule.
+            var searchTerms = searchTerm.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            // 2. Commencer la requête de base
+            var query = context.Vehicules
+                               .Include(v => v.Client)
+                               .Include(v => v.Conteneur)
+                               .AsNoTracking();
+
+            // 3. Appliquer un filtre pour chaque mot du terme de recherche
+            foreach (var term in searchTerms)
+            {
+                query = query.Where(v =>
+                    EF.Functions.ILike(v.Immatriculation, $"%{term}%") ||
+                    EF.Functions.ILike(v.Marque, $"%{term}%") ||
+                    EF.Functions.ILike(v.Modele, $"%{term}%") ||
+                    (v.Client != null && EF.Functions.ILike(v.Client.NomComplet, $"%{term}%")) ||
+                    (v.Annee.ToString() == term) || // Recherche exacte pour l'année
+                    (v.Commentaires != null && EF.Functions.ILike(v.Commentaires, $"%{term}%"))
+                );
+            }
+
+            return await query.OrderByDescending(v => v.DateCreation).ToListAsync();
         }
 	
         public async Task RecalculateAndUpdateVehiculeStatisticsAsync(Guid vehiculeId)
@@ -179,10 +201,11 @@ namespace TransitManager.Infrastructure.Services
             {
                 // 2. On calcule la somme des paiements directement en base de données
                 // C'est la méthode la plus fiable et performante.
+                var validStatuses = new[] { StatutPaiement.Paye, StatutPaiement.Valide };
                 var totalPaye = await context.Paiements
                     .Where(p => p.VehiculeId == vehiculeId && 
                                 p.Actif && 
-                                p.Statut == StatutPaiement.Paye)
+                                validStatuses.Contains(p.Statut)) // On compte les "Paye" ET les "Valide"
                     .SumAsync(p => p.Montant);
 
                 // 3. On met à jour la propriété et on sauvegarde

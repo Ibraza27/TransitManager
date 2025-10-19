@@ -216,33 +216,28 @@ namespace TransitManager.WPF.ViewModels
 			await LoadAsync();
 		}
 
-        private async Task LoadVehiculesAsync()
+		private async Task LoadVehiculesAsync()
         {
             await ExecuteBusyActionAsync(async () =>
             {
-                var allVehicules = await _vehiculeService.GetAllAsync();
-                IEnumerable<Vehicule> filteredVehicules = allVehicules;
-
+                // Étape 1 : Recherche principale via le service si un texte est saisi
+                IEnumerable<Vehicule> filteredVehicules;
                 if (!string.IsNullOrWhiteSpace(SearchText))
                 {
-                    var searchTextLower = SearchText.ToLower();
-                    filteredVehicules = filteredVehicules.Where(v => 
-                        (v.Immatriculation.ToLower().Contains(searchTextLower)) ||
-						(v.Marque.ToLower().Contains(searchTextLower)) ||
-						(v.Modele.ToLower().Contains(searchTextLower)) ||
-                        (v.Client?.NomComplet.ToLower().Contains(searchTextLower) == true) ||
-                        (v.Conteneur?.NumeroDossier.ToLower().Contains(searchTextLower) == true) ||
-                        (v.DestinationFinale.ToLower().Contains(searchTextLower))
-                    );
+                    filteredVehicules = await _vehiculeService.SearchAsync(SearchText);
+                }
+                else
+                {
+                    filteredVehicules = await _vehiculeService.GetAllAsync();
                 }
 
+                // Étape 2 : Appliquer les filtres supplémentaires en mémoire
                 if (SelectedClient != null) {
                     filteredVehicules = filteredVehicules.Where(v => v.ClientId == SelectedClient.Id);
                 }
                 if (SelectedConteneur != null) {
                     filteredVehicules = filteredVehicules.Where(v => v.ConteneurId == SelectedConteneur.Id);
                 }
-                // Filtre par date ajouté
                 if (SelectedDate.HasValue) {
                     filteredVehicules = filteredVehicules.Where(c => c.DateCreation.Date == SelectedDate.Value.Date);
                 }

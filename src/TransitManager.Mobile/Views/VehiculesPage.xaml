@@ -3,43 +3,106 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
              xmlns:dto="clr-namespace:TransitManager.Core.DTOs;assembly=TransitManager.Core"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
              x:DataType="viewmodels:VehiculesViewModel"
              x:Class="TransitManager.Mobile.Views.VehiculesPage"
              Title="Véhicules">
-    <Grid RowDefinitions="Auto, *">
-		<HorizontalStackLayout Grid.Row="0" Margin="10" Spacing="10">
-			<Button Text="Actualiser" Command="{Binding LoadVehiculesCommand}" />
-			<Button Text="Nouveau Véhicule" Command="{Binding AddVehiculeCommand}" /> <!-- AJOUTER CE BOUTON -->
-		</HorizontalStackLayout>
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding VehiculesList}">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="dto:VehiculeListItemDto">
-					<Frame Margin="10" Padding="10" BorderColor="LightGray" CornerRadius="5">
-						<Frame.GestureRecognizers>
-							<TapGestureRecognizer 
-								Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:VehiculesViewModel}}, Path=GoToDetailsCommand}"
-								CommandParameter="{Binding .}" />
-						</Frame.GestureRecognizers>					
-                        <VerticalStackLayout>
-                            <Label Text="{Binding Immatriculation}" FontSize="Medium" FontAttributes="Bold"/>
-                            <Label>
-                                <Label.FormattedText>
-                                    <FormattedString>
-                                        <Span Text="{Binding Marque}"/>
-                                        <Span Text=" "/>
-                                        <Span Text="{Binding Modele}"/>
-                                    </FormattedString>
-                                </Label.FormattedText>
-                            </Label>
-                            <Label Text="{Binding ClientNomComplet}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
-                            <Label Text="{Binding Statut}" FontSize="Micro" HorizontalOptions="End"/>
-                        </VerticalStackLayout>
-                    </Frame>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+    <ContentPage.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+    </ContentPage.Resources>
+    
+    <Grid RowDefinitions="Auto, Auto, Auto, *">
         
-        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+        <!-- Barre de recherche -->
+        <SearchBar Grid.Row="0" 
+                   Placeholder="Rechercher immat, client, marque..."
+                   Text="{Binding SearchText}"
+                   Margin="10"/>
+
+        <!-- Barre de boutons d'action -->
+        <HorizontalStackLayout Grid.Row="1" Spacing="10" Padding="10,0">
+            <Button Text="Actualiser" Command="{Binding LoadVehiculesCommand}" HorizontalOptions="Start"/>
+            <Button Text="Nouveau Véhicule" Command="{Binding AddVehiculeCommand}" HorizontalOptions="Start"/>
+        </HorizontalStackLayout>
+
+        <!-- Filtres -->
+        <ScrollView Grid.Row="2" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout Spacing="15" Padding="10">
+                <VerticalStackLayout>
+                    <Label Text="Statut" FontSize="Caption"/>
+                    <Picker ItemsSource="{Binding StatutsList}" 
+                            SelectedItem="{Binding SelectedStatut}" 
+                            WidthRequest="120"/>
+                </VerticalStackLayout>
+                <VerticalStackLayout>
+                    <Label Text="Client" FontSize="Caption"/>
+                    <Picker ItemsSource="{Binding ClientsList}"
+                            ItemDisplayBinding="{Binding NomComplet}"
+                            SelectedItem="{Binding SelectedClient}"
+                            WidthRequest="150"/>
+                </VerticalStackLayout>
+				
+				<VerticalStackLayout>
+					<Label Text="Conteneur" FontSize="Caption"/>
+					<Picker ItemsSource="{Binding ConteneursList}"
+							ItemDisplayBinding="{Binding NumeroDossier}"
+							SelectedItem="{Binding SelectedConteneur}"
+							WidthRequest="150"/>
+				</VerticalStackLayout>
+				<VerticalStackLayout>
+					<Label Text="Date Création" FontSize="Caption"/>
+					<DatePicker Date="{Binding SelectedDate}" Format="dd/MM/yyyy" />
+				</VerticalStackLayout>
+				
+                <Button Text="Effacer Filtres" Command="{Binding ClearFiltersCommand}" VerticalOptions="End"/>
+            </HorizontalStackLayout>
+        </ScrollView>
+
+        <!-- Liste des véhicules -->
+        <RefreshView Grid.Row="3" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadVehiculesCommand}">
+            <CollectionView ItemsSource="{Binding VehiculesList}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="dto:VehiculeListItemDto">
+                        <Frame Margin="10" Padding="15" BorderColor="LightGray" CornerRadius="8">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:VehiculesViewModel}}, Path=GoToDetailsCommand}"
+                                    CommandParameter="{Binding .}" />
+                            </Frame.GestureRecognizers>
+                            <Grid ColumnDefinitions="*, Auto">
+                                <VerticalStackLayout Grid.Column="0" Spacing="5">
+                                    <Label Text="{Binding Immatriculation}" FontSize="Medium" FontAttributes="Bold"/>
+                                    <Label>
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding Marque}"/>
+                                                <Span Text=" "/>
+                                                <Span Text="{Binding Modele}"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                    <Label Text="{Binding ClientNomComplet}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
+                                </VerticalStackLayout>
+                                
+                                <!-- Badge de Statut -->
+                                <Border Grid.Column="1" 
+                                        Padding="10,5" 
+                                        BackgroundColor="{Binding Statut, Converter={StaticResource StatusToColorConverter}}"
+                                        StrokeShape="RoundRectangle 12"
+                                        VerticalOptions="Start">
+                                    <Label Text="{Binding Statut}" 
+                                           TextColor="White" 
+                                           FontSize="10" 
+                                           FontAttributes="Bold"/>
+                                </Border>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+        
+        <ActivityIndicator Grid.RowSpan="4" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
     </Grid>
 </ContentPage>

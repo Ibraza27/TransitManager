@@ -13,11 +13,12 @@ public partial class ColisPage : ContentPage
     }
 
 	protected override async void OnAppearing()
-	{
-		base.OnAppearing();
-		if (_viewModel != null)
-		{
-			await _viewModel.LoadColisCommand.ExecuteAsync(null);
-		}
-	}
+    {
+        base.OnAppearing();
+        if (BindingContext is ColisViewModel vm)
+        {
+            // InitializeAsync charge à la fois les filtres et la liste
+            await vm.InitializeAsync();
+        }
+    }
 }

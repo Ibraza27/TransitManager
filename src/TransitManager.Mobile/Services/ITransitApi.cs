@@ -43,6 +43,9 @@ namespace TransitManager.Mobile.Services
 		[Get("/api/vehicules")]
 		Task<IEnumerable<VehiculeListItemDto>> GetVehiculesAsync();
 		
+		[Get("/api/conteneurs")]
+		Task<IEnumerable<Conteneur>> GetConteneursAsync();
+		
 		[Get("/api/vehicules/{id}")]
 		Task<Vehicule> GetVehiculeByIdAsync(Guid id);
 		

@@ -11,5 +11,6 @@ namespace TransitManager.Core.DTOs
         public StatutVehicule Statut { get; set; }
         public string ClientNomComplet { get; set; } = string.Empty;
         public string? ConteneurNumeroDossier { get; set; }
+		public DateTime DateCreation { get; set; }
     }
 }

@@ -260,12 +260,32 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
-        public async Task<IEnumerable<Colis>> SearchAsync(string searchTerm)
+		public async Task<IEnumerable<Colis>> SearchAsync(string searchTerm)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             if (string.IsNullOrWhiteSpace(searchTerm)) return await GetAllAsync();
-            searchTerm = searchTerm.ToLower();
-            return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.Actif && (c.Barcodes.Any(b => b.Value.ToLower().Contains(searchTerm)) || c.NumeroReference.ToLower().Contains(searchTerm) || c.Designation.ToLower().Contains(searchTerm) || (c.Client != null && (c.Client.Nom + " " + c.Client.Prenom).ToLower().Contains(searchTerm)) || (c.Conteneur != null && c.Conteneur.NumeroDossier.ToLower().Contains(searchTerm)))).AsNoTracking().OrderByDescending(c => c.DateArrivee).ToListAsync();
+
+            var searchTerms = searchTerm.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            var query = context.Colis
+                               .Include(c => c.Client)
+                               .Include(c => c.Conteneur)
+                               .Include(c => c.Barcodes.Where(b => b.Actif))
+                               .AsNoTracking();
+
+            foreach (var term in searchTerms)
+            {
+                query = query.Where(c =>
+                    EF.Functions.ILike(c.NumeroReference, $"%{term}%") ||
+                    EF.Functions.ILike(c.Designation, $"%{term}%") ||
+                    (c.Client != null && EF.Functions.ILike(c.Client.NomComplet, $"%{term}%")) ||
+                    (c.Conteneur != null && EF.Functions.ILike(c.Conteneur.NumeroDossier, $"%{term}%")) ||
+                    (c.Destinataire != null && EF.Functions.ILike(c.Destinataire, $"%{term}%")) ||
+                    c.Barcodes.Any(b => EF.Functions.ILike(b.Value, $"%{term}%"))
+                );
+            }
+            
+            return await query.OrderByDescending(c => c.DateArrivee).ToListAsync();
         }
 
         public async Task<Dictionary<StatutColis, int>> GetStatisticsByStatusAsync()

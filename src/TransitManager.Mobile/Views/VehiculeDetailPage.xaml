@@ -6,12 +6,22 @@
              x:DataType="viewmodels:VehiculeDetailViewModel"
              x:Class="TransitManager.Mobile.Views.VehiculeDetailPage"
              Title="Détails du Véhicule">
+			 
+    <ContentPage.Resources>
+        <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+        <converters:ToUpperConverter x:Key="ToUpperConverter" />
+    </ContentPage.Resources>
 
 	<ScrollView>
         <VerticalStackLayout Spacing="15" Padding="20">
             <!-- EN-TÊTE -->
-            <Label Text="{Binding Vehicule.Immatriculation}" FontSize="Header" FontAttributes="Bold"/>
-            <Label FontSize="Title" Opacity="0.8">
+            <!-- MODIFICATION 1 : Style de la police pour l'immatriculation -->
+            <Label Text="{Binding Vehicule.Immatriculation}" 
+                   FontSize="32" 
+                   FontAttributes="Bold" 
+                   HorizontalOptions="Center"/>
+            
+            <Label FontSize="Title" Opacity="0.8" HorizontalOptions="Center">
                 <Label.FormattedText>
                     <FormattedString>
                         <Span Text="{Binding Vehicule.Marque}"/>
@@ -86,10 +96,15 @@
                 </VerticalStackLayout>
             </Frame>
 			
-            <Frame Padding="15" BorderColor="LightGray" IsVisible="{Binding Vehicule.Commentaires, Converter={StaticResource IsNotNullOrEmptyConverter}}">
+            <!-- Section Commentaires -->
+            <Frame Padding="15" BorderColor="LightGray">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Commentaires" FontSize="Large" FontAttributes="Bold" />
-                    <Label Text="{Binding Vehicule.Commentaires}" />
+                    <!-- MODIFICATION 2 : Style pour le texte des commentaires -->
+                    <Label Text="{Binding Vehicule.Commentaires, Converter={StaticResource ToUpperConverter}}"
+                           TextColor="Red"
+                           FontAttributes="Bold"
+                           IsVisible="{Binding Vehicule.Commentaires, Converter={StaticResource IsNotNullOrEmptyConverter}}"/>
                 </VerticalStackLayout>
             </Frame>
 

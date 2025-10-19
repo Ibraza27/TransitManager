@@ -97,7 +97,7 @@ namespace TransitManager.Infrastructure.Services
 				.ToListAsync();
 		}
 
-        public async Task<Paiement> CreateAsync(Paiement paiement)
+		public async Task<Paiement> CreateAsync(Paiement paiement)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             
@@ -112,10 +112,22 @@ namespace TransitManager.Infrastructure.Services
                 paiement.NumeroRecu = await GenerateUniqueReceiptNumberAsync(context);
             }
 
+            // --- CORRECTION 1 : Forcer le statut à "Paye" ---
+            // Puisque l'UI n'a pas d'étape de validation, on considère un paiement créé comme payé.
+            paiement.Statut = StatutPaiement.Paye;
+
             context.Paiements.Add(paiement);
-            await UpdateClientBalanceAsync(paiement.ClientId, context);
-            await context.SaveChangesAsync();
+            // Note : SaveChangesAsync est appelé par les services de recalcul
+
+            await context.SaveChangesAsync(); // Sauvegarder le paiement d'abord
 			 _messenger.Send(new PaiementUpdatedMessage());
+
+            // --- CORRECTION 2 : Déclencher le recalcul pour le véhicule ---
+            if (paiement.VehiculeId.HasValue)
+            {
+                await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(paiement.VehiculeId.Value);
+            }
+            
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 
             await _notificationService.NotifyAsync(

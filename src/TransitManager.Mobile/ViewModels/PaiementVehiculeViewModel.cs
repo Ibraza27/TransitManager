@@ -101,27 +101,31 @@ namespace TransitManager.Mobile.ViewModels
 		}
 
 		[RelayCommand]
-		private async Task AddPaiementAsync()
-		{
-			if (NewPaiement.Montant <= 0 || !Guid.TryParse(VehiculeId, out Guid vehiculeId)) return;
-			
-			var client = (await _transitApi.GetVehiculeByIdAsync(vehiculeId)).Client;
-			if (client == null) return;
-			
-			NewPaiement.VehiculeId = vehiculeId;
-			NewPaiement.ClientId = client.Id;
+        private async Task AddPaiementAsync()
+        {
+            if (NewPaiement.Montant <= 0 || !Guid.TryParse(VehiculeId, out Guid vehiculeId)) return;
+            
+            var vehicule = await _transitApi.GetVehiculeByIdAsync(vehiculeId);
+            if (vehicule?.Client == null) return;
+            
+            NewPaiement.VehiculeId = vehiculeId;
+            NewPaiement.ClientId = vehicule.ClientId;
 
             // --- CORRECTION APPLIQUÉE ICI ---
             // On convertit la chaîne sélectionnée en Enum avant d'envoyer
-            NewPaiement.ModePaiement = (TypePaiement)Enum.Parse(typeof(TypePaiement), SelectedNewPaymentType);
+            if (Enum.TryParse<TypePaiement>(SelectedNewPaymentType, out var modePaiement))
+            {
+                NewPaiement.ModePaiement = modePaiement;
+            }
 
             var createdPaiement = await _transitApi.CreatePaiementAsync(NewPaiement);
             Paiements.Add(createdPaiement);
             
+            // Réinitialisation
             NewPaiement = new Paiement { DatePaiement = DateTime.Now };
-            SelectedNewPaymentType = "Especes"; // Réinitialiser la sélection
+            SelectedNewPaymentType = "Especes";
             CalculateTotals();
-		}
+        }
 
 		[RelayCommand]
 		private async Task DeletePaiementAsync(Paiement paiement)

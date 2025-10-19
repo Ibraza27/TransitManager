@@ -307,23 +307,18 @@ namespace TransitManager.WPF.ViewModels
 		}
 
         
-        private async Task LoadColisAsync()
+		private async Task LoadColisAsync()
         {
             await ExecuteBusyActionAsync(async () =>
             {
-                var filteredColis = await _colisService.GetAllAsync();
-
+                IEnumerable<Core.Entities.Colis> filteredColis;
                 if (!string.IsNullOrWhiteSpace(SearchText))
                 {
-                    var searchTextLower = SearchText.ToLower();
-                    filteredColis = filteredColis.Where(c => 
-                        c.AllBarcodes.ToLower().Contains(searchTextLower) ||
-                        c.NumeroReference.ToLower().Contains(searchTextLower) ||
-						c.Designation.ToLower().Contains(searchTextLower) ||
-                        (c.Client?.NomComplet.ToLower().Contains(searchTextLower) == true) ||
-                        (c.Conteneur?.NumeroDossier.ToLower().Contains(searchTextLower) == true) ||
-                        (c.DestinationFinale.ToLower().Contains(searchTextLower))
-                    );
+                    filteredColis = await _colisService.SearchAsync(SearchText);
+                }
+                else
+                {
+                    filteredColis = await _colisService.GetAllAsync();
                 }
 
                 if (SelectedClient != null) {

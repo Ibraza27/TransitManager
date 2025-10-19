@@ -13,11 +13,12 @@ public partial class VehiculesPage : ContentPage
     }
 
 	protected override async void OnAppearing()
-	{
-		base.OnAppearing();
-		if (_viewModel != null)
-		{
-			await _viewModel.LoadVehiculesCommand.ExecuteAsync(null);
-		}
-	}
+    {
+        base.OnAppearing();
+        if (BindingContext is VehiculesViewModel vm)
+        {
+            // On appelle InitializeAsync qui charge tout (filtres + liste)
+            await vm.InitializeAsync();
+        }
+    }
 }

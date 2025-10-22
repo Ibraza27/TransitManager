@@ -9,4 +9,13 @@ public partial class ColisDetailPage : ContentPage
         InitializeComponent();
         BindingContext = viewModel;
     }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        if (BindingContext is ColisDetailViewModel vm && vm.RefreshCommand.CanExecute(null))
+        {
+            await vm.RefreshCommand.ExecuteAsync(null);
+        }
+    }
 }

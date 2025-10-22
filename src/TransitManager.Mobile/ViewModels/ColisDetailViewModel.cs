@@ -16,6 +16,8 @@ namespace TransitManager.Mobile.ViewModels
 		
 		[ObservableProperty]
 		private string _colisIdStr = string.Empty;
+		
+		private bool _isNavigatedBack = false;
 
 		public ColisDetailViewModel(ITransitApi transitApi)
 		{
@@ -46,7 +48,17 @@ namespace TransitManager.Mobile.ViewModels
 		async Task EditAsync()
 		{
 			if (Colis == null) return;
+			_isNavigatedBack = true;
 			await Shell.Current.GoToAsync($"AddEditColisPage?colisId={Colis.Id}");
+		}
+		
+		[RelayCommand]
+		private async Task RefreshAsync()
+		{
+			if (!string.IsNullOrEmpty(ColisIdStr) && Guid.TryParse(ColisIdStr, out Guid colisId))
+			{
+				await LoadColisDetailsAsync(colisId);
+			}
 		}
 
 		[RelayCommand]

@@ -74,7 +74,7 @@ namespace TransitManager.Mobile.ViewModels
             }
         }
 
-        [RelayCommand]
+		[RelayCommand]
         private void ApplyFilters()
         {
             IEnumerable<ColisListItemDto> filtered = _allColis;
@@ -87,7 +87,9 @@ namespace TransitManager.Mobile.ViewModels
                     filtered = filtered.Where(c =>
                         c.NumeroReference.ToLower().Contains(term) ||
                         c.Designation.ToLower().Contains(term) ||
-                        c.ClientNomComplet.ToLower().Contains(term)
+                        c.ClientNomComplet.ToLower().Contains(term) ||
+                        // --- AJOUTER CETTE LIGNE ---
+                        c.AllBarcodes.ToLower().Contains(term) 
                     );
                 }
             }

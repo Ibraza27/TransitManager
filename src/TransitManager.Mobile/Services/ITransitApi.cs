@@ -66,5 +66,8 @@ namespace TransitManager.Mobile.Services
 
 		[Delete("/api/paiements/{id}")]
 		Task DeletePaiementAsync(Guid id);
+		
+		[Get("/api/utilities/generate-barcode")]
+		Task<string> GenerateBarcodeAsync();
     }
 }

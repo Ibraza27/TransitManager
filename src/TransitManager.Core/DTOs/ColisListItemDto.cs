@@ -10,5 +10,6 @@ namespace TransitManager.Core.DTOs
         public StatutColis Statut { get; set; }
         public string ClientNomComplet { get; set; } = string.Empty;
         public string? ConteneurNumeroDossier { get; set; }
+		public string AllBarcodes { get; set; } = string.Empty;
     }
 }

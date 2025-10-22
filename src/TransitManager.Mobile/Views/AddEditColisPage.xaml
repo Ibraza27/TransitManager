@@ -2,30 +2,140 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             xmlns:entities="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
              x:DataType="viewmodels:AddEditColisViewModel"
              x:Class="TransitManager.Mobile.Views.AddEditColisPage"
              Title="{Binding PageTitle}">
+
+    <ContentPage.Resources>
+        <converters:InvertedBooleanConverter x:Key="InvertedBooleanConverter" />
+    </ContentPage.Resources>
+    
     <ScrollView>
-        <VerticalStackLayout Spacing="10" Padding="20">
-            <Label Text="Informations Générales" FontSize="Large" FontAttributes="Bold"/>
-            
-            <Picker Title="Client Propriétaire *" 
-                    ItemsSource="{Binding Clients}"
-                    ItemDisplayBinding="{Binding NomComplet}"
-                    SelectedItem="{Binding SelectedClient}"/>
-            
-            <Entry Placeholder="Désignation / Description" Text="{Binding Colis.Designation}"/>
-            <Entry Placeholder="Destination Finale" Text="{Binding Colis.DestinationFinale}"/>
+        <VerticalStackLayout Spacing="20" Padding="20">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
 
-            <Label Text="Détails" FontSize="Large" FontAttributes="Bold" Margin="0,20,0,0"/>
-            <Entry Placeholder="Nombre de Pièces" Text="{Binding Colis.NombrePieces}" Keyboard="Numeric"/>
-            <Entry Placeholder="Volume (m³)" Text="{Binding Colis.Volume}" Keyboard="Numeric"/>
-            <Entry Placeholder="Valeur Déclarée (€)" Text="{Binding Colis.ValeurDeclaree}" Keyboard="Numeric"/>
+            <!-- Informations Générales -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Informations Générales" FontSize="Large" FontAttributes="Bold"/>
+                    <Label Text="Client Propriétaire *" FontSize="Caption"/>
+                    <Picker ItemsSource="{Binding Clients}" ItemDisplayBinding="{Binding NomComplet}" SelectedItem="{Binding SelectedClient}"/>
+                    
+                    <Label Text="Désignation / Description *" FontSize="Caption"/>
+                    <Editor Text="{Binding Colis.Designation}" AutoSize="TextChanges" HeightRequest="100"/>
+                </VerticalStackLayout>
+            </Frame>
             
-            <Label Text="Finances" FontSize="Large" FontAttributes="Bold" Margin="0,20,0,0"/>
-            <Entry Placeholder="Prix Total (€)" Text="{Binding Colis.PrixTotal}" Keyboard="Numeric"/>
+            <!-- Destinataire & Livraison -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Destinataire &amp; Livraison" FontSize="Large" FontAttributes="Bold"/>
+                    <HorizontalStackLayout Spacing="10" Margin="0,10,0,0">
+                        <CheckBox IsChecked="{Binding DestinataireIdentiqueAuClient}"/>
+                        <Label Text="Destinataire identique au propriétaire" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                    
+                    <Label Text="Nom du Destinataire" FontSize="Caption" Margin="0,10,0,0"/>
+                    <Entry Text="{Binding Colis.Destinataire}" IsEnabled="{Binding DestinataireIdentiqueAuClient, Converter={StaticResource InvertedBooleanConverter}}"/>
+                    
+                    <Label Text="Téléphone du Destinataire" FontSize="Caption"/>
+                    <Entry Text="{Binding Colis.TelephoneDestinataire}" Keyboard="Telephone" IsEnabled="{Binding DestinataireIdentiqueAuClient, Converter={StaticResource InvertedBooleanConverter}}"/>
 
-            <Button Text="Enregistrer" Command="{Binding SaveCommand}" Margin="0,30,0,0"/>
+                    <Label Text="Destination Finale *" FontSize="Caption"/>
+                    <Entry Text="{Binding Colis.DestinationFinale}"/>
+                    
+                    <HorizontalStackLayout Spacing="10" Margin="0,15,0,0">
+                        <CheckBox IsChecked="{Binding Colis.LivraisonADomicile}"/>
+                        <Label Text="Livraison à domicile" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                    
+                    <Label Text="Adresse de Livraison" FontSize="Caption"/>
+                    <Editor Text="{Binding Colis.AdresseLivraison}" AutoSize="TextChanges" HeightRequest="100" IsEnabled="{Binding Colis.LivraisonADomicile}"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Détails & Options -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Détails &amp; Options" FontSize="Large" FontAttributes="Bold"/>
+                    <Label Text="Nombre de pièces *" FontSize="Caption"/>
+                    <Entry Text="{Binding Colis.NombrePieces}" Keyboard="Numeric"/>
+                    
+                    <Label Text="Volume (m³)" FontSize="Caption"/>
+                    <Entry Text="{Binding Colis.Volume}" Keyboard="Numeric"/>
+                    
+                    <HorizontalStackLayout Spacing="10" Margin="0,15,0,0">
+                        <CheckBox IsChecked="{Binding Colis.EstFragile}"/>
+                        <Label Text="Colis fragile" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="10">
+                        <CheckBox IsChecked="{Binding Colis.ManipulationSpeciale}"/>
+                        <Label Text="Manipulation spéciale requise" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+
+                    <Label Text="Instructions spéciales" FontSize="Caption" Margin="0,10,0,0"/>
+                    <Editor Text="{Binding Colis.InstructionsSpeciales}" AutoSize="TextChanges" HeightRequest="100"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Codes-barres -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Codes-barres" FontSize="Large" FontAttributes="Bold" />
+                    <CollectionView ItemsSource="{Binding Barcodes}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="entities:Barcode">
+                                <Grid ColumnDefinitions="*,Auto" Padding="0,5">
+                                    <Label Grid.Column="0" Text="{Binding Value}" VerticalOptions="Center"/>
+                                    <Button Grid.Column="1" Text="X" Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:AddEditColisViewModel}}, Path=RemoveBarcodeCommand}" CommandParameter="{Binding}" BackgroundColor="Red" TextColor="White" WidthRequest="40" HeightRequest="40" CornerRadius="20"/>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>   
+					<!-- Dans la section Codes-barres -->
+					<Grid ColumnDefinitions="*,Auto,Auto" Margin="0,10,0,0">
+						<Entry Grid.Column="0" Placeholder="Nouveau code-barres" Text="{Binding NewBarcodeText}"/>
+						<Button Grid.Column="1" Text="Ajouter" Command="{Binding AddBarcodeCommand}" Margin="10,0,0,0"/>
+						<!-- AJOUTER CE BOUTON -->
+						<Button Grid.Column="2" Text="Générer" Command="{Binding GenerateBarcodeCommand}" Margin="5,0,0,0"/>
+					</Grid>
+
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Finances -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Finances" FontSize="Large" FontAttributes="Bold"/>
+                    <Label Text="Valeur Déclarée (€)" FontSize="Caption"/>
+                    <Entry Text="{Binding Colis.ValeurDeclaree}" Keyboard="Numeric"/>
+					<Label Text="Volume (m³)" FontSize="Caption"/>
+					<Entry Text="{Binding Colis.Volume}" Keyboard="Numeric"/>
+					
+					<BoxView HeightRequest="1" Color="LightGray" Margin="0,10"/>
+					<Label Text="Calculateur de prix" FontSize="Body" FontAttributes="Italic" Opacity="0.8"/>
+					<Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="10">
+						<VerticalStackLayout Grid.Column="0">
+							<Label Text="Prix / m³" FontSize="Caption"/>
+							<Entry Placeholder="Prix au m³" Text="{Binding PrixMetreCube}" Keyboard="Numeric"/>
+						</VerticalStackLayout>
+						
+						<Label Grid.Column="1" Text="=" FontSize="Title" VerticalOptions="Center"/>
+						
+						<VerticalStackLayout Grid.Column="2">
+							<Label Text="Prix Estimé" FontSize="Caption"/>
+							<Entry Text="{Binding PrixEstime, StringFormat='{0:C}', Mode=OneWay}" IsReadOnly="True" FontAttributes="Bold"/>
+						</VerticalStackLayout>
+					</Grid>
+                    
+                    <Label Text="Prix Total (€)" FontSize="Caption"/>
+                    <Entry Text="{Binding Colis.PrixTotal}" Keyboard="Numeric"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="Enregistrer" Command="{Binding SaveCommand}" Margin="0,20,0,0"/>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

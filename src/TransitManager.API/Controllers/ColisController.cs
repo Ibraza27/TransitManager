@@ -66,21 +66,14 @@ namespace TransitManager.API.Controllers
 
         // --- AJOUT : POST api/colis ---
         [HttpPost]
-        public async Task<ActionResult<Colis>> CreateColis([FromBody] Colis colis)
+        public async Task<ActionResult<Colis>> CreateColis([FromBody] CreateColisDto colisDto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             
-            // --- CORRECTION API ---
-            // On établit manuellement la relation inverse avant de passer au service.
-            foreach (var barcode in colis.Barcodes)
-            {
-                barcode.Colis = colis;
-            }
-            // --- FIN CORRECTION ---
-
             try
             {
-                var createdColis = await _colisService.CreateAsync(colis);
+                // On passe directement le DTO au service
+                var createdColis = await _colisService.CreateAsync(colisDto);
                 return CreatedAtAction(nameof(GetColisById), new { id = createdColis.Id }, createdColis);
             }
             catch (Exception ex)
@@ -91,21 +84,15 @@ namespace TransitManager.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateColis(Guid id, [FromBody] Colis colis)
+        public async Task<IActionResult> UpdateColis(Guid id, [FromBody] UpdateColisDto colisDto)
         {
-            if (id != colis.Id) return BadRequest("L'ID de l'URL ne correspond pas à l'ID du colis.");
+            if (id != colisDto.Id) return BadRequest("Incohérence des IDs.");
             if (!ModelState.IsValid) return BadRequest(ModelState);
             
-            // --- CORRECTION API ---
-            foreach (var barcode in colis.Barcodes)
-            {
-                barcode.Colis = colis;
-            }
-            // --- FIN CORRECTION ---
-
             try
             {
-                await _colisService.UpdateAsync(colis);
+                // On passe l'ID et le DTO au service
+                await _colisService.UpdateAsync(id, colisDto);
                 return NoContent();
             }
             catch (Exception ex)

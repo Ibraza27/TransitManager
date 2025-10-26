@@ -147,25 +147,62 @@ namespace TransitManager.Mobile.ViewModels
                 return;
             }
 
-			Colis.ClientId = SelectedClient.Id;
-
-            // On s'assure que chaque code-barres a la référence à l'objet Colis parent.
-            foreach (var barcode in Barcodes)
-            {
-                barcode.ColisId = Colis.Id;
-                barcode.Colis = Colis;
-            }
-            Colis.Barcodes = Barcodes.ToList();
-
 			try
 			{
-				if (string.IsNullOrEmpty(ColisId))
+				if (string.IsNullOrEmpty(ColisId)) // Cas de la création
 				{
-					await _transitApi.CreateColisAsync(Colis);
+					var dto = new CreateColisDto
+					{
+						// Propriétés principales
+						ClientId = SelectedClient.Id,
+						Designation = Colis.Designation,
+						DestinationFinale = Colis.DestinationFinale,
+						Barcodes = Barcodes.Select(b => b.Value).ToList(),
+						
+						// Détails et options
+						NombrePieces = Colis.NombrePieces,
+						Volume = Colis.Volume,
+						ValeurDeclaree = Colis.ValeurDeclaree,
+						PrixTotal = Colis.PrixTotal,
+						Destinataire = Colis.Destinataire,
+						TelephoneDestinataire = Colis.TelephoneDestinataire,
+						LivraisonADomicile = Colis.LivraisonADomicile,
+						AdresseLivraison = Colis.AdresseLivraison,
+						EstFragile = Colis.EstFragile,
+						ManipulationSpeciale = Colis.ManipulationSpeciale,
+						InstructionsSpeciales = Colis.InstructionsSpeciales,
+						Type = Colis.Type,
+						TypeEnvoi = Colis.TypeEnvoi
+					};
+					await _transitApi.CreateColisAsync(dto);
 				}
-				else
+				else // Cas de la mise à jour
 				{
-					await _transitApi.UpdateColisAsync(Colis.Id, Colis);
+					var dto = new UpdateColisDto
+					{
+                        Id = Colis.Id,
+						// Propriétés principales
+						ClientId = SelectedClient.Id,
+						Designation = Colis.Designation,
+						DestinationFinale = Colis.DestinationFinale,
+						Barcodes = Barcodes.Select(b => b.Value).ToList(),
+						
+						// Détails et options
+						NombrePieces = Colis.NombrePieces,
+						Volume = Colis.Volume,
+						ValeurDeclaree = Colis.ValeurDeclaree,
+						PrixTotal = Colis.PrixTotal,
+						Destinataire = Colis.Destinataire,
+						TelephoneDestinataire = Colis.TelephoneDestinataire,
+						LivraisonADomicile = Colis.LivraisonADomicile,
+						AdresseLivraison = Colis.AdresseLivraison,
+						EstFragile = Colis.EstFragile,
+						ManipulationSpeciale = Colis.ManipulationSpeciale,
+						InstructionsSpeciales = Colis.InstructionsSpeciales,
+						Type = Colis.Type,
+						TypeEnvoi = Colis.TypeEnvoi
+					};
+					await _transitApi.UpdateColisAsync(Colis.Id, dto);
 				}
 				await Shell.Current.GoToAsync("..");
 			}
@@ -181,7 +218,6 @@ namespace TransitManager.Mobile.ViewModels
                     }
                     catch (System.Text.Json.JsonException)
                     {
-                        // CORRECTION APPLIQUÉE ICI
                         errorDetails = apiEx.Content ?? "Impossible de lire le contenu de l'erreur.";
                     }
 					await Shell.Current.DisplayAlert("Erreur API", $"Sauvegarde échouée : {apiEx.StatusCode}\n\n{errorDetails}", "OK");

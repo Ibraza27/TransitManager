@@ -16,6 +16,7 @@ using System.Text.Json;
 using TransitManager.WPF.Views.Inventaire;
 using Microsoft.Extensions.DependencyInjection; // Assurez-vous que celui-ci est présent
 using TransitManager.WPF.Views; // <--- LIGNE À AJOUTER
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -195,20 +196,40 @@ namespace TransitManager.WPF.ViewModels
 			if (paiementWindow.ShowDialog() == true)
 			{
 				colis.SommePayee = paiementViewModel.TotalValeur;
-
-                // ======================= DÉBUT DE LA MODIFICATION =======================
-                // On sauvegarde le colis pour persister la nouvelle SommePayee
                 try
                 {
-                    await _colisService.UpdateAsync(colis);
+                    // Créer le DTO pour la mise à jour
+                    var dto = new UpdateColisDto 
+                    { 
+                        Id = colis.Id,
+                        ClientId = colis.ClientId,
+                        Designation = colis.Designation,
+                        DestinationFinale = colis.DestinationFinale,
+                        Barcodes = colis.Barcodes.Select(b => b.Value).ToList(),
+                        NombrePieces = colis.NombrePieces,
+                        Volume = colis.Volume,
+                        ValeurDeclaree = colis.ValeurDeclaree,
+                        PrixTotal = colis.PrixTotal,
+                        SommePayee = colis.SommePayee, // <-- La valeur mise à jour
+                        Destinataire = colis.Destinataire,
+                        TelephoneDestinataire = colis.TelephoneDestinataire,
+                        LivraisonADomicile = colis.LivraisonADomicile,
+                        AdresseLivraison = colis.AdresseLivraison,
+                        EstFragile = colis.EstFragile,
+                        ManipulationSpeciale = colis.ManipulationSpeciale,
+                        InstructionsSpeciales = colis.InstructionsSpeciales,
+                        Type = colis.Type,
+                        TypeEnvoi = colis.TypeEnvoi,
+                        ConteneurId = colis.ConteneurId,
+                        Statut = colis.Statut
+                    };
+                    await _colisService.UpdateAsync(colis.Id, dto);
                 }
                 catch (Exception ex)
                 {
                     await _dialogService.ShowErrorAsync("Erreur de sauvegarde", $"Impossible de mettre à jour le total payé pour le colis : {ex.Message}");
                 }
-                // ======================== FIN DE LA MODIFICATION ========================
-
-				CalculateStatistics();
+                CalculateStatistics();
 			}
 		}
 		
@@ -241,12 +262,12 @@ namespace TransitManager.WPF.ViewModels
 			await LoadAsync();
 		}
 		
-        private async Task OpenInventaireFromList(Colis? colis)
+		private async Task OpenInventaireFromList(Colis? colis)
         {
             if (colis == null) return;
 
             var inventaireViewModel = new InventaireViewModel(colis.InventaireJson);
-            var inventaireWindow = new InventaireView(inventaireViewModel)
+            var inventaireWindow = new Views.Inventaire.InventaireView(inventaireViewModel)
             {
                 Owner = System.Windows.Application.Current.MainWindow
             };
@@ -257,13 +278,36 @@ namespace TransitManager.WPF.ViewModels
                 colis.NombrePieces = inventaireViewModel.TotalQuantite;
                 colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
 
-                // Sauvegarder directement les changements
-                await _colisService.UpdateAsync(colis);
-                // Rafraîchir la liste pour voir les nouvelles valeurs
+                var dto = new UpdateColisDto
+                {
+                    Id = colis.Id,
+                    ClientId = colis.ClientId,
+                    Designation = colis.Designation,
+                    DestinationFinale = colis.DestinationFinale,
+                    Barcodes = colis.Barcodes.Select(b => b.Value).ToList(),
+                    NombrePieces = colis.NombrePieces, // Mis à jour
+                    Volume = colis.Volume,
+                    ValeurDeclaree = colis.ValeurDeclaree, // Mis à jour
+                    PrixTotal = colis.PrixTotal,
+                    SommePayee = colis.SommePayee,
+                    Destinataire = colis.Destinataire,
+                    TelephoneDestinataire = colis.TelephoneDestinataire,
+                    LivraisonADomicile = colis.LivraisonADomicile,
+                    AdresseLivraison = colis.AdresseLivraison,
+                    EstFragile = colis.EstFragile,
+                    ManipulationSpeciale = colis.ManipulationSpeciale,
+                    InstructionsSpeciales = colis.InstructionsSpeciales,
+                    Type = colis.Type,
+                    TypeEnvoi = colis.TypeEnvoi,
+                    ConteneurId = colis.ConteneurId,
+                    Statut = colis.Statut,
+                    InventaireJson = colis.InventaireJson // Mis à jour
+                };
+
+                await _colisService.UpdateAsync(colis.Id, dto);
                 await LoadColisAsync();
             }
-        }		
-
+        }
         public async void Receive(ClientUpdatedMessage message)
         {
             await LoadFilterDataAsync();

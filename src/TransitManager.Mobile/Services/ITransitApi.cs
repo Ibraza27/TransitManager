@@ -32,10 +32,10 @@ namespace TransitManager.Mobile.Services
 		Task<Colis> GetColisByIdAsync(Guid id);
 
 		[Post("/api/colis")]
-		Task<Colis> CreateColisAsync([Body] Colis colis);
+		Task<Colis> CreateColisAsync([Body] CreateColisDto colisDto);
 
 		[Put("/api/colis/{id}")]
-		Task UpdateColisAsync(Guid id, [Body] Colis colis);
+		Task UpdateColisAsync(Guid id, [Body] UpdateColisDto colisDto);
 
 		[Delete("/api/colis/{id}")]
 		Task DeleteColisAsync(Guid id);

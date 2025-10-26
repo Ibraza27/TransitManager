@@ -4,11 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using TransitManager.Core.DTOs;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
+using TransitManager.Core.Exceptions;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
-using TransitManager.Core.Exceptions;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -27,125 +28,129 @@ namespace TransitManager.Infrastructure.Services
             _clientService = clientService;
         }
 
-
-		public async Task<Colis> CreateAsync(Colis colis)
+        public async Task<Colis> CreateAsync(CreateColisDto colisDto)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-
-            // 1. On sépare les codes-barres du colis parent pour éviter les problèmes de suivi d'EF Core.
-            var barcodesFromUI = colis.Barcodes.ToList();
-            colis.Barcodes.Clear(); // On vide la collection sur l'objet principal.
-
-            // 2. On ajoute UNIQUEMENT le colis au contexte. EF Core commence à le "suivre".
-            context.Colis.Add(colis);
-
-            // 3. MAINTENANT que le colis est suivi, on peut y ajouter ses enfants.
-            foreach (var barcode in barcodesFromUI)
+            var newColis = new Colis
             {
-                // On crée une NOUVELLE instance de Barcode pour être sûr qu'elle n'est pas déjà suivie ailleurs.
-                var newBarcode = new Barcode
-                {
-                    Value = barcode.Value,
-                    Colis = colis // On établit la relation de navigation. EF Core déduira le ColisId.
-                };
-                colis.Barcodes.Add(newBarcode);
+                ClientId = colisDto.ClientId,
+                Designation = colisDto.Designation,
+                DestinationFinale = colisDto.DestinationFinale,
+                NombrePieces = colisDto.NombrePieces,
+                Volume = colisDto.Volume,
+                ValeurDeclaree = colisDto.ValeurDeclaree,
+                PrixTotal = colisDto.PrixTotal,
+                Destinataire = colisDto.Destinataire,
+                TelephoneDestinataire = colisDto.TelephoneDestinataire,
+                LivraisonADomicile = colisDto.LivraisonADomicile,
+                AdresseLivraison = colisDto.AdresseLivraison,
+                EstFragile = colisDto.EstFragile,
+                ManipulationSpeciale = colisDto.ManipulationSpeciale,
+                InstructionsSpeciales = colisDto.InstructionsSpeciales,
+                Type = colisDto.Type,
+                TypeEnvoi = colisDto.TypeEnvoi,
+                ConteneurId = colisDto.ConteneurId
+            };
+
+            foreach (var barcodeValue in colisDto.Barcodes)
+            {
+                newColis.Barcodes.Add(new Barcode { Value = barcodeValue });
             }
 
-            // 4. On sauvegarde tout en une seule transaction.
+            context.Colis.Add(newColis);
             await context.SaveChangesAsync();
 
-            // 5. Le reste de la logique ne change pas.
-            await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
+            await _clientService.RecalculateAndUpdateClientStatisticsAsync(newColis.ClientId);
 
-            if (colis.ConteneurId.HasValue)
+            if (newColis.ConteneurId.HasValue)
             {
-                await _conteneurService.RecalculateStatusAsync(colis.ConteneurId.Value);
+                await _conteneurService.RecalculateStatusAsync(newColis.ConteneurId.Value);
             }
 
-            return colis;
+            return newColis;
         }
 
-		public async Task<Colis> UpdateAsync(Colis colisFromUI)
+		public async Task<Colis> UpdateAsync(Guid id, UpdateColisDto colisDto)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            
-            // On charge l'entité de la BDD et on inclut ses relations
-            var colisInDb = await context.Colis
-                .Include(c => c.Barcodes)
-                .FirstOrDefaultAsync(c => c.Id == colisFromUI.Id);
-
-            if (colisInDb == null) 
-            {
-                throw new InvalidOperationException("Le colis n'existe plus.");
-            }
-
-            var originalConteneurId = colisInDb.ConteneurId;
-            var originalClientId = colisInDb.ClientId;
-
-            // 1. Appliquer les changements simples sur l'entité suivie
-            context.Entry(colisInDb).CurrentValues.SetValues(colisFromUI);
-            colisInDb.ClientId = colisFromUI.ClientId; // S'assurer que les clés étrangères sont à jour
-            colisInDb.ConteneurId = colisFromUI.ConteneurId;
-            context.Entry(colisInDb).Property("RowVersion").OriginalValue = colisFromUI.RowVersion;
-
-            // 2. Synchroniser la collection de codes-barres
-            var barcodesFromUIValues = colisFromUI.Barcodes.Select(b => b.Value).ToHashSet();
-            var barcodesInDb = colisInDb.Barcodes.ToList();
-
-            // Supprimer les codes-barres qui ne sont plus dans la liste de l'UI
-            var barcodesToRemove = barcodesInDb.Where(b => !barcodesFromUIValues.Contains(b.Value)).ToList();
-            if (barcodesToRemove.Any())
-            {
-                context.Barcodes.RemoveRange(barcodesToRemove);
-            }
-
-            // Ajouter les nouveaux codes-barres
-            var barcodesInDbValues = barcodesInDb.Select(b => b.Value).ToHashSet();
-            var barcodeValuesToAdd = barcodesFromUIValues.Where(uiValue => !barcodesInDbValues.Contains(uiValue));
-            foreach (var valueToAdd in barcodeValuesToAdd)
-            {
-                colisInDb.Barcodes.Add(new Barcode { Value = valueToAdd });
-            }
-
             try
             {
-                // 3. Sauvegarder TOUTES les modifications en une seule transaction
+                var colisInDb = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Id == id);
+                if (colisInDb == null) throw new InvalidOperationException("Le colis n'existe plus.");
+
+                var originalClientId = colisInDb.ClientId;
+                var originalConteneurId = colisInDb.ConteneurId;
+
+                // 1. Mapper les propriétés simples
+                colisInDb.ClientId = colisDto.ClientId;
+                colisInDb.Designation = colisDto.Designation;
+                colisInDb.DestinationFinale = colisDto.DestinationFinale;
+                colisInDb.NombrePieces = colisDto.NombrePieces;
+                colisInDb.Volume = colisDto.Volume;
+                colisInDb.ValeurDeclaree = colisDto.ValeurDeclaree;
+                colisInDb.PrixTotal = colisDto.PrixTotal;
+                colisInDb.SommePayee = colisDto.SommePayee;
+                colisInDb.Destinataire = colisDto.Destinataire;
+                colisInDb.TelephoneDestinataire = colisDto.TelephoneDestinataire;
+                colisInDb.LivraisonADomicile = colisDto.LivraisonADomicile;
+                colisInDb.AdresseLivraison = colisDto.AdresseLivraison;
+                colisInDb.EstFragile = colisDto.EstFragile;
+                colisInDb.ManipulationSpeciale = colisDto.ManipulationSpeciale;
+                colisInDb.InstructionsSpeciales = colisDto.InstructionsSpeciales;
+                colisInDb.Type = colisDto.Type;
+                colisInDb.TypeEnvoi = colisDto.TypeEnvoi;
+                colisInDb.ConteneurId = colisDto.ConteneurId;
+                colisInDb.Statut = colisDto.Statut;
+                colisInDb.InventaireJson = colisDto.InventaireJson;
+
+                // On marque l'entité comme modifiée
+                context.Update(colisInDb);
+
+                // 2. Synchroniser la collection de codes-barres
+                var barcodesFromUIValues = colisDto.Barcodes.ToHashSet();
+                var barcodesInDb = colisInDb.Barcodes.ToList();
+
+                var barcodesToRemove = barcodesInDb.Where(b => !barcodesFromUIValues.Contains(b.Value)).ToList();
+                if (barcodesToRemove.Any())
+                {
+                    context.Barcodes.RemoveRange(barcodesToRemove);
+                }
+
+                var barcodesInDbValues = barcodesInDb.Select(b => b.Value).ToHashSet();
+                var barcodeValuesToAdd = barcodesFromUIValues.Where(uiValue => !barcodesInDbValues.Contains(uiValue));
+                foreach (var valueToAdd in barcodeValuesToAdd)
+                {
+                    // On crée un nouveau barcode lié directement à l'ID du colis
+                    context.Barcodes.Add(new Barcode { Value = valueToAdd, ColisId = colisInDb.Id });
+                }
+
+                // 3. Sauvegarder
                 await context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                var entry = ex.Entries.Single();
-                var databaseValues = await entry.GetDatabaseValuesAsync();
-                if (databaseValues == null)
+                
+                // 4. Logique post-sauvegarde (inchangée)
+                await _clientService.RecalculateAndUpdateClientStatisticsAsync(colisInDb.ClientId);
+                if (originalClientId != colisInDb.ClientId)
                 {
-                    throw new ConcurrencyException("Ce colis a été supprimé par un autre utilisateur.");
+                    await _clientService.RecalculateAndUpdateClientStatisticsAsync(originalClientId);
                 }
-                else
+                if (originalConteneurId.HasValue && originalConteneurId.Value != colisInDb.ConteneurId)
                 {
-                    throw new ConcurrencyException("Ce colis a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
+                    await _conteneurService.RecalculateStatusAsync(originalConteneurId.Value);
                 }
-            }
+                if (colisInDb.ConteneurId.HasValue)
+                {
+                    await _conteneurService.RecalculateStatusAsync(colisInDb.ConteneurId.Value);
+                }
 
-            // 4. Appeler les services de mise à jour des statistiques APRÈS la sauvegarde.
-            // Chaque service utilisera son propre contexte, ce qui est maintenant sûr.
-			await _clientService.RecalculateAndUpdateClientStatisticsAsync(colisInDb.ClientId);
-            // Si le client a changé, on met aussi à jour l'ancien client
-            if (originalClientId != colisInDb.ClientId)
-            {
-                await _clientService.RecalculateAndUpdateClientStatisticsAsync(originalClientId);
+                return colisInDb;
             }
-
-            // Mettre à jour l'ancien et le nouveau conteneur si nécessaire
-            if (originalConteneurId.HasValue && originalConteneurId.Value != colisInDb.ConteneurId)
+            catch (Exception ex)
             {
-                await _conteneurService.RecalculateStatusAsync(originalConteneurId.Value);
+                // Mettez un point d'arrêt ici pour inspecter 'ex'
+                Console.WriteLine($"[ERREUR ColisService.UpdateAsync] : {ex.Message}");
+                Console.WriteLine(ex.InnerException?.Message);
+                throw; // Rethrow pour que l'API renvoie une erreur 500
             }
-            if(colisInDb.ConteneurId.HasValue)
-            {
-                await _conteneurService.RecalculateStatusAsync(colisInDb.ConteneurId.Value);
-            }
-            
-            return colisInDb;
         }
 
         public async Task<bool> AssignToConteneurAsync(Guid colisId, Guid conteneurId)
@@ -153,7 +158,6 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var colis = await context.Colis.FindAsync(colisId);
             var conteneur = await context.Conteneurs.FindAsync(conteneurId);
-            // On ajoute le statut "Probleme" à la liste des statuts valides pour une affectation
             var canReceiveStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation, StatutConteneur.Probleme };
             if (colis == null || conteneur == null || !canReceiveStatuses.Contains(conteneur.Statut)) return false;
             colis.ConteneurId = conteneurId;
@@ -181,7 +185,6 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Colis?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            // On charge le colis en ignorant les filtres pour lui-même
             var colis = await context.Colis
                 .IgnoreQueryFilters()
                 .Include(c => c.Conteneur)
@@ -191,14 +194,11 @@ namespace TransitManager.Infrastructure.Services
                 .FirstOrDefaultAsync(c => c.Id == id);
             if (colis != null)
             {
-                // Ensuite, on charge son client SÉPARÉMENT, en ignorant les filtres pour le client.
-                // C'est la garantie absolue de l'obtenir.
                 colis.Client = await context.Clients
                     .IgnoreQueryFilters()
                     .AsNoTracking()
                     .FirstOrDefaultAsync(c => c.Id == colis.ClientId);
             }
-
             return colis;
         }
 
@@ -317,7 +317,6 @@ namespace TransitManager.Infrastructure.Services
                     c.Barcodes.Any(b => EF.Functions.ILike(b.Value, $"%{term}%"))
                 );
             }
-
             return await query.OrderByDescending(c => c.DateArrivee).ToListAsync();
         }
 

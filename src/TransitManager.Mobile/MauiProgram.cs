@@ -96,11 +96,17 @@ namespace TransitManager.Mobile
 			builder.Services.AddTransient<AddEditPaiementPage>();
 			builder.Services.AddTransient<AddEditPaiementViewModel>();
 			
+            builder.Services.AddTransient<PaiementColisPage>();
+            builder.Services.AddTransient<PaiementColisViewModel>();
+			
 			builder.Services.AddTransient<EtatDesLieuxPage>();
 			builder.Services.AddTransient<EtatDesLieuxViewModel>();
 			
 			builder.Services.AddTransient<EditEtatDesLieuxPage>();
 			builder.Services.AddTransient<EditEtatDesLieuxViewModel>();
+			
+            builder.Services.AddTransient<InventairePage>();
+            builder.Services.AddTransient<InventaireViewModel>();
 			
             return builder.Build();
         }

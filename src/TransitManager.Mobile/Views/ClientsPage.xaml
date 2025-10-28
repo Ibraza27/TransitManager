@@ -2,40 +2,56 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
-             xmlns:core="clr-namespace:TransitManager.Core.DTOs;assembly=TransitManager.Core"
+             xmlns:core="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
              x:DataType="viewmodels:ClientsViewModel"
              x:Class="TransitManager.Mobile.Views.ClientsPage"
              Title="Clients">
 
-    <Grid RowDefinitions="Auto, *">
-        
-        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
-                           HorizontalOptions="Center" VerticalOptions="Center" Grid.RowSpan="2" />
 
-        <HorizontalStackLayout Grid.Row="0" Padding="10" Spacing="10">
+    <Grid RowDefinitions="Auto, Auto, *, Auto">
+        
+        <ActivityIndicator Grid.RowSpan="4" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Center" VerticalOptions="Center" />
+
+        <SearchBar Grid.Row="0" Placeholder="Rechercher nom, code, tél, ville..." Text="{Binding SearchText}" Margin="10"/>
+
+        <ScrollView Grid.Row="1" Orientation="Horizontal" Padding="10,0" HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout Spacing="10">
+                <Picker Title="Statut" ItemsSource="{Binding StatutsList}" SelectedItem="{Binding SelectedStatus}" WidthRequest="140"/>
+                <Picker Title="Ville" ItemsSource="{Binding CitiesList}" SelectedItem="{Binding SelectedCity}" WidthRequest="140"/>
+                <Button Text="Effacer" Command="{Binding ClearFiltersCommand}"/>
+            </HorizontalStackLayout>
+        </ScrollView>
+        
+        <RefreshView Grid.Row="2" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadClientsCommand}">
+            <CollectionView ItemsSource="{Binding Clients}" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="{x:Type core:Client}">
+                        <Frame Margin="10,5" Padding="15" BorderColor="LightGray" CornerRadius="8">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ClientsViewModel}}, Path=GoToDetailsCommand}"
+                                    CommandParameter="{Binding .}" />
+                            </Frame.GestureRecognizers>
+                            
+                            <Grid ColumnDefinitions="*, Auto">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="{Binding NomComplet}" FontSize="Medium" FontAttributes="Bold" />
+                                    <Label Text="{Binding CodeClient}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
+                                    <Label Text="{Binding TelephonePrincipal}" FontSize="Small" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1" Text="{Binding Ville}" FontSize="Small" TextColor="Gray" VerticalOptions="Start" HorizontalOptions="End"/>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <HorizontalStackLayout Grid.Row="3" Padding="10" Spacing="10">
             <Button Text="Actualiser" Command="{Binding LoadClientsCommand}" />
 			<Button Text="Nouveau Client" Command="{Binding AddClientCommand}" />
         </HorizontalStackLayout>
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Clients}" SelectionMode="None">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type core:ClientListItemDto}">
-                    <Frame Margin="10" Padding="10" BorderColor="LightGray" CornerRadius="5">
-                        <Frame.GestureRecognizers>
-                            <TapGestureRecognizer 
-                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ClientsViewModel}}, Path=GoToDetailsCommand}"
-                                CommandParameter="{Binding .}" />
-                        </Frame.GestureRecognizers>
-                        
-                        <VerticalStackLayout>
-                            <Label Text="{Binding NomComplet}" FontSize="Medium" FontAttributes="Bold" />
-                            <Label Text="{Binding TelephonePrincipal}" FontSize="Small" />
-                            <Label Text="{Binding Email}" FontSize="Small" TextColor="Gray" />
-                        </VerticalStackLayout>
-                    </Frame>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
-
     </Grid>
+
 </ContentPage>

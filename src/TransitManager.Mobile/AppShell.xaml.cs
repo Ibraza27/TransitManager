@@ -18,7 +18,9 @@ namespace TransitManager.Mobile
 			Routing.RegisterRoute(nameof(EtatDesLieuxPage), typeof(EtatDesLieuxPage));
 			Routing.RegisterRoute(nameof(EditEtatDesLieuxPage), typeof(EditEtatDesLieuxPage));
 			Routing.RegisterRoute(nameof(PaiementVehiculePage), typeof(PaiementVehiculePage));
+			Routing.RegisterRoute(nameof(PaiementColisPage), typeof(PaiementColisPage));
 			Routing.RegisterRoute(nameof(AddEditPaiementPage), typeof(AddEditPaiementPage));
+			Routing.RegisterRoute(nameof(InventairePage), typeof(InventairePage));
 			
         }
     }

@@ -16,6 +16,21 @@ namespace TransitManager.API.Controllers
             _paiementService = paiementService;
             _logger = logger;
         }
+		
+        [HttpGet("colis/{colisId}")]
+        public async Task<ActionResult<IEnumerable<Paiement>>> GetPaiementsForColis(Guid colisId)
+        {
+            try
+            {
+                var paiements = await _paiementService.GetByColisAsync(colisId);
+                return Ok(paiements);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la récupération des paiements pour le colis ID {ColisId}", colisId);
+                return StatusCode(500, "Erreur interne");
+            }
+        }
 
         // GET: api/paiements/vehicule/{vehiculeId}
         [HttpGet("vehicule/{vehiculeId}")]

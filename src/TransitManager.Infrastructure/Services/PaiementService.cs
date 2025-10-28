@@ -20,6 +20,7 @@ namespace TransitManager.Infrastructure.Services
 		private readonly IClientService _clientService;
 		private readonly IMessenger _messenger;
 		private readonly IVehiculeService _vehiculeService;
+        private readonly IColisService _colisService;
 
 		public PaiementService(
 			IDbContextFactory<TransitContext> contextFactory,
@@ -27,7 +28,8 @@ namespace TransitManager.Infrastructure.Services
 			IExportService exportService,
 			IClientService clientService,
 			IMessenger messenger,
-			IVehiculeService vehiculeService)
+			IVehiculeService vehiculeService,
+            IColisService colisService) 
 		{
             _contextFactory = contextFactory;
             _notificationService = notificationService;
@@ -35,6 +37,7 @@ namespace TransitManager.Infrastructure.Services
 			_clientService = clientService;
             _messenger = messenger;
 			_vehiculeService = vehiculeService;
+            _colisService = colisService;
         }
 
         public async Task<Paiement?> GetByIdAsync(Guid id)
@@ -112,20 +115,20 @@ namespace TransitManager.Infrastructure.Services
                 paiement.NumeroRecu = await GenerateUniqueReceiptNumberAsync(context);
             }
 
-            // --- CORRECTION 1 : Forcer le statut à "Paye" ---
-            // Puisque l'UI n'a pas d'étape de validation, on considère un paiement créé comme payé.
             paiement.Statut = StatutPaiement.Paye;
 
             context.Paiements.Add(paiement);
-            // Note : SaveChangesAsync est appelé par les services de recalcul
 
-            await context.SaveChangesAsync(); // Sauvegarder le paiement d'abord
+            await context.SaveChangesAsync(); 
 			 _messenger.Send(new PaiementUpdatedMessage());
 
-            // --- CORRECTION 2 : Déclencher le recalcul pour le véhicule ---
             if (paiement.VehiculeId.HasValue)
             {
                 await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(paiement.VehiculeId.Value);
+            }
+            if (paiement.ColisId.HasValue)
+            {
+                await _colisService.RecalculateAndUpdateColisStatisticsAsync(paiement.ColisId.Value);
             }
             
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
@@ -145,11 +148,15 @@ namespace TransitManager.Infrastructure.Services
 			await context.SaveChangesAsync();
 			 _messenger.Send(new PaiementUpdatedMessage());
 			
-            // --- AJOUTER CETTE LOGIQUE ---
             if (paiement.VehiculeId.HasValue)
             {
                 await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(paiement.VehiculeId.Value);
             }
+            if (paiement.ColisId.HasValue)
+            {
+                await _colisService.RecalculateAndUpdateColisStatisticsAsync(paiement.ColisId.Value);
+            }
+
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 			return paiement;
 		}
@@ -161,21 +168,29 @@ namespace TransitManager.Infrastructure.Services
             var paiement = await context.Paiements.FindAsync(id);
             if (paiement == null) return false;
 
-            if (paiement.Statut == StatutPaiement.Paye)
-            {
-                throw new InvalidOperationException("Impossible de supprimer un paiement validé.");
-            }
+            // --- DÉBUT DE LA MODIFICATION ---
+            // On supprime la condition qui empêchait la suppression
+            // if (paiement.Statut == StatutPaiement.Paye)
+            // {
+            //     throw new InvalidOperationException("Impossible de supprimer un paiement validé.");
+            // }
+            // --- FIN DE LA MODIFICATION ---
 			
 			var clientId = paiement.ClientId;
-            var vehiculeId = paiement.VehiculeId; // CORRECTION ICI
+            var vehiculeId = paiement.VehiculeId;
+            var colisId = paiement.ColisId;
 
-            paiement.Actif = false;
+            paiement.Actif = false; // On effectue une suppression logique
             await context.SaveChangesAsync();
 			 _messenger.Send(new PaiementUpdatedMessage());
             
             if (vehiculeId.HasValue)
             {
                 await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(vehiculeId.Value);
+            }
+            if (colisId.HasValue)
+            {
+                await _colisService.RecalculateAndUpdateColisStatisticsAsync(colisId.Value);
             }
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId); 
             return true;
@@ -190,7 +205,6 @@ namespace TransitManager.Infrastructure.Services
 			paiement.Statut = StatutPaiement.Paye;
 			await context.SaveChangesAsync();
 			 _messenger.Send(new PaiementUpdatedMessage());
-			// Ligne à ajouter/vérifier
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 			return true;
 		}
@@ -205,7 +219,6 @@ namespace TransitManager.Infrastructure.Services
 			paiement.Commentaires = $"Annulé : {raison}";
 			await context.SaveChangesAsync();
 			 _messenger.Send(new PaiementUpdatedMessage());
-			// Ligne à ajouter/vérifier
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
 			return true;
         }
@@ -214,14 +227,13 @@ namespace TransitManager.Infrastructure.Services
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
 
-			// On s'assure que la date de début est bien le premier jour du mois à minuit, en UTC
 			var debutMois = new DateTime(month.Year, month.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 			var debutMoisSuivant = debutMois.AddMonths(1);
 
 			return await context.Paiements
 				.Where(p => p.Statut == StatutPaiement.Paye && 
 							p.DatePaiement >= debutMois && 
-							p.DatePaiement < debutMoisSuivant) // Utiliser "<" est plus sûr
+							p.DatePaiement < debutMoisSuivant) 
 				.SumAsync(p => p.Montant);
 		}
 
@@ -287,7 +299,6 @@ namespace TransitManager.Infrastructure.Services
 			await context.SaveChangesAsync();
 			 _messenger.Send(new PaiementUpdatedMessage());
 			
-			// CORRECTION APPLIQUÉE ICI
 			await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId); 
 			
 			return true;
@@ -321,10 +332,7 @@ namespace TransitManager.Infrastructure.Services
                 Statut = StatutPaiement.Valide,
                 DatePaiement = DateTime.UtcNow
             };
-			// La méthode CreateAsync s'occupe déjà d'appeler la mise à jour.
-			// Mais par sécurité, on peut s'assurer qu'elle est bien appelée après la création.
 			await CreateAsync(paiement); 
-			// Pas besoin de rajouter l'appel ici, car CreateAsync le fait déjà.
 			return true;
         }
 		
@@ -332,7 +340,7 @@ namespace TransitManager.Infrastructure.Services
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
 			return await context.Paiements
-				.Include(p => p.Client) // On garde le client au cas où
+				.Include(p => p.Client) 
 				.Where(p => p.ColisId == colisId)
 				.AsNoTracking()
 				.OrderByDescending(p => p.DatePaiement)
@@ -354,7 +362,7 @@ namespace TransitManager.Infrastructure.Services
 			var client = await context.Clients.FindAsync(clientId);
 			if (client != null)
 			{
-				client.Impayes = await CalculateClientBalanceAsync(clientId, context); // MODIFIÉ
+				client.Impayes = await CalculateClientBalanceAsync(clientId, context);
 			}
 		}
 				

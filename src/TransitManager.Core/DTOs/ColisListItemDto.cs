@@ -11,5 +11,10 @@ namespace TransitManager.Core.DTOs
         public string ClientNomComplet { get; set; } = string.Empty;
         public string? ConteneurNumeroDossier { get; set; }
 		public string AllBarcodes { get; set; } = string.Empty;
+        
+        // --- DÉBUT DE L'AJOUT ---
+        public string DestinationFinale { get; set; } = string.Empty;
+        public DateTime DateArrivee { get; set; }
+        // --- FIN DE L'AJOUT ---
     }
 }

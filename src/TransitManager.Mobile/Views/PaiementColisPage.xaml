@@ -4,10 +4,10 @@
              xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
              xmlns:model="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
              xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
-             x:DataType="viewmodels:PaiementVehiculeViewModel"
-             x:Class="TransitManager.Mobile.Views.PaiementVehiculePage"
-             Title="Paiements du Véhicule">
-
+             x:DataType="viewmodels:PaiementColisViewModel"
+             x:Class="TransitManager.Mobile.Views.PaiementColisPage"
+             Title="Paiements du Colis">
+    
     <!-- AJOUT DE LA RESSOURCE -->
     <ContentPage.Resources>
         <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
@@ -50,17 +50,16 @@
                                     </Label.FormattedText>
                                 </Label>
                                 <!-- FIN DE L'AJOUT -->
-                                
+
                             </VerticalStackLayout>
 
-                            <!-- BOUTON MODIFIER AJOUTÉ -->
                             <Button Grid.Column="1" Text="Modifier"
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PaiementVehiculeViewModel}}, Path=GoToEditPaiementCommand}" 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PaiementColisViewModel}}, Path=GoToEditPaiementCommand}" 
                                     CommandParameter="{Binding}" 
                                     VerticalOptions="Center" Margin="5,0"/>
                             
                             <Button Grid.Column="2" Text="Supprimer" 
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PaiementVehiculeViewModel}}, Path=DeletePaiementCommand}" 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PaiementColisViewModel}}, Path=DeletePaiementCommand}" 
                                     CommandParameter="{Binding}" 
                                     BackgroundColor="Red"
                                     VerticalOptions="Center"/>
@@ -73,7 +72,7 @@
         <!-- Statistiques -->
         <Frame Grid.Row="2" Margin="10" Padding="10">
             <VerticalStackLayout>
-                <Label Text="{Binding PrixTotalVehicule, StringFormat='Prix Total : {0:C}'}"/>
+                <Label Text="{Binding PrixTotalColis, StringFormat='Prix Total : {0:C}'}"/>
                 <Label Text="{Binding TotalPaye, StringFormat='Total Payé : {0:C}'}" TextColor="Green"/>
                 <Label Text="{Binding RestantAPayer, StringFormat='Restant à Payer : {0:C}'}" TextColor="Red" FontAttributes="Bold"/>
             </VerticalStackLayout>

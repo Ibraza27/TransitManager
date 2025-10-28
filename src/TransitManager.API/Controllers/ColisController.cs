@@ -34,8 +34,12 @@ namespace TransitManager.API.Controllers
                     Statut = c.Statut,
                     ClientNomComplet = c.Client?.NomComplet ?? "N/A",
                     ConteneurNumeroDossier = c.Conteneur?.NumeroDossier,
-                    // --- AJOUTER CETTE LIGNE ---
-                    AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value))
+                    AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)),
+
+                    // --- DÉBUT DE LA MODIFICATION ---
+                    DestinationFinale = c.DestinationFinale,
+                    DateArrivee = c.DateArrivee
+                    // --- FIN DE LA MODIFICATION ---
                 });
                 
                 return Ok(colisDtos);

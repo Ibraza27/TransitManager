@@ -10,6 +10,8 @@
     
     <ContentPage.Resources>
         <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+        <!-- AJOUTER LE NOUVEAU CONVERTISSEUR -->
+        <converters:IsDateOverdueConverter x:Key="IsDateOverdueConverter" />
     </ContentPage.Resources>
     
     <Grid RowDefinitions="Auto, Auto, Auto, *">
@@ -54,7 +56,22 @@
             <CollectionView ItemsSource="{Binding ColisList}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="dto:ColisListItemDto">
+
                         <Frame Margin="10" Padding="15" BorderColor="LightGray" CornerRadius="8">
+                            <Frame.Triggers>
+                                <MultiTrigger TargetType="Frame">
+                                    <MultiTrigger.Conditions>
+                                        <!-- Condition 1: Le statut doit être "EnAttente" -->
+                                        <BindingCondition Binding="{Binding Statut}" Value="EnAttente" />
+                                        <!-- Condition 2: La date doit être dépassée (vérifié par le convertisseur) -->
+                                        <BindingCondition Binding="{Binding DateArrivee, Converter={StaticResource IsDateOverdueConverter}}" Value="True" />
+                                    </MultiTrigger.Conditions>
+                                    <Setter Property="BorderColor" Value="Red" />
+                                    <Setter Property="BackgroundColor" Value="#1AEC4B4B" /> <!-- Rouge très clair -->
+                                </MultiTrigger>
+                            </Frame.Triggers>
+
+                            
                             <Frame.GestureRecognizers>
                                 <TapGestureRecognizer 
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ColisViewModel}}, Path=GoToDetailsCommand}"
@@ -62,9 +79,19 @@
                             </Frame.GestureRecognizers>
                             <Grid ColumnDefinitions="*, Auto">
                                 <VerticalStackLayout Grid.Column="0" Spacing="5">
-                                    <Label Text="{Binding NumeroReference}" FontSize="Medium" FontAttributes="Bold"/>
-                                    <Label Text="{Binding Designation}" FontSize="Body"/>
-                                    <Label Text="{Binding ClientNomComplet}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
+
+                                    <Label Text="{Binding ClientNomComplet}" FontSize="Medium" FontAttributes="Bold"/>
+                                    <Label>
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding Designation}"/>
+                                                <Span Text=" -> " FontAttributes="Italic" TextColor="Gray"/>
+                                                <Span Text="{Binding DestinationFinale}" FontAttributes="Bold"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                    <Label Text="{Binding NumeroReference}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
+
                                 </VerticalStackLayout>
                                 
                                 <Border Grid.Column="1" 

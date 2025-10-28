@@ -28,6 +28,31 @@ namespace TransitManager.Infrastructure.Services
             _clientService = clientService;
         }
 
+        // --- DÉBUT DE L'AJOUT ---
+        public async Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == colisId);
+
+            if (colis != null)
+            {
+                // Statuts de paiement considérés comme valides pour le calcul
+                var validStatuses = new[] { StatutPaiement.Paye, StatutPaiement.Valide };
+                
+                // Calculer la somme des paiements valides directement depuis la base de données
+                var totalPaye = await context.Paiements
+                    .Where(p => p.ColisId == colisId && p.Actif && validStatuses.Contains(p.Statut))
+                    .SumAsync(p => p.Montant);
+
+                colis.SommePayee = totalPaye;
+                await context.SaveChangesAsync();
+
+                // Très important : notifier le service client que ses propres statistiques doivent être mises à jour
+                await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
+            }
+        }
+        // --- FIN DE L'AJOUT ---
+
         public async Task<Colis> CreateAsync(CreateColisDto colisDto)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();

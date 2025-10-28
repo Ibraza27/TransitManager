@@ -6,20 +6,69 @@
              x:Class="TransitManager.Mobile.Views.AddEditClientPage"
              Title="{Binding PageTitle}">
     <ScrollView>
-        <VerticalStackLayout Spacing="10" Padding="20">
-            <Label Text="Informations Personnelles" FontSize="Large" FontAttributes="Bold"/>
-            <Entry Placeholder="Nom" Text="{Binding Client.Nom}"/>
-            <Entry Placeholder="Prénom" Text="{Binding Client.Prenom}"/>
-            <Entry Placeholder="Téléphone Principal" Text="{Binding Client.TelephonePrincipal}" Keyboard="Telephone"/>
-            <Entry Placeholder="Email" Text="{Binding Client.Email}" Keyboard="Email"/>
+        <VerticalStackLayout Spacing="20" Padding="20">
 
-            <Label Text="Adresse" FontSize="Large" FontAttributes="Bold" Margin="0,20,0,0"/>
-            <Editor Placeholder="Adresse Principale" Text="{Binding Client.AdressePrincipale}" AutoSize="TextChanges"/>
-            <Entry Placeholder="Ville" Text="{Binding Client.Ville}"/>
-            <Entry Placeholder="Code Postal" Text="{Binding Client.CodePostal}" Keyboard="Numeric"/>
-            <Entry Placeholder="Pays" Text="{Binding Client.Pays}"/>
+
+
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Informations Personnelles" FontSize="Large" FontAttributes="Bold"/>
+                    <Label Text="Nom *" FontSize="Caption"/>
+                    <Entry Placeholder="Nom de famille" Text="{Binding Client.Nom}"/>
+
+                    <Label Text="Prénom *" FontSize="Caption"/>
+                    <Entry Placeholder="Prénom" Text="{Binding Client.Prenom}"/>
+
+                    <Label Text="Téléphone Principal *" FontSize="Caption"/>
+                    <Entry Placeholder="Téléphone" Text="{Binding Client.TelephonePrincipal}" Keyboard="Telephone"/>
+                    
+                    <Label Text="Téléphone Secondaire" FontSize="Caption"/>
+                    <Entry Placeholder="Autre téléphone" Text="{Binding Client.TelephoneSecondaire}" Keyboard="Telephone"/>
+                    
+                    <Label Text="Email" FontSize="Caption"/>
+                    <Entry Placeholder="adresse@email.com" Text="{Binding Client.Email}" Keyboard="Email"/>
+
+                    <Label Text="Commentaires" FontSize="Caption"/>
+                    <Editor Placeholder="Notes sur le client..." Text="{Binding Client.Commentaires}" AutoSize="TextChanges" HeightRequest="100"/>
+                </VerticalStackLayout>
+            </Frame>
             
-            <Button Text="Enregistrer" Command="{Binding SaveCommand}" Margin="0,30,0,0"/>
+            <Frame Padding="15" BorderColor="LightGray">
+                 <VerticalStackLayout Spacing="10">
+                    <Label Text="Adresse" FontSize="Large" FontAttributes="Bold"/>
+                    <Label Text="Adresse Principale" FontSize="Caption"/>
+                    <Editor Placeholder="Numéro et nom de rue" Text="{Binding Client.AdressePrincipale}" AutoSize="TextChanges" HeightRequest="100"/>
+                    
+                    <Label Text="Ville" FontSize="Caption"/>
+                    <Entry Placeholder="Ville" Text="{Binding Client.Ville}"/>
+                    
+                    <Label Text="Code Postal" FontSize="Caption"/>
+                    <Entry Placeholder="Code Postal" Text="{Binding Client.CodePostal}" Keyboard="Numeric"/>
+                    
+                    <Label Text="Pays" FontSize="Caption"/>
+                    <Entry Placeholder="Pays" Text="{Binding Client.Pays}"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Padding="15" BorderColor="LightGray">
+                 <VerticalStackLayout Spacing="10">
+                    <Label Text="Statut &amp; Paramètres" FontSize="Large" FontAttributes="Bold"/>
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="Client Actif" VerticalOptions="Center"/>
+                        <Switch IsToggled="{Binding Client.Actif}"/>
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="Client Fidèle" VerticalOptions="Center"/>
+                        <Switch IsToggled="{Binding Client.EstClientFidele}"/>
+                    </HorizontalStackLayout>
+                    <Label Text="Pourcentage de Remise (%)" FontSize="Caption"/>
+                    <Entry Placeholder="Ex: 5 pour 5%" Text="{Binding Client.PourcentageRemise}" Keyboard="Numeric"/>
+                 </VerticalStackLayout>
+            </Frame>
+            
+            <Button Text="Enregistrer" Command="{Binding SaveCommand}" Margin="0,10,0,0"/>
+            
+
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

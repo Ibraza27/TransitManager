@@ -6,13 +6,14 @@ namespace TransitManager.Mobile.Services
 {
     public interface ITransitApi
     {
+        // --- DÉBUT DE LA MODIFICATION ---
         [Get("/api/clients")]
-        Task<IEnumerable<ClientListItemDto>> GetClientsAsync();
+        Task<IEnumerable<Client>> GetClientsAsync(); // On renvoie l'entité complète
+        // --- FIN DE LA MODIFICATION ---
 
         [Get("/api/clients/{id}")]
         Task<Client> GetClientByIdAsync(Guid id);
         
-        // --- AJOUTS ---
         [Post("/api/clients")]
         Task<Client> CreateClientAsync([Body] Client client);
 
@@ -27,7 +28,6 @@ namespace TransitManager.Mobile.Services
 		[Get("/api/colis")]
 		Task<IEnumerable<ColisListItemDto>> GetColisAsync();
 
-		// --- AJOUTS ---
 		[Get("/api/colis/{id}")]
 		Task<Colis> GetColisByIdAsync(Guid id);
 
@@ -57,6 +57,9 @@ namespace TransitManager.Mobile.Services
 		
 		[Get("/api/paiements/vehicule/{vehiculeId}")]
 		Task<IEnumerable<Paiement>> GetPaiementsForVehiculeAsync(Guid vehiculeId);
+
+        [Get("/api/paiements/colis/{colisId}")]
+        Task<IEnumerable<Paiement>> GetPaiementsForColisAsync(Guid colisId);
 
 		[Post("/api/paiements")]
 		Task<Paiement> CreatePaiementAsync([Body] Paiement paiement);

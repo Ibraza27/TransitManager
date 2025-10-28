@@ -20,17 +20,14 @@ namespace TransitManager.API.Controllers
 
         // --- GET: api/clients ---
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ClientListItemDto>>> GetClients()
+        public async Task<ActionResult<IEnumerable<Client>>> GetClients()
         {
             try
             {
+                // --- DÉBUT DE LA MODIFICATION ---
                 var clients = await _clientService.GetActiveClientsAsync();
-                var clientDtos = clients.Select(c => new ClientListItemDto
-                {
-                    Id = c.Id, CodeClient = c.CodeClient, NomComplet = c.NomComplet, 
-                    TelephonePrincipal = c.TelephonePrincipal, Email = c.Email
-                });
-                return Ok(clientDtos);
+                return Ok(clients); // On renvoie la liste complète directement
+                // --- FIN DE LA MODIFICATION ---
             }
             catch (Exception ex)
             {

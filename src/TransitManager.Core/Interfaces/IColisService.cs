@@ -28,5 +28,9 @@ namespace TransitManager.Core.Interfaces
         Task<bool> MarkAsDeliveredAsync(Guid colisId, string signature);
         Task<IEnumerable<Colis>> SearchAsync(string searchTerm);
         Task<Dictionary<StatutColis, int>> GetStatisticsByStatusAsync();
+
+        // --- DÉBUT DE L'AJOUT ---
+        Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId);
+        // --- FIN DE L'AJOUT ---
     }
 }

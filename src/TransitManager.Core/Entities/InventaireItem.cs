@@ -9,7 +9,9 @@ namespace TransitManager.Core.Entities
         private string _designation = string.Empty;
         private int _quantite = 1;
         private decimal _valeur;
-		private DateTime _date = DateTime.Today; // AJOUTÉ
+        // --- DÉBUT DE LA MODIFICATION ---
+		private DateTime _date = DateTime.UtcNow; // On utilise UtcNow au lieu de Today
+        // --- FIN DE LA MODIFICATION ---
 
         public string Designation
         {

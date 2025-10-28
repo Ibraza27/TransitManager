@@ -123,6 +123,8 @@
             <!-- BOUTONS D'ACTION -->
             <HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
                 <Button Text="Modifier" Command="{Binding EditCommand}"/>
+				<Button Text="Inventaire" Command="{Binding GoToInventaireCommand}"/>
+				<Button Text="Paiements" Command="{Binding GoToPaiementsCommand}"/>
                 <Button Text="Supprimer" Command="{Binding DeleteCommand}" BackgroundColor="Red"/>
 				<Button Text="Actualiser" Command="{Binding RefreshCommand}"/>
             </HorizontalStackLayout>

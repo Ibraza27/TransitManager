@@ -59,7 +59,8 @@
             <Frame Padding="15" BorderColor="LightGray">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Statut &amp; Statistiques" FontSize="Large" FontAttributes="Bold" />
-                     <Grid ColumnDefinitions="Auto, *" RowDefinitions="*,*,*,*,*" RowSpacing="8">
+
+                     <Grid ColumnDefinitions="Auto, *" RowDefinitions="*,*,*,*,*,*,*,*" RowSpacing="8">
                         <Label Grid.Row="0" Grid.Column="0" Text="Statut :" FontAttributes="Bold"/>
                         <Label Grid.Row="0" Grid.Column="1" Text="{Binding Client.Actif, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Actif|Inactif'}"/>
                         
@@ -72,17 +73,28 @@
                         <Label Grid.Row="3" Grid.Column="0" Text="Envois (Cont.) :" FontAttributes="Bold"/>
                         <Label Grid.Row="3" Grid.Column="1" Text="{Binding Client.NombreConteneursUniques}"/>
                         
-                        <Label Grid.Row="4" Grid.Column="0" Text="Impayés :" FontAttributes="Bold"/>
-                        <Label Grid.Row="4" Grid.Column="1" Text="{Binding Client.Impayes, StringFormat='{0:C}'}" TextColor="Red" FontAttributes="Bold"/>
+                        <Label Grid.Row="4" Grid.Column="0" Text="Impayés Colis :" FontAttributes="Bold"/>
+                        <Label Grid.Row="4" Grid.Column="1" Text="{Binding ImpayesColis, StringFormat='{0:C}'}" TextColor="Red"/>
+
+                        <Label Grid.Row="5" Grid.Column="0" Text="Impayés Véhicules :" FontAttributes="Bold"/>
+                        <Label Grid.Row="5" Grid.Column="1" Text="{Binding ImpayesVehicules, StringFormat='{0:C}'}" TextColor="Red"/>
+
+                        <BoxView Grid.Row="6" Grid.ColumnSpan="2" HeightRequest="1" Color="LightGray" Margin="0,5"/>
+                        
+                        <Label Grid.Row="7" Grid.Column="0" Text="Total Impayés :" FontAttributes="Bold"/>
+                        <Label Grid.Row="7" Grid.Column="1" Text="{Binding Client.Impayes, StringFormat='{0:C}'}" TextColor="Red" FontAttributes="Bold"/>
                     </Grid>
+
                 </VerticalStackLayout>
             </Frame>
 
 			<HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
 				<Button Text="Modifier" Command="{Binding EditCommand}"/>
+
+                <Button Text="Actualiser" Command="{Binding LoadClientDetailsCommand}"/>
+
 				<Button Text="Supprimer" Command="{Binding DeleteCommand}" BackgroundColor="Red"/>
 			</HorizontalStackLayout>
-
 
         </VerticalStackLayout>
     </ScrollView>

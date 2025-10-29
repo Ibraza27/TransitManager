@@ -17,11 +17,13 @@ namespace TransitManager.Mobile.ViewModels
         [ObservableProperty] private string _searchText = string.Empty;
 
         public ObservableCollection<string> StatutsList { get; } = new();
-        public ObservableCollection<ClientListItemDto> ClientsList { get; } = new();
+        // --- DÉBUT DE LA MODIFICATION 1 ---
+        public ObservableCollection<Client> ClientsList { get; } = new();
+        [ObservableProperty] private Client? _selectedClient;
+        // --- FIN DE LA MODIFICATION 1 ---
         public ObservableCollection<Conteneur> ConteneursList { get; } = new();
 
         [ObservableProperty] private string _selectedStatut = "Tous";
-        [ObservableProperty] private ClientListItemDto? _selectedClient;
         [ObservableProperty] private Conteneur? _selectedConteneur;
         [ObservableProperty] private DateTime? _selectedDate;
 
@@ -88,7 +90,6 @@ namespace TransitManager.Mobile.ViewModels
                         c.NumeroReference.ToLower().Contains(term) ||
                         c.Designation.ToLower().Contains(term) ||
                         c.ClientNomComplet.ToLower().Contains(term) ||
-                        // --- AJOUTER CETTE LIGNE ---
                         c.AllBarcodes.ToLower().Contains(term) 
                     );
                 }
@@ -124,7 +125,9 @@ namespace TransitManager.Mobile.ViewModels
         
         partial void OnSearchTextChanged(string value) => ApplyFilters();
         partial void OnSelectedStatutChanged(string value) => ApplyFilters();
-        partial void OnSelectedClientChanged(ClientListItemDto? value) => ApplyFilters();
+        // --- DÉBUT DE LA MODIFICATION 2 ---
+        partial void OnSelectedClientChanged(Client? value) => ApplyFilters();
+        // --- FIN DE LA MODIFICATION 2 ---
         partial void OnSelectedConteneurChanged(Conteneur? value) => ApplyFilters();
         partial void OnSelectedDateChanged(DateTime? value) => ApplyFilters();
 

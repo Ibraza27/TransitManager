@@ -7,6 +7,7 @@ using TransitManager.WPF.Helpers;
 using CommunityToolkit.Mvvm.Messaging;
 using TransitManager.Core.Messages;
 using TransitManager.Core.Exceptions;
+using System.Linq; // <-- ASSUREZ-VOUS QUE CE USING EST PRÉSENT
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -18,9 +19,12 @@ namespace TransitManager.WPF.ViewModels
 		private readonly IMessenger _messenger;
 		public Action? CloseAction { get; set; }
 		private bool _isModal = false;
-		public decimal ImpayesColis => Client?.Colis.Sum(c => c.RestantAPayer) ?? 0;
-		public decimal ImpayesVehicules => Client?.Vehicules.Sum(v => v.RestantAPayer) ?? 0;
-		
+
+        // --- DÉBUT DE LA MODIFICATION 1 ---
+		public decimal ImpayesColis => Client?.Colis?.Where(c => c.Actif).Sum(c => c.RestantAPayer) ?? 0;
+		public decimal ImpayesVehicules => Client?.Vehicules?.Where(v => v.Actif).Sum(v => v.RestantAPayer) ?? 0;
+		// --- FIN DE LA MODIFICATION 1 ---
+
 		public void SetModalMode()
 		{
 			_isModal = true;
@@ -30,7 +34,17 @@ namespace TransitManager.WPF.ViewModels
         public Client? Client
         {
             get => _client;
-            set => SetProperty(ref _client, value);
+            // --- DÉBUT DE LA MODIFICATION 2 ---
+            set 
+            {
+                if (SetProperty(ref _client, value))
+                {
+                    // Notifier explicitement que les propriétés calculées doivent être mises à jour
+                    OnPropertyChanged(nameof(ImpayesColis));
+                    OnPropertyChanged(nameof(ImpayesVehicules));
+                }
+            }
+            // --- FIN DE LA MODIFICATION 2 ---
         }
 
         private bool _isNewClient;
@@ -87,7 +101,6 @@ namespace TransitManager.WPF.ViewModels
 						_navigationService.GoBack();
 					}
 				}
-				// ======================= DÉBUT DE LA MODIFICATION =======================
 				catch (ConcurrencyException cex)
 				{
 					var refresh = await _dialogService.ShowConfirmationAsync(
@@ -96,11 +109,9 @@ namespace TransitManager.WPF.ViewModels
 
 					if (refresh && Client != null)
 					{
-						// Recharge les données depuis la BDD pour écraser les changements locaux.
 						await InitializeAsync(Client.Id);
 					}
 				}
-				// ======================== FIN DE LA MODIFICATION ========================
 				catch (Exception ex)
 				{
 					await _dialogService.ShowErrorAsync("Erreur", $"Une erreur est survenue : {ex.Message}");
@@ -133,7 +144,6 @@ namespace TransitManager.WPF.ViewModels
 
 		public async Task InitializeAsync(Guid clientId)
 		{
-			// On garde ExecuteBusyActionAsync pour l'indicateur de chargement
 			await ExecuteBusyActionAsync(async () =>
 			{
 				Client = await _clientService.GetByIdAsync(clientId); 
@@ -142,16 +152,10 @@ namespace TransitManager.WPF.ViewModels
 					Title = $"Modifier - {Client.NomComplet}";
 					_isNewClient = false;
 					
-					// On notifie l'interface que les propriétés calculées sont à jour
-					OnPropertyChanged(nameof(ImpayesColis));
-					OnPropertyChanged(nameof(ImpayesVehicules));
-
+					// La notification est maintenant gérée par le setter de la propriété Client
 					Client.PropertyChanged += (s, e) => SaveCommand.NotifyCanExecuteChanged();
 				}
 			});
-			// On notifie une nouvelle fois après la fin de IsBusy pour être sûr
-			OnPropertyChanged(nameof(ImpayesColis));
-			OnPropertyChanged(nameof(ImpayesVehicules));
 		}
     }
 }

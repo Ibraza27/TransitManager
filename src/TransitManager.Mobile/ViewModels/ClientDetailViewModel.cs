@@ -1,12 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Linq; 
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Mobile.Services;
 
 namespace TransitManager.Mobile.ViewModels
 {
-    // La propriété qui reçoit le paramètre de l'URL est maintenant une string
     [QueryProperty(nameof(ClientIdStr), "clientId")]
     public partial class ClientDetailViewModel : ObservableObject
     {
@@ -14,29 +14,41 @@ namespace TransitManager.Mobile.ViewModels
 
         [ObservableProperty]
         private bool _isBusy;
-
-        // On garde une propriété Guid pour un usage interne, mais elle n'est pas liée à la navigation
+        
         private Guid _clientId;
 
-        [ObservableProperty]
+        // --- DÉBUT DE LA MODIFICATION 1 ---
         private Client? _client;
+        public Client? Client
+        {
+            get => _client;
+            set 
+            {
+                if (SetProperty(ref _client, value))
+                {
+                    // Notifier explicitement que les propriétés calculées doivent être mises à jour
+                    OnPropertyChanged(nameof(ImpayesColis));
+                    OnPropertyChanged(nameof(ImpayesVehicules));
+                }
+            }
+        }
+        // --- FIN DE LA MODIFICATION 1 ---
 
-        // C'est cette propriété de type string qui va recevoir la valeur de l'URL
         [ObservableProperty]
         private string _clientIdStr = string.Empty;
+
+        public decimal ImpayesColis => Client?.Colis?.Where(c => c.Actif).Sum(c => c.RestantAPayer) ?? 0m;
+        public decimal ImpayesVehicules => Client?.Vehicules?.Where(v => v.Actif).Sum(v => v.RestantAPayer) ?? 0m;
 
         public ClientDetailViewModel(ITransitApi transitApi)
         {
             _transitApi = transitApi;
         }
-
-        // La méthode de notification est maintenant liée au changement de la string
+        
         async partial void OnClientIdStrChanged(string value)
         {
-            // On convertit la chaîne reçue en Guid
             if (Guid.TryParse(value, out _clientId))
             {
-                // Et on lance le chargement des données
                 await LoadClientDetailsAsync();
             }
         }
@@ -49,8 +61,9 @@ namespace TransitManager.Mobile.ViewModels
 
             try
             {
-                // On utilise notre variable _clientId (qui est bien un Guid) pour appeler l'API
                 Client = await _transitApi.GetClientByIdAsync(_clientId);
+
+                // La notification est maintenant gérée par le setter de la propriété Client
             }
             catch (System.Exception ex)
             {
@@ -65,7 +78,6 @@ namespace TransitManager.Mobile.ViewModels
 		async Task EditAsync()
 		{
 			if (Client == null) return;
-			// Naviguer vers la page d'édition avec l'ID du client
 			await Shell.Current.GoToAsync($"AddEditClientPage?clientId={Client.Id}");
 		}
 
@@ -78,7 +90,7 @@ namespace TransitManager.Mobile.ViewModels
 			if (confirm)
 			{
 				await _transitApi.DeleteClientAsync(Client.Id);
-				await Shell.Current.GoToAsync(".."); // Revenir à la liste
+				await Shell.Current.GoToAsync(".."); 
 			}
 		}
     }

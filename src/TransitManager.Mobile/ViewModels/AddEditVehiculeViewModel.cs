@@ -24,27 +24,26 @@ namespace TransitManager.Mobile.ViewModels
         [ObservableProperty]
         private string _pageTitle = string.Empty;
 
+        // --- DÉBUT DE LA MODIFICATION 1 ---
         [ObservableProperty]
-        private ClientListItemDto? _selectedClient;
+        private Client? _selectedClient;
         
         [ObservableProperty]
         private bool _isBusy;
 
-        // --- CORRECTION 1 : RÉINTRODUIRE LA PROPRIÉTÉ ---
         [ObservableProperty]
         private bool _destinataireIdentiqueAuClient;
 
-        public ObservableCollection<ClientListItemDto> Clients { get; } = new();
+        public ObservableCollection<Client> Clients { get; } = new();
+        // --- FIN DE LA MODIFICATION 1 ---
 
         private bool _isInitialized = false;
 		
-        // --- AJOUTER CETTE SECTION ---
         public List<string> VehiculeTypes { get; } = 
             Enum.GetNames(typeof(TypeVehicule)).ToList();
 
         [ObservableProperty]
-        private string _selectedVehiculeType;
-        // --- FIN DE L'AJOUT ---
+        private string _selectedVehiculeType = string.Empty; // Initialiser avec une chaîne vide
 
         public AddEditVehiculeViewModel(ITransitApi transitApi)
         {
@@ -63,7 +62,7 @@ namespace TransitManager.Mobile.ViewModels
                 {
                     PageTitle = "Nouveau Véhicule";
                     Vehicule = new Vehicule();
-                    DestinataireIdentiqueAuClient = true; // Par défaut, on coche la case pour un nouveau véhicule
+                    DestinataireIdentiqueAuClient = true; 
                 }
                 else
                 {
@@ -74,7 +73,6 @@ namespace TransitManager.Mobile.ViewModels
                     {
                         SelectedClient = Clients.FirstOrDefault(c => c.Id == Vehicule.ClientId);
 						SelectedVehiculeType = Vehicule.Type.ToString();
-                        // Logique pour pré-cocher la case si les infos correspondent
                         DestinataireIdentiqueAuClient = SelectedClient != null &&
                                                         Vehicule.Destinataire == SelectedClient.NomComplet &&
                                                         Vehicule.TelephoneDestinataire == SelectedClient.TelephonePrincipal;
@@ -135,7 +133,9 @@ namespace TransitManager.Mobile.ViewModels
             }
         }
         
-        partial void OnSelectedClientChanged(ClientListItemDto? value)
+        // --- DÉBUT DE LA MODIFICATION 2 ---
+        partial void OnSelectedClientChanged(Client? value)
+        // --- FIN DE LA MODIFICATION 2 ---
         {
             if (DestinataireIdentiqueAuClient)
             {
@@ -155,7 +155,6 @@ namespace TransitManager.Mobile.ViewModels
             if (DestinataireIdentiqueAuClient && SelectedClient != null)
             {
                 Vehicule.Destinataire = SelectedClient.NomComplet;
-                // Le DTO n'a que le téléphone principal, on l'utilise
                 Vehicule.TelephoneDestinataire = SelectedClient.TelephonePrincipal;
             }
         }

@@ -18,17 +18,21 @@ namespace TransitManager.Mobile.ViewModels
         [ObservableProperty] private Colis? _colis;
         [ObservableProperty] private string? _colisId;
         [ObservableProperty] private string _pageTitle = string.Empty;
-        [ObservableProperty] private ClientListItemDto? _selectedClient;
+
+        // --- DÉBUT DE LA MODIFICATION 1 ---
+        [ObservableProperty] private Client? _selectedClient;
+        public ObservableCollection<Client> Clients { get; } = new();
+        // --- FIN DE LA MODIFICATION 1 ---
+
         [ObservableProperty] private bool _isBusy;
         [ObservableProperty] private bool _destinataireIdentiqueAuClient;
 		
 		[ObservableProperty]
-		[NotifyPropertyChangedFor(nameof(PrixEstime))] // Notifie que PrixEstime doit être recalculé
+		[NotifyPropertyChangedFor(nameof(PrixEstime))] 
 		private decimal _prixMetreCube;
 
 		public decimal PrixEstime => (Colis?.Volume ?? 0) * PrixMetreCube;
 
-        public ObservableCollection<ClientListItemDto> Clients { get; } = new();
         public ObservableCollection<Barcode> Barcodes { get; } = new();
         
         [ObservableProperty] private string _newBarcodeText = string.Empty;
@@ -85,7 +89,9 @@ namespace TransitManager.Mobile.ViewModels
             foreach (var client in clients) Clients.Add(client);
         }
         
-        partial void OnSelectedClientChanged(ClientListItemDto? value)
+        // --- DÉBUT DE LA MODIFICATION 2 ---
+        partial void OnSelectedClientChanged(Client? value)
+        // --- FIN DE LA MODIFICATION 2 ---
         {
             if (DestinataireIdentiqueAuClient) UpdateDestinataire();
         }
@@ -149,17 +155,14 @@ namespace TransitManager.Mobile.ViewModels
 
 			try
 			{
-				if (string.IsNullOrEmpty(ColisId)) // Cas de la création
+				if (string.IsNullOrEmpty(ColisId)) 
 				{
 					var dto = new CreateColisDto
 					{
-						// Propriétés principales
 						ClientId = SelectedClient.Id,
 						Designation = Colis.Designation,
 						DestinationFinale = Colis.DestinationFinale,
 						Barcodes = Barcodes.Select(b => b.Value).ToList(),
-						
-						// Détails et options
 						NombrePieces = Colis.NombrePieces,
 						Volume = Colis.Volume,
 						ValeurDeclaree = Colis.ValeurDeclaree,
@@ -176,18 +179,15 @@ namespace TransitManager.Mobile.ViewModels
 					};
 					await _transitApi.CreateColisAsync(dto);
 				}
-				else // Cas de la mise à jour
+				else 
 				{
 					var dto = new UpdateColisDto
 					{
                         Id = Colis.Id,
-						// Propriétés principales
 						ClientId = SelectedClient.Id,
 						Designation = Colis.Designation,
 						DestinationFinale = Colis.DestinationFinale,
 						Barcodes = Barcodes.Select(b => b.Value).ToList(),
-						
-						// Détails et options
 						NombrePieces = Colis.NombrePieces,
 						Volume = Colis.Volume,
 						ValeurDeclaree = Colis.ValeurDeclaree,
@@ -229,7 +229,6 @@ namespace TransitManager.Mobile.ViewModels
 			}
 		}
 		
-		// Se déclenche quand la propriété Colis.Volume change
 		partial void OnColisChanged(Colis? value)
 		{
 			if (value != null)

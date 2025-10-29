@@ -29,13 +29,18 @@ namespace TransitManager.Infrastructure.Services
 		public async Task<Client?> GetByIdAsync(Guid id)
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
+			// --- DÉBUT DE LA CORRECTION DÉFINITIVE ---
 			return await context.Clients
+				.AsSplitQuery() // Optionnel mais recommandé pour la performance avec plusieurs `Include`
 				.IgnoreQueryFilters()
 				.Include(c => c.Colis)
-				.Include(c => c.Vehicules) // <-- LIGNE AJOUTÉE
-				.Include(c => c.Paiements)
+					.ThenInclude(colis => colis.Paiements) // Charger les paiements de chaque colis
+				.Include(c => c.Vehicules)
+					.ThenInclude(vehicule => vehicule.Paiements) // Charger les paiements de chaque véhicule
+				.Include(c => c.Paiements) // Garder celui-ci pour les paiements directs au client
 				.AsNoTracking()
 				.FirstOrDefaultAsync(c => c.Id == id);
+            // --- FIN DE LA CORRECTION DÉFINITIVE ---
 		}
 
         public async Task<Client?> GetByCodeAsync(string code)
@@ -52,7 +57,6 @@ namespace TransitManager.Infrastructure.Services
         public async Task<IEnumerable<Client>> GetAllAsync()
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            // On utilise IgnoreQueryFilters() pour récupérer VRAIMENT tous les clients.
             return await context.Clients
                 .IgnoreQueryFilters() 
                 .AsNoTracking()
@@ -129,12 +133,11 @@ namespace TransitManager.Infrastructure.Services
 			{
 				throw new InvalidOperationException("Un autre client avec cet email ou ce téléphone existe déjà.");
 			}
-
-			// ÉTAPE A : Charger l'entité originale depuis la BDD. C'est elle qui est suivie par EF Core.
+			
 			var clientInDb = await context.Clients
-										  .IgnoreQueryFilters() // Important pour pouvoir modifier un client inactif
+										  .IgnoreQueryFilters() 
 										  .Include(c => c.Colis)
-										  .Include(c => c.Vehicules) // On inclut les véhicules
+										  .Include(c => c.Vehicules) 
 										  .FirstOrDefaultAsync(c => c.Id == clientFromUI.Id);
 
 			if (clientInDb == null)
@@ -144,14 +147,10 @@ namespace TransitManager.Infrastructure.Services
 
 			context.Entry(clientInDb).CurrentValues.SetValues(clientFromUI);
 			
-			// ======================= DÉBUT DE LA MODIFICATION =======================
-			// On attache la RowVersion reçue de l'UI pour la vérification de concurrence
 			context.Entry(clientInDb).Property("RowVersion").OriginalValue = clientFromUI.RowVersion;
-			// ======================== FIN DE LA MODIFICATION ========================
 
 			await UpdateClientStatisticsAsync(clientInDb, context);
 
-			// ======================= DÉBUT DE LA MODIFICATION =======================
 			try
 			{
 				await context.SaveChangesAsync();
@@ -159,23 +158,18 @@ namespace TransitManager.Infrastructure.Services
 			}
 			catch (DbUpdateConcurrencyException ex)
 			{
-				// Un conflit de concurrence s'est produit !
 				var entry = ex.Entries.Single();
 				var databaseValues = await entry.GetDatabaseValuesAsync();
 
 				if (databaseValues == null)
 				{
-					// L'entité a été supprimée par un autre utilisateur.
 					throw new ConcurrencyException("Le client a été supprimé par un autre utilisateur. Impossible de sauvegarder.");
 				}
 				else
 				{
-					// L'entité a été modifiée. On peut recharger les valeurs de la BDD pour les comparer si besoin.
-					// Pour l'instant, on envoie un message générique.
 					throw new ConcurrencyException("Ce client a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
 				}
 			}
-			// ======================== FIN DE LA MODIFICATION ========================
 			
 			return clientInDb;
 		}
@@ -284,24 +278,14 @@ namespace TransitManager.Infrastructure.Services
 		
 		private async Task UpdateClientStatisticsAsync(Client client, TransitContext context)
 		{
-			// Charger explicitement les colis et les véhicules si ce n'est pas déjà fait
 			await context.Entry(client).Collection(c => c.Colis).LoadAsync();
 			await context.Entry(client).Collection(c => c.Vehicules).LoadAsync();
 
-			// Calcul du total dû
-			decimal totalDuColis = client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal);
-			decimal totalDuVehicules = client.Vehicules.Where(v => v.Actif).Sum(v => v.PrixTotal);
-			decimal totalDu = totalDuColis + totalDuVehicules;
+			decimal impayesColis = client.Colis.Where(c => c.Actif).Sum(c => c.RestantAPayer);
+			decimal impayesVehicules = client.Vehicules.Where(v => v.Actif).Sum(v => v.RestantAPayer);
 
-			// Calcul du total payé
-			decimal totalPayeColis = client.Colis.Where(c => c.Actif).Sum(c => c.SommePayee);
-			decimal totalPayeVehicules = client.Vehicules.Where(v => v.Actif).Sum(v => v.SommePayee);
-			decimal totalPaye = totalPayeColis + totalPayeVehicules;
+			client.Impayes = impayesColis + impayesVehicules;
 
-			// Mise à jour de la propriété Impayes
-			client.Impayes = totalDu - totalPaye;
-
-			// Calcul du nombre de conteneurs uniques
 			var conteneursColis = client.Colis.Where(c => c.ConteneurId.HasValue).Select(c => c.ConteneurId);
 			var conteneursVehicules = client.Vehicules.Where(v => v.ConteneurId.HasValue).Select(v => v.ConteneurId);
 			client.NombreConteneursUniques = conteneursColis.Union(conteneursVehicules).Distinct().Count();
@@ -311,18 +295,12 @@ namespace TransitManager.Infrastructure.Services
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
 			
-			// On utilise FindAsync car on va modifier le client, donc on a besoin qu'il soit suivi par le contexte.
 			var client = await context.Clients.FindAsync(clientId);
 			
 			if (client != null)
 			{
-				// On appelle la méthode de calcul que nous avons déjà créée
 				await UpdateClientStatisticsAsync(client, context);
-				
-				// On sauvegarde les nouvelles statistiques dans la base de données
 				await context.SaveChangesAsync();
-				
-
 				ClientStatisticsUpdated?.Invoke(clientId);
 			}
 		}
@@ -335,9 +313,7 @@ namespace TransitManager.Infrastructure.Services
             for (int i = months - 1; i >= 0; i--)
             {
                 var date = DateTime.UtcNow.AddMonths(-i);
-                // ======================= DÉBUT DE LA CORRECTION =======================
                 var firstDayOfMonth = new DateTime(date.Year, date.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-                // ======================== FIN DE LA CORRECTION ========================
                 var firstDayOfNextMonth = firstDayOfMonth.AddMonths(1);
 
                 var count = await context.Clients

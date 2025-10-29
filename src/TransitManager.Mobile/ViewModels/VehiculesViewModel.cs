@@ -17,11 +17,13 @@ namespace TransitManager.Mobile.ViewModels
         [ObservableProperty] private string _searchText = string.Empty;
 
         public ObservableCollection<string> StatutsList { get; } = new();
-        public ObservableCollection<ClientListItemDto> ClientsList { get; } = new();
+        // --- DÉBUT DE LA MODIFICATION 1 ---
+        public ObservableCollection<Client> ClientsList { get; } = new();
+        [ObservableProperty] private Client? _selectedClient;
+        // --- FIN DE LA MODIFICATION 1 ---
         public ObservableCollection<Conteneur> ConteneursList { get; } = new();
 
         [ObservableProperty] private string _selectedStatut = "Tous";
-        [ObservableProperty] private ClientListItemDto? _selectedClient;
         [ObservableProperty] private Conteneur? _selectedConteneur;
         [ObservableProperty] private DateTime? _selectedDate;
 
@@ -79,7 +81,6 @@ namespace TransitManager.Mobile.ViewModels
         {
             IEnumerable<VehiculeListItemDto> filtered = _allVehicules;
 
-            // Filtre par recherche texte
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 var searchTerms = SearchText.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -94,8 +95,7 @@ namespace TransitManager.Mobile.ViewModels
                 }
             }
 
-			// Autres filtres
-            if (SelectedClient != null)
+			if (SelectedClient != null)
             {
                 filtered = filtered.Where(v => v.ClientNomComplet == SelectedClient.NomComplet);
             }
@@ -109,7 +109,6 @@ namespace TransitManager.Mobile.ViewModels
                 filtered = filtered.Where(v => v.ConteneurNumeroDossier == SelectedConteneur.NumeroDossier);
             }
             
-            // --- CORRECTION 1 : ACTIVER LE FILTRE PAR DATE ---
             if (SelectedDate.HasValue)
             {
                 filtered = filtered.Where(v => v.DateCreation.Date == SelectedDate.Value.Date);
@@ -125,17 +124,17 @@ namespace TransitManager.Mobile.ViewModels
             SearchText = string.Empty;
             SelectedStatut = "Tous";
             SelectedClient = null;
-            // --- CORRECTION 2 : RÉINITIALISER LES NOUVEAUX FILTRES ---
             SelectedConteneur = null;
             SelectedDate = null; 
             
-            ApplyFilters(); // Appeler ApplyFilters une seule fois à la fin
+            ApplyFilters(); 
         }
 
-        // --- Méthodes partielles pour la réactivité ---
         partial void OnSearchTextChanged(string value) => ApplyFilters();
         partial void OnSelectedStatutChanged(string value) => ApplyFilters();
-        partial void OnSelectedClientChanged(ClientListItemDto? value) => ApplyFilters();
+        // --- DÉBUT DE LA MODIFICATION 2 ---
+        partial void OnSelectedClientChanged(Client? value) => ApplyFilters();
+        // --- FIN DE LA MODIFICATION 2 ---
         partial void OnSelectedConteneurChanged(Conteneur? value) => ApplyFilters();
         partial void OnSelectedDateChanged(DateTime? value) => ApplyFilters();
 

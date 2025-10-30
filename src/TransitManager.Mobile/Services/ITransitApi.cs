@@ -6,10 +6,8 @@ namespace TransitManager.Mobile.Services
 {
     public interface ITransitApi
     {
-        // --- DÉBUT DE LA MODIFICATION ---
         [Get("/api/clients")]
-        Task<IEnumerable<Client>> GetClientsAsync(); // On renvoie l'entité complète
-        // --- FIN DE LA MODIFICATION ---
+        Task<IEnumerable<Client>> GetClientsAsync(); 
 
         [Get("/api/clients/{id}")]
         Task<Client> GetClientByIdAsync(Guid id);
@@ -46,6 +44,17 @@ namespace TransitManager.Mobile.Services
 		[Get("/api/conteneurs")]
 		Task<IEnumerable<Conteneur>> GetConteneursAsync();
 		
+        // --- DÉBUT DES AJOUTS ---
+        [Get("/api/conteneurs/{id}")]
+        Task<Conteneur> GetConteneurByIdAsync(Guid id);
+        
+        [Post("/api/conteneurs")]
+        Task<Conteneur> CreateConteneurAsync([Body] Conteneur conteneur);
+
+        [Put("/api/conteneurs/{id}")]
+        Task UpdateConteneurAsync(Guid id, [Body] Conteneur conteneur);
+        // --- FIN DES AJOUTS ---
+
 		[Get("/api/vehicules/{id}")]
 		Task<Vehicule> GetVehiculeByIdAsync(Guid id);
 		

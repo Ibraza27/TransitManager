@@ -7,7 +7,6 @@
     Shell.FlyoutBehavior="Disabled"
     Title="TransitManager.Mobile">
 
-    <!-- L'application s'ouvrira sur cet onglet -->
     <TabBar>
         <ShellContent
             Title="Clients"
@@ -15,7 +14,6 @@
             ContentTemplate="{DataTemplate local:ClientsPage}"
             Route="ClientsPage" />
 
-        <!-- AJOUTER CETTE SECTION -->
         <ShellContent
             Title="Colis"
             Icon="box_icon.png"
@@ -27,6 +25,14 @@
             Icon="car_icon.png"
             ContentTemplate="{DataTemplate local:VehiculesPage}"
             Route="VehiculesPage" />
+            
+
+        <ShellContent
+            Title="Conteneurs"
+            Icon="container_icon.png" 
+            ContentTemplate="{DataTemplate local:ConteneurPage}"
+            Route="ConteneurPage" />
+
     </TabBar>
 
 </Shell>

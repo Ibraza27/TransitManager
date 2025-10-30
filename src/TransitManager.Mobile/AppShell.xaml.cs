@@ -1,4 +1,4 @@
-﻿using TransitManager.Mobile.Views; // N'oubliez pas ce using
+﻿using TransitManager.Mobile.Views;
 
 namespace TransitManager.Mobile
 {
@@ -8,7 +8,6 @@ namespace TransitManager.Mobile
         {
             InitializeComponent();
 
-            // --- AJOUTER CETTE LIGNE ---
             Routing.RegisterRoute(nameof(ClientDetailPage), typeof(ClientDetailPage));
 			Routing.RegisterRoute(nameof(AddEditClientPage), typeof(AddEditClientPage));
 			Routing.RegisterRoute(nameof(ColisDetailPage), typeof(ColisDetailPage));
@@ -18,10 +17,16 @@ namespace TransitManager.Mobile
 			Routing.RegisterRoute(nameof(EtatDesLieuxPage), typeof(EtatDesLieuxPage));
 			Routing.RegisterRoute(nameof(EditEtatDesLieuxPage), typeof(EditEtatDesLieuxPage));
 			Routing.RegisterRoute(nameof(PaiementVehiculePage), typeof(PaiementVehiculePage));
-			Routing.RegisterRoute(nameof(PaiementColisPage), typeof(PaiementColisPage));
+            Routing.RegisterRoute(nameof(PaiementColisPage), typeof(PaiementColisPage));
 			Routing.RegisterRoute(nameof(AddEditPaiementPage), typeof(AddEditPaiementPage));
-			Routing.RegisterRoute(nameof(InventairePage), typeof(InventairePage));
-			
+            Routing.RegisterRoute(nameof(InventairePage), typeof(InventairePage));
+
+            // --- DÉBUT DE L'AJOUT ---
+            Routing.RegisterRoute(nameof(ConteneurDetailPage), typeof(ConteneurDetailPage));
+            Routing.RegisterRoute(nameof(AddEditConteneurPage), typeof(AddEditConteneurPage));
+            Routing.RegisterRoute(nameof(AddColisToConteneurPage), typeof(AddColisToConteneurPage));
+            Routing.RegisterRoute(nameof(AddVehiculeToConteneurPage), typeof(AddVehiculeToConteneurPage));
+            // --- FIN DE L'AJOUT ---
         }
     }
 }

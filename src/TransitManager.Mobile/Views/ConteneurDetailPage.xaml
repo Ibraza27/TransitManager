@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:entities="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:ConteneurDetailViewModel"
+             x:Class="TransitManager.Mobile.Views.ConteneurDetailPage"
+             Title="Détails du Conteneur">
+
+    <ContentPage.Resources>
+        <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter"/>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+    </ContentPage.Resources>
+    
+    <ScrollView>
+        <VerticalStackLayout Spacing="15" Padding="20">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+
+
+
+            <Label Text="{Binding Conteneur.NumeroDossier}" FontSize="Header" FontAttributes="Bold" HorizontalOptions="Center"/>
+            <BoxView HeightRequest="1" Color="LightGray" Margin="0,10"/>
+            
+            <Frame Padding="15" BorderColor="Red">
+                <Label HorizontalOptions="Center" TextColor="Red" FontAttributes="Bold">
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="TOTAL RESTANT À PAYER : "/>
+                            <Span Text="{Binding TotalGlobalRestant, StringFormat='{0:C}'}"/>
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+            </Frame>
+
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Informations du Dossier" FontSize="Large" FontAttributes="Bold"/>
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*,*,*" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="N° Plomb :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Conteneur.NumeroPlomb, TargetNullValue='N/A'}"/>
+                        <Label Grid.Row="1" Grid.Column="0" Text="Compagnie :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Conteneur.NomCompagnie, TargetNullValue='N/A'}"/>
+                        <Label Grid.Row="2" Grid.Column="0" Text="Transitaire :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Conteneur.NomTransitaire, TargetNullValue='N/A'}"/>
+                        <Label Grid.Row="3" Grid.Column="0" Text="Destination :" FontAttributes="Bold"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding Conteneur.Destination}"/>
+                        <Label Grid.Row="4" Grid.Column="0" Text="Pays :" FontAttributes="Bold"/>
+                        <Label Grid.Row="4" Grid.Column="1" Text="{Binding Conteneur.PaysDestination}"/>
+                        <Label Grid.Row="5" Grid.Column="0" Text="Commentaires :" FontAttributes="Bold" VerticalOptions="Start"/>
+                        <Label Grid.Row="5" Grid.Column="1" Text="{Binding Conteneur.Commentaires, TargetNullValue='Aucun'}" IsVisible="{Binding Conteneur.Commentaires, Converter={StaticResource IsNotNullOrEmptyConverter}}"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame Padding="15" BorderColor="LightGray">
+                 <VerticalStackLayout Spacing="10">
+                    <Label Text="Dates Clés" FontSize="Large" FontAttributes="Bold"/>
+                     <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*,*,*,*,*" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Réception :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Conteneur.DateReception, StringFormat='{0:dd/MM/yyyy}'}"/>
+                        <Label Grid.Row="1" Grid.Column="0" Text="Chargement :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Conteneur.DateChargement, StringFormat='{0:dd/MM/yyyy}', TargetNullValue='-'}"/>
+                        <Label Grid.Row="2" Grid.Column="0" Text="Départ :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Conteneur.DateDepart, StringFormat='{0:dd/MM/yyyy}', TargetNullValue='-'}"/>
+                        <Label Grid.Row="3" Grid.Column="0" Text="Arrivée :" FontAttributes="Bold"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding Conteneur.DateArriveeDestination, StringFormat='{0:dd/MM/yyyy}', TargetNullValue='-'}"/>
+                        <Label Grid.Row="4" Grid.Column="0" Text="Dédouanement :" FontAttributes="Bold"/>
+                        <Label Grid.Row="4" Grid.Column="1" Text="{Binding Conteneur.DateDedouanement, StringFormat='{0:dd/MM/yyyy}', TargetNullValue='-'}"/>
+                        <Label Grid.Row="5" Grid.Column="0" Text="Clôture :" FontAttributes="Bold"/>
+                        <Label Grid.Row="5" Grid.Column="1" Text="{Binding Conteneur.DateCloture, StringFormat='{0:dd/MM/yyyy}', TargetNullValue='-'}"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Clients Concernés -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="{Binding TotalClientsDistincts, StringFormat='Clients Concernés ({0})'}" FontSize="Large" FontAttributes="Bold"/>
+                    <CollectionView ItemsSource="{Binding Conteneur.ClientsDistincts}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="entities:Client">
+                                <Label Padding="0,5">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="{Binding NomComplet}" FontAttributes="Bold"/>
+                                            <Span Text=" - "/>
+                                            <Span Text="{Binding TelephonePrincipal}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Colis Affectés -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="{Binding TotalColis, StringFormat='Colis Affectés ({0})'}" FontSize="Large" FontAttributes="Bold"/>
+                    <CollectionView ItemsSource="{Binding Conteneur.Colis}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="entities:Colis">
+                                <Grid ColumnDefinitions="*,Auto" Padding="0,5">
+                                    <VerticalStackLayout>
+                                        <Label Text="{Binding Client.NomComplet}" FontAttributes="Bold"/>
+                                        <Label>
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="{Binding Designation}"/>
+                                                    <Span Text=" -> "/>
+                                                    <Span Text="{Binding DestinationFinale}"/>
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="1" Text="{Binding NombrePieces, StringFormat='{0} p.'}" VerticalOptions="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <Grid ColumnDefinitions="*,*,*" Margin="0,10,0,0">
+                        <Label Grid.Column="0" Text="{Binding TotalPrixColis, StringFormat='Total: {0:C}'}"/>
+                        <Label Grid.Column="1" Text="{Binding TotalPayeColis, StringFormat='Payé: {0:C}'}" TextColor="Green"/>
+                        <Label Grid.Column="2" Text="{Binding TotalRestantColis, StringFormat='Restant: {0:C}'}" TextColor="Red" FontAttributes="Bold"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Véhicules Affectés -->
+            <Frame Padding="15" BorderColor="LightGray">
+                 <VerticalStackLayout Spacing="10">
+                    <Label Text="{Binding TotalVehicules, StringFormat='Véhicules Affectés ({0})'}" FontSize="Large" FontAttributes="Bold"/>
+                    <CollectionView ItemsSource="{Binding Conteneur.Vehicules}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="entities:Vehicule">
+                                 <VerticalStackLayout Padding="0,5">
+                                     <Label Text="{Binding Client.NomComplet}" FontAttributes="Bold"/>
+                                     <Label>
+                                         <Label.FormattedText>
+                                             <FormattedString>
+                                                <Span Text="{Binding Immatriculation}"/>
+                                                <Span Text=" ("/>
+                                                <Span Text="{Binding Marque}"/>
+                                                <Span Text=" "/>
+                                                <Span Text="{Binding Modele}"/>
+                                                <Span Text=")"/>
+                                             </FormattedString>
+                                         </Label.FormattedText>
+                                     </Label>
+                                 </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <Grid ColumnDefinitions="*,*,*" Margin="0,10,0,0">
+                        <Label Grid.Column="0" Text="{Binding TotalPrixVehicules, StringFormat='Total: {0:C}'}"/>
+                        <Label Grid.Column="1" Text="{Binding TotalPayeVehicules, StringFormat='Payé: {0:C}'}" TextColor="Green"/>
+                        <Label Grid.Column="2" Text="{Binding TotalRestantVehicules, StringFormat='Restant: {0:C}'}" TextColor="Red" FontAttributes="Bold"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
+                <Button Text="Modifier Dossier" Command="{Binding GoToEditCommand}"/>
+                <Button Text="Ajouter Colis" Command="{Binding GoToAddColisCommand}"/>
+                <Button Text="Ajouter Véhicules" Command="{Binding GoToAddVehiculesCommand}"/>
+                <Button Text="Actualiser" Command="{Binding LoadConteneurDetailsCommand}"/>
+            </HorizontalStackLayout>
+            
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

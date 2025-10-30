@@ -108,6 +108,17 @@ namespace TransitManager.Mobile
             builder.Services.AddTransient<InventairePage>();
             builder.Services.AddTransient<InventaireViewModel>();
 			
+            builder.Services.AddSingleton<ConteneurPage>();
+            builder.Services.AddSingleton<ConteneurViewModel>();
+            builder.Services.AddTransient<ConteneurDetailPage>();
+            builder.Services.AddTransient<ConteneurDetailViewModel>();
+            builder.Services.AddTransient<AddEditConteneurPage>();
+            builder.Services.AddTransient<AddEditConteneurViewModel>();
+            builder.Services.AddTransient<AddColisToConteneurPage>();
+            builder.Services.AddTransient<AddColisToConteneurViewModel>();
+            builder.Services.AddTransient<AddVehiculeToConteneurPage>();
+            builder.Services.AddTransient<AddVehiculeToConteneurViewModel>();
+			
             return builder.Build();
         }
     }

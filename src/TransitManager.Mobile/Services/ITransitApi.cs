@@ -44,17 +44,17 @@ namespace TransitManager.Mobile.Services
 		[Get("/api/conteneurs")]
 		Task<IEnumerable<Conteneur>> GetConteneursAsync();
 		
-        // --- DÉBUT DES AJOUTS ---
+        // --- DÉBUT DE LA CORRECTION ---
         [Get("/api/conteneurs/{id}")]
         Task<Conteneur> GetConteneurByIdAsync(Guid id);
+        // --- FIN DE LA CORRECTION ---
         
         [Post("/api/conteneurs")]
         Task<Conteneur> CreateConteneurAsync([Body] Conteneur conteneur);
 
         [Put("/api/conteneurs/{id}")]
         Task UpdateConteneurAsync(Guid id, [Body] Conteneur conteneur);
-        // --- FIN DES AJOUTS ---
-
+		
 		[Get("/api/vehicules/{id}")]
 		Task<Vehicule> GetVehiculeByIdAsync(Guid id);
 		

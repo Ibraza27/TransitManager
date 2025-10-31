@@ -31,12 +31,13 @@ namespace TransitManager.Mobile.ViewModels
             }
         }
 
+
         [RelayCommand]
         private async Task LoadConteneursAsync()
         {
             if (IsBusy) return;
             IsBusy = true;
-            try
+            try // <-- AJOUTER
             {
                 var conteneurs = await _transitApi.GetConteneursAsync();
                 _allConteneurs = conteneurs.ToList();
@@ -46,9 +47,9 @@ namespace TransitManager.Mobile.ViewModels
             {
                 await Shell.Current.DisplayAlert("Erreur", $"Impossible de charger les conteneurs : {ex.Message}", "OK");
             }
-            finally
+            finally // <-- AJOUTER
             {
-                IsBusy = false;
+                IsBusy = false; // <-- S'ASSURER QUE C'EST TOUJOURS EXÉCUTÉ
             }
         }
 

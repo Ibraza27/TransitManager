@@ -2,9 +2,18 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
              x:DataType="viewmodels:AddEditConteneurViewModel"
              x:Class="TransitManager.Mobile.Views.AddEditConteneurPage"
              Title="{Binding PageTitle}">
+
+
+    <ContentPage.Resources>
+        <converters:IsNotNullConverter x:Key="IsNotNullConverter" />
+        <converters:NullableDateConverter x:Key="NullableDateConverter" />
+    </ContentPage.Resources>
+
+    
     <ScrollView>
         <VerticalStackLayout Spacing="20" Padding="20">
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
@@ -29,10 +38,14 @@
                     
                     <Label Text="Nom du transitaire" FontSize="Caption"/>
                     <Entry Text="{Binding Conteneur.NomTransitaire}"/>
+
+
+                    <Label Text="Commentaires" FontSize="Caption"/>
+                    <Editor Text="{Binding Conteneur.Commentaires}" AutoSize="TextChanges" HeightRequest="100"/>
+
                 </VerticalStackLayout>
             </Frame>
             
-
             <Frame Padding="15" BorderColor="LightGray">
                 <VerticalStackLayout Spacing="15">
                     <Label Text="Dates Clés" FontSize="Large" FontAttributes="Bold"/>
@@ -48,7 +61,7 @@
                             <CheckBox x:Name="HasDateChargement" IsChecked="{Binding Conteneur.DateChargement, Converter={StaticResource IsNotNullConverter}}"/>
                             <Label Text="Date de chargement" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
-                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateChargement}, Path=IsChecked}" Date="{Binding Conteneur.DateChargement, Mode=TwoWay}"/>
+                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateChargement}, Path=IsChecked}" Date="{Binding Conteneur.DateChargement, Converter={StaticResource NullableDateConverter}, Mode=TwoWay}"/>
                     </VerticalStackLayout>
 
                     <VerticalStackLayout>
@@ -56,16 +69,15 @@
                             <CheckBox x:Name="HasDateDepart" IsChecked="{Binding Conteneur.DateDepart, Converter={StaticResource IsNotNullConverter}}"/>
                             <Label Text="Date de départ" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
-                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateDepart}, Path=IsChecked}" Date="{Binding Conteneur.DateDepart, Mode=TwoWay}"/>
+                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateDepart}, Path=IsChecked}" Date="{Binding Conteneur.DateDepart, Converter={StaticResource NullableDateConverter}, Mode=TwoWay}"/>
                     </VerticalStackLayout>
-
 
                     <VerticalStackLayout>
                          <HorizontalStackLayout>
                             <CheckBox x:Name="HasDateArrivee" IsChecked="{Binding Conteneur.DateArriveeDestination, Converter={StaticResource IsNotNullConverter}}"/>
                             <Label Text="Date d'arrivée à destination" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
-                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateArrivee}, Path=IsChecked}" Date="{Binding Conteneur.DateArriveeDestination, Mode=TwoWay}"/>
+                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateArrivee}, Path=IsChecked}" Date="{Binding Conteneur.DateArriveeDestination, Converter={StaticResource NullableDateConverter}, Mode=TwoWay}"/>
                     </VerticalStackLayout>
 
                     <VerticalStackLayout>
@@ -73,11 +85,11 @@
                             <CheckBox x:Name="HasDateDedouanement" IsChecked="{Binding Conteneur.DateDedouanement, Converter={StaticResource IsNotNullConverter}}"/>
                             <Label Text="Date de dédouanement" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
-                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateDedouanement}, Path=IsChecked}" Date="{Binding Conteneur.DateDedouanement, Mode=TwoWay}"/>
+                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateDedouanement}, Path=IsChecked}" Date="{Binding Conteneur.DateDedouanement, Converter={StaticResource NullableDateConverter}, Mode=TwoWay}"/>
                     </VerticalStackLayout>
+
                 </VerticalStackLayout>
             </Frame>
-
             
             <Button Text="Enregistrer" Command="{Binding SaveCommand}" Margin="0,10,0,0"/>
             

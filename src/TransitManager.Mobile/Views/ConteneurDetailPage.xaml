@@ -16,9 +16,7 @@
     <ScrollView>
         <VerticalStackLayout Spacing="15" Padding="20">
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
-
-
-
+            
             <Label Text="{Binding Conteneur.NumeroDossier}" FontSize="Header" FontAttributes="Bold" HorizontalOptions="Center"/>
             <BoxView HeightRequest="1" Color="LightGray" Margin="0,10"/>
             
@@ -73,7 +71,6 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- Clients Concernés -->
             <Frame Padding="15" BorderColor="LightGray">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="{Binding TotalClientsDistincts, StringFormat='Clients Concernés ({0})'}" FontSize="Large" FontAttributes="Bold"/>
@@ -95,7 +92,6 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- Colis Affectés -->
             <Frame Padding="15" BorderColor="LightGray">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="{Binding TotalColis, StringFormat='Colis Affectés ({0})'}" FontSize="Large" FontAttributes="Bold"/>
@@ -128,7 +124,6 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- Véhicules Affectés -->
             <Frame Padding="15" BorderColor="LightGray">
                  <VerticalStackLayout Spacing="10">
                     <Label Text="{Binding TotalVehicules, StringFormat='Véhicules Affectés ({0})'}" FontSize="Large" FontAttributes="Bold"/>
@@ -168,7 +163,6 @@
                 <Button Text="Actualiser" Command="{Binding LoadConteneurDetailsCommand}"/>
             </HorizontalStackLayout>
             
-
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

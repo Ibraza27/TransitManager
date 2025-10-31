@@ -21,6 +21,51 @@ namespace TransitManager.Infrastructure.Services
             _contextFactory = contextFactory;
             _notificationService = notificationService;
         }
+        
+        // ===================================================================
+        // DÉBUT DE L'IMPLÉMENTATION CRITIQUE
+        // ===================================================================
+
+		public async Task<Conteneur?> GetByIdAsync(Guid id)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			return await context.Conteneurs
+                .AsSplitQuery()
+				.IgnoreQueryFilters()
+				.Include(c => c.Colis)
+					.ThenInclude(col => col.Client)
+				.Include(c => c.Colis)
+					.ThenInclude(col => col.Barcodes.Where(b => b.Actif))
+				.Include(c => c.Vehicules)
+					.ThenInclude(v => v.Client)
+				.AsNoTracking()
+				.FirstOrDefaultAsync(c => c.Id == id);
+		}
+		
+        public async Task<IEnumerable<Conteneur>> GetAllAsync()
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Conteneurs
+                .Include(c => c.Colis)
+                .Include(c => c.Vehicules)
+                .AsNoTracking()
+                .OrderByDescending(c => c.DateCreation)
+                .ToListAsync();
+        }
+
+        public async Task<Conteneur> CreateAsync(Conteneur conteneur)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            conteneur.Statut = CalculateStatusFromDates(conteneur);
+            context.Conteneurs.Add(conteneur);
+            await context.SaveChangesAsync();
+            await _notificationService.NotifyAsync("Nouveau conteneur", $"Le conteneur {conteneur.NumeroDossier} pour {conteneur.Destination} a été créé.");
+            return conteneur;
+        }
+
+        // ===================================================================
+        // FIN DE L'IMPLÉMENTATION CRITIQUE
+        // ===================================================================
 
         public async Task RecalculateStatusAsync(Guid conteneurId)
         {
@@ -157,16 +202,7 @@ namespace TransitManager.Infrastructure.Services
                 .ExecuteUpdateAsync(s => s.SetProperty(v => v.Statut, newVehiculeStatus));
         }
 
-        #region Reste du service (correction et implémentation)
-        public async Task<Conteneur> CreateAsync(Conteneur conteneur)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            conteneur.Statut = CalculateStatusFromDates(conteneur);
-            context.Conteneurs.Add(conteneur);
-            await context.SaveChangesAsync();
-            await _notificationService.NotifyAsync("Nouveau conteneur", $"Le conteneur {conteneur.NumeroDossier} pour {conteneur.Destination} a été créé.");
-            return conteneur;
-        }
+        #region Reste du service
         private async Task UpdatePlombOnChildren(Guid conteneurId, string? numeroPlomb, TransitContext context)
         {
             await context.Colis.Where(c => c.ConteneurId == conteneurId).ExecuteUpdateAsync(s => s.SetProperty(c => c.NumeroPlomb, numeroPlomb));
@@ -184,29 +220,6 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
-        // --- DÉBUT DE LA CORRECTION DÉFINITIVE ---
-		public async Task<Conteneur?> GetByIdAsync(Guid id)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			return await context.Conteneurs
-                .AsSplitQuery() // Recommandé pour les requêtes complexes avec plusieurs Include
-				.IgnoreQueryFilters()
-				.Include(c => c.Colis)
-					.ThenInclude(col => col.Client)
-				.Include(c => c.Colis)
-					.ThenInclude(col => col.Barcodes.Where(b => b.Actif))
-				.Include(c => c.Vehicules)
-					.ThenInclude(v => v.Client)
-				.AsNoTracking()
-				.FirstOrDefaultAsync(c => c.Id == id);
-		}
-		// --- FIN DE LA CORRECTION DÉFINITIVE ---
-		
-        public async Task<IEnumerable<Conteneur>> GetAllAsync()
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Conteneurs.Include(c => c.Colis).Include(c => c.Vehicules).AsNoTracking().OrderByDescending(c => c.DateCreation).ToListAsync();
-        }
         public async Task<IEnumerable<Conteneur>> GetActiveAsync()
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -239,17 +252,17 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Conteneurs.Where(c => c.Statut == statut).ToListAsync();
         }
-        // Ces méthodes restent non implémentées pour l'instant
-        public Task<bool> CloseConteneurAsync(Guid id) => Task.FromResult(true);
-        public Task<bool> SetDepartureAsync(Guid id, DateTime departureDate) => Task.FromResult(true);
-        public Task<bool> SetArrivalAsync(Guid id, DateTime arrivalDate) => Task.FromResult(true);
+        
+        public Task<bool> CloseConteneurAsync(Guid id) => throw new NotImplementedException();
+        public Task<bool> SetDepartureAsync(Guid id, DateTime departureDate) => throw new NotImplementedException();
+        public Task<bool> SetArrivalAsync(Guid id, DateTime arrivalDate) => throw new NotImplementedException();
         public async Task<int> GetActiveCountAsync() => (await GetActiveAsync()).Count();
-        public Task<decimal> GetAverageFillingRateAsync() => Task.FromResult(0m);
-        public Task<IEnumerable<Conteneur>> GetUpcomingDeparturesAsync(int days) => Task.FromResult(Enumerable.Empty<Conteneur>());
-        public Task<IEnumerable<Conteneur>> GetAlmostFullContainersAsync(decimal threshold) => Task.FromResult(Enumerable.Empty<Conteneur>());
-        public Task<Dictionary<string, int>> GetStatsByDestinationAsync() => Task.FromResult(new Dictionary<string, int>());
-        public Task<bool> CanAddColisAsync(Guid conteneurId, Guid colisId) => Task.FromResult(true);
-        public Task<decimal> CalculateProfitabilityAsync(Guid conteneurId) => Task.FromResult(0m);
+        public Task<decimal> GetAverageFillingRateAsync() => throw new NotImplementedException();
+        public Task<IEnumerable<Conteneur>> GetUpcomingDeparturesAsync(int days) => throw new NotImplementedException();
+        public Task<IEnumerable<Conteneur>> GetAlmostFullContainersAsync(decimal threshold) => throw new NotImplementedException();
+        public Task<Dictionary<string, int>> GetStatsByDestinationAsync() => throw new NotImplementedException();
+        public Task<bool> CanAddColisAsync(Guid conteneurId, Guid colisId) => throw new NotImplementedException();
+        public Task<decimal> CalculateProfitabilityAsync(Guid conteneurId) => throw new NotImplementedException();
         #endregion
     }
 }

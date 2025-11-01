@@ -31,6 +31,7 @@ namespace TransitManager.Core.Interfaces
 
         // --- DÉBUT DE L'AJOUT ---
         Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId);
+		Task UpdateInventaireAsync(UpdateInventaireDto dto);
         // --- FIN DE L'AJOUT ---
     }
 }

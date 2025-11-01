@@ -21,11 +21,14 @@ namespace TransitManager.Mobile
 			Routing.RegisterRoute(nameof(AddEditPaiementPage), typeof(AddEditPaiementPage));
             Routing.RegisterRoute(nameof(InventairePage), typeof(InventairePage));
 
-            // --- DÉBUT DE L'AJOUT ---
             Routing.RegisterRoute(nameof(ConteneurDetailPage), typeof(ConteneurDetailPage));
             Routing.RegisterRoute(nameof(AddEditConteneurPage), typeof(AddEditConteneurPage));
             Routing.RegisterRoute(nameof(AddColisToConteneurPage), typeof(AddColisToConteneurPage));
             Routing.RegisterRoute(nameof(AddVehiculeToConteneurPage), typeof(AddVehiculeToConteneurPage));
+            
+            // --- DÉBUT DE L'AJOUT ---
+            Routing.RegisterRoute(nameof(RemoveColisFromConteneurPage), typeof(RemoveColisFromConteneurPage));
+            Routing.RegisterRoute(nameof(RemoveVehiculeFromConteneurPage), typeof(RemoveVehiculeFromConteneurPage));
             // --- FIN DE L'AJOUT ---
         }
     }

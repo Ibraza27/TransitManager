@@ -4,28 +4,25 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using TransitManager.Core.DTOs; // <-- AJOUTER CE USING
+using TransitManager.Core.DTOs;
 using TransitManager.Core.Entities;
 using TransitManager.Mobile.Services;
 
 namespace TransitManager.Mobile.ViewModels
 {
-    // --- DÉBUT DE LA MODIFICATION 1 : Changer la QueryProperty ---
     [QueryProperty(nameof(ColisId), "colisId")]
     public partial class InventaireViewModel : ObservableObject
-    // --- FIN DE LA MODIFICATION 1 ---
     {
-        // --- DÉBUT DE LA MODIFICATION 2 : Injecter l'API et ajouter des champs ---
         private readonly ITransitApi _transitApi;
-        private Colis? _colis; // Pour conserver l'objet colis complet
+        private Colis? _colis;
 
         [ObservableProperty]
         private string _colisId = string.Empty;
-        // --- FIN DE LA MODIFICATION 2 ---
 
         public ObservableCollection<InventaireItem> Items { get; } = new();
 
         [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(AddItemCommand))]
         private InventaireItem _newItem = new();
 
         [ObservableProperty]
@@ -34,16 +31,12 @@ namespace TransitManager.Mobile.ViewModels
         [ObservableProperty]
         private decimal _totalValeur;
 
-        // --- DÉBUT DE LA MODIFICATION 3 : Mettre à jour le constructeur ---
         public InventaireViewModel(ITransitApi transitApi)
         {
             _transitApi = transitApi;
             Items.CollectionChanged += (s, e) => CalculateTotals();
-            NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
         }
-        // --- FIN DE LA MODIFICATION 3 ---
 
-        // --- DÉBUT DE LA MODIFICATION 4 : Remplacer l'ancienne méthode de chargement ---
         async partial void OnColisIdChanged(string value)
         {
             if (Guid.TryParse(value, out var id))
@@ -67,9 +60,9 @@ namespace TransitManager.Mobile.ViewModels
                 await Shell.Current.DisplayAlert("Erreur", $"Impossible de charger les données du colis : {ex.Message}", "OK");
             }
         }
-        // --- FIN DE LA MODIFICATION 4 ---
 
-        private Task LoadItemsFromJsonAsync(string? json)
+        // --- DÉBUT DE LA CORRECTION ---
+        private async Task LoadItemsFromJsonAsync(string? json)
         {
             try
             {
@@ -85,12 +78,14 @@ namespace TransitManager.Mobile.ViewModels
             }
             catch (Exception ex)
             {
-                Shell.Current.DisplayAlert("Erreur", $"Impossible de charger l'inventaire : {ex.Message}", "OK");
+                // Cet appel 'await' est la raison de l'erreur
+                await Shell.Current.DisplayAlert("Erreur", $"Impossible de charger l'inventaire : {ex.Message}", "OK");
             }
             
             CalculateTotals();
-            return Task.CompletedTask;
+            // Pas besoin de retourner Task.CompletedTask, la méthode est déjà async.
         }
+        // --- FIN DE LA CORRECTION ---
 
         private void CalculateTotals()
         {
@@ -102,9 +97,7 @@ namespace TransitManager.Mobile.ViewModels
         private void AddItem()
         {
             Items.Add(NewItem);
-            NewItem = new InventaireItem(); 
-            NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
-            AddItemCommand.NotifyCanExecuteChanged();
+            NewItem = new InventaireItem();
         }
 
         private bool CanAddItem() => !string.IsNullOrWhiteSpace(NewItem.Designation) && NewItem.Quantite > 0;
@@ -144,7 +137,6 @@ namespace TransitManager.Mobile.ViewModels
             if (itemToDelete != null) Items.Remove(itemToDelete);
         }
 
-        // --- DÉBUT DE LA MODIFICATION 5 : Remplacer complètement la méthode de sauvegarde ---
         [RelayCommand]
         private async Task SaveAndCloseAsync()
         {
@@ -156,7 +148,6 @@ namespace TransitManager.Mobile.ViewModels
 
             try
             {
-                // Mettre à jour les dates en UTC
                 foreach (var item in Items)
                 {
                     if (item.Date.Kind != DateTimeKind.Utc)
@@ -167,39 +158,15 @@ namespace TransitManager.Mobile.ViewModels
 
                 var updatedJson = JsonSerializer.Serialize(Items);
                 
-                // Créer un DTO (Data Transfer Object) pour la mise à jour
-                var updateDto = new UpdateColisDto
+                var inventaireDto = new UpdateInventaireDto
                 {
-                    Id = _colis.Id,
-                    ClientId = _colis.ClientId,
-                    Designation = _colis.Designation,
-                    DestinationFinale = _colis.DestinationFinale,
-                    Barcodes = _colis.Barcodes.Select(b => b.Value).ToList(),
-                    PrixTotal = _colis.PrixTotal,
-                    Destinataire = _colis.Destinataire,
-                    TelephoneDestinataire = _colis.TelephoneDestinataire,
-                    LivraisonADomicile = _colis.LivraisonADomicile,
-                    AdresseLivraison = _colis.AdresseLivraison,
-                    EstFragile = _colis.EstFragile,
-                    ManipulationSpeciale = _colis.ManipulationSpeciale,
-                    InstructionsSpeciales = _colis.InstructionsSpeciales,
-                    Type = _colis.Type,
-                    TypeEnvoi = _colis.TypeEnvoi,
-                    ConteneurId = _colis.ConteneurId,
-                    Statut = _colis.Statut,
-
-                    // Appliquer les changements de l'inventaire
+                    ColisId = _colis.Id,
                     InventaireJson = updatedJson,
-                    NombrePieces = TotalQuantite,
-                    ValeurDeclaree = TotalValeur,
-                    SommePayee = _colis.SommePayee, // Conserver le montant déjà payé
-                    Volume = _colis.Volume
+                    TotalPieces = TotalQuantite,
+                    TotalValeurDeclaree = TotalValeur
                 };
 
-                // Appeler l'API pour sauvegarder
-                await _transitApi.UpdateColisAsync(_colis.Id, updateDto);
-
-                // Revenir à la page précédente
+                await _transitApi.UpdateInventaireAsync(inventaireDto);
                 await Shell.Current.GoToAsync("..");
             }
             catch (Exception ex)
@@ -207,6 +174,5 @@ namespace TransitManager.Mobile.ViewModels
                 await Shell.Current.DisplayAlert("Erreur de Sauvegarde", $"L'enregistrement a échoué : {ex.Message}", "OK");
             }
         }
-        // --- FIN DE LA MODIFICATION 5 ---
     }
 }

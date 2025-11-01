@@ -94,25 +94,31 @@
 
             <Frame Padding="15" BorderColor="LightGray">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="{Binding TotalColis, StringFormat='Colis Affectés ({0})'}" FontSize="Large" FontAttributes="Bold"/>
+                    <Grid ColumnDefinitions="*, Auto">
+                        <Label Text="{Binding TotalColis, StringFormat='Colis Affectés ({0})'}" FontSize="Large" FontAttributes="Bold" VerticalOptions="Center"/>
+                        <Button Grid.Column="1" Text="Modifier" Command="{Binding GoToRemoveColisCommand}" FontSize="Small" Padding="10,5"/>
+                    </Grid>
+                    
                     <CollectionView ItemsSource="{Binding Conteneur.Colis}">
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="entities:Colis">
-                                <Grid ColumnDefinitions="*,Auto" Padding="0,5">
-                                    <VerticalStackLayout>
-                                        <Label Text="{Binding Client.NomComplet}" FontAttributes="Bold"/>
-                                        <Label>
-                                            <Label.FormattedText>
-                                                <FormattedString>
-                                                    <Span Text="{Binding Designation}"/>
-                                                    <Span Text=" -> "/>
-                                                    <Span Text="{Binding DestinationFinale}"/>
-                                                </FormattedString>
-                                            </Label.FormattedText>
-                                        </Label>
-                                    </VerticalStackLayout>
-                                    <Label Grid.Column="1" Text="{Binding NombrePieces, StringFormat='{0} p.'}" VerticalOptions="Center"/>
-                                </Grid>
+                                <Border Padding="10,8" Margin="0,2" Stroke="LightGray" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <VerticalStackLayout>
+                                            <Label Text="{Binding Client.NomComplet}" FontAttributes="Bold"/>
+                                            <Label>
+                                                <Label.FormattedText>
+                                                    <FormattedString>
+                                                        <Span Text="{Binding Designation}"/>
+                                                        <Span Text=" -> "/>
+                                                        <Span Text="{Binding DestinationFinale}"/>
+                                                    </FormattedString>
+                                                </Label.FormattedText>
+                                            </Label>
+                                        </VerticalStackLayout>
+                                        <Label Grid.Column="1" Text="{Binding NombrePieces, StringFormat='{0} p.'}" VerticalOptions="Center"/>
+                                    </Grid>
+                                </Border>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                     </CollectionView>
@@ -126,25 +132,31 @@
 
             <Frame Padding="15" BorderColor="LightGray">
                  <VerticalStackLayout Spacing="10">
-                    <Label Text="{Binding TotalVehicules, StringFormat='Véhicules Affectés ({0})'}" FontSize="Large" FontAttributes="Bold"/>
+                    <Grid ColumnDefinitions="*, Auto">
+                        <Label Text="{Binding TotalVehicules, StringFormat='Véhicules Affectés ({0})'}" FontSize="Large" FontAttributes="Bold" VerticalOptions="Center"/>
+                        <Button Grid.Column="1" Text="Modifier" Command="{Binding GoToRemoveVehiculesCommand}" FontSize="Small" Padding="10,5"/>
+                    </Grid>
+                    
                     <CollectionView ItemsSource="{Binding Conteneur.Vehicules}">
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="entities:Vehicule">
-                                 <VerticalStackLayout Padding="0,5">
-                                     <Label Text="{Binding Client.NomComplet}" FontAttributes="Bold"/>
-                                     <Label>
-                                         <Label.FormattedText>
-                                             <FormattedString>
-                                                <Span Text="{Binding Immatriculation}"/>
-                                                <Span Text=" ("/>
-                                                <Span Text="{Binding Marque}"/>
-                                                <Span Text=" "/>
-                                                <Span Text="{Binding Modele}"/>
-                                                <Span Text=")"/>
-                                             </FormattedString>
-                                         </Label.FormattedText>
-                                     </Label>
-                                 </VerticalStackLayout>
+                                 <Border Padding="10,8" Margin="0,2" Stroke="LightGray" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                                     <VerticalStackLayout>
+                                         <Label Text="{Binding Client.NomComplet}" FontAttributes="Bold"/>
+                                         <Label>
+                                             <Label.FormattedText>
+                                                 <FormattedString>
+                                                    <Span Text="{Binding Immatriculation}"/>
+                                                    <Span Text=" ("/>
+                                                    <Span Text="{Binding Marque}"/>
+                                                    <Span Text=" "/>
+                                                    <Span Text="{Binding Modele}"/>
+                                                    <Span Text=")"/>
+                                                 </FormattedString>
+                                             </Label.FormattedText>
+                                         </Label>
+                                     </VerticalStackLayout>
+                                 </Border>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                     </CollectionView>

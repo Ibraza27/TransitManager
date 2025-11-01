@@ -34,6 +34,9 @@ namespace TransitManager.Mobile.Services
 
 		[Put("/api/colis/{id}")]
 		Task UpdateColisAsync(Guid id, [Body] UpdateColisDto colisDto);
+		
+        [Put("/api/colis/inventaire")]
+        Task UpdateInventaireAsync([Body] UpdateInventaireDto inventaireDto);
 
 		[Delete("/api/colis/{id}")]
 		Task DeleteColisAsync(Guid id);

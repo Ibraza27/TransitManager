@@ -178,6 +178,22 @@ namespace TransitManager.Infrastructure.Services
             }
         }
 
+        public async Task UpdateInventaireAsync(UpdateInventaireDto dto)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == dto.ColisId);
+
+            if (colis != null)
+            {
+                colis.InventaireJson = dto.InventaireJson; // LA LIGNE QUI MANQUAIT
+                colis.NombrePieces = dto.TotalPieces;
+                colis.ValeurDeclaree = dto.TotalValeurDeclaree;
+
+                await context.SaveChangesAsync();
+                await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
+            }
+        }
+		
         public async Task<bool> AssignToConteneurAsync(Guid colisId, Guid conteneurId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -210,21 +226,21 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Colis?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
+            
+            // --- DÉBUT DE LA CORRECTION ---
+            // On utilise AsSplitQuery pour charger les collections de manière fiable
             var colis = await context.Colis
+                .AsSplitQuery() 
                 .IgnoreQueryFilters()
+                .Include(c => c.Client) // On inclut le client directement
                 .Include(c => c.Conteneur)
                 .Include(c => c.Barcodes.Where(b => b.Actif))
                 .Include(c => c.Paiements)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id);
-            if (colis != null)
-            {
-                colis.Client = await context.Clients
-                    .IgnoreQueryFilters()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(c => c.Id == colis.ClientId);
-            }
+            
             return colis;
+            // --- FIN DE LA CORRECTION ---
         }
 
         public async Task<Colis?> GetByBarcodeAsync(string barcode)

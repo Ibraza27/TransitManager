@@ -119,6 +119,11 @@ namespace TransitManager.Mobile
             builder.Services.AddTransient<AddVehiculeToConteneurPage>();
             builder.Services.AddTransient<AddVehiculeToConteneurViewModel>();
 			
+            builder.Services.AddTransient<RemoveColisFromConteneurPage>();
+            builder.Services.AddTransient<RemoveColisFromConteneurViewModel>();
+            builder.Services.AddTransient<RemoveVehiculeFromConteneurPage>();
+            builder.Services.AddTransient<RemoveVehiculeFromConteneurViewModel>();
+			
             return builder.Build();
         }
     }

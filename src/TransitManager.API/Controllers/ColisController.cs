@@ -17,6 +17,24 @@ namespace TransitManager.API.Controllers
             _colisService = colisService;
             _logger = logger;
         }
+		
+        // PUT: api/colis/inventaire
+        [HttpPut("inventaire")]
+        public async Task<IActionResult> UpdateInventaire([FromBody] UpdateInventaireDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            
+            try
+            {
+                await _colisService.UpdateInventaireAsync(dto);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la mise à jour de l'inventaire pour le colis ID {ColisId}", dto.ColisId);
+                return StatusCode(500, "Une erreur interne est survenue.");
+            }
+        }
 
         // --- GET: api/colis ---
         [HttpGet]

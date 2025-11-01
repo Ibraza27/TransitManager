@@ -1,6 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
@@ -32,9 +31,8 @@ namespace TransitManager.Mobile.ViewModels
         [ObservableProperty] private decimal _totalPrixVehicules;
         [ObservableProperty] private decimal _totalPayeVehicules;
         [ObservableProperty] private decimal _totalRestantVehicules;
-		
-		public int TotalClientsDistincts => Conteneur?.ClientsDistincts?.Count() ?? 0;
         
+        public int TotalClientsDistincts => Conteneur?.ClientsDistincts?.Count() ?? 0;
         public decimal TotalGlobalRestant => TotalRestantColis + TotalRestantVehicules;
         #endregion
 
@@ -85,9 +83,8 @@ namespace TransitManager.Mobile.ViewModels
             TotalPrixVehicules = Conteneur.Vehicules.Sum(v => v.PrixTotal);
             TotalPayeVehicules = Conteneur.Vehicules.Sum(v => v.SommePayee);
             TotalRestantVehicules = TotalPrixVehicules - TotalPayeVehicules;
-			
-			OnPropertyChanged(nameof(TotalClientsDistincts));
-
+            
+            OnPropertyChanged(nameof(TotalClientsDistincts));
             OnPropertyChanged(nameof(TotalGlobalRestant));
         }
 
@@ -110,6 +107,20 @@ namespace TransitManager.Mobile.ViewModels
         {
             if (Conteneur == null) return;
             await Shell.Current.GoToAsync($"AddVehiculeToConteneurPage?conteneurId={Conteneur.Id}");
+        }
+
+        [RelayCommand]
+        private async Task GoToRemoveColisAsync()
+        {
+            if (Conteneur == null) return;
+            await Shell.Current.GoToAsync($"RemoveColisFromConteneurPage?conteneurId={Conteneur.Id}");
+        }
+
+        [RelayCommand]
+        private async Task GoToRemoveVehiculesAsync()
+        {
+            if (Conteneur == null) return;
+            await Shell.Current.GoToAsync($"RemoveVehiculeFromConteneurPage?conteneurId={Conteneur.Id}");
         }
     }
 }

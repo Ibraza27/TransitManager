@@ -22,26 +22,26 @@
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Informations du Dossier" FontSize="Large" FontAttributes="Bold"/>
                     <Label Text="Numéro du conteneur *" FontSize="Caption"/>
-                    <Entry Text="{Binding Conteneur.NumeroDossier}"/>
-                    
+                    <Entry Text="{Binding Conteneur.NumeroDossier, Mode=TwoWay}"/>
+
                     <Label Text="Numéro du plomb" FontSize="Caption"/>
-                    <Entry Text="{Binding Conteneur.NumeroPlomb}"/>
-                    
+                    <Entry Text="{Binding Conteneur.NumeroPlomb, Mode=TwoWay}"/>
+
                     <Label Text="Compagnie" FontSize="Caption"/>
-                    <Entry Text="{Binding Conteneur.NomCompagnie}"/>
-                    
+                    <Entry Text="{Binding Conteneur.NomCompagnie, Mode=TwoWay}"/>
+
                     <Label Text="Destination (Ville/Port) *" FontSize="Caption"/>
-                    <Entry Text="{Binding Conteneur.Destination}"/>
-                    
+                    <Entry Text="{Binding Conteneur.Destination, Mode=TwoWay}"/>
+
                     <Label Text="Pays de Destination *" FontSize="Caption"/>
-                    <Entry Text="{Binding Conteneur.PaysDestination}"/>
-                    
+                    <Entry Text="{Binding Conteneur.PaysDestination, Mode=TwoWay}"/>
+
                     <Label Text="Nom du transitaire" FontSize="Caption"/>
-                    <Entry Text="{Binding Conteneur.NomTransitaire}"/>
+                    <Entry Text="{Binding Conteneur.NomTransitaire, Mode=TwoWay}"/>
 
 
                     <Label Text="Commentaires" FontSize="Caption"/>
-                    <Editor Text="{Binding Conteneur.Commentaires}" AutoSize="TextChanges" HeightRequest="100"/>
+                    <Editor Text="{Binding Conteneur.Commentaires, Mode=TwoWay}" AutoSize="TextChanges" HeightRequest="100"/>
 
                 </VerticalStackLayout>
             </Frame>
@@ -52,7 +52,7 @@
                     
                     <VerticalStackLayout>
                         <Label Text="Date de réception *" FontSize="Caption"/>
-                        <DatePicker Date="{Binding Conteneur.DateReception, Mode=TwoWay}"/>
+                        <DatePicker Date="{Binding Conteneur.DateReception, Converter={StaticResource NullableDateConverter}, Mode=TwoWay}"/>
                     </VerticalStackLayout>
 
 

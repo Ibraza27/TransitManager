@@ -28,14 +28,15 @@ namespace TransitManager.Mobile.ViewModels
         public AddEditConteneurViewModel(ITransitApi transitApi)
         {
             _transitApi = transitApi;
+            // Initialiser Conteneur par défaut pour éviter qu'il soit null
+            Conteneur = new Conteneur { DateReception = DateTime.Now };
+            PageTitle = "Nouveau Conteneur";
         }
 
         async partial void OnConteneurIdChanged(string value)
         {
-            // --- CORRECTION : On assigne la valeur reçue à notre propriété ---
-            ConteneurId = value;
-
-            if (string.IsNullOrEmpty(ConteneurId))
+            // Le paramètre 'value' contient la nouvelle valeur de ConteneurId
+            if (string.IsNullOrEmpty(value))
             {
                 PageTitle = "Nouveau Conteneur";
                 Conteneur = new Conteneur { DateReception = DateTime.Now };
@@ -46,7 +47,7 @@ namespace TransitManager.Mobile.ViewModels
                 IsBusy = true;
                 try
                 {
-                    var id = Guid.Parse(ConteneurId);
+                    var id = Guid.Parse(value);
                     Conteneur = await _transitApi.GetConteneurByIdAsync(id);
                 }
                 catch (Exception ex)

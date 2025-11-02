@@ -10,7 +10,6 @@
     
     <ContentPage.Resources>
         <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
-        <!-- AJOUTER LE NOUVEAU CONVERTISSEUR -->
         <converters:IsDateOverdueConverter x:Key="IsDateOverdueConverter" />
     </ContentPage.Resources>
     
@@ -34,13 +33,20 @@
                             SelectedItem="{Binding SelectedStatut}" 
                             WidthRequest="120"/>
                 </VerticalStackLayout>
-                <VerticalStackLayout>
-                    <Label Text="Client" FontSize="Caption"/>
-                    <Picker ItemsSource="{Binding ClientsList}"
-                            ItemDisplayBinding="{Binding NomComplet}"
-                            SelectedItem="{Binding SelectedClient}"
-                            WidthRequest="150"/>
-                </VerticalStackLayout>
+				<VerticalStackLayout>
+					<Label Text="Client" FontSize="Caption"/>
+					<Frame Padding="8" BorderColor="LightGray" CornerRadius="4" HeightRequest="50" WidthRequest="150">
+						<Frame.GestureRecognizers>
+							<TapGestureRecognizer Command="{Binding GoToClientSelectionCommand}"/>
+						</Frame.GestureRecognizers>
+						<Grid ColumnDefinitions="*, Auto">
+							<Label Grid.Column="0" 
+								   Text="{Binding SelectedClient.NomComplet, TargetNullValue='Tous'}" 
+								   VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="▼" FontSize="Micro" VerticalOptions="Center"/>
+						</Grid>
+					</Frame>
+				</VerticalStackLayout>
                 <VerticalStackLayout>
                     <Label Text="Conteneur" FontSize="Caption"/>
                     <Picker ItemsSource="{Binding ConteneursList}"
@@ -56,21 +62,17 @@
             <CollectionView ItemsSource="{Binding ColisList}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="dto:ColisListItemDto">
-
                         <Frame Margin="10" Padding="15" BorderColor="LightGray" CornerRadius="8">
                             <Frame.Triggers>
                                 <MultiTrigger TargetType="Frame">
                                     <MultiTrigger.Conditions>
-                                        <!-- Condition 1: Le statut doit être "EnAttente" -->
                                         <BindingCondition Binding="{Binding Statut}" Value="EnAttente" />
-                                        <!-- Condition 2: La date doit être dépassée (vérifié par le convertisseur) -->
                                         <BindingCondition Binding="{Binding DateArrivee, Converter={StaticResource IsDateOverdueConverter}}" Value="True" />
                                     </MultiTrigger.Conditions>
                                     <Setter Property="BorderColor" Value="Red" />
-                                    <Setter Property="BackgroundColor" Value="#1AEC4B4B" /> <!-- Rouge très clair -->
+                                    <Setter Property="BackgroundColor" Value="#1AEC4B4B" />
                                 </MultiTrigger>
                             </Frame.Triggers>
-
                             
                             <Frame.GestureRecognizers>
                                 <TapGestureRecognizer 
@@ -79,8 +81,16 @@
                             </Frame.GestureRecognizers>
                             <Grid ColumnDefinitions="*, Auto">
                                 <VerticalStackLayout Grid.Column="0" Spacing="5">
+                                    <Label FontSize="Medium">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding ClientNomComplet}" FontAttributes="Bold"/>
+                                                <Span Text="{Binding ClientTelephonePrincipal, StringFormat=' ({0})'}" TextColor="Gray"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                    
 
-                                    <Label Text="{Binding ClientNomComplet}" FontSize="Medium" FontAttributes="Bold"/>
                                     <Label>
                                         <Label.FormattedText>
                                             <FormattedString>
@@ -90,6 +100,8 @@
                                             </FormattedString>
                                         </Label.FormattedText>
                                     </Label>
+
+                                    
                                     <Label Text="{Binding NumeroReference}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
 
                                 </VerticalStackLayout>

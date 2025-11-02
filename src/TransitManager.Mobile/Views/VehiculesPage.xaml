@@ -35,13 +35,20 @@
                             SelectedItem="{Binding SelectedStatut}" 
                             WidthRequest="120"/>
                 </VerticalStackLayout>
-                <VerticalStackLayout>
-                    <Label Text="Client" FontSize="Caption"/>
-                    <Picker ItemsSource="{Binding ClientsList}"
-                            ItemDisplayBinding="{Binding NomComplet}"
-                            SelectedItem="{Binding SelectedClient}"
-                            WidthRequest="150"/>
-                </VerticalStackLayout>
+				<VerticalStackLayout>
+					<Label Text="Client" FontSize="Caption"/>
+					<Frame Padding="8" BorderColor="LightGray" CornerRadius="4" HeightRequest="50" WidthRequest="150">
+						<Frame.GestureRecognizers>
+							<TapGestureRecognizer Command="{Binding GoToClientSelectionCommand}"/>
+						</Frame.GestureRecognizers>
+						<Grid ColumnDefinitions="*, Auto">
+							<Label Grid.Column="0" 
+								   Text="{Binding SelectedClient.NomComplet, TargetNullValue='Tous'}" 
+								   VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="▼" FontSize="Micro" VerticalOptions="Center"/>
+						</Grid>
+					</Frame>
+				</VerticalStackLayout>
 				
 				<VerticalStackLayout>
 					<Label Text="Conteneur" FontSize="Caption"/>
@@ -82,7 +89,17 @@
                                             </FormattedString>
                                         </Label.FormattedText>
                                     </Label>
-                                    <Label Text="{Binding ClientNomComplet}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
+									
+									<Label Text="{Binding DestinationFinale, StringFormat='Destination : {0}'}" FontSize="Small"/>
+									
+									<Label FontSize="Small" FontAttributes="Italic">
+										<Label.FormattedText>
+											<FormattedString>
+												<Span Text="{Binding ClientNomComplet}" TextColor="Gray"/>
+												<Span Text="{Binding ClientTelephonePrincipal, StringFormat=' ({0})'}" TextColor="DarkGray"/>
+											</FormattedString>
+										</Label.FormattedText>
+									</Label>
                                 </VerticalStackLayout>
                                 
                                 <!-- Badge de Statut -->

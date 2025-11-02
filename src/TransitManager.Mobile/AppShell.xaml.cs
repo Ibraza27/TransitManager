@@ -26,10 +26,10 @@ namespace TransitManager.Mobile
             Routing.RegisterRoute(nameof(AddColisToConteneurPage), typeof(AddColisToConteneurPage));
             Routing.RegisterRoute(nameof(AddVehiculeToConteneurPage), typeof(AddVehiculeToConteneurPage));
             
-            // --- DÉBUT DE L'AJOUT ---
             Routing.RegisterRoute(nameof(RemoveColisFromConteneurPage), typeof(RemoveColisFromConteneurPage));
             Routing.RegisterRoute(nameof(RemoveVehiculeFromConteneurPage), typeof(RemoveVehiculeFromConteneurPage));
-            // --- FIN DE L'AJOUT ---
+			Routing.RegisterRoute(nameof(ClientSelectionPage), typeof(ClientSelectionPage));
+
         }
     }
 }

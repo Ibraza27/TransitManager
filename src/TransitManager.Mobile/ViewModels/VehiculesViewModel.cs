@@ -9,6 +9,7 @@ using TransitManager.Mobile.Services;
 
 namespace TransitManager.Mobile.ViewModels
 {
+	[QueryProperty(nameof(SelectedClient), "SelectedClient")]
     public partial class VehiculesViewModel : ObservableObject
     {
         private readonly ITransitApi _transitApi;
@@ -90,6 +91,7 @@ namespace TransitManager.Mobile.ViewModels
                         v.Immatriculation.ToLower().Contains(term) ||
                         v.Marque.ToLower().Contains(term) ||
                         v.Modele.ToLower().Contains(term) ||
+						(v.ClientTelephonePrincipal?.Contains(term) ?? false) ||
                         v.ClientNomComplet.ToLower().Contains(term)
                     );
                 }
@@ -150,5 +152,12 @@ namespace TransitManager.Mobile.ViewModels
         {
             await Shell.Current.GoToAsync("AddEditVehiculePage");
         }
+		
+        [RelayCommand]
+        private async Task GoToClientSelectionAsync()
+        {
+            await Shell.Current.GoToAsync("ClientSelectionPage");
+        }
+		
     }
 }

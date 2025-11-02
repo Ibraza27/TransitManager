@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:entities="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
+             x:DataType="viewmodels:ClientSelectionViewModel"
+             x:Class="TransitManager.Mobile.Views.ClientSelectionPage"
+             Title="Sélectionner un Client">
+    <Grid RowDefinitions="Auto, *">
+        <SearchBar Grid.Row="0" 
+                   Placeholder="Rechercher par nom, prénom, téléphone..."
+                   Text="{Binding SearchText}"
+                   Margin="10"/>
+
+        <CollectionView Grid.Row="1" 
+                        ItemsSource="{Binding FilteredClients}"
+                        SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="entities:Client">
+                    <Frame Margin="10,5" Padding="15" BorderColor="LightGray" CornerRadius="8">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer 
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ClientSelectionViewModel}}, Path=SelectClientCommand}"
+                                CommandParameter="{Binding .}"/>
+                        </Frame.GestureRecognizers>
+                        <VerticalStackLayout>
+                            <Label Text="{Binding NomComplet}" FontAttributes="Bold"/>
+                            <Label Text="{Binding TelephonePrincipal}" FontSize="Small" TextColor="Gray"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

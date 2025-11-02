@@ -11,6 +11,7 @@ using TransitManager.Core.Enums;
 namespace TransitManager.Mobile.ViewModels
 {
     [QueryProperty(nameof(VehiculeId), "vehiculeId")]
+	[QueryProperty(nameof(SelectedClient), "SelectedClient")]
     public partial class AddEditVehiculeViewModel : ObservableObject
     {
         private readonly ITransitApi _transitApi;
@@ -34,7 +35,7 @@ namespace TransitManager.Mobile.ViewModels
         [ObservableProperty]
         private bool _destinataireIdentiqueAuClient;
 
-        public ObservableCollection<Client> Clients { get; } = new();
+
         // --- FIN DE LA MODIFICATION 1 ---
 
         private bool _isInitialized = false;
@@ -56,7 +57,6 @@ namespace TransitManager.Mobile.ViewModels
             IsBusy = true;
             try
             {
-                await LoadClientsAsync();
 
                 if (string.IsNullOrEmpty(VehiculeId))
                 {
@@ -71,7 +71,7 @@ namespace TransitManager.Mobile.ViewModels
                     Vehicule = await _transitApi.GetVehiculeByIdAsync(id);
                     if (Vehicule != null)
                     {
-                        SelectedClient = Clients.FirstOrDefault(c => c.Id == Vehicule.ClientId);
+                        SelectedClient = await _transitApi.GetClientByIdAsync(Vehicule.ClientId);
 						SelectedVehiculeType = Vehicule.Type.ToString();
                         DestinataireIdentiqueAuClient = SelectedClient != null &&
                                                         Vehicule.Destinataire == SelectedClient.NomComplet &&
@@ -94,15 +94,6 @@ namespace TransitManager.Mobile.ViewModels
 			}
 		}
 
-        private async Task LoadClientsAsync()
-        {
-            Clients.Clear();
-            var clients = await _transitApi.GetClientsAsync();
-            foreach (var client in clients)
-            {
-                Clients.Add(client);
-            }
-        }
 
         [RelayCommand]
         async Task SaveAsync()
@@ -157,6 +148,12 @@ namespace TransitManager.Mobile.ViewModels
                 Vehicule.Destinataire = SelectedClient.NomComplet;
                 Vehicule.TelephoneDestinataire = SelectedClient.TelephonePrincipal;
             }
+        }
+		
+        [RelayCommand]
+        private async Task GoToClientSelectionAsync()
+        {
+            await Shell.Current.GoToAsync("ClientSelectionPage");
         }
     }
 }

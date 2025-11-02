@@ -124,6 +124,9 @@ namespace TransitManager.Mobile
             builder.Services.AddTransient<RemoveVehiculeFromConteneurPage>();
             builder.Services.AddTransient<RemoveVehiculeFromConteneurViewModel>();
 			
+            builder.Services.AddTransient<ClientSelectionPage>();
+            builder.Services.AddTransient<ClientSelectionViewModel>();
+			
             return builder.Build();
         }
     }

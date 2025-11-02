@@ -33,8 +33,10 @@ namespace TransitManager.API.Controllers
                     Modele = v.Modele,
                     Statut = v.Statut,
                     ClientNomComplet = v.Client?.NomComplet ?? "N/A",
+					ClientTelephonePrincipal = v.Client?.TelephonePrincipal,
                     ConteneurNumeroDossier = v.Conteneur?.NumeroDossier,
-					DateCreation = v.DateCreation
+					DateCreation = v.DateCreation,
+					DestinationFinale = v.DestinationFinale
                 });
                 return Ok(vehiculeDtos);
             }

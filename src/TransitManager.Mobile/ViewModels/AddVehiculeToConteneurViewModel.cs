@@ -75,6 +75,7 @@ namespace TransitManager.Mobile.ViewModels
                 filtered = filtered.Where(v =>
                     v.Immatriculation.ToLower().Contains(search) ||
                     (v.Client?.NomComplet.ToLower().Contains(search) ?? false) ||
+					(v.Client?.TelephonePrincipal?.Contains(search) ?? false) ||
                     v.Marque.ToLower().Contains(search) ||
                     v.Modele.ToLower().Contains(search)
                 );

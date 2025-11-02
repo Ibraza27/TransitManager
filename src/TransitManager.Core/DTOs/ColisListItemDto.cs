@@ -15,6 +15,7 @@ namespace TransitManager.Core.DTOs
         // --- DÉBUT DE L'AJOUT ---
         public string DestinationFinale { get; set; } = string.Empty;
         public DateTime DateArrivee { get; set; }
+		public string? ClientTelephonePrincipal { get; set; }
         // --- FIN DE L'AJOUT ---
     }
 }

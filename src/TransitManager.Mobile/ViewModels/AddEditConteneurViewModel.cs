@@ -4,7 +4,7 @@ using System;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Mobile.Services;
-using TransitManager.Mobile.Views; // <-- Assurez-vous que ce using est bien présent
+using TransitManager.Mobile.Views;
 
 namespace TransitManager.Mobile.ViewModels
 {
@@ -28,19 +28,19 @@ namespace TransitManager.Mobile.ViewModels
         public AddEditConteneurViewModel(ITransitApi transitApi)
         {
             _transitApi = transitApi;
+            
+            // --- CORRECTION 1 : Initialiser l'objet Conteneur dès le début ---
+            Conteneur = new Conteneur { DateReception = DateTime.Now };
+            PageTitle = "Nouveau Conteneur";
         }
 
         async partial void OnConteneurIdChanged(string value)
         {
-            // --- CORRECTION : On assigne la valeur reçue à notre propriété ---
             ConteneurId = value;
 
-            if (string.IsNullOrEmpty(ConteneurId))
-            {
-                PageTitle = "Nouveau Conteneur";
-                Conteneur = new Conteneur { DateReception = DateTime.Now };
-            }
-            else
+            // La logique de création est déjà gérée par le constructeur.
+            // Cette méthode ne s'occupe plus que de la modification.
+            if (!string.IsNullOrEmpty(ConteneurId))
             {
                 PageTitle = "Modifier le Conteneur";
                 IsBusy = true;
@@ -65,9 +65,11 @@ namespace TransitManager.Mobile.ViewModels
         {
             if (Conteneur == null) return;
             
-            if (string.IsNullOrWhiteSpace(Conteneur.NumeroDossier) || string.IsNullOrWhiteSpace(Conteneur.Destination))
+            if (string.IsNullOrWhiteSpace(Conteneur.NumeroDossier) || 
+                string.IsNullOrWhiteSpace(Conteneur.Destination) || 
+                string.IsNullOrWhiteSpace(Conteneur.PaysDestination))
             {
-                await Shell.Current.DisplayAlert("Champs requis", "Le numéro de dossier et la destination sont obligatoires.", "OK");
+                await Shell.Current.DisplayAlert("Champs requis", "Le numéro de dossier, la destination et le pays sont obligatoires.", "OK");
                 return;
             }
 
@@ -79,7 +81,7 @@ namespace TransitManager.Mobile.ViewModels
             IsBusy = true;
             try
             {
-                // --- CORRECTION : On se base de nouveau sur ConteneurId, qui est la source de vérité ---
+                // La logique reste la même et est maintenant correcte.
                 if (string.IsNullOrEmpty(ConteneurId))
                 {
                     await _transitApi.CreateConteneurAsync(Conteneur);

@@ -47,7 +47,14 @@
                             
                             <Grid ColumnDefinitions="*, Auto">
                                 <VerticalStackLayout Grid.Column="0" Spacing="5">
-                                    <Label Text="{Binding Item.Client.NomComplet}" FontSize="Medium" FontAttributes="Bold"/>
+									<Label FontSize="Medium">
+										<Label.FormattedText>
+											<FormattedString>
+												<Span Text="{Binding Item.Client.NomComplet}" FontAttributes="Bold"/>
+												<Span Text="{Binding Item.Client.TelephonePrincipal, StringFormat=' ({0})'}" TextColor="Gray"/>
+											</FormattedString>
+										</Label.FormattedText>
+									</Label>
                                     <Label>
                                         <Label.FormattedText>
                                             <FormattedString>

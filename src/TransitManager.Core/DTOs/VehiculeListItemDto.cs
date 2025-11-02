@@ -12,5 +12,7 @@ namespace TransitManager.Core.DTOs
         public string ClientNomComplet { get; set; } = string.Empty;
         public string? ConteneurNumeroDossier { get; set; }
 		public DateTime DateCreation { get; set; }
+		public string? ClientTelephonePrincipal { get; set; }
+		public string DestinationFinale { get; set; } = string.Empty;
     }
 }

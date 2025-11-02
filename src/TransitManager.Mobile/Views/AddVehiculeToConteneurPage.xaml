@@ -48,7 +48,15 @@
                                             </FormattedString>
                                         </Label.FormattedText>
                                     </Label>
-                                    <Label Text="{Binding Item.Client.NomComplet}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
+									<Label Text="{Binding Item.DestinationFinale, StringFormat='Destination : {0}'}" FontSize="Small"/>
+									<Label FontSize="Small" FontAttributes="Italic">
+										 <Label.FormattedText>
+											<FormattedString>
+												<Span Text="{Binding Item.Client.NomComplet}" TextColor="Gray"/>
+												<Span Text="{Binding Item.Client.TelephonePrincipal, StringFormat=' ({0})'}" TextColor="DarkGray"/>
+											</FormattedString>
+										</Label.FormattedText>
+									</Label>
                                 </VerticalStackLayout>
                                 <Border Grid.Column="1" Padding="10,5" 
                                         BackgroundColor="{Binding Item.Statut, Converter={StaticResource StatusToColorConverter}}" 

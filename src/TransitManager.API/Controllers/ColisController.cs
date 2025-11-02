@@ -51,6 +51,7 @@ namespace TransitManager.API.Controllers
                     Designation = c.Designation,
                     Statut = c.Statut,
                     ClientNomComplet = c.Client?.NomComplet ?? "N/A",
+					ClientTelephonePrincipal = c.Client?.TelephonePrincipal,
                     ConteneurNumeroDossier = c.Conteneur?.NumeroDossier,
                     AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)),
 

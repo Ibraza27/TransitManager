@@ -21,7 +21,18 @@
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Informations Générales" FontSize="Large" FontAttributes="Bold"/>
                     <Label Text="Client Propriétaire *" FontSize="Caption"/>
-                    <Picker ItemsSource="{Binding Clients}" ItemDisplayBinding="{Binding NomComplet}" SelectedItem="{Binding SelectedClient}"/>
+                    <Frame Padding="10" BorderColor="LightGray" CornerRadius="4">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding GoToClientSelectionCommand}"/>
+                        </Frame.GestureRecognizers>
+                        <Grid ColumnDefinitions="*, Auto">
+                            <Entry Grid.Column="0" 
+                                   Text="{Binding SelectedClient.NomComplet}" 
+                                   Placeholder="Appuyez pour sélectionner un client"
+                                   IsReadOnly="True"/>
+                            <Label Grid.Column="1" Text=">" FontSize="Large" VerticalOptions="Center"/>
+                        </Grid>
+                    </Frame>
                     
                     <Label Text="Désignation / Description *" FontSize="Caption"/>
                     <Editor Text="{Binding Colis.Designation}" AutoSize="TextChanges" HeightRequest="100"/>

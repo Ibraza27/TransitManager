@@ -9,6 +9,7 @@ using TransitManager.Mobile.Services;
 
 namespace TransitManager.Mobile.ViewModels
 {
+	[QueryProperty(nameof(SelectedClient), "SelectedClient")]
     public partial class ColisViewModel : ObservableObject
     {
         private readonly ITransitApi _transitApi;
@@ -90,6 +91,7 @@ namespace TransitManager.Mobile.ViewModels
                         c.NumeroReference.ToLower().Contains(term) ||
                         c.Designation.ToLower().Contains(term) ||
                         c.ClientNomComplet.ToLower().Contains(term) ||
+						(c.ClientTelephonePrincipal?.Contains(term) ?? false) ||
                         c.AllBarcodes.ToLower().Contains(term) 
                     );
                 }
@@ -143,5 +145,12 @@ namespace TransitManager.Mobile.ViewModels
         {
             await Shell.Current.GoToAsync("AddEditColisPage");
         }
+		
+        [RelayCommand]
+        private async Task GoToClientSelectionAsync()
+        {
+            await Shell.Current.GoToAsync("ClientSelectionPage");
+        }
+		
     }
 }

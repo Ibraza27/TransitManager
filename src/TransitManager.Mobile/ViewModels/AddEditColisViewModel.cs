@@ -11,6 +11,7 @@ using TransitManager.Mobile.Services;
 namespace TransitManager.Mobile.ViewModels
 {
     [QueryProperty(nameof(ColisId), "colisId")]
+    [QueryProperty(nameof(SelectedClient), "SelectedClient")]
     public partial class AddEditColisViewModel : ObservableObject
     {
         private readonly ITransitApi _transitApi;
@@ -19,10 +20,8 @@ namespace TransitManager.Mobile.ViewModels
         [ObservableProperty] private string? _colisId;
         [ObservableProperty] private string _pageTitle = string.Empty;
 
-        // --- DÉBUT DE LA MODIFICATION 1 ---
         [ObservableProperty] private Client? _selectedClient;
-        public ObservableCollection<Client> Clients { get; } = new();
-        // --- FIN DE LA MODIFICATION 1 ---
+
 
         [ObservableProperty] private bool _isBusy;
         [ObservableProperty] private bool _destinataireIdentiqueAuClient;
@@ -50,7 +49,6 @@ namespace TransitManager.Mobile.ViewModels
             IsBusy = true;
             try
             {
-                await LoadClientsAsync();
 
                 if (string.IsNullOrEmpty(ColisId))
                 {
@@ -65,7 +63,7 @@ namespace TransitManager.Mobile.ViewModels
                     Colis = await _transitApi.GetColisByIdAsync(id);
                     if (Colis != null)
                     {
-                        SelectedClient = Clients.FirstOrDefault(c => c.Id == Colis.ClientId);
+						SelectedClient = await _transitApi.GetClientByIdAsync(Colis.ClientId);
                         Barcodes.Clear();
                         foreach(var b in Colis.Barcodes) Barcodes.Add(b);
 
@@ -82,16 +80,8 @@ namespace TransitManager.Mobile.ViewModels
             }
         }
 
-        private async Task LoadClientsAsync()
-        {
-            Clients.Clear();
-            var clients = await _transitApi.GetClientsAsync();
-            foreach (var client in clients) Clients.Add(client);
-        }
         
-        // --- DÉBUT DE LA MODIFICATION 2 ---
         partial void OnSelectedClientChanged(Client? value)
-        // --- FIN DE LA MODIFICATION 2 ---
         {
             if (DestinataireIdentiqueAuClient) UpdateDestinataire();
         }
@@ -192,6 +182,11 @@ namespace TransitManager.Mobile.ViewModels
 						Volume = Colis.Volume,
 						ValeurDeclaree = Colis.ValeurDeclaree,
 						PrixTotal = Colis.PrixTotal,
+                        
+                        // --- DÉBUT DE LA CORRECTION ---
+                        SommePayee = Colis.SommePayee, // On s'assure de renvoyer la valeur existante
+                        // --- FIN DE LA CORRECTION ---
+
 						Destinataire = Colis.Destinataire,
 						TelephoneDestinataire = Colis.TelephoneDestinataire,
 						LivraisonADomicile = Colis.LivraisonADomicile,
@@ -200,7 +195,8 @@ namespace TransitManager.Mobile.ViewModels
 						ManipulationSpeciale = Colis.ManipulationSpeciale,
 						InstructionsSpeciales = Colis.InstructionsSpeciales,
 						Type = Colis.Type,
-						TypeEnvoi = Colis.TypeEnvoi
+						TypeEnvoi = Colis.TypeEnvoi,
+                        Statut = Colis.Statut // Il manquait aussi le statut
 					};
 					await _transitApi.UpdateColisAsync(Colis.Id, dto);
 				}
@@ -240,7 +236,13 @@ namespace TransitManager.Mobile.ViewModels
 					}
 				};
 			}
-		}		
+		}
+		
+        [RelayCommand]
+        private async Task GoToClientSelectionAsync()
+        {
+            await Shell.Current.GoToAsync("ClientSelectionPage");
+        }
 		
     }
 }

@@ -48,10 +48,18 @@
                     <Label Text="Client &amp; Destinataire" FontSize="Large" FontAttributes="Bold"/>
                     
                     <Label Text="Client Proprietaire *" FontSize="Caption"/>
-                    <Picker Title="Selectionner un client" 
-                            ItemsSource="{Binding Clients}"
-                            ItemDisplayBinding="{Binding NomComplet}"
-                            SelectedItem="{Binding SelectedClient}"/>
+                    <Frame Padding="10" BorderColor="LightGray" CornerRadius="4">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding GoToClientSelectionCommand}"/>
+                        </Frame.GestureRecognizers>
+                        <Grid ColumnDefinitions="*, Auto">
+                            <Entry Grid.Column="0" 
+                                   Text="{Binding SelectedClient.NomComplet}" 
+                                   Placeholder="Appuyez pour sélectionner un client"
+                                   IsReadOnly="True"/>
+                            <Label Grid.Column="1" Text=">" FontSize="Large" VerticalOptions="Center"/>
+                        </Grid>
+                    </Frame>
                     
                     <HorizontalStackLayout Spacing="10" Margin="0,15,0,0">
                         <CheckBox IsChecked="{Binding DestinataireIdentiqueAuClient}"/>

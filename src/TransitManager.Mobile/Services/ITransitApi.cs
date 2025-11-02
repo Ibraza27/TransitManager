@@ -58,6 +58,9 @@ namespace TransitManager.Mobile.Services
         [Put("/api/conteneurs/{id}")]
         Task UpdateConteneurAsync(Guid id, [Body] Conteneur conteneur);
 		
+        [Delete("/api/conteneurs/{id}")]
+        Task DeleteConteneurAsync(Guid id);
+		
 		[Get("/api/vehicules/{id}")]
 		Task<Vehicule> GetVehiculeByIdAsync(Guid id);
 		

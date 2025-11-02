@@ -122,5 +122,38 @@ namespace TransitManager.Mobile.ViewModels
             if (Conteneur == null) return;
             await Shell.Current.GoToAsync($"RemoveVehiculeFromConteneurPage?conteneurId={Conteneur.Id}");
         }
+		
+
+		[RelayCommand]
+		private async Task DeleteConteneurAsync()
+		{
+			if (Conteneur == null) return;
+
+			bool confirm = await Shell.Current.DisplayAlert(
+				"Confirmation", 
+				$"Voulez-vous vraiment supprimer le conteneur {Conteneur.NumeroDossier} ? Cette action est irréversible.", 
+				"Oui, Supprimer", 
+				"Non");
+			
+			if (!confirm) return;
+
+			IsBusy = true;
+			try
+			{
+				// --- DÉBUT DE LA CORRECTION : Activer le code ---
+				await _transitApi.DeleteConteneurAsync(Conteneur.Id);
+				await Shell.Current.GoToAsync(".."); // Revenir à la page de liste
+				// --- FIN DE LA CORRECTION ---
+			}
+			catch (Exception ex)
+			{
+				await Shell.Current.DisplayAlert("Erreur", $"La suppression a échoué : {ex.Message}", "OK");
+			}
+			finally
+			{
+				IsBusy = false;
+			}
+		}
+		
     }
 }

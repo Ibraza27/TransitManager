@@ -102,5 +102,29 @@ namespace TransitManager.API.Controllers
             }
         }
         // --- FIN DES AJOUTS ---
+		
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteConteneur(Guid id)
+        {
+            try
+            {
+                var success = await _conteneurService.DeleteAsync(id);
+                if (!success)
+                {
+                    return NotFound();
+                }
+                return NoContent(); // Code 204 : Succès, pas de contenu à retourner
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Si la règle métier (conteneur non vide) est violée, on renvoie une erreur 400
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la suppression du conteneur ID {ConteneurId}", id);
+                return StatusCode(500, "Une erreur interne est survenue.");
+            }
+        }
     }
 }

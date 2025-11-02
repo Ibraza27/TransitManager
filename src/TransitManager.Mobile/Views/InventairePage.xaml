@@ -41,23 +41,25 @@
         <!-- La CollectionView est maintenant l'élément principal de la ligne 1 -->
         <Grid Grid.Row="1" Margin="10,0" RowDefinitions="Auto, *">
             <!-- En-têtes de colonne -->
-            <Grid Grid.Row="0" ColumnDefinitions="2*,*,*,Auto,Auto" Padding="10,5" BackgroundColor="LightGray">
-                <Label Grid.Column="0" Text="Désignation" FontAttributes="Bold" HorizontalTextAlignment="Start"/>
-                <Label Grid.Column="1" Text="Qté" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
-                <Label Grid.Column="2" Text="Valeur" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
+            <Grid Grid.Row="0" ColumnDefinitions="*, 2*, *, *, Auto, Auto" Padding="10,5" BackgroundColor="LightGray">
+                <Label Grid.Column="0" Text="Date" FontAttributes="Bold" HorizontalTextAlignment="Start"/>
+                <Label Grid.Column="1" Text="Désignation" FontAttributes="Bold" HorizontalTextAlignment="Start"/>
+                <Label Grid.Column="2" Text="Qté" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
+                <Label Grid.Column="3" Text="Valeur" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
             </Grid>
 
             <CollectionView Grid.Row="1" ItemsSource="{Binding Items}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="entities:InventaireItem">
-                        <Grid ColumnDefinitions="2*,*,*,Auto,Auto" Padding="10,8" >
-                            <Label Grid.Column="0" Text="{Binding Designation}" VerticalOptions="Center"/>
-                            <Label Grid.Column="1" Text="{Binding Quantite}" VerticalOptions="Center" HorizontalTextAlignment="Center"/>
-                            <Label Grid.Column="2" Text="{Binding Valeur, StringFormat='{0:C}'}" VerticalOptions="Center" HorizontalTextAlignment="Center"/>
-                            <Button Grid.Column="3" Text="Modifier" FontSize="Micro"
+                        <Grid ColumnDefinitions="*, 2*, *, *, Auto, Auto" Padding="10,8" >
+                            <Label Grid.Column="0" Text="{Binding Date, StringFormat='{0:dd/MM/yy}'}" VerticalOptions="Center"/>
+                            <Label Grid.Column="1" Text="{Binding Designation}" VerticalOptions="Center"/>
+                            <Label Grid.Column="2" Text="{Binding Quantite}" VerticalOptions="Center" HorizontalTextAlignment="Center"/>
+                            <Label Grid.Column="3" Text="{Binding Valeur, StringFormat='{0:C}'}" VerticalOptions="Center" HorizontalTextAlignment="Center"/>
+                            <Button Grid.Column="4" Text="Modifier" FontSize="Micro"
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:InventaireViewModel}}, Path=EditItemCommand}"
                                     CommandParameter="{Binding .}"/>
-                            <Button Grid.Column="4" Text="Suppr." FontSize="Micro" BackgroundColor="Red"
+                            <Button Grid.Column="5" Text="Suppr." FontSize="Micro" BackgroundColor="Red"
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:InventaireViewModel}}, Path=DeleteItemCommand}"
                                     CommandParameter="{Binding .}"/>
                         </Grid>

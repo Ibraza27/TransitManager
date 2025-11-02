@@ -208,14 +208,26 @@ namespace TransitManager.Infrastructure.Services
             await context.Colis.Where(c => c.ConteneurId == conteneurId).ExecuteUpdateAsync(s => s.SetProperty(c => c.NumeroPlomb, numeroPlomb));
             await context.Vehicules.Where(v => v.ConteneurId == conteneurId).ExecuteUpdateAsync(s => s.SetProperty(v => v.NumeroPlomb, numeroPlomb));
         }
+
         public async Task<bool> DeleteAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            var conteneur = await context.Conteneurs.Include(c => c.Colis).Include(c => c.Vehicules).FirstOrDefaultAsync(c => c.Id == id);
+            var conteneur = await context.Conteneurs
+                .Include(c => c.Colis)
+                .Include(c => c.Vehicules)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
             if (conteneur == null) return false;
-            if (conteneur.Colis.Any() || conteneur.Vehicules.Any()) throw new InvalidOperationException("Impossible de supprimer un conteneur contenant des colis ou des véhicules.");
+
+            // Règle métier : on ne peut pas supprimer un conteneur qui n'est pas vide.
+            if (conteneur.Colis.Any() || conteneur.Vehicules.Any())
+            {
+                throw new InvalidOperationException("Impossible de supprimer un conteneur qui n'est pas vide. Veuillez d'abord retirer tous les colis et véhicules.");
+            }
+
+            // Suppression logique
             conteneur.Actif = false;
-            conteneur.Statut = StatutConteneur.Annule;
+            conteneur.Statut = StatutConteneur.Annule; // On le marque comme annulé
             await context.SaveChangesAsync();
             return true;
         }

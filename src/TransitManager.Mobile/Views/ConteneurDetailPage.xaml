@@ -14,7 +14,7 @@
     </ContentPage.Resources>
     
     <ScrollView>
-        <VerticalStackLayout Spacing="15" Padding="20">
+        <VerticalStackLayout Spacing="15" Padding="0,20,0,20">
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
             
             <Label Text="{Binding Conteneur.NumeroDossier}" FontSize="Header" FontAttributes="Bold" HorizontalOptions="Center"/>
@@ -91,12 +91,15 @@
                     </CollectionView>
                 </VerticalStackLayout>
             </Frame>
+			
+			<!-- Colis Affectés -->
 
             <Frame Padding="15" BorderColor="LightGray">
                 <VerticalStackLayout Spacing="10">
-                    <Grid ColumnDefinitions="*, Auto">
-                        <Label Text="{Binding TotalColis, StringFormat='Colis Affectés ({0})'}" FontSize="Large" FontAttributes="Bold" VerticalOptions="Center"/>
-                        <Button Grid.Column="1" Text="Modifier" Command="{Binding GoToRemoveColisCommand}" FontSize="Small" Padding="10,5"/>
+                    <Grid ColumnDefinitions="*, Auto, Auto">
+                        <Label Grid.Column="0" Text="{Binding TotalColis, StringFormat='Colis Affectés ({0})'}" FontSize="Large" FontAttributes="Bold" VerticalOptions="Center"/>
+                        <Button Grid.Column="1" Text="Retirer" Command="{Binding GoToRemoveColisCommand}" FontSize="Small" Padding="10,5" BackgroundColor="OrangeRed"/>
+                        <Button Grid.Column="2" Text="Ajouter" Command="{Binding GoToAddColisCommand}" FontSize="Small" Padding="10,5" Margin="5,0,0,0"/>
                     </Grid>
                     
                     <CollectionView ItemsSource="{Binding Conteneur.Colis}">
@@ -129,12 +132,15 @@
                     </Grid>
                 </VerticalStackLayout>
             </Frame>
+			
+			<!-- Véhicules Affectés -->
 
             <Frame Padding="15" BorderColor="LightGray">
                  <VerticalStackLayout Spacing="10">
-                    <Grid ColumnDefinitions="*, Auto">
-                        <Label Text="{Binding TotalVehicules, StringFormat='Véhicules Affectés ({0})'}" FontSize="Large" FontAttributes="Bold" VerticalOptions="Center"/>
-                        <Button Grid.Column="1" Text="Modifier" Command="{Binding GoToRemoveVehiculesCommand}" FontSize="Small" Padding="10,5"/>
+                    <Grid ColumnDefinitions="*, Auto, Auto">
+                        <Label Grid.Column="0" Text="{Binding TotalVehicules, StringFormat='Véhicules Affectés ({0})'}" FontSize="Large" FontAttributes="Bold" VerticalOptions="Center"/>
+                        <Button Grid.Column="1" Text="Retirer" Command="{Binding GoToRemoveVehiculesCommand}" FontSize="Small" Padding="10,5" BackgroundColor="OrangeRed"/>
+                        <Button Grid.Column="2" Text="Ajouter" Command="{Binding GoToAddVehiculesCommand}" FontSize="Small" Padding="10,5" Margin="5,0,0,0"/>
                     </Grid>
                     
                     <CollectionView ItemsSource="{Binding Conteneur.Vehicules}">
@@ -168,12 +174,11 @@
                 </VerticalStackLayout>
             </Frame>
             
-            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
-                <Button Text="Modifier Dossier" Command="{Binding GoToEditCommand}"/>
-                <Button Text="Ajouter Colis" Command="{Binding GoToAddColisCommand}"/>
-                <Button Text="Ajouter Véhicules" Command="{Binding GoToAddVehiculesCommand}"/>
-                <Button Text="Actualiser" Command="{Binding LoadConteneurDetailsCommand}"/>
-            </HorizontalStackLayout>
+			<HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
+				<Button Text="Modifier Dossier" Command="{Binding GoToEditCommand}"/>
+				<Button Text="Actualiser" Command="{Binding LoadConteneurDetailsCommand}"/>
+				<Button Text="Supprimer" Command="{Binding DeleteConteneurCommand}" BackgroundColor="Red"/>
+			</HorizontalStackLayout>
             
         </VerticalStackLayout>
     </ScrollView>

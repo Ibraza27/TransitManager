@@ -567,23 +567,36 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-		private async Task OpenInventaire()
+        private async Task OpenInventaire()
 		{
 			if (Colis == null) return;
 			var inventaireViewModel = new InventaireViewModel(Colis.InventaireJson);
-			var inventaireWindow = new InventaireView(inventaireViewModel)
+			var inventaireWindow = new Views.Inventaire.InventaireView(inventaireViewModel)
 			{
 				Owner = System.Windows.Application.Current.MainWindow
 			};
 
 			if (inventaireWindow.ShowDialog() == true)
 			{
-				Colis.InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items);
-				Colis.NombrePieces = inventaireViewModel.TotalQuantite;
-				Colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
+                // --- DÉBUT DE LA CORRECTION WPF ---
+                // On utilise le nouveau DTO et la nouvelle méthode de service
+                var dto = new UpdateInventaireDto
+                {
+                    ColisId = Colis.Id,
+                    InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items),
+                    TotalPieces = inventaireViewModel.TotalQuantite,
+                    TotalValeurDeclaree = inventaireViewModel.TotalValeur
+                };
+
+                await _colisService.UpdateInventaireAsync(dto);
+                
+                // On rafraîchit les données locales après la sauvegarde
+                Colis.InventaireJson = dto.InventaireJson;
+                Colis.NombrePieces = dto.TotalPieces;
+                Colis.ValeurDeclaree = dto.TotalValeurDeclaree;
 				
-				// Notifier explicitement le changement de HasInventaire
 				OnPropertyChanged(nameof(HasInventaire));
+                // --- FIN DE LA CORRECTION WPF ---
 			}
 		}
 

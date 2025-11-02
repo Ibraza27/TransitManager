@@ -4,7 +4,7 @@ using System;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Mobile.Services;
-using TransitManager.Mobile.Views;
+using TransitManager.Mobile.Views; // <-- Assurez-vous que ce using est bien présent
 
 namespace TransitManager.Mobile.ViewModels
 {
@@ -32,7 +32,10 @@ namespace TransitManager.Mobile.ViewModels
 
         async partial void OnConteneurIdChanged(string value)
         {
-            if (string.IsNullOrEmpty(value))
+            // --- CORRECTION : On assigne la valeur reçue à notre propriété ---
+            ConteneurId = value;
+
+            if (string.IsNullOrEmpty(ConteneurId))
             {
                 PageTitle = "Nouveau Conteneur";
                 Conteneur = new Conteneur { DateReception = DateTime.Now };
@@ -43,7 +46,7 @@ namespace TransitManager.Mobile.ViewModels
                 IsBusy = true;
                 try
                 {
-                    var id = Guid.Parse(value);
+                    var id = Guid.Parse(ConteneurId);
                     Conteneur = await _transitApi.GetConteneurByIdAsync(id);
                 }
                 catch (Exception ex)
@@ -68,18 +71,15 @@ namespace TransitManager.Mobile.ViewModels
                 return;
             }
 
-            // --- DÉBUT DE L'AJOUT : Gérer les dates désactivées ---
-            // Si une checkbox est décochée, la propriété correspondante dans le binding ne met pas la date à null.
-            // Il faut le faire manuellement avant d'envoyer les données.
             if (Conteneur.DateChargement.HasValue && !IsDateChecked("HasDateChargement")) Conteneur.DateChargement = null;
             if (Conteneur.DateDepart.HasValue && !IsDateChecked("HasDateDepart")) Conteneur.DateDepart = null;
             if (Conteneur.DateArriveeDestination.HasValue && !IsDateChecked("HasDateArrivee")) Conteneur.DateArriveeDestination = null;
             if (Conteneur.DateDedouanement.HasValue && !IsDateChecked("HasDateDedouanement")) Conteneur.DateDedouanement = null;
-            // --- FIN DE L'AJOUT ---
 
             IsBusy = true;
             try
             {
+                // --- CORRECTION : On se base de nouveau sur ConteneurId, qui est la source de vérité ---
                 if (string.IsNullOrEmpty(ConteneurId))
                 {
                     await _transitApi.CreateConteneurAsync(Conteneur);
@@ -100,7 +100,6 @@ namespace TransitManager.Mobile.ViewModels
             }
         }
         
-        // --- DÉBUT DE L'AJOUT : Méthode helper ---
         private bool IsDateChecked(string checkBoxName)
         {
             if (Shell.Current.CurrentPage is AddEditConteneurPage page)
@@ -110,6 +109,5 @@ namespace TransitManager.Mobile.ViewModels
             }
             return false;
         }
-        // --- FIN DE L'AJOUT ---
     }
 }

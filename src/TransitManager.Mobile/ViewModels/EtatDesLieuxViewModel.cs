@@ -108,8 +108,8 @@ namespace TransitManager.Mobile.ViewModels
                 float y = (point.Y * imageSize) + offsetY;
                 
                 // Dessiner un cercle de 15 pixels de rayon
-                canvas.FillCircle(x, y, 15);
-                canvas.DrawCircle(x, y, 15);
+                canvas.FillCircle(x, y, 5);
+                canvas.DrawCircle(x, y, 5);
             }
 
             // --- DESSIN DES RAYURES ---

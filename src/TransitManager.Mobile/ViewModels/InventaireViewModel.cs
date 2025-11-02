@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.Globalization; // <-- AJOUTER CETTE LIGNE
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -22,7 +23,6 @@ namespace TransitManager.Mobile.ViewModels
         public ObservableCollection<InventaireItem> Items { get; } = new();
 
         [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(AddItemCommand))]
         private InventaireItem _newItem = new();
 
         [ObservableProperty]
@@ -31,10 +31,21 @@ namespace TransitManager.Mobile.ViewModels
         [ObservableProperty]
         private decimal _totalValeur;
 
+        // --- DÉBUT DE L'AJOUT 1 : Options de sérialisation globales pour ce ViewModel ---
+        private readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        // --- FIN DE L'AJOUT 1 ---
+
         public InventaireViewModel(ITransitApi transitApi)
         {
             _transitApi = transitApi;
             Items.CollectionChanged += (s, e) => CalculateTotals();
+
+            // --- DÉBUT DE L'AJOUT 2 : S'abonner manuellement pour une meilleure réactivité ---
+            NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
+            // --- FIN DE L'AJOUT 2 ---
         }
 
         async partial void OnColisIdChanged(string value)
@@ -61,15 +72,17 @@ namespace TransitManager.Mobile.ViewModels
             }
         }
 
-        // --- DÉBUT DE LA CORRECTION ---
         private async Task LoadItemsFromJsonAsync(string? json)
         {
             try
             {
                 Items.Clear();
-                if (!string.IsNullOrEmpty(json) && json != "[]")
+                if (!string.IsNullOrEmpty(json) && json != "[]" && json != "null")
                 {
-                    var items = JsonSerializer.Deserialize<List<InventaireItem>>(json);
+                    // --- DÉBUT DE LA CORRECTION 3 : Utiliser les options de sérialisation ---
+                    var items = JsonSerializer.Deserialize<List<InventaireItem>>(json, _jsonOptions);
+                    // --- FIN DE LA CORRECTION 3 ---
+                    
                     if (items != null)
                     {
                         foreach (var item in items) Items.Add(item);
@@ -78,14 +91,11 @@ namespace TransitManager.Mobile.ViewModels
             }
             catch (Exception ex)
             {
-                // Cet appel 'await' est la raison de l'erreur
-                await Shell.Current.DisplayAlert("Erreur", $"Impossible de charger l'inventaire : {ex.Message}", "OK");
+                await Shell.Current.DisplayAlert("Erreur de Désérialisation", $"Impossible de lire l'inventaire : {ex.Message}", "OK");
             }
             
             CalculateTotals();
-            // Pas besoin de retourner Task.CompletedTask, la méthode est déjà async.
         }
-        // --- FIN DE LA CORRECTION ---
 
         private void CalculateTotals()
         {
@@ -97,7 +107,16 @@ namespace TransitManager.Mobile.ViewModels
         private void AddItem()
         {
             Items.Add(NewItem);
+
+            // Important : désabonner l'ancien objet pour éviter les fuites de mémoire
+            NewItem.PropertyChanged -= (s, e) => AddItemCommand.NotifyCanExecuteChanged();
+            
             NewItem = new InventaireItem();
+            
+            // --- DÉBUT DE L'AJOUT 4 : Se réabonner au nouvel objet ---
+            NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
+            AddItemCommand.NotifyCanExecuteChanged(); // Mettre à jour l'état du bouton immédiatement
+            // --- FIN DE L'AJOUT 4 ---
         }
 
         private bool CanAddItem() => !string.IsNullOrWhiteSpace(NewItem.Designation) && NewItem.Quantite > 0;
@@ -107,6 +126,11 @@ namespace TransitManager.Mobile.ViewModels
         {
             try
             {
+                // --- DÉBUT DE L'AJOUT 5 : Pouvoir modifier la date ---
+                var newDateStr = await Shell.Current.DisplayPromptAsync("Modifier", "Nouvelle date (jj/mm/aaaa) :", "OK", "Annuler", initialValue: itemToEdit.Date.ToString("dd/MM/yyyy"));
+                if (newDateStr == null || !DateTime.TryParseExact(newDateStr, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var newDate)) return;
+                // --- FIN DE L'AJOUT 5 ---
+
                 var newDesignation = await Shell.Current.DisplayPromptAsync("Modifier", "Nouvelle désignation :", "OK", "Annuler", initialValue: itemToEdit.Designation);
                 if (newDesignation == null) return;
 
@@ -116,6 +140,7 @@ namespace TransitManager.Mobile.ViewModels
                 var newValeurStr = await Shell.Current.DisplayPromptAsync("Modifier", "Nouvelle valeur :", "OK", "Annuler", initialValue: itemToEdit.Valeur.ToString(), keyboard: Keyboard.Numeric);
                 if (newValeurStr == null || !decimal.TryParse(newValeurStr, out var newValeur)) return;
 
+                itemToEdit.Date = newDate; // <-- Appliquer la nouvelle date
                 itemToEdit.Designation = newDesignation;
                 itemToEdit.Quantite = newQuantite;
                 itemToEdit.Valeur = newValeur;

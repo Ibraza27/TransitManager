@@ -94,7 +94,7 @@ namespace TransitManager.Mobile.ViewModels
         [RelayCommand]
         private async Task AddConteneurAsync()
         {
-            await Shell.Current.GoToAsync("AddEditConteneurPage");
+            await Shell.Current.GoToAsync("AddEditConteneurPage?conteneurId=");
         }
     }
 }

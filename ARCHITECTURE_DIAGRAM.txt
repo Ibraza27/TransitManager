@@ -1,0 +1,347 @@
+╔════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                    TRANSITMANAGER - SYSTEM ARCHITECTURE DIAGRAM                                   ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    CLIENT LAYER (Presentation)                                     │
+├──────────────────────────┬──────────────────────────┬──────────────────────────────────────────────┤
+│                          │                          │                                              │
+│    WPF DESKTOP           │    MOBILE (ANDROID)      │    WEB (TO BE BUILT) ⚠️                      │
+│    (.NET 8.0-windows)    │    (.NET MAUI)           │                                              │
+│                          │                          │                                              │
+│  ┌─────────────────┐     │ ┌──────────────────┐    │  ┌─────────────────────────────────┐        │
+│  │   Views/XAML    │     │ │  Views/XAML      │    │  │  React/Vue/Angular SPA          │        │
+│  │                 │     │ │                  │    │  │  • TypeScript/JavaScript        │        │
+│  │ • Clients       │     │ │ • Clients        │    │  │  • Material UI/Bootstrap        │        │
+│  │ • Colis         │     │ │ • Colis          │    │  │  • State Management (Redux)     │        │
+│  │ • Vehicules     │     │ │ • Vehicules      │    │  │  • API Integration              │        │
+│  │ • Paiements     │     │ │ • Paiements      │    │  │                                 │        │
+│  │ • Dashboard     │     │ │ • Inventory      │    │  └─────────────────────────────────┘        │
+│  └────────┬────────┘     │ └────────┬─────────┘    │                                              │
+│           │              │          │              │                                              │
+│  ┌────────v──────────┐   │ ┌────────v──────────┐   │                                              │
+│  │ ViewModels        │   │ │ ViewModels        │   │                                              │
+│  │ (MVVM)            │   │ │ (MVVM)            │   │                                              │
+│  └────────┬──────────┘   │ └────────┬──────────┘   │                                              │
+│           │              │          │              │                                              │
+│  ┌────────v──────────┐   │ ┌────────v──────────┐   │  ┌──────────────────────────┐               │
+│  │ SignalR Client    │   │ │ Refit HTTP Client │   │  │ HTTP Client              │               │
+│  │ (.NET SignalR)    │   │ │ (ITransitApi)     │   │  │ • Axios/Fetch            │               │
+│  └────────┬──────────┘   │ └────────┬──────────┘   │  │ • JWT Interceptor        │               │
+│           │              │          │              │  └──────────────────────────┘               │
+└───────────┼──────────────┼──────────┼──────────────┼────────────────────────────────────────────┘
+            │              │          │              │
+            └──────────────┼──────────┼──────────────┘
+                           │          │
+              WebSocket    │          │ HTTP/REST
+              /notificationHub         │
+                           │          │
+        ┌──────────────────┴──────────┴────────────┐
+        │                                          │
+        │   API GATEWAY / REVERSE PROXY (Optional)│
+        │   • Authentication Middleware ⚠️         │
+        │   • Authorization Middleware ⚠️          │
+        │   • Rate Limiting ⚠️                     │
+        │   • CORS Configuration ⚠️                │
+        │                                          │
+        └──────────────────┬─────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────────────────────────────────────┐
+│                          ASP.NET CORE 8.0 REST API                                              │
+│                    (TransitManager.API - /src/TransitManager.API)                              │
+│                                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │ API CONTROLLERS (CURRENTLY UNSECURED ⚠️)                                               │   │
+│  │                                                                                        │   │
+│  │  • ClientsController        /api/clients           [NO AUTH]                          │   │
+│  │  • ColisController          /api/colis             [NO AUTH]                          │   │
+│  │  • VehiculesController      /api/vehicules         [NO AUTH]                          │   │
+│  │  • ConteneursController     /api/conteneurs        [NO AUTH]                          │   │
+│  │  • PaiementsController      /api/paiements         [NO AUTH]                          │   │
+│  │  • UtilitiesController      /api/utilities         [NO AUTH]                          │   │
+│  │  • [AuthController]         /api/auth              [NEW - JWT TOKENS NEEDED] ⚠️       │   │
+│  │                                                                                        │   │
+│  └────────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │ SIGNALR HUB                                                                            │   │
+│  │ • NotificationHub                /notificationHub    (Real-time updates)               │   │
+│  └────────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                      │                                                        │
+│                                      │ HTTP/WebSocket                                         │
+│                                      │                                                        │
+└──────────────────────────────────────┼───────────────────────────────────────────────────────┘
+                                       │
+                ┌──────────────────────┴──────────────────────┐
+                │                                             │
+┌───────────────▼──────────────────────────────────────────┐ │
+│         SERVICE LAYER (Business Logic)                   │ │
+│   (TransitManager.Infrastructure/Services)              │ │
+│                                                         │ │
+│  ┌─────────────────────────────────────────────────┐  │ │
+│  │ AuthenticationService    [PASSWORD HASHING]    │  │ │
+│  │ ClientService            [CLIENT MGMT]         │  │ │
+│  │ ColisService             [PACKAGE MGMT]        │  │ │
+│  │ VehiculeService          [VEHICLE MGMT]        │  │ │
+│  │ ConteneurService         [CONTAINER MGMT]      │  │ │
+│  │ PaiementService          [PAYMENT MGMT]        │  │ │
+│  │ NotificationService      [NOTIFICATIONS]       │  │ │
+│  │ NotificationHubService   [SIGNALR BROADCAST]   │  │ │
+│  │ BarcodeService           [BARCODE GEN]         │  │ │
+│  │ ExportService            [EXPORT TO EXCEL/PDF] │  │ │
+│  │ BackupService            [DB BACKUP]           │  │ │
+│  │ PrintingService          [DOCUMENT PRINT]      │  │ │
+│  └──────────────────┬────────────────────────────┘  │ │
+│                     │                               │ │
+└─────────────────────┼───────────────────────────────┘ │
+                      │                                 │
+┌─────────────────────▼──────────────────────────────┐ │
+│      REPOSITORY PATTERN (Data Access)              │ │
+│ (TransitManager.Infrastructure/Repositories)       │ │
+│                                                    │ │
+│  ┌────────────────────────────────────────────┐  │ │
+│  │ GenericRepository<T>                       │  │ │
+│  │  • GetByIdAsync()        [Soft-delete]    │  │ │
+│  │  • GetAllAsync()         [Active only]    │  │ │
+│  │  • FindAsync()           [Query filter]   │  │ │
+│  │  • AddAsync()            [Create]         │  │ │
+│  │  • UpdateAsync()         [Update]         │  │ │
+│  │  • RemoveAsync()         [Soft delete]    │  │ │
+│  │  • GetPagedAsync()       [Pagination]     │  │ │
+│  └────────────────────────────────────────────┘  │ │
+│                    ▲                              │ │
+│                    │ Inherited By                 │ │
+│  ┌────────────────┴─────────────────────────┐   │ │
+│  │ ClientRepository     [SPECIALIZED]       │   │ │
+│  │ ColisRepository      [SPECIALIZED]       │   │ │
+│  │ ConteneurRepository  [SPECIALIZED]       │   │ │
+│  └────────────────────────────────────────────┘   │ │
+│                     │                             │ │
+└─────────────────────┼─────────────────────────────┘ │
+                      │                               │
+└──────────────────────┼───────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────────────────────────────────────┐
+│                      ENTITY FRAMEWORK CORE 8.0                                              │
+│                   (TransitManager.Infrastructure/Data)                                      │
+│                                                                                              │
+│  TransitContext.cs                                                                         │
+│  ├─ DbContextOptions                                                                       │
+│  ├─ DbSets (Entities)                                                                      │
+│  ├─ ModelBuilder (Configuration)                                                           │
+│  │  ├─ Soft Delete Query Filters                  [Actif = true]                          │
+│  │  ├─ Decimal Precision                          [Precision(18,2)]                       │
+│  │  └─ Default Admin User Seeding                 [admin/Admin@123]                       │
+│  ├─ SaveChanges Override                                                                   │
+│  │  ├─ UTC Date Conversion                        [All DateTimes → UTC]                   │
+│  │  ├─ Audit Logging                             [Before/After values]                    │
+│  │  └─ CreatedBy/ModifiedBy Setting              [Track user changes]                     │
+│  └─ Database Migrations                                                                    │
+│     └─ /Migrations/*.cs                           [Schema versioning]                      │
+│                                                                                              │
+└──────────────────────┬───────────────────────────────────────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────────────────────────────────────┐
+│                         DATABASE LAYER                                                      │
+│                                                                                              │
+│  ┌──────────────────────────────────────┐                                                 │
+│  │  PostgreSQL 8.0+                     │                                                 │
+│  │  Database: TransitManager            │                                                 │
+│  │                                      │                                                 │
+│  │  ┌──────────────────────────────┐   │                                                 │
+│  │  │ Main Tables:                 │   │                                                 │
+│  │  │ • Utilisateurs               │   │                                                 │
+│  │  │ • Clients                    │   │                                                 │
+│  │  │ • Colis                      │   │                                                 │
+│  │  │ • Vehicules                  │   │                                                 │
+│  │  │ • Conteneurs                 │   │                                                 │
+│  │  │ • Paiements                  │   │                                                 │
+│  │  │ • Documents                  │   │                                                 │
+│  │  │ • Barcodes                   │   │                                                 │
+│  │  │ • AuditLogs        [Audit]   │   │                                                 │
+│  │  │ • Notifications              │   │                                                 │
+│  │  └──────────────────────────────┘   │                                                 │
+│  │                                      │                                                 │
+│  │  Connection Pool                     │                                                 │
+│  │  Async Operations                    │                                                 │
+│  │  Soft Delete Support                 │                                                 │
+│  │  Concurrency Control (RowVersion)    │                                                 │
+│  └──────────────────────────────────────┘                                                 │
+│                                                                                              │
+└──────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                              ENTITY RELATIONSHIPS                                             ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+                             ┌─────────────────┐
+                             │   Utilisateur   │
+                             │  (5 Roles)      │
+                             └────────┬────────┘
+                                      │
+                  ┌───────────────────┼───────────────────┐
+                  │                   │                   │
+         ┌────────▼──────┐   ┌────────▼──────┐   ┌───────▼──────┐
+         │   Clients      │   │  AuditLog     │   │ Notification │
+         │  (Customers)   │   │  (Audit Trail)│   │              │
+         └────────┬──────┘   └────────▲──────┘   └──────────────┘
+                  │                   │
+         ┌────────┴────────┐  ┌───────┴───────┐
+         │                 │  │               │
+    ┌────▼─────┐   ┌───────▼──▼───┐   ┌───────▼──────┐
+    │  Colis    │   │  Vehicules   │   │ Paiements    │
+    │(Packages) │   │ (Vehicles)   │   │(Payments)    │
+    └────┬─────┘   └───────┬──────┘   └───────┬──────┘
+         │                 │                   │
+         └─────────┬───────┴───────┬───────────┘
+                   │               │
+            ┌──────▼────────┐  (references)
+            │  Conteneur    │
+            │ (Containers)  │
+            └───────────────┘
+
+
+╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                           AUTHENTICATION FLOW (CURRENT vs NEEDED)                             ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+CURRENT STATE (WPF/Mobile):
+┌──────────────┐
+│ Client App   │
+│              │
+│ username     │ ──────HTTP POST──────>  AuthenticationService
+│ password     │                         (DB Lookup + BCrypt)
+└──────────────┘                              │
+                                              │ Returns: AuthenticationResult
+                                         ┌────▼─────┐
+                                         │ Success?  │
+                                         └────┬──────┘
+                                              │
+                         ┌────────────────────┴────────────────────┐
+                         │                                         │
+                    ┌────▼──────┐                         ┌────────▼─────┐
+                    │ In-Memory  │                        │ DB Updates   │
+                    │ User State │                        │ (LastLogin)  │
+                    └───────────┘                        └──────────────┘
+
+NEEDED FOR WEB (JWT):
+┌──────────────┐
+│ Web Browser  │
+│              │
+│ username     │ ──────HTTP POST──────>  AuthController
+│ password     │                         (DB Lookup + BCrypt)
+└──────────────┘                              │
+                                              │ Returns: JwtToken
+                                         ┌────▼─────────────────────────┐
+                                         │ JWT Token (RS256 signed)      │
+                                         │ • Header (alg, typ)          │
+                                         │ • Payload (user, roles)      │
+                                         │ • Signature (private key)    │
+                                         │ • Expiration (15-60 min)     │
+                                         └────┬────────────────────────┘
+                                              │
+                         ┌────────────────────┴────────────────────┐
+                         │                                         │
+                    ┌────▼──────────────┐               ┌─────────▼──────┐
+                    │ localStorage      │               │ DB Updates     │
+                    │ (Token Storage)   │               │ (LastLogin)    │
+                    └────┬──────────────┘               └────────────────┘
+                         │
+                         │ Authorization Header
+                         │ "Bearer eyJ0eXAi..."
+                         │
+                    ┌────▼─────────────────────────────────────────┐
+                    │ API Middleware (NEW)                         │
+                    │ • Validate JWT Signature                     │
+                    │ • Check Token Expiration                     │
+                    │ • Extract Claims (UserId, Roles)             │
+                    │ • Check Authorization [Authorize] attributes │
+                    └────────────────────────────────────────────┘
+                         │
+                    ┌────▼──────────────┐
+                    │ Controller Action │
+                    │ (Process Request) │
+                    └───────────────────┘
+
+
+╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                             CRITICAL SECURITY GAPS ⚠️                                          ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+1. NO AUTHENTICATION MIDDLEWARE
+   ├─ All API endpoints are publicly accessible
+   ├─ No [Authorize] attributes on controllers
+   └─ No token validation
+
+2. NO AUTHORIZATION MIDDLEWARE
+   ├─ No role-based access control in API
+   ├─ No permission checking on endpoints
+   └─ APermission() method exists but is not used
+
+3. NO JWT TOKENS
+   ├─ No token generation
+   ├─ No token refresh mechanism
+   └─ No token expiration handling
+
+4. CORS ALLOWS ALL ORIGINS (Development)
+   ├─ policy.SetIsOriginAllowed(origin => true)
+   └─ Must be restricted for production
+
+5. NO RATE LIMITING
+   ├─ No protection against brute force
+   └─ No protection against DoS
+
+6. NO GLOBAL EXCEPTION HANDLER
+   ├─ Stack traces may be exposed
+   └─ Inconsistent error responses
+
+
+╔════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                            WEB VERSION IMPLEMENTATION ROADMAP                                 ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+PHASE 1: Secure the API (WEEKS 1-2)
+├─ Add JWT authentication middleware
+├─ Add authorization policies
+├─ Add [Authorize] attributes to all endpoints
+├─ Implement refresh token mechanism
+├─ Add global exception handler
+└─ Restrict CORS to specific domain
+
+PHASE 2: Build Frontend Framework (WEEKS 2-4)
+├─ Choose framework (React/Vue/Angular)
+├─ Setup authentication UI (Login page)
+├─ Implement JWT token storage
+├─ Setup HTTP interceptor for Authorization header
+├─ Implement logout functionality
+└─ Add token refresh logic
+
+PHASE 3: Build Core Features (WEEKS 4-8)
+├─ Client management views
+├─ Package management views
+├─ Payment management views
+├─ Container tracking views
+├─ Dashboard/Analytics
+└─ Role-based UI rendering
+
+PHASE 4: Integration & Testing (WEEKS 8-10)
+├─ Integrate SignalR for real-time updates
+├─ Integration testing
+├─ Security testing
+├─ Performance testing
+└─ UAT with stakeholders
+
+PHASE 5: Deployment (WEEKS 10-12)
+├─ Production environment setup
+├─ HTTPS/SSL configuration
+├─ Database optimization
+├─ Monitoring setup
+├─ Documentation
+└─ Go-live
+
+
+Legend:
+✓ = Already Implemented
+⚠️ = Partial/Needs Review
+❌ = Missing/Critical Gap

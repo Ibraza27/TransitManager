@@ -41,6 +41,9 @@ namespace TransitManager.Infrastructure.Data
                 property.SetScale(2);
             }
 
+            // Hash BCrypt fixe pour le mot de passe "Admin@123"
+            // Ce hash est statique pour garantir la cohérence entre les migrations
+            // Hash: $2a$11$47CimAPLqf80X5ildRmPXuC0TWgjvHAIA7CeifbveROmjA1zR0dOu
             modelBuilder.Entity<Utilisateur>().HasData(new Utilisateur
             {
                 Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
@@ -48,9 +51,9 @@ namespace TransitManager.Infrastructure.Data
                 Nom = "Administrateur",
                 Prenom = "Système",
                 Email = "admin@transitmanager.com",
-                MotDePasseHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+                MotDePasseHash = "$2a$11$47CimAPLqf80X5ildRmPXuC0TWgjvHAIA7CeifbveROmjA1zR0dOu",
                 Role = Core.Enums.RoleUtilisateur.Administrateur,
-                DateCreation = DateTime.UtcNow,
+                DateCreation = new DateTime(2025, 8, 27, 21, 36, 38, 895, DateTimeKind.Utc).AddTicks(8319),
                 Actif = true
             });
 

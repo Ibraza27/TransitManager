@@ -35,7 +35,6 @@ namespace TransitManager.Mobile.ViewModels
         [RelayCommand]
         private async Task LoadConteneursAsync()
         {
-            if (IsBusy) return;
             IsBusy = true;
             try // <-- AJOUTER
             {

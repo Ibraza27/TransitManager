@@ -22,25 +22,26 @@ namespace TransitManager.Infrastructure.Services
             _contextFactory = contextFactory;
         }
 
-        public async Task<AuthenticationResult> LoginAsync(string username, string password)
+        public async Task<AuthenticationResult> LoginAsync(string identifier, string password)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             try
             {
+                // On recherche l'utilisateur soit par son email, soit par son nom d'utilisateur
                 var user = await context.Utilisateurs
-                    .FirstOrDefaultAsync(u => u.NomUtilisateur == username && u.Actif);
+                    .FirstOrDefaultAsync(u => (u.Email == identifier || u.NomUtilisateur == identifier) && u.Actif);
 
                 if (user == null)
                 {
-                    return new AuthenticationResult { Success = false, ErrorMessage = "Nom d'utilisateur ou mot de passe incorrect." };
+                    return new AuthenticationResult { Success = false, ErrorMessage = "Identifiant ou mot de passe incorrect." };
                 }
 
                 if (user.EstVerrouille)
                 {
-                    return new AuthenticationResult { Success = false, ErrorMessage = "Votre compte est temporairement verrouillé. Veuillez réessayer plus tard." };
+                    return new AuthenticationResult { Success = false, ErrorMessage = "Votre compte est temporairement verrouillé." };
                 }
 
-                if (!BCryptNet.Verify(password, user.MotDePasseHash))
+                if (!BCrypt.Net.BCrypt.Verify(password, user.MotDePasseHash))
                 {
                     user.TentativesConnexionEchouees++;
                     if (user.TentativesConnexionEchouees >= 5)
@@ -48,7 +49,7 @@ namespace TransitManager.Infrastructure.Services
                         user.DateVerrouillage = DateTime.UtcNow.AddMinutes(30);
                     }
                     await context.SaveChangesAsync();
-                    return new AuthenticationResult { Success = false, ErrorMessage = "Nom d'utilisateur ou mot de passe incorrect." };
+                    return new AuthenticationResult { Success = false, ErrorMessage = "Identifiant ou mot de passe incorrect." };
                 }
 
                 user.TentativesConnexionEchouees = 0;
@@ -71,14 +72,13 @@ namespace TransitManager.Infrastructure.Services
 				}
                 
                 await context.SaveChangesAsync();
-
                 _currentUser = user;
-
                 return new AuthenticationResult { Success = true, User = user, RequiresPasswordChange = user.DoitChangerMotDePasse };
             }
             catch (Exception ex)
             {
-                return new AuthenticationResult { Success = false, ErrorMessage = $"Une erreur s'est produite lors de la connexion : {ex.Message}" };
+                // Log l'exception ici
+                return new AuthenticationResult { Success = false, ErrorMessage = $"Une erreur interne est survenue." };
             }
         }
 

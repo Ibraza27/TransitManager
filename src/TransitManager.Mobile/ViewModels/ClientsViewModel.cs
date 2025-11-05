@@ -38,7 +38,6 @@ namespace TransitManager.Mobile.ViewModels
         [RelayCommand]
         private async Task LoadClientsAsync()
         {
-            if (IsBusy) return;
 
             IsBusy = true;
             try
@@ -129,7 +128,7 @@ namespace TransitManager.Mobile.ViewModels
 		[RelayCommand]
 		private async Task AddClientAsync()
 		{
-			await Shell.Current.GoToAsync("AddEditClientPage");
+			await Shell.Current.GoToAsync("AddEditClientPage?clientId=");
 		}
     }
 }

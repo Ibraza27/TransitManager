@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <AuthorizeView>
+                <Authorized>
+                    Bonjour, @context.User.Identity?.Name!
+                    <a href="javascript:void(0)" @onclick="Logout">Se déconnecter</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="login">Se connecter</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+@code {
+    private async Task Logout()
+    {
+        // On doit caster (convertir) AuthStateProvider vers notre type personnalisé
+        // pour pouvoir appeler notre méthode spécifique MarkUserAsLoggedOut.
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+        await customAuthStateProvider.MarkUserAsLoggedOut();
+        NavigationManager.NavigateTo("/");
+    }
+}

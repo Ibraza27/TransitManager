@@ -1,0 +1,20 @@
+﻿<div class="nav-scrollable" onclick="document.body.classList.toggle('sidebar-toggle')">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Accueil
+            </NavLink>
+        </div>
+
+        @* ---- DÉBUT DE L'AJOUT ---- *@
+        <AuthorizeView Roles="Administrateur">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="clients">
+                    <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Clients
+                </NavLink>
+            </div>
+        </AuthorizeView>
+        @* ---- FIN DE L'AJOUT ---- *@
+
+    </nav>
+</div>

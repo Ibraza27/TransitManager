@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransitManager.API", "src\T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransitManager.Mobile", "src\TransitManager.Mobile\TransitManager.Mobile.csproj", "{2F1A630D-14F6-4D18-81E6-A3112622D9D6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransitManager.Web", "src\TransitManager.Web\TransitManager.Web.csproj", "{B3F4B6AB-A091-4E00-9B97-DC54430B2D6F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +42,10 @@ Global
 		{2F1A630D-14F6-4D18-81E6-A3112622D9D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2F1A630D-14F6-4D18-81E6-A3112622D9D6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2F1A630D-14F6-4D18-81E6-A3112622D9D6}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{B3F4B6AB-A091-4E00-9B97-DC54430B2D6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3F4B6AB-A091-4E00-9B97-DC54430B2D6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3F4B6AB-A091-4E00-9B97-DC54430B2D6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3F4B6AB-A091-4E00-9B97-DC54430B2D6F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

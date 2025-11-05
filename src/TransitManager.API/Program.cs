@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TransitManager.API.Hubs;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
@@ -6,6 +7,9 @@ using TransitManager.Infrastructure.Repositories;
 using TransitManager.Infrastructure.Services;
 using CommunityToolkit.Mvvm.Messaging;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +31,7 @@ builder.Services.AddScoped<IBarcodeService, BarcodeService>();
 builder.Services.AddScoped<IExportService, ExportService>();
 builder.Services.AddScoped<IBackupService, BackupService>();
 builder.Services.AddScoped<IPrintingService, PrintingService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Notification Hub Service (pour les notifications entre services et le Hub)
 builder.Services.AddSingleton<INotificationHubService, NotificationHubService>();
@@ -57,6 +62,21 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+    });
+
 // --- CONFIGURATION DE SIGNALR ---
 builder.Services.AddSignalR();
 
@@ -86,11 +106,13 @@ app.UseHttpsRedirection();
 // Appliquer la politique CORS
 app.UseCors("AllowAll");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 // Mapper le Hub SignalR à une URL
 app.MapHub<NotificationHub>("/notificationHub");
+
 
 app.Run();

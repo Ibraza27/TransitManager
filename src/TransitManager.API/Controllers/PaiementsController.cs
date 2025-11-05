@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TransitManager.API.Controllers
 {
+	[Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class PaiementsController : ControllerBase

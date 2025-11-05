@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
 using TransitManager.Core.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TransitManager.API.Controllers
 {
+	[Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ClientsController : ControllerBase

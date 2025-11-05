@@ -1,0 +1,24 @@
+﻿@using TransitManager.Web.Components.Layout
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <h3>Accès non autorisé</h3>
+                    <p>Vous devez vous <a href="login">connecter</a> pour voir cette page.</p>
+                </NotAuthorized>
+                <Authorizing>
+                    <p>Vérification de l'autorisation en cours...</p>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Introuvable</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p role="alert">Désolé, il n'y a rien à cette adresse.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

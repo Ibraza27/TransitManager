@@ -4,10 +4,12 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Dépendances .NET MAUI -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.21" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.21" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
     <PackageVersion Include="Microsoft.Maui.Controls" Version="8.0.40" />
     <PackageVersion Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.40" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
-
     <!-- Framework & EF Core -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.7" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.7" />
@@ -23,7 +25,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
-	<!-- UI - MAUI (Ajoutez cette section pour rester organisé) -->
+    <!-- UI - MAUI (Ajoutez cette section pour rester organisé) -->
     <PackageVersion Include="Refit.HttpClientFactory" Version="7.0.0" />
     <!-- API & SignalR -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
@@ -36,6 +38,7 @@
     <PackageVersion Include="MaterialDesignThemes" Version="4.9.0" />
     <PackageVersion Include="MaterialDesignThemes.MahApps" Version="0.3.0" />
     <PackageVersion Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     <PackageVersion Include="ToastNotifications" Version="2.5.1" />
     <PackageVersion Include="ToastNotifications.Messages" Version="2.5.1" />
     <PackageVersion Include="AForge.Video" Version="2.2.5" />

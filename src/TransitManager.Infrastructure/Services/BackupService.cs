@@ -14,26 +14,24 @@ namespace TransitManager.Infrastructure.Services
 {
     public class BackupService : IBackupService
     {
-        private readonly IDbContextFactory<TransitContext> _contextFactory;
+        private readonly TransitContext _context;
         private readonly IConfiguration _configuration;
         private readonly INotificationService _notificationService;
         private readonly string _backupDirectory;
         private System.Timers.Timer? _backupTimer;
 
         public BackupService(
-            IDbContextFactory<TransitContext> contextFactory,
+            TransitContext context,
             IConfiguration configuration,
             INotificationService notificationService)
         {
-            _contextFactory = contextFactory;
+            _context = context;
             _configuration = configuration;
             _notificationService = notificationService;
-
             _backupDirectory = Path.Combine(
                 _configuration["FileStorage:RootPath"] ?? "C:\\TransitManager\\Storage",
                 "Backups"
             );
-
             Directory.CreateDirectory(_backupDirectory);
         }
 
@@ -44,17 +42,13 @@ namespace TransitManager.Infrastructure.Services
                 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 var backupName = $"TransitManager_Backup_{timestamp}";
                 var backupPath = customPath ?? Path.Combine(_backupDirectory, backupName);
-
                 Directory.CreateDirectory(backupPath);
-
                 await BackupDatabaseAsync(Path.Combine(backupPath, "database.sql"));
                 await CreateBackupMetadataAsync(backupPath);
-
                 var zipPath = $"{backupPath}.zip";
                 if (File.Exists(zipPath)) File.Delete(zipPath);
                 ZipFile.CreateFromDirectory(backupPath, zipPath);
                 Directory.Delete(backupPath, true);
-
                 await _notificationService.NotifyAsync("Sauvegarde créée", $"La sauvegarde a été créée avec succès : {Path.GetFileName(zipPath)}", Core.Enums.TypeNotification.Succes);
                 return zipPath;
             }
@@ -75,7 +69,6 @@ namespace TransitManager.Infrastructure.Services
         {
             if (!Directory.Exists(_backupDirectory))
                 return Task.FromResult(Array.Empty<string>());
-
             var files = Directory.GetFiles(_backupDirectory, "TransitManager_Backup_*.zip")
                 .OrderByDescending(f => new FileInfo(f).CreationTime)
                 .ToArray();
@@ -89,7 +82,6 @@ namespace TransitManager.Infrastructure.Services
                 var cutoffDate = DateTime.Now.AddDays(-daysToKeep);
                 var backups = await GetAvailableBackupsAsync();
                 var deletedCount = 0;
-
                 foreach (var backup in backups)
                 {
                     var fileInfo = new FileInfo(backup);
@@ -99,7 +91,6 @@ namespace TransitManager.Infrastructure.Services
                         deletedCount++;
                     }
                 }
-
                 if (deletedCount > 0)
                 {
                     await _notificationService.NotifyAsync("Sauvegardes nettoyées", $"{deletedCount} ancienne(s) sauvegarde(s) supprimée(s).");
@@ -132,7 +123,6 @@ namespace TransitManager.Infrastructure.Services
                 CreatedDate = fileInfo.CreationTime,
                 IsValid = false
             };
-
             try
             {
                 using var archive = ZipFile.OpenRead(backupPath);
@@ -146,12 +136,11 @@ namespace TransitManager.Infrastructure.Services
                     {
                         info.AppVersion = metadata.AppVersion;
                         info.TotalClients = metadata.TotalClients;
-                        // etc.
                         info.IsValid = true;
                     }
                 }
             }
-            catch { /* Ignorer */ }
+            catch { }
             return Task.FromResult(info);
         }
 
@@ -167,10 +156,8 @@ namespace TransitManager.Infrastructure.Services
 
         private async Task BackupDatabaseAsync(string outputPath)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var connectionString = context.Database.GetConnectionString();
+            var connectionString = _context.Database.GetConnectionString();
             var builder = new NpgsqlConnectionStringBuilder(connectionString);
-
             var processInfo = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = "pg_dump",
@@ -181,14 +168,12 @@ namespace TransitManager.Infrastructure.Services
                 CreateNoWindow = true,
                 Environment = { ["PGPASSWORD"] = builder.Password }
             };
-
             using var process = System.Diagnostics.Process.Start(processInfo);
             if (process != null)
             {
                 await using var fileStream = new FileStream(outputPath, FileMode.Create);
                 await process.StandardOutput.BaseStream.CopyToAsync(fileStream);
                 await process.WaitForExitAsync();
-
                 if (process.ExitCode != 0)
                 {
                     var error = await process.StandardError.ReadToEndAsync();
@@ -199,17 +184,16 @@ namespace TransitManager.Infrastructure.Services
 
         private async Task CreateBackupMetadataAsync(string backupPath)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
             var metadata = new BackupMetadata
             {
                 BackupDate = DateTime.UtcNow,
                 AppVersion = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "1.0.0",
-                DatabaseVersion = (await context.Database.GetAppliedMigrationsAsync()).LastOrDefault() ?? "Initial",
+                DatabaseVersion = (await _context.Database.GetAppliedMigrationsAsync()).LastOrDefault() ?? "Initial",
                 MachineName = Environment.MachineName,
                 UserName = Environment.UserName,
-                TotalClients = await context.Clients.CountAsync(),
-                TotalColis = await context.Colis.CountAsync(),
-                TotalConteneurs = await context.Conteneurs.CountAsync(),
+                TotalClients = await _context.Clients.CountAsync(),
+                TotalColis = await _context.Colis.CountAsync(),
+                TotalConteneurs = await _context.Conteneurs.CountAsync(),
                 TotalFiles = Directory.Exists(Path.Combine(backupPath, "Files")) ? Directory.GetFiles(Path.Combine(backupPath, "Files"), "*", SearchOption.AllDirectories).Length : 0
             };
             var json = System.Text.Json.JsonSerializer.Serialize(metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });

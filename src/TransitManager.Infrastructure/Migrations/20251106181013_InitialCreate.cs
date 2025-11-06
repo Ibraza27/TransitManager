@@ -135,10 +135,7 @@ namespace TransitManager.Infrastructure.Migrations
                     Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     NombrePieces = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
                     Designation = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    Poids = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
-                    Longueur = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
-                    Largeur = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
-                    Hauteur = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
+                    Volume = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
                     ValeurDeclaree = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m),
                     EstFragile = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     ManipulationSpeciale = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
@@ -152,6 +149,7 @@ namespace TransitManager.Infrastructure.Migrations
                     Commentaires = table.Column<string>(type: "text", nullable: true),
                     Destinataire = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     TelephoneDestinataire = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    AdresseLivraison = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     DestinationFinale = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     TypeEnvoi = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     LivraisonADomicile = table.Column<bool>(type: "boolean", nullable: false),
@@ -177,53 +175,6 @@ namespace TransitManager.Infrastructure.Migrations
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Colis_Conteneurs_ConteneurId",
-                        column: x => x.ConteneurId,
-                        principalTable: "Conteneurs",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Paiements",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    NumeroRecu = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    ClientId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ConteneurId = table.Column<Guid>(type: "uuid", nullable: true),
-                    FactureId = table.Column<Guid>(type: "uuid", nullable: true),
-                    DatePaiement = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    Montant = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    Devise = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false, defaultValue: "EUR"),
-                    TauxChange = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 1m),
-                    ModePaiement = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Reference = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    Banque = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    Statut = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    Commentaires = table.Column<string>(type: "text", nullable: true),
-                    RecuScanne = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    DateEcheance = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    RappelEnvoye = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    DateDernierRappel = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CreePar = table.Column<string>(type: "text", nullable: true),
-                    ModifiePar = table.Column<string>(type: "text", nullable: true),
-                    Actif = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
-                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Paiements", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Paiements_Clients_ClientId",
-                        column: x => x.ClientId,
-                        principalTable: "Clients",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Paiements_Conteneurs_ConteneurId",
                         column: x => x.ConteneurId,
                         principalTable: "Conteneurs",
                         principalColumn: "Id",
@@ -363,6 +314,67 @@ namespace TransitManager.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Paiements",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    NumeroRecu = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ClientId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ColisId = table.Column<Guid>(type: "uuid", nullable: true),
+                    VehiculeId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ConteneurId = table.Column<Guid>(type: "uuid", nullable: true),
+                    FactureId = table.Column<Guid>(type: "uuid", nullable: true),
+                    DatePaiement = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    Montant = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Devise = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false, defaultValue: "EUR"),
+                    TauxChange = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 1m),
+                    ModePaiement = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Reference = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Banque = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Statut = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Commentaires = table.Column<string>(type: "text", nullable: true),
+                    RecuScanne = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    DateEcheance = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    RappelEnvoye = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    DateDernierRappel = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DateCreation = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DateModification = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreePar = table.Column<string>(type: "text", nullable: true),
+                    ModifiePar = table.Column<string>(type: "text", nullable: true),
+                    Actif = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Paiements", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Paiements_Clients_ClientId",
+                        column: x => x.ClientId,
+                        principalTable: "Clients",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Paiements_Colis_ColisId",
+                        column: x => x.ColisId,
+                        principalTable: "Colis",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Paiements_Conteneurs_ConteneurId",
+                        column: x => x.ConteneurId,
+                        principalTable: "Conteneurs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Paiements_Vehicules_VehiculeId",
+                        column: x => x.VehiculeId,
+                        principalTable: "Vehicules",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Documents",
                 columns: table => new
                 {
@@ -433,7 +445,7 @@ namespace TransitManager.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Utilisateurs",
                 columns: new[] { "Id", "Actif", "CreePar", "DateCreation", "DateModification", "DateVerrouillage", "DerniereConnexion", "DoitChangerMotDePasse", "Email", "ExpirationToken", "FuseauHoraire", "Langue", "ModifiePar", "MotDePasseHash", "Nom", "NomUtilisateur", "NotificationsActivees", "NotificationsEmail", "NotificationsSMS", "PasswordSalt", "PermissionsSpecifiques", "PhotoProfil", "Preferences", "Prenom", "Role", "RowVersion", "Telephone", "TentativesConnexionEchouees", "Theme", "TokenReinitialisation" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 8, 27, 21, 36, 38, 895, DateTimeKind.Utc).AddTicks(8319), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$47CimAPLqf80X5ildRmPXuC0TWgjvHAIA7CeifbveROmjA1zR0dOu", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), true, null, new DateTime(2025, 11, 6, 18, 10, 10, 572, DateTimeKind.Utc).AddTicks(6595), null, null, null, false, "admin@transitmanager.com", null, "Europe/Paris", "fr-FR", null, "$2a$11$Tb9CvmOW2h/YNRaP.3QZsOo3jxIN0IN.M4khQYoZu7Ji8i82WyDxu", "Administrateur", "admin", true, true, false, null, null, null, null, "Système", 0, null, null, 0, "Clair", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UtilisateurId",
@@ -581,6 +593,11 @@ namespace TransitManager.Infrastructure.Migrations
                 column: "ClientId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Paiements_ColisId",
+                table: "Paiements",
+                column: "ColisId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Paiements_ConteneurId",
                 table: "Paiements",
                 column: "ConteneurId");
@@ -610,6 +627,11 @@ namespace TransitManager.Infrastructure.Migrations
                 name: "IX_Paiements_Statut",
                 table: "Paiements",
                 column: "Statut");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Paiements_VehiculeId",
+                table: "Paiements",
+                column: "VehiculeId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Vehicules_ClientId",
@@ -649,16 +671,16 @@ namespace TransitManager.Infrastructure.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "Vehicules");
+                name: "Paiements");
+
+            migrationBuilder.DropTable(
+                name: "Utilisateurs");
 
             migrationBuilder.DropTable(
                 name: "Colis");
 
             migrationBuilder.DropTable(
-                name: "Paiements");
-
-            migrationBuilder.DropTable(
-                name: "Utilisateurs");
+                name: "Vehicules");
 
             migrationBuilder.DropTable(
                 name: "Clients");

@@ -12,8 +12,8 @@ using TransitManager.Infrastructure.Data;
 namespace TransitManager.Infrastructure.Migrations
 {
     [DbContext(typeof(TransitContext))]
-    [Migration("20250914061550_AddDeliveryAddressToColis")]
-    partial class AddDeliveryAddressToColis
+    [Migration("20251106181013_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1022,12 +1022,12 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 9, 14, 6, 15, 48, 922, DateTimeKind.Utc).AddTicks(6415),
+                            DateCreation = new DateTime(2025, 11, 6, 18, 10, 10, 572, DateTimeKind.Utc).AddTicks(6595),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
                             Langue = "fr-FR",
-                            MotDePasseHash = "$2a$11$pTdOiicmME4EAKuc4aBQmOJIhqgHXmPYhQBzIViauCL2ggavYWYu.",
+                            MotDePasseHash = "$2a$11$Tb9CvmOW2h/YNRaP.3QZsOo3jxIN0IN.M4khQYoZu7Ji8i82WyDxu",
                             Nom = "Administrateur",
                             NomUtilisateur = "admin",
                             NotificationsActivees = true,

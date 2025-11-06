@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
@@ -12,24 +11,25 @@ namespace TransitManager.Infrastructure.Services
 {
     public class AuthenticationService : IAuthenticationService
     {
-        private readonly IDbContextFactory<TransitContext> _contextFactory;
+        private readonly TransitContext _context;
         private Utilisateur? _currentUser;
 
         public Utilisateur? CurrentUser => _currentUser;
 
-        public AuthenticationService(IDbContextFactory<TransitContext> contextFactory)
+        public AuthenticationService(TransitContext context)
         {
-            _contextFactory = contextFactory;
+            _context = context;
         }
 
         public async Task<AuthenticationResult> LoginAsync(string identifier, string password)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
             try
             {
-                // On recherche l'utilisateur soit par son email, soit par son nom d'utilisateur
-                var user = await context.Utilisateurs
-                    .FirstOrDefaultAsync(u => (u.Email == identifier || u.NomUtilisateur == identifier) && u.Actif);
+                // --- DÉBUT DE LA CORRECTION ---
+                var lowerIdentifier = identifier.ToLower();
+                var user = await _context.Utilisateurs
+                    .FirstOrDefaultAsync(u => (u.Email.ToLower() == lowerIdentifier || u.NomUtilisateur.ToLower() == lowerIdentifier) && u.Actif);
+                // --- FIN DE LA CORRECTION ---
 
                 if (user == null)
                 {
@@ -41,14 +41,14 @@ namespace TransitManager.Infrastructure.Services
                     return new AuthenticationResult { Success = false, ErrorMessage = "Votre compte est temporairement verrouillé." };
                 }
 
-                if (!BCrypt.Net.BCrypt.Verify(password, user.MotDePasseHash))
+                if (!BCryptNet.Verify(password, user.MotDePasseHash))
                 {
                     user.TentativesConnexionEchouees++;
                     if (user.TentativesConnexionEchouees >= 5)
                     {
                         user.DateVerrouillage = DateTime.UtcNow.AddMinutes(30);
                     }
-                    await context.SaveChangesAsync();
+                    await _context.SaveChangesAsync();
                     return new AuthenticationResult { Success = false, ErrorMessage = "Identifiant ou mot de passe incorrect." };
                 }
 
@@ -56,29 +56,26 @@ namespace TransitManager.Infrastructure.Services
                 user.DateVerrouillage = null;
                 user.DerniereConnexion = DateTime.UtcNow;
 
-
-				// Vérification que l'utilisateur est valide avant de créer le log
-				if (user.Id != Guid.Empty)
-				{
-					var auditLog = new AuditLog
-					{
-						UtilisateurId = user.Id,
-						Action = "LOGIN",
-						Entite = "Utilisateur",
-						EntiteId = user.Id.ToString(),
-						DateAction = DateTime.UtcNow
-					};
-					context.AuditLogs.Add(auditLog);
-				}
+                if (user.Id != Guid.Empty)
+                {
+                    var auditLog = new AuditLog
+                    {
+                        UtilisateurId = user.Id,
+                        Action = "LOGIN",
+                        Entite = "Utilisateur",
+                        EntiteId = user.Id.ToString(),
+                        DateAction = DateTime.UtcNow
+                    };
+                    _context.AuditLogs.Add(auditLog);
+                }
                 
-                await context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
                 _currentUser = user;
                 return new AuthenticationResult { Success = true, User = user, RequiresPasswordChange = user.DoitChangerMotDePasse };
             }
             catch (Exception ex)
             {
-                // Log l'exception ici
-                return new AuthenticationResult { Success = false, ErrorMessage = $"Une erreur interne est survenue." };
+                return new AuthenticationResult { Success = false, ErrorMessage = "Une erreur interne est survenue." };
             }
         }
 
@@ -86,30 +83,26 @@ namespace TransitManager.Infrastructure.Services
         {
             if (_currentUser != null)
             {
-                await using var context = await _contextFactory.CreateDbContextAsync();
-
-				// Vérification que l'utilisateur actuel est valide
-				if (_currentUser.Id != Guid.Empty)
-				{
-					var auditLog = new AuditLog
-					{
-						UtilisateurId = _currentUser.Id,
-						Action = "LOGOUT",
-						Entite = "Utilisateur",
-						EntiteId = _currentUser.Id.ToString(),
-						DateAction = DateTime.UtcNow
-					};
-					context.AuditLogs.Add(auditLog);
-				}
-                await context.SaveChangesAsync();
+                if (_currentUser.Id != Guid.Empty)
+                {
+                    var auditLog = new AuditLog
+                    {
+                        UtilisateurId = _currentUser.Id,
+                        Action = "LOGOUT",
+                        Entite = "Utilisateur",
+                        EntiteId = _currentUser.Id.ToString(),
+                        DateAction = DateTime.UtcNow
+                    };
+                    _context.AuditLogs.Add(auditLog);
+                }
+                await _context.SaveChangesAsync();
             }
             _currentUser = null;
         }
 
         public async Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var user = await context.Utilisateurs.FindAsync(userId);
+            var user = await _context.Utilisateurs.FindAsync(userId);
             if (user == null || !BCryptNet.Verify(currentPassword, user.MotDePasseHash) || !IsPasswordValid(newPassword))
             {
                 return false;
@@ -117,7 +110,7 @@ namespace TransitManager.Infrastructure.Services
 
             user.MotDePasseHash = BCryptNet.HashPassword(newPassword);
             user.DoitChangerMotDePasse = false;
-            await context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
             return true;
         }
         

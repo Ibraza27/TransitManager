@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransitManager.Mobile", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransitManager.Web", "src\TransitManager.Web\TransitManager.Web.csproj", "{B3F4B6AB-A091-4E00-9B97-DC54430B2D6F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PasswordGenerator", "src\PasswordGenerator\PasswordGenerator.csproj", "{ADE6A6B9-4F44-4570-974A-F5BE3496411D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,6 +48,10 @@ Global
 		{B3F4B6AB-A091-4E00-9B97-DC54430B2D6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3F4B6AB-A091-4E00-9B97-DC54430B2D6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3F4B6AB-A091-4E00-9B97-DC54430B2D6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADE6A6B9-4F44-4570-974A-F5BE3496411D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADE6A6B9-4F44-4570-974A-F5BE3496411D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADE6A6B9-4F44-4570-974A-F5BE3496411D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADE6A6B9-4F44-4570-974A-F5BE3496411D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

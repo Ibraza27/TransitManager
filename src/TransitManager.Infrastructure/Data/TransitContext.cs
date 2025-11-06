@@ -48,7 +48,7 @@ namespace TransitManager.Infrastructure.Data
                 Nom = "Administrateur",
                 Prenom = "Système",
                 Email = "admin@transitmanager.com",
-                MotDePasseHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+                MotDePasseHash = "$2a$11$Tb9CvmOW2h/YNRaP.3QZsOo3jxIN0IN.M4khQYoZu7Ji8i82WyDxu",
                 Role = Core.Enums.RoleUtilisateur.Administrateur,
                 DateCreation = DateTime.UtcNow,
                 Actif = true
@@ -102,33 +102,29 @@ namespace TransitManager.Infrastructure.Data
         // --- L'ANCIENNE MÉTHODE HandleAudit A ÉTÉ RENOMMÉE ET MODIFIÉE ---
         private void HandleAuditAndDates()
         {
-            // ======================= DÉBUT DE LA MODIFICATION =======================
-
+            // ======================= DÉBUT DE LA CORRECTION =======================
             var entries = ChangeTracker.Entries()
                 .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
 
             foreach (var entry in entries)
             {
-                var properties = entry.Properties
+                var dateProperties = entry.Properties
                     .Where(p => p.Metadata.ClrType == typeof(DateTime) || p.Metadata.ClrType == typeof(DateTime?));
 
-                foreach (var property in properties)
+                foreach (var property in dateProperties)
                 {
                     if (property.CurrentValue is DateTime dateTimeValue && dateTimeValue.Kind != DateTimeKind.Utc)
                     {
-                        // Logique améliorée :
-                        // 1. Si la date est 'Unspecified', on la traite comme une date locale.
+                        // Logique améliorée et plus robuste :
+                        // 1. Si la date est 'Unspecified' (venant d'un DatePicker), on la traite comme une date locale.
                         // 2. Ensuite, on la convertit en UTC.
                         // Cela couvre à la fois les cas 'Local' et 'Unspecified'.
                         property.CurrentValue = DateTime.SpecifyKind(dateTimeValue, DateTimeKind.Local).ToUniversalTime();
                     }
                 }
             }
+            // ======================== FIN DE LA CORRECTION ========================
 
-            // ======================== FIN DE LA MODIFICATION ========================
-
-
-            // Le reste de la méthode pour l'audit ne change pas
             var auditEntries = ChangeTracker.Entries()
                 .Where(e => e.Entity is BaseEntity &&
                             e.Entity.GetType() != typeof(AuditLog) &&

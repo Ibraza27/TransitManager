@@ -20,6 +20,7 @@ using TransitManager.WPF.Views;
 using TransitManager.WPF.Models;
 using Microsoft.Extensions.DependencyInjection;
 using TransitManager.Core.Exceptions;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -164,23 +165,41 @@ namespace TransitManager.WPF.ViewModels
 			if (window.ShowDialog() == true) 
 			{ 
 				colis.SommePayee = vm.TotalValeur;
-
-                // ======================= DÉBUT DE LA MODIFICATION =======================
-                // Sauvegarder le colis pour persister la nouvelle SommePayee
                 try
                 {
-                    await _colisService.UpdateAsync(colis);
+					var dto = new UpdateColisDto
+					{
+						Id = colis.Id,
+						ClientId = colis.ClientId,
+						Designation = colis.Designation,
+						DestinationFinale = colis.DestinationFinale,
+						Barcodes = colis.Barcodes.Select(b => b.Value).ToList(),
+						NombrePieces = colis.NombrePieces,
+						Volume = colis.Volume,
+						ValeurDeclaree = colis.ValeurDeclaree,
+						PrixTotal = colis.PrixTotal,
+						Destinataire = colis.Destinataire,
+						TelephoneDestinataire = colis.TelephoneDestinataire,
+						LivraisonADomicile = colis.LivraisonADomicile,
+						AdresseLivraison = colis.AdresseLivraison,
+						EstFragile = colis.EstFragile,
+						ManipulationSpeciale = colis.ManipulationSpeciale,
+						InstructionsSpeciales = colis.InstructionsSpeciales,
+						Type = colis.Type,
+						TypeEnvoi = colis.TypeEnvoi
+						// Note: On ne mappe pas les propriétés comme Statut, ConteneurId, etc.
+						// qui sont gérées par des logiques métier spécifiques.
+					};
+                    await _colisService.UpdateAsync(colis.Id, dto);
                 }
                 catch (Exception ex)
                 {
                     await _dialogService.ShowErrorAsync("Erreur de sauvegarde", $"Impossible de mettre à jour le total payé pour le colis : {ex.Message}");
                 }
-                
-                // Recalculer et notifier les totaux globaux de la vue
                 RecalculateAndNotifyTotals();
-                // ======================== FIN DE LA MODIFICATION ========================
 			}
 		}
+		
 		private async Task OpenVehiculePaiementsAsync(Vehicule? vehicule)
 		{
 			if (vehicule == null || Conteneur == null) return;
@@ -277,22 +296,28 @@ namespace TransitManager.WPF.ViewModels
         // <--- NOUVELLE MÉTHODE : OUVRE LA FENÊTRE D'INVENTAIRE --- >
         private async Task OpenInventaireAsync(Colis? colis)
         {
-            if (colis == null) return;
+            if (colis == null || Conteneur == null) return;
 
             var inventaireViewModel = new InventaireViewModel(colis.InventaireJson);
-            var inventaireWindow = new InventaireView(inventaireViewModel)
+            var inventaireWindow = new Views.Inventaire.InventaireView(inventaireViewModel)
             {
                 Owner = System.Windows.Application.Current.MainWindow
             };
 
             if (inventaireWindow.ShowDialog() == true)
             {
-                colis.InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items);
-                colis.NombrePieces = inventaireViewModel.TotalQuantite;
-                colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
-                
-                await _colisService.UpdateAsync(colis);
-                await InitializeAsync(Conteneur.Id); // Rafraîchir la vue
+                // --- DÉBUT DE LA CORRECTION WPF ---
+                var dto = new UpdateInventaireDto
+                {
+                    ColisId = colis.Id,
+                    InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items),
+                    TotalPieces = inventaireViewModel.TotalQuantite,
+                    TotalValeurDeclaree = inventaireViewModel.TotalValeur
+                };
+
+                await _colisService.UpdateInventaireAsync(dto);
+                await InitializeAsync(Conteneur.Id); // Rafraîchir toute la vue du conteneur
+                // --- FIN DE LA CORRECTION WPF ---
             }
         }
 

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:model="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:PaiementVehiculeViewModel"
+             x:Class="TransitManager.Mobile.Views.PaiementVehiculePage"
+             Title="Paiements du Véhicule">
+
+    <!-- AJOUT DE LA RESSOURCE -->
+    <ContentPage.Resources>
+        <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto, *, Auto">
+        
+        <!-- Formulaire d'ajout -->
+        <Frame Grid.Row="0" Margin="10" Padding="10">
+            <VerticalStackLayout Spacing="10">
+				<Picker Title="Type de paiement" 
+						ItemsSource="{Binding PaymentTypes}" 
+						SelectedItem="{Binding SelectedNewPaymentType}"/>
+                <Entry Placeholder="Montant" Text="{Binding NewPaiement.Montant}" Keyboard="Numeric"/>
+                <DatePicker Date="{Binding NewPaiement.DatePaiement}"/>
+                <Entry Placeholder="Commentaire (optionnel)" Text="{Binding NewPaiement.Commentaires}"/>
+                <Button Text="Ajouter Paiement" Command="{Binding AddPaiementCommand}"/>
+            </VerticalStackLayout>
+        </Frame>
+        
+        <!-- Liste des paiements -->
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Paiements}" Margin="10,0">
+			<CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="model:Paiement">
+                    <Frame Margin="0,5" Padding="15" CornerRadius="8">
+                        <Grid ColumnDefinitions="*, Auto, Auto">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Montant, StringFormat='{0:C}'}" FontAttributes="Bold" FontSize="Medium"/>
+                                <Label Text="{Binding DatePaiement, StringFormat='{0:dd/MM/yyyy}'}" FontSize="Small"/>
+                                <Label Text="{Binding ModePaiement}" FontSize="Small" TextColor="Gray"/>
+                                
+                                <!-- DÉBUT DE L'AJOUT -->
+                                <Label IsVisible="{Binding Commentaires, Converter={StaticResource IsNotNullOrEmptyConverter}}"
+                                       Margin="0,5,0,0">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Commentaire : " FontAttributes="Italic" TextColor="Gray"/>
+                                            <Span Text="{Binding Commentaires}" FontAttributes="Italic" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <!-- FIN DE L'AJOUT -->
+                                
+                            </VerticalStackLayout>
+
+                            <!-- BOUTON MODIFIER AJOUTÉ -->
+                            <Button Grid.Column="1" Text="Modifier"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PaiementVehiculeViewModel}}, Path=GoToEditPaiementCommand}" 
+                                    CommandParameter="{Binding}" 
+                                    VerticalOptions="Center" Margin="5,0"/>
+                            
+                            <Button Grid.Column="2" Text="Supprimer" 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PaiementVehiculeViewModel}}, Path=DeletePaiementCommand}" 
+                                    CommandParameter="{Binding}" 
+                                    BackgroundColor="Red"
+                                    VerticalOptions="Center"/>
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Statistiques -->
+        <Frame Grid.Row="2" Margin="10" Padding="10">
+            <VerticalStackLayout>
+                <Label Text="{Binding PrixTotalVehicule, StringFormat='Prix Total : {0:C}'}"/>
+                <Label Text="{Binding TotalPaye, StringFormat='Total Payé : {0:C}'}" TextColor="Green"/>
+                <Label Text="{Binding RestantAPayer, StringFormat='Restant à Payer : {0:C}'}" TextColor="Red" FontAttributes="Bold"/>
+            </VerticalStackLayout>
+        </Frame>
+        
+    </Grid>
+</ContentPage>

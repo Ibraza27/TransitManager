@@ -7,9 +7,32 @@
     Shell.FlyoutBehavior="Disabled"
     Title="TransitManager.Mobile">
 
-    <ShellContent
-        Title="Clients"
-        ContentTemplate="{DataTemplate local:ClientsPage}"
-        Route="ClientsPage" />
+    <TabBar>
+        <ShellContent
+            Title="Clients"
+            Icon="user_icon.png"
+            ContentTemplate="{DataTemplate local:ClientsPage}"
+            Route="ClientsPage" />
+
+        <ShellContent
+            Title="Colis"
+            Icon="box_icon.png"
+            ContentTemplate="{DataTemplate local:ColisPage}"
+            Route="ColisPage" />
+			
+        <ShellContent
+            Title="Véhicules"
+            Icon="car_icon.png"
+            ContentTemplate="{DataTemplate local:VehiculesPage}"
+            Route="VehiculesPage" />
+            
+
+        <ShellContent
+            Title="Conteneurs"
+            Icon="container_icon.png" 
+            ContentTemplate="{DataTemplate local:ConteneurPage}"
+            Route="ConteneurPage" />
+
+    </TabBar>
 
 </Shell>

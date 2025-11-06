@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.8.34525.116
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11123.170
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TransitManager.Core", "src\TransitManager.Core\TransitManager.Core.csproj", "{A1B2C3D4-E5F6-1234-5678-9ABCDEF01234}"
 EndProject
@@ -11,6 +11,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransitManager.API", "src\TransitManager.API\TransitManager.API.csproj", "{5CF35FB9-8BF7-4752-9856-CEB89745DAC9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransitManager.Mobile", "src\TransitManager.Mobile\TransitManager.Mobile.csproj", "{2F1A630D-14F6-4D18-81E6-A3112622D9D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransitManager.Web", "src\TransitManager.Web\TransitManager.Web.csproj", "{2564E617-88B6-4177-B5B3-66E20937F166}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PasswordGenerator", "src\PasswordGenerator\PasswordGenerator.csproj", "{9D8CD79F-FFD3-4217-9D8B-056B9E2F5084}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -40,6 +44,14 @@ Global
 		{2F1A630D-14F6-4D18-81E6-A3112622D9D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2F1A630D-14F6-4D18-81E6-A3112622D9D6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2F1A630D-14F6-4D18-81E6-A3112622D9D6}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{2564E617-88B6-4177-B5B3-66E20937F166}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2564E617-88B6-4177-B5B3-66E20937F166}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2564E617-88B6-4177-B5B3-66E20937F166}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2564E617-88B6-4177-B5B3-66E20937F166}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D8CD79F-FFD3-4217-9D8B-056B9E2F5084}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D8CD79F-FFD3-4217-9D8B-056B9E2F5084}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D8CD79F-FFD3-4217-9D8B-056B9E2F5084}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D8CD79F-FFD3-4217-9D8B-056B9E2F5084}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

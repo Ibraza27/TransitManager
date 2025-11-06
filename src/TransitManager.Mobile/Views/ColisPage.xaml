@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:dto="clr-namespace:TransitManager.Core.DTOs;assembly=TransitManager.Core"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:ColisViewModel"
+             x:Class="TransitManager.Mobile.Views.ColisPage"
+             Title="Colis">
+    
+    <ContentPage.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+        <converters:IsDateOverdueConverter x:Key="IsDateOverdueConverter" />
+    </ContentPage.Resources>
+    
+    <Grid RowDefinitions="Auto, Auto, Auto, *">
+        
+        <SearchBar Grid.Row="0" 
+                   Placeholder="Rechercher réf, désignation, client..."
+                   Text="{Binding SearchText}"
+                   Margin="10"/>
+
+        <HorizontalStackLayout Grid.Row="1" Spacing="10" Padding="10,0">
+            <Button Text="Actualiser" Command="{Binding LoadColisCommand}" HorizontalOptions="Start"/>
+            <Button Text="Nouveau Colis" Command="{Binding AddColisCommand}" HorizontalOptions="Start"/>
+        </HorizontalStackLayout>
+
+        <ScrollView Grid.Row="2" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout Spacing="15" Padding="10">
+                <VerticalStackLayout>
+                    <Label Text="Statut" FontSize="Caption"/>
+                    <Picker ItemsSource="{Binding StatutsList}" 
+                            SelectedItem="{Binding SelectedStatut}" 
+                            WidthRequest="120"/>
+                </VerticalStackLayout>
+				<VerticalStackLayout>
+					<Label Text="Client" FontSize="Caption"/>
+					<Frame Padding="8" BorderColor="LightGray" CornerRadius="4" HeightRequest="50" WidthRequest="150">
+						<Frame.GestureRecognizers>
+							<TapGestureRecognizer Command="{Binding GoToClientSelectionCommand}"/>
+						</Frame.GestureRecognizers>
+						<Grid ColumnDefinitions="*, Auto">
+							<Label Grid.Column="0" 
+								   Text="{Binding SelectedClient.NomComplet, TargetNullValue='Tous'}" 
+								   VerticalOptions="Center"/>
+							<Label Grid.Column="1" Text="▼" FontSize="Micro" VerticalOptions="Center"/>
+						</Grid>
+					</Frame>
+				</VerticalStackLayout>
+                <VerticalStackLayout>
+                    <Label Text="Conteneur" FontSize="Caption"/>
+                    <Picker ItemsSource="{Binding ConteneursList}"
+                            ItemDisplayBinding="{Binding NumeroDossier}"
+                            SelectedItem="{Binding SelectedConteneur}"
+                            WidthRequest="150"/>
+                </VerticalStackLayout>
+                <Button Text="Effacer Filtres" Command="{Binding ClearFiltersCommand}" VerticalOptions="End"/>
+            </HorizontalStackLayout>
+        </ScrollView>
+
+        <RefreshView Grid.Row="3" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadColisCommand}">
+            <CollectionView ItemsSource="{Binding ColisList}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="dto:ColisListItemDto">
+                        <Frame Margin="10" Padding="15" BorderColor="LightGray" CornerRadius="8">
+                            <Frame.Triggers>
+                                <MultiTrigger TargetType="Frame">
+                                    <MultiTrigger.Conditions>
+                                        <BindingCondition Binding="{Binding Statut}" Value="EnAttente" />
+                                        <BindingCondition Binding="{Binding DateArrivee, Converter={StaticResource IsDateOverdueConverter}}" Value="True" />
+                                    </MultiTrigger.Conditions>
+                                    <Setter Property="BorderColor" Value="Red" />
+                                    <Setter Property="BackgroundColor" Value="#1AEC4B4B" />
+                                </MultiTrigger>
+                            </Frame.Triggers>
+                            
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ColisViewModel}}, Path=GoToDetailsCommand}"
+                                    CommandParameter="{Binding .}" />
+                            </Frame.GestureRecognizers>
+                            <Grid ColumnDefinitions="*, Auto">
+                                <VerticalStackLayout Grid.Column="0" Spacing="5">
+                                    <Label FontSize="Medium">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding ClientNomComplet}" FontAttributes="Bold"/>
+                                                <Span Text="{Binding ClientTelephonePrincipal, StringFormat=' ({0})'}" TextColor="Gray"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                    
+
+                                    <Label>
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding Designation}"/>
+                                                <Span Text=" -> " FontAttributes="Italic" TextColor="Gray"/>
+                                                <Span Text="{Binding DestinationFinale}" FontAttributes="Bold"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+
+                                    
+                                    <Label Text="{Binding NumeroReference}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
+
+                                </VerticalStackLayout>
+                                
+                                <Border Grid.Column="1" 
+                                        Padding="10,5" 
+                                        BackgroundColor="{Binding Statut, Converter={StaticResource StatusToColorConverter}}"
+                                        StrokeShape="RoundRectangle 12"
+                                        VerticalOptions="Start">
+                                    <Label Text="{Binding Statut}" 
+                                           TextColor="White" 
+                                           FontSize="10" 
+                                           FontAttributes="Bold"/>
+                                </Border>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+        
+        <ActivityIndicator Grid.RowSpan="4" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

@@ -94,10 +94,12 @@ namespace TransitManager.Core.Entities
         public decimal VolumeTotalExpedié { get => _volumeTotalExpedie; set => SetProperty(ref _volumeTotalExpedie, value); }
 	
 
+        // --- DÉBUT DE LA MODIFICATION ---
         // --- Propriétés de navigation ---
-        public virtual ICollection<Colis> Colis { get; } = new List<Colis>();
-		public virtual ICollection<Vehicule> Vehicules { get; } = new List<Vehicule>();
-        public virtual ICollection<Paiement> Paiements { get; } = new List<Paiement>();
+        public virtual ICollection<Colis> Colis { get; set; } = new List<Colis>();
+		public virtual ICollection<Vehicule> Vehicules { get; set; } = new List<Vehicule>();
+        public virtual ICollection<Paiement> Paiements { get; set; } = new List<Paiement>();
+        // --- FIN DE LA MODIFICATION ---
         
         // --- Constructeur et Méthodes ---
         public Client()

@@ -1,0 +1,52 @@
+@page "/clients"
+@attribute [Authorize(Roles = "Administrateur")]
+
+@inject IApiService ApiService
+
+<h3>Liste des Clients</h3>
+
+@if (clients == null)
+{
+    <p><em>Chargement des clients...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Code Client</th>
+                <th>Nom Complet</th>
+                <th>Téléphone</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var client in clients)
+            {
+                <tr>
+                    <td>@client.CodeClient</td>
+                    <td>@client.NomComplet</td>
+                    <td>@client.TelephonePrincipal</td>
+                    <td>@client.Email</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IEnumerable<TransitManager.Core.Entities.Client>? clients;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            clients = await ApiService.GetClientsAsync();
+        }
+        catch (Exception ex)
+        {
+            // Gérer le cas où l'API n'est pas accessible ou le token est expiré
+            Console.WriteLine($"Erreur lors du chargement des clients : {ex.Message}");
+        }
+    }
+}

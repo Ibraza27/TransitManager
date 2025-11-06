@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             xmlns:entities="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
+             x:DataType="viewmodels:ColisDetailViewModel"
+             x:Class="TransitManager.Mobile.Views.ColisDetailPage"
+             Title="Détails du Colis">
+
+	<ContentPage.Resources>
+		<converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+		<converters:BoolToStringConverter x:Key="BoolToStringConverter" />
+		<converters:IsListNotNullOrEmptyConverter x:Key="IsListNotNullOrEmptyConverter" />
+	</ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="15" Padding="20">
+            <!-- EN-TÊTE -->
+            <Label Text="{Binding Colis.NumeroReference}" FontSize="Header" FontAttributes="Bold" HorizontalOptions="Center"/>
+            <Label Text="{Binding Colis.Designation}" FontSize="Title" Opacity="0.8" HorizontalOptions="Center"/>
+            <BoxView HeightRequest="1" Color="LightGray" Margin="0,10"/>
+
+            <!-- INFORMATIONS PRINCIPALES -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Informations Principales" FontSize="Large" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="*,*,*,*,*,*" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Client :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Colis.Client.NomComplet}" />
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Conteneur :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Colis.Conteneur.NumeroDossier, TargetNullValue='Non affecté'}" />
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Statut :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Colis.Statut}" />
+                        
+                        <Label Grid.Row="3" Grid.Column="0" Text="Date d'arrivée :" FontAttributes="Bold"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding Colis.DateArrivee, StringFormat='{0:dd/MM/yyyy HH:mm}'}" />
+
+                        <Label Grid.Row="4" Grid.Column="0" Text="Nombre de pièces :" FontAttributes="Bold"/>
+                        <Label Grid.Row="4" Grid.Column="1" Text="{Binding Colis.NombrePieces}" />
+
+                        <Label Grid.Row="5" Grid.Column="0" Text="Volume :" FontAttributes="Bold"/>
+                        <Label Grid.Row="5" Grid.Column="1" Text="{Binding Colis.Volume, StringFormat='{0:N3} m³'}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- DESTINATAIRE -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Destinataire" FontSize="Large" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="*,*,*,*" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Nom :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Colis.Destinataire, TargetNullValue='(identique au propriétaire)'}"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Téléphone :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Colis.TelephoneDestinataire, TargetNullValue='N/A'}"/>
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Adresse Livraison :" FontAttributes="Bold" VerticalOptions="Start"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Colis.AdresseLivraison, TargetNullValue='N/A'}"/>
+
+                        <Label Grid.Row="3" Grid.Column="0" Text="Destination Finale :" FontAttributes="Bold"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding Colis.DestinationFinale}"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- DÉTAILS ET OPTIONS -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Détails &amp; Options" FontSize="Large" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="*,*,*" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Colis Fragile :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Colis.EstFragile, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Oui|Non'}"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Manip. Spéciale :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Colis.ManipulationSpeciale, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Oui|Non'}"/>
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Instructions :" FontAttributes="Bold" VerticalOptions="Start"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Colis.InstructionsSpeciales, TargetNullValue='Aucune'}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- DÉTAILS FINANCIERS -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Détails Financiers" FontSize="Large" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="*,*,*,*" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Valeur Déclarée :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Colis.ValeurDeclaree, StringFormat='{0:C}'}"/>
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="Prix Total :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Colis.PrixTotal, StringFormat='{0:C}'}" TextColor="Blue"/>
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Somme Payée :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Colis.SommePayee, StringFormat='{0:C}'}" TextColor="Green"/>
+                        
+                        <Label Grid.Row="3" Grid.Column="0" Text="Restant à Payer :" FontAttributes="Bold"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding Colis.RestantAPayer, StringFormat='{0:C}'}" TextColor="Red" FontAttributes="Bold"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- CODES-BARRES -->
+            <Frame Padding="15" BorderColor="LightGray" IsVisible="{Binding Colis.Barcodes, Converter={StaticResource IsListNotNullOrEmptyConverter}}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Codes-barres" FontSize="Large" FontAttributes="Bold" />
+					<CollectionView ItemsSource="{Binding Colis.Barcodes}">
+                        <CollectionView.ItemTemplate>
+                            <!-- AJOUT : On spécifie que chaque item est de type Barcode -->
+                            <DataTemplate x:DataType="entities:Barcode"
+                                          xmlns:entities="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core">
+                                <Label Text="{Binding Value}" FontFamily="monospace" FontSize="16"/>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- BOUTONS D'ACTION -->
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,20,0,0">
+                <Button Text="Modifier" Command="{Binding EditCommand}"/>
+				<Button Text="Inventaire" Command="{Binding GoToInventaireCommand}"/>
+				<Button Text="Paiements" Command="{Binding GoToPaiementsCommand}"/>
+                <Button Text="Supprimer" Command="{Binding DeleteCommand}" BackgroundColor="Red"/>
+				<Button Text="Actualiser" Command="{Binding RefreshCommand}"/>
+            </HorizontalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

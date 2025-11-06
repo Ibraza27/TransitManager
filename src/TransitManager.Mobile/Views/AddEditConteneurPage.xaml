@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:AddEditConteneurViewModel"
+             x:Class="TransitManager.Mobile.Views.AddEditConteneurPage"
+             Title="{Binding PageTitle}">
+
+    <ContentPage.Resources>
+        <converters:IsNotNullConverter x:Key="IsNotNullConverter" />
+        <converters:NullableDateConverter x:Key="NullableDateConverter" />
+    </ContentPage.Resources>
+    
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="20">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Informations du Dossier" FontSize="Large" FontAttributes="Bold"/>
+                    <Label Text="Numéro du conteneur *" FontSize="Caption"/>
+                    <Entry Text="{Binding Conteneur.NumeroDossier, Mode=TwoWay}"/>
+                    
+                    <Label Text="Numéro du plomb" FontSize="Caption"/>
+                    <Entry Text="{Binding Conteneur.NumeroPlomb, Mode=TwoWay}"/>
+                    
+                    <Label Text="Compagnie" FontSize="Caption"/>
+                    <Entry Text="{Binding Conteneur.NomCompagnie, Mode=TwoWay}"/>
+                    
+                    <Label Text="Destination (Ville/Port) *" FontSize="Caption"/>
+                    <Entry Text="{Binding Conteneur.Destination, Mode=TwoWay}"/>
+                    
+                    <Label Text="Pays de Destination *" FontSize="Caption"/>
+                    <Entry Text="{Binding Conteneur.PaysDestination, Mode=TwoWay}"/>
+                    
+                    <Label Text="Nom du transitaire" FontSize="Caption"/>
+                    <Entry Text="{Binding Conteneur.NomTransitaire, Mode=TwoWay}"/>
+                    
+                    <Label Text="Commentaires" FontSize="Caption"/>
+                    <Editor Text="{Binding Conteneur.Commentaires, Mode=TwoWay}" AutoSize="TextChanges" HeightRequest="100"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="Dates Clés" FontSize="Large" FontAttributes="Bold"/>
+                    
+                    <VerticalStackLayout>
+                        <Label Text="Date de réception *" FontSize="Caption"/>
+                        <!-- Le DatePicker pour une date obligatoire reste simple -->
+                        <DatePicker Date="{Binding Conteneur.DateReception, Mode=TwoWay}"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout>
+                        <HorizontalStackLayout>
+                            <CheckBox x:Name="HasDateChargement" IsChecked="{Binding Conteneur.DateChargement, Converter={StaticResource IsNotNullConverter}}"/>
+                            <Label Text="Date de chargement" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateChargement}, Path=IsChecked}" Date="{Binding Conteneur.DateChargement, Converter={StaticResource NullableDateConverter}, Mode=TwoWay}"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout>
+                        <HorizontalStackLayout>
+                            <CheckBox x:Name="HasDateDepart" IsChecked="{Binding Conteneur.DateDepart, Converter={StaticResource IsNotNullConverter}}"/>
+                            <Label Text="Date de départ" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateDepart}, Path=IsChecked}" Date="{Binding Conteneur.DateDepart, Converter={StaticResource NullableDateConverter}, Mode=TwoWay}"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout>
+                         <HorizontalStackLayout>
+                            <CheckBox x:Name="HasDateArrivee" IsChecked="{Binding Conteneur.DateArriveeDestination, Converter={StaticResource IsNotNullConverter}}"/>
+                            <Label Text="Date d'arrivée à destination" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateArrivee}, Path=IsChecked}" Date="{Binding Conteneur.DateArriveeDestination, Converter={StaticResource NullableDateConverter}, Mode=TwoWay}"/>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout>
+                         <HorizontalStackLayout>
+                            <CheckBox x:Name="HasDateDedouanement" IsChecked="{Binding Conteneur.DateDedouanement, Converter={StaticResource IsNotNullConverter}}"/>
+                            <Label Text="Date de dédouanement" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                        <DatePicker IsEnabled="{Binding Source={x:Reference HasDateDedouanement}, Path=IsChecked}" Date="{Binding Conteneur.DateDedouanement, Converter={StaticResource NullableDateConverter}, Mode=TwoWay}"/>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Frame>
+            
+            <Button Text="Enregistrer" Command="{Binding SaveCommand}" Margin="0,10,0,0"/>
+            
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

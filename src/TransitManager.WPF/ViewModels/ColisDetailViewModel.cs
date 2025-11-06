@@ -18,6 +18,7 @@ using System.Windows.Input;
 using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using TransitManager.Core.Exceptions;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.WPF.ViewModels
 {
@@ -377,53 +378,94 @@ namespace TransitManager.WPF.ViewModels
 			if (!CanSave() || Colis == null || SelectedClient == null) return;
 			
 			Colis.ClientId = SelectedClient.Id;
-			Colis.Barcodes = Barcodes.ToList();
+			// Note : la liste de barcodes du ViewModel est déjà à jour, pas besoin de la réassigner ici.
 
-			// *** LOGIQUE MÉTIER AJOUTÉE ICI ***
-			// C'est AU MOMENT D'ENREGISTRER qu'on applique les règles.
+			// Logique métier pour le statut
 			var finalStatuses = new[] { StatutColis.Livre, StatutColis.Perdu, StatutColis.Probleme, StatutColis.Retourne };
 			if (!finalStatuses.Contains(Colis.Statut))
 			{
 				Colis.Statut = Colis.ConteneurId.HasValue ? StatutColis.Affecte : StatutColis.EnAttente;
 			}
-			// Cas particulier du statut "Retourne"
 			if(Colis.Statut == StatutColis.Retourne)
 			{
 				Colis.ConteneurId = null;
 			}
-			// *** FIN DE LA LOGIQUE MÉTIER ***
 
 			await ExecuteBusyActionAsync(async () =>
 			{
 				try
 				{
 					bool isNew = string.IsNullOrEmpty(Colis.CreePar);
+
 					if (isNew)
 					{
-						await _colisService.CreateAsync(Colis);
+						var createDto = new CreateColisDto
+						{
+							ClientId = SelectedClient.Id,
+							Designation = Colis.Designation,
+							DestinationFinale = Colis.DestinationFinale,
+							Barcodes = Barcodes.Select(b => b.Value).ToList(),
+							NombrePieces = Colis.NombrePieces,
+							Volume = Colis.Volume,
+							ValeurDeclaree = Colis.ValeurDeclaree,
+							PrixTotal = Colis.PrixTotal,
+							Destinataire = Colis.Destinataire,
+							TelephoneDestinataire = Colis.TelephoneDestinataire,
+							LivraisonADomicile = Colis.LivraisonADomicile,
+							AdresseLivraison = Colis.AdresseLivraison,
+							EstFragile = Colis.EstFragile,
+							ManipulationSpeciale = Colis.ManipulationSpeciale,
+							InstructionsSpeciales = Colis.InstructionsSpeciales,
+							Type = Colis.Type,
+							TypeEnvoi = Colis.TypeEnvoi,
+                            // On peut aussi passer le ConteneurId si sélectionné
+                            ConteneurId = Colis.ConteneurId
+						};
+						var createdColis = await _colisService.CreateAsync(createDto);
+                        Colis.Id = createdColis.Id; // Mettre à jour l'ID pour les actions futures
 					}
 					else
 					{
-						await _colisService.UpdateAsync(Colis);
+						var updateDto = new UpdateColisDto
+						{
+							Id = Colis.Id,
+							ClientId = SelectedClient.Id,
+							Designation = Colis.Designation,
+							DestinationFinale = Colis.DestinationFinale,
+							Barcodes = Barcodes.Select(b => b.Value).ToList(),
+							NombrePieces = Colis.NombrePieces,
+							Volume = Colis.Volume,
+							ValeurDeclaree = Colis.ValeurDeclaree,
+							PrixTotal = Colis.PrixTotal,
+							Destinataire = Colis.Destinataire,
+							TelephoneDestinataire = Colis.TelephoneDestinataire,
+							LivraisonADomicile = Colis.LivraisonADomicile,
+							AdresseLivraison = Colis.AdresseLivraison,
+							EstFragile = Colis.EstFragile,
+							ManipulationSpeciale = Colis.ManipulationSpeciale,
+							InstructionsSpeciales = Colis.InstructionsSpeciales,
+							Type = Colis.Type,
+							TypeEnvoi = Colis.TypeEnvoi,
+                            ConteneurId = Colis.ConteneurId,
+                            Statut = Colis.Statut
+						};
+						await _colisService.UpdateAsync(Colis.Id, updateDto);
 					}
-					await _dialogService.ShowInformationAsync("Succès", "Le colis a été enregistré.");
 
-					// ==== MODIFICATION ICI ====
+					await _dialogService.ShowInformationAsync("Succès", "Le colis a été enregistré.");
+                    _messenger.Send(new ConteneurUpdatedMessage(true)); // Notifier que les listes doivent être rechargées
+
 					if (_isModal)
 					{
-						// On ne ferme plus automatiquement, sauf si on décide de garder ce comportement pour les modales
-						// CloseAction?.Invoke(); 
+						// Optionnel : on peut choisir de fermer ou non
 					}
 					else
 					{
-						// On ne revient plus en arrière
-						// _navigationService.GoBack(); 
+						_navigationService.GoBack();
 					}
 
-					// On recharge les données pour avoir l'état le plus récent après sauvegarde
 					await InitializeAsync(Colis.Id);
 					OpenPrintPreviewCommand.NotifyCanExecuteChanged();
-					// ==== FIN DE LA MODIFICATION ====
 				}
 				catch (ConcurrencyException cex)
 				{
@@ -433,11 +475,9 @@ namespace TransitManager.WPF.ViewModels
 
 					if (refresh && Colis != null)
 					{
-						await InitializeAsync(Colis.Id); // Recharge les données
+						await InitializeAsync(Colis.Id);
 					}
 				}
-
-				
 				catch (Exception ex)
 				{
 					await _dialogService.ShowErrorAsync("Erreur", $"Erreur d'enregistrement : {ex.Message}\n{ex.InnerException?.Message}");
@@ -527,23 +567,36 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-		private async Task OpenInventaire()
+        private async Task OpenInventaire()
 		{
 			if (Colis == null) return;
 			var inventaireViewModel = new InventaireViewModel(Colis.InventaireJson);
-			var inventaireWindow = new InventaireView(inventaireViewModel)
+			var inventaireWindow = new Views.Inventaire.InventaireView(inventaireViewModel)
 			{
 				Owner = System.Windows.Application.Current.MainWindow
 			};
 
 			if (inventaireWindow.ShowDialog() == true)
 			{
-				Colis.InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items);
-				Colis.NombrePieces = inventaireViewModel.TotalQuantite;
-				Colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
+                // --- DÉBUT DE LA CORRECTION WPF ---
+                // On utilise le nouveau DTO et la nouvelle méthode de service
+                var dto = new UpdateInventaireDto
+                {
+                    ColisId = Colis.Id,
+                    InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items),
+                    TotalPieces = inventaireViewModel.TotalQuantite,
+                    TotalValeurDeclaree = inventaireViewModel.TotalValeur
+                };
+
+                await _colisService.UpdateInventaireAsync(dto);
+                
+                // On rafraîchit les données locales après la sauvegarde
+                Colis.InventaireJson = dto.InventaireJson;
+                Colis.NombrePieces = dto.TotalPieces;
+                Colis.ValeurDeclaree = dto.TotalValeurDeclaree;
 				
-				// Notifier explicitement le changement de HasInventaire
 				OnPropertyChanged(nameof(HasInventaire));
+                // --- FIN DE LA CORRECTION WPF ---
 			}
 		}
 

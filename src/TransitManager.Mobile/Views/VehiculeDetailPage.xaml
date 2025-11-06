@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+			 xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:VehiculeDetailViewModel"
+             x:Class="TransitManager.Mobile.Views.VehiculeDetailPage"
+             Title="Détails du Véhicule">
+			 
+    <ContentPage.Resources>
+        <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+        <converters:ToUpperConverter x:Key="ToUpperConverter" />
+    </ContentPage.Resources>
+
+	<ScrollView>
+        <VerticalStackLayout Spacing="15" Padding="20">
+            <!-- EN-TÊTE -->
+            <!-- MODIFICATION 1 : Style de la police pour l'immatriculation -->
+            <Label Text="{Binding Vehicule.Immatriculation}" 
+                   FontSize="32" 
+                   FontAttributes="Bold" 
+                   HorizontalOptions="Center"/>
+            
+            <Label FontSize="Title" Opacity="0.8" HorizontalOptions="Center">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="{Binding Vehicule.Marque}"/>
+                        <Span Text=" "/>
+                        <Span Text="{Binding Vehicule.Modele}"/>
+                        <Span Text=" ("/>
+                        <Span Text="{Binding Vehicule.Annee}"/>
+                        <Span Text=")"/>
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+            <BoxView HeightRequest="1" Color="LightGray" Margin="0,10"/>
+
+            <!-- Informations Principales -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Informations Principales" FontSize="Large" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="*,*,*,*,*" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Client Propriétaire :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Vehicule.Client.NomComplet}"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Kilométrage :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Vehicule.Kilometrage, StringFormat='{0:N0} km'}"/>
+                        
+                        <!-- AJOUT : Champ Type -->
+                        <Label Grid.Row="2" Grid.Column="0" Text="Type :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Vehicule.Type}"/>
+                        
+                        <Label Grid.Row="3" Grid.Column="0" Text="Statut :" FontAttributes="Bold"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding Vehicule.Statut}"/>
+
+                        <Label Grid.Row="4" Grid.Column="0" Text="Conteneur :" FontAttributes="Bold"/>
+                        <Label Grid.Row="4" Grid.Column="1" Text="{Binding Vehicule.Conteneur.NumeroDossier, TargetNullValue='Non affecté'}"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Destination -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Destination" FontSize="Large" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="*,*,*" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Destinataire :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Vehicule.Destinataire, TargetNullValue='(identique au propriétaire)'}"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Téléphone Dest. :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Vehicule.TelephoneDestinataire, TargetNullValue='N/A'}"/>
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Destination Finale :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Vehicule.DestinationFinale}"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Finances -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Détails Financiers" FontSize="Large" FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="*,*,*,*" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Valeur Déclarée :" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding Vehicule.ValeurDeclaree, StringFormat='{0:C}'}"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Prix Total :" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Vehicule.PrixTotal, StringFormat='{0:C}'}" TextColor="Blue"/>
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Somme Payée :" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding Vehicule.SommePayee, StringFormat='{0:C}'}" TextColor="Green"/>
+                        
+                        <Label Grid.Row="3" Grid.Column="0" Text="Restant à Payer :" FontAttributes="Bold"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding Vehicule.RestantAPayer, StringFormat='{0:C}'}" TextColor="Red" FontAttributes="Bold"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+			
+            <!-- Section Commentaires -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Commentaires" FontSize="Large" FontAttributes="Bold" />
+                    <!-- MODIFICATION 2 : Style pour le texte des commentaires -->
+                    <Label Text="{Binding Vehicule.Commentaires, Converter={StaticResource ToUpperConverter}}"
+                           TextColor="Red"
+                           FontAttributes="Bold"
+                           IsVisible="{Binding Vehicule.Commentaires, Converter={StaticResource IsNotNullOrEmptyConverter}}"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="Actions" FontSize="Large" FontAttributes="Bold" Margin="0,20,0,0"/>
+            
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="CenterAndExpand">
+                <Button Text="Voir État des Lieux" Command="{Binding ViewEtatDesLieuxCommand}"/>
+                <Button Text="Modifier État des Lieux" Command="{Binding EditEtatDesLieuxCommand}"/>
+            </HorizontalStackLayout>
+            
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="CenterAndExpand" Margin="0,10,0,0">
+                <Button Text="Modifier Fiche" Command="{Binding EditCommand}"/>
+                <Button Text="Actualiser" Command="{Binding RefreshCommand}"/>
+				<Button Text="Paiements" Command="{Binding GoToPaiementsCommand}"/>
+            </HorizontalStackLayout>
+
+        </VerticalStackLayout>
+		
+    <ContentPage.Resources>
+        <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+    </ContentPage.Resources>
+    
+		
+    </ScrollView>
+</ContentPage>

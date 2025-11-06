@@ -23,6 +23,8 @@
 
 		<!-- MODIFICATION : Nous ne gardons que la version de plateforme pour Android -->
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		
+		<AndroidPackageFormat>apk</AndroidPackageFormat>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -34,7 +36,6 @@
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
@@ -42,6 +43,21 @@
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="Resources\Images\camion_plan.png" />
+	  <None Remove="Resources\Images\clear_icon.png" />
+	  <None Remove="Resources\Images\dotnet_bot.png" />
+	  <None Remove="Resources\Images\eraser_icon.png" />
+	  <None Remove="Resources\Images\logo.jpg" />
+	  <None Remove="Resources\Images\moto_plan.png" />
+	  <None Remove="Resources\Images\pencil_icon.png" />
+	  <None Remove="Resources\Images\quad_plan.png" />
+	  <None Remove="Resources\Images\van_plan.png" />
+	  <None Remove="Resources\Images\vehicule_plan.png" />
+	  <None Remove="Resources\Images\voiture_plan.png" />
+	</ItemGroup>
+	
 
 	<!--
 	MODIFICATION : Toutes les références de package sont ici, SANS attribut de version,
@@ -69,6 +85,56 @@
 	  <MauiXaml Update="Views\ClientsPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\ClientDetailPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <!-- VÉRIFIEZ QUE CETTE SECTION EST BIEN PRÉSENTE -->
+	  <MauiXaml Update="Views\AddEditClientPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\ColisPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\ColisDetailPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\AddEditColisPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\VehiculesPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\VehiculeDetailPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\AddEditVehiculePage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+      <MauiXaml Update="Views\EtatDesLieuxPage.xaml">
+        <Generator>MSBuild:Compile</Generator>
+      </MauiXaml>
+	  
+      <MauiXaml Update="Views\EditEtatDesLieuxPage.xaml">
+        <Generator>MSBuild:Compile</Generator>
+      </MauiXaml>
+	  
+	  <MauiXaml Update="Views\PaiementVehiculePage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
+	  <MauiXaml Update="Views\AddEditPaiementPage.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  
 	</ItemGroup>
 
 </Project>

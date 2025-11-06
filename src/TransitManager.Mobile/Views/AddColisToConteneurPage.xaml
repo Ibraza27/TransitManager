@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:models="clr-namespace:TransitManager.Mobile.Models"
+             xmlns:entities="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:AddColisToConteneurViewModel"
+             x:Class="TransitManager.Mobile.Views.AddColisToConteneurPage"
+             Title="Ajouter des Colis">
+
+    <ContentPage.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+        <converters:IsDateOverdueConverter x:Key="IsDateOverdueConverter" />
+        
+        <MenuFlyout x:Key="ColisMenu">
+
+            <MenuFlyoutItem Text="Voir / Modifier les détails"
+                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:AddColisToConteneurViewModel}}, Path=GoToColisDetailsCommand}"
+                            CommandParameter="{Binding .}"/> 
+
+        </MenuFlyout>
+    </ContentPage.Resources>
+    
+    <Grid RowDefinitions="Auto, *, Auto">
+        <SearchBar Grid.Row="0" Placeholder="Rechercher code-barres, client, désignation..." Text="{Binding SearchText}" Margin="10"/>
+        
+        <CollectionView Grid.Row="1" ItemsSource="{Binding ColisList}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:SelectableColisWrapper">
+                    <Grid ColumnDefinitions="Auto, *" Padding="10,5">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalOptions="Center"/>
+                        <Frame Grid.Column="1" Margin="5,0,0,0" Padding="15" BorderColor="LightGray" CornerRadius="8">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:AddColisToConteneurViewModel}}, Path=GoToColisDetailsCommand}"
+                                                      CommandParameter="{Binding .}"/>
+                            </Frame.GestureRecognizers>
+                            <FlyoutBase.ContextFlyout>
+                                <StaticResourceExtension Key="ColisMenu"/>
+                            </FlyoutBase.ContextFlyout>
+                            <Frame.Triggers>
+                                <DataTrigger TargetType="Frame" Binding="{Binding Item.DateArrivee, Converter={StaticResource IsDateOverdueConverter}}" Value="True">
+                                    <Setter Property="BorderColor" Value="Red" />
+                                    <Setter Property="BackgroundColor" Value="#1AEC4B4B" />
+                                </DataTrigger>
+                            </Frame.Triggers>
+                            
+                            <Grid ColumnDefinitions="*, Auto">
+                                <VerticalStackLayout Grid.Column="0" Spacing="5">
+									<Label FontSize="Medium">
+										<Label.FormattedText>
+											<FormattedString>
+												<Span Text="{Binding Item.Client.NomComplet}" FontAttributes="Bold"/>
+												<Span Text="{Binding Item.Client.TelephonePrincipal, StringFormat=' ({0})'}" TextColor="Gray"/>
+											</FormattedString>
+										</Label.FormattedText>
+									</Label>
+                                    <Label>
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding Item.Designation}"/>
+                                                <Span Text=" -> " FontAttributes="Italic" TextColor="Gray"/>
+                                                <Span Text="{Binding Item.DestinationFinale}" FontAttributes="Bold"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                    <Label Text="{Binding Item.NumeroReference}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
+                                </VerticalStackLayout>
+                                
+                                <Border Grid.Column="1" Padding="10,5" 
+                                        BackgroundColor="{Binding Item.Statut, Converter={StaticResource StatusToColorConverter}}" 
+                                        StrokeShape="RoundRectangle 12" VerticalOptions="Start">
+                                    <Label Text="{Binding Item.Statut}" TextColor="White" FontSize="10" FontAttributes="Bold"/>
+                                </Border>
+                            </Grid>
+                        </Frame>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        
+        <Button Grid.Row="2" Text="Ajouter la sélection" Command="{Binding AddSelectedCommand}" Margin="10"/>
+        
+        <ActivityIndicator Grid.RowSpan="3" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

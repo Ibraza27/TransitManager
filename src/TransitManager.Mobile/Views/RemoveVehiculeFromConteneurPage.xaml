@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:models="clr-namespace:TransitManager.Mobile.Models"
+             xmlns:entities="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:RemoveVehiculeFromConteneurViewModel"
+             x:Class="TransitManager.Mobile.Views.RemoveVehiculeFromConteneurPage"
+             Title="Retirer des Véhicules">
+
+    <ContentPage.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+        <MenuFlyout x:Key="VehiculeMenu">
+            <MenuFlyoutItem Text="Voir / Modifier les détails"
+                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RemoveVehiculeFromConteneurViewModel}}, Path=GoToVehiculeDetailsCommand}"
+                            CommandParameter="{Binding .}"/>
+        </MenuFlyout>
+    </ContentPage.Resources>
+    
+    <Grid RowDefinitions="Auto, *, Auto">
+        <SearchBar Grid.Row="0" Placeholder="Rechercher immat., client, marque..." Text="{Binding SearchText}" Margin="10"/>
+        
+        <CollectionView Grid.Row="1" ItemsSource="{Binding VehiculesList}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:SelectableVehiculeWrapper">
+                    <Grid ColumnDefinitions="Auto, *" Padding="10,5">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalOptions="Center"/>
+                        <Frame Grid.Column="1" Margin="5,0,0,0" Padding="15" BorderColor="LightGray" CornerRadius="8">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RemoveVehiculeFromConteneurViewModel}}, Path=GoToVehiculeDetailsCommand}"
+                                                      CommandParameter="{Binding .}"/>
+                            </Frame.GestureRecognizers>
+                            <FlyoutBase.ContextFlyout>
+                                <StaticResourceExtension Key="VehiculeMenu"/>
+                            </FlyoutBase.ContextFlyout>
+
+                            <Grid ColumnDefinitions="*, Auto">
+                                <VerticalStackLayout Grid.Column="0" Spacing="5">
+                                    <Label Text="{Binding Item.Immatriculation}" FontSize="Medium" FontAttributes="Bold"/>
+                                    <Label>
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding Item.Marque}"/>
+                                                <Span Text=" "/>
+                                                <Span Text="{Binding Item.Modele}"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                    <Label Text="{Binding Item.Client.NomComplet}" FontSize="Small" TextColor="Gray" FontAttributes="Italic"/>
+                                </VerticalStackLayout>
+                                
+                                <Border Grid.Column="1" Padding="10,5" 
+                                        BackgroundColor="{Binding Item.Statut, Converter={StaticResource StatusToColorConverter}}" 
+                                        StrokeShape="RoundRectangle 12" VerticalOptions="Start">
+                                    <Label Text="{Binding Item.Statut}" TextColor="White" FontSize="10" FontAttributes="Bold"/>
+                                </Border>
+                            </Grid>
+                        </Frame>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        
+        <Button Grid.Row="2" Text="Retirer la sélection" Command="{Binding RemoveSelectedCommand}" Margin="10" BackgroundColor="Red"/>
+        
+        <ActivityIndicator Grid.RowSpan="3" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

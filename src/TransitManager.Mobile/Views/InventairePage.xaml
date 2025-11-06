@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:entities="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
+             x:DataType="viewmodels:InventaireViewModel"
+             x:Class="TransitManager.Mobile.Views.InventairePage"
+             Title="Gestion de l'Inventaire">
+    <Grid RowDefinitions="Auto, *, Auto, Auto">
+        
+        <!-- Formulaire d'ajout (inchangé) -->
+        <Frame Grid.Row="0" Margin="10" Padding="15" BorderColor="LightGray">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Ajouter un article" FontAttributes="Bold" FontSize="Medium"/>
+                <VerticalStackLayout>
+                    <Label Text="Désignation" FontSize="Caption"/>
+                    <Entry Placeholder="Ex : Chemise, Pantalon..." Text="{Binding NewItem.Designation}"/>
+                </VerticalStackLayout>
+                
+                <Grid ColumnDefinitions="*,*,*">
+                    <VerticalStackLayout Grid.Column="0">
+                        <Label Text="Quantité" FontSize="Caption"/>
+                        <Entry Placeholder="Qté" Text="{Binding NewItem.Quantite}" Keyboard="Numeric"/>
+                    </VerticalStackLayout>
+                    
+                    <VerticalStackLayout Grid.Column="1" Margin="10,0,0,0">
+                        <Label Text="Valeur (€)" FontSize="Caption"/>
+                        <Entry Placeholder="Valeur" Text="{Binding NewItem.Valeur}" Keyboard="Numeric"/>
+                    </VerticalStackLayout>
+                    
+                    <VerticalStackLayout Grid.Column="2" Margin="10,0,0,0">
+                        <Label Text="Date" FontSize="Caption"/>
+                        <DatePicker Date="{Binding NewItem.Date}"/>
+                    </VerticalStackLayout>
+                </Grid>
+                <Button Text="Ajouter" Command="{Binding AddItemCommand}" HorizontalOptions="End"/>
+            </VerticalStackLayout>
+        </Frame>
+
+
+        <!-- La CollectionView est maintenant l'élément principal de la ligne 1 -->
+        <Grid Grid.Row="1" Margin="10,0" RowDefinitions="Auto, *">
+            <!-- En-têtes de colonne -->
+            <Grid Grid.Row="0" ColumnDefinitions="*, 2*, *, *, Auto, Auto" Padding="10,5" BackgroundColor="LightGray">
+                <Label Grid.Column="0" Text="Date" FontAttributes="Bold" HorizontalTextAlignment="Start"/>
+                <Label Grid.Column="1" Text="Désignation" FontAttributes="Bold" HorizontalTextAlignment="Start"/>
+                <Label Grid.Column="2" Text="Qté" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
+                <Label Grid.Column="3" Text="Valeur" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
+            </Grid>
+
+            <CollectionView Grid.Row="1" ItemsSource="{Binding Items}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="entities:InventaireItem">
+                        <Grid ColumnDefinitions="*, 2*, *, *, Auto, Auto" Padding="10,8" >
+                            <Label Grid.Column="0" Text="{Binding Date, StringFormat='{0:dd/MM/yy}'}" VerticalOptions="Center"/>
+                            <Label Grid.Column="1" Text="{Binding Designation}" VerticalOptions="Center"/>
+                            <Label Grid.Column="2" Text="{Binding Quantite}" VerticalOptions="Center" HorizontalTextAlignment="Center"/>
+                            <Label Grid.Column="3" Text="{Binding Valeur, StringFormat='{0:C}'}" VerticalOptions="Center" HorizontalTextAlignment="Center"/>
+                            <Button Grid.Column="4" Text="Modifier" FontSize="Micro"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:InventaireViewModel}}, Path=EditItemCommand}"
+                                    CommandParameter="{Binding .}"/>
+                            <Button Grid.Column="5" Text="Suppr." FontSize="Micro" BackgroundColor="Red"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:InventaireViewModel}}, Path=DeleteItemCommand}"
+                                    CommandParameter="{Binding .}"/>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+
+        
+        <!-- Statistiques (inchangées) -->
+        <Frame Grid.Row="2" Margin="10" Padding="15" BorderColor="LightGray">
+            <HorizontalStackLayout HorizontalOptions="End" Spacing="20">
+                <Label>
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="Quantité Totale : "/>
+                            <Span Text="{Binding TotalQuantite}" FontAttributes="Bold"/>
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+                <Label>
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="Valeur Totale : "/>
+                            <Span Text="{Binding TotalValeur, StringFormat='{0:C}'}" FontAttributes="Bold"/>
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+            </HorizontalStackLayout>
+        </Frame>
+
+        <!-- Bouton de sauvegarde (inchangé) -->
+        <Button Grid.Row="3" Text="Enregistrer et Fermer" Command="{Binding SaveAndCloseCommand}" Margin="10"/>
+        
+    </Grid>
+</ContentPage>

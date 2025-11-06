@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:AddEditVehiculeViewModel"
+             x:Class="TransitManager.Mobile.Views.AddEditVehiculePage"
+             Title="{Binding PageTitle}">
+
+    <ContentPage.Resources>
+        <converters:InvertedBooleanConverter x:Key="InvertedBooleanConverter" />
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="20">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+
+            <!-- Section Infos Vehicule -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Informations du Vehicule" FontSize="Large" FontAttributes="Bold"/>
+                    
+                    <Label Text="Immatriculation *" FontSize="Caption"/>
+                    <Entry Text="{Binding Vehicule.Immatriculation}"/>
+
+                    <Label Text="Marque *" FontSize="Caption"/>
+                    <Entry Text="{Binding Vehicule.Marque}"/>
+
+                    <Label Text="Modele *" FontSize="Caption"/>
+                    <Entry Text="{Binding Vehicule.Modele}"/>
+                    
+                    <Label Text="Annee" FontSize="Caption"/>
+                    <Entry Text="{Binding Vehicule.Annee}" Keyboard="Numeric"/>
+
+                    <Label Text="Kilometrage" FontSize="Caption"/>
+                    <Entry Text="{Binding Vehicule.Kilometrage, StringFormat='{0:N0}'}" Keyboard="Numeric"/>
+
+					<Label Text="Type de Véhicule" FontSize="Caption"/>
+					<Picker Title="Sélectionner le type" 
+							ItemsSource="{Binding VehiculeTypes}"
+							SelectedItem="{Binding SelectedVehiculeType}"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Section Client & Destinataire -->
+            <Frame Padding="15" BorderColor="LightGray">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Client &amp; Destinataire" FontSize="Large" FontAttributes="Bold"/>
+                    
+                    <Label Text="Client Proprietaire *" FontSize="Caption"/>
+                    <Frame Padding="10" BorderColor="LightGray" CornerRadius="4">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding GoToClientSelectionCommand}"/>
+                        </Frame.GestureRecognizers>
+                        <Grid ColumnDefinitions="*, Auto">
+                            <Entry Grid.Column="0" 
+                                   Text="{Binding SelectedClient.NomComplet}" 
+                                   Placeholder="Appuyez pour sélectionner un client"
+                                   IsReadOnly="True"/>
+                            <Label Grid.Column="1" Text=">" FontSize="Large" VerticalOptions="Center"/>
+                        </Grid>
+                    </Frame>
+                    
+                    <HorizontalStackLayout Spacing="10" Margin="0,15,0,0">
+                        <CheckBox IsChecked="{Binding DestinataireIdentiqueAuClient}"/>
+                        <Label Text="Destinataire identique au proprietaire" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+
+                    <Label Text="Nom du Destinataire" FontSize="Caption" Margin="0,10,0,0"/>
+                    <Entry Text="{Binding Vehicule.Destinataire}" IsEnabled="{Binding DestinataireIdentiqueAuClient, Converter={StaticResource InvertedBooleanConverter}}"/>
+
+                    <Label Text="Telephone du Destinataire" FontSize="Caption"/>
+                    <Entry Text="{Binding Vehicule.TelephoneDestinataire}" Keyboard="Telephone" IsEnabled="{Binding DestinataireIdentiqueAuClient, Converter={StaticResource InvertedBooleanConverter}}"/>
+                    
+                    <Label Text="Destination Finale *" FontSize="Caption"/>
+                    <Entry Text="{Binding Vehicule.DestinationFinale}"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Section Finances & Commentaires -->
+            <Frame Padding="15" BorderColor="LightGray">
+                 <VerticalStackLayout Spacing="10">
+                    <Label Text="Finances &amp; Commentaires" FontSize="Large" FontAttributes="Bold"/>
+                    
+                    <Label Text="Valeur Declaree (€)" FontSize="Caption"/>
+                    <Entry Text="{Binding Vehicule.ValeurDeclaree}" Keyboard="Numeric"/>
+
+                    <Label Text="Prix Total (€)" FontSize="Caption"/>
+                    <Entry Text="{Binding Vehicule.PrixTotal}" Keyboard="Numeric"/>
+
+                    <Label Text="Commentaires" FontSize="Caption"/>
+                    <Editor Text="{Binding Vehicule.Commentaires}" AutoSize="TextChanges" HeightRequest="100"/>
+                 </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="Enregistrer" Command="{Binding SaveCommand}" Margin="0,20,0,0"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

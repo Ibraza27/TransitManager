@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+             xmlns:entities="clr-namespace:TransitManager.Core.Entities;assembly=TransitManager.Core"
+             xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:ConteneurViewModel"
+             x:Class="TransitManager.Mobile.Views.ConteneurPage"
+             Title="Conteneurs">
+    <ContentPage.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+    </ContentPage.Resources>
+    
+    <Grid RowDefinitions="Auto, Auto, *, Auto">
+        <SearchBar Grid.Row="0" Placeholder="Rechercher conteneur, plomb, destination..." Text="{Binding SearchText}" Margin="10"/>
+
+        <HorizontalStackLayout Grid.Row="1" Spacing="10" Padding="10,0">
+            <Picker Title="Statut" ItemsSource="{Binding StatutsList}" SelectedItem="{Binding SelectedStatut}" WidthRequest="200"/>
+        </HorizontalStackLayout>
+
+        <RefreshView Grid.Row="2" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadConteneursCommand}">
+            <CollectionView ItemsSource="{Binding ConteneursList}" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="entities:Conteneur">
+                        <Frame Margin="10,5" Padding="15" BorderColor="LightGray" CornerRadius="8">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ConteneurViewModel}}, Path=GoToDetailsCommand}"
+                                    CommandParameter="{Binding .}" />
+                            </Frame.GestureRecognizers>
+                            <Grid ColumnDefinitions="*, Auto">
+                                <VerticalStackLayout Grid.Column="0" Spacing="5">
+                                    <Label Text="{Binding NumeroDossier}" FontSize="Medium" FontAttributes="Bold"/>
+                                    <Label Text="{Binding NumeroPlomb, StringFormat='N°Plomb : {0}'}"/>
+                                    <Label Text="{Binding NomCompagnie, StringFormat='Compagnie : {0}'}"/>
+                                    <Label Text="{Binding Destination, StringFormat='Destination : {0}'}"/>
+                                    <Label Text="{Binding NomTransitaire, StringFormat='Transitaire : {0}'}"/>
+                                </VerticalStackLayout>
+                                <Border Grid.Column="1" Padding="10,5" 
+                                        BackgroundColor="{Binding Statut, Converter={StaticResource StatusToColorConverter}}" 
+                                        StrokeShape="RoundRectangle 12" VerticalOptions="Center">
+                                    <Label Text="{Binding Statut}" TextColor="White" FontSize="10" FontAttributes="Bold"/>
+                                </Border>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <HorizontalStackLayout Grid.Row="3" Padding="10" Spacing="10">
+            <Button Text="Actualiser" Command="{Binding LoadConteneursCommand}"/>
+            <Button Text="Nouveau" Command="{Binding AddConteneurCommand}"/>
+        </HorizontalStackLayout>
+        
+        <ActivityIndicator Grid.RowSpan="4" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"/>
+    </Grid>
+</ContentPage>

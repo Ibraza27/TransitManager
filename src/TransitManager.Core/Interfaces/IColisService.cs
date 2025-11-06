@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.Core.Interfaces
 {
@@ -15,8 +16,8 @@ namespace TransitManager.Core.Interfaces
         Task<IEnumerable<Colis>> GetByClientAsync(Guid clientId);
         Task<IEnumerable<Colis>> GetByConteneurAsync(Guid conteneurId);
         Task<IEnumerable<Colis>> GetByStatusAsync(StatutColis statut);
-        Task<Colis> CreateAsync(Colis colis);
-        Task<Colis> UpdateAsync(Colis colis);
+        Task<Colis> CreateAsync(CreateColisDto colisDto);
+        Task<Colis> UpdateAsync(Guid id, UpdateColisDto colisDto);
         Task<bool> DeleteAsync(Guid id);
         Task<Colis> ScanAsync(string barcode, string location);
         Task<bool> AssignToConteneurAsync(Guid colisId, Guid conteneurId);
@@ -27,5 +28,10 @@ namespace TransitManager.Core.Interfaces
         Task<bool> MarkAsDeliveredAsync(Guid colisId, string signature);
         Task<IEnumerable<Colis>> SearchAsync(string searchTerm);
         Task<Dictionary<StatutColis, int>> GetStatisticsByStatusAsync();
+
+        // --- DÉBUT DE L'AJOUT ---
+        Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId);
+		Task UpdateInventaireAsync(UpdateInventaireDto dto);
+        // --- FIN DE L'AJOUT ---
     }
 }

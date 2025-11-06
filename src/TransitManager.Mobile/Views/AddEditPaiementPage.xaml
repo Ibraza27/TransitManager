@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TransitManager.Mobile.ViewModels"
+			 xmlns:converters="clr-namespace:TransitManager.Mobile.Converters"
+             x:DataType="viewmodels:AddEditPaiementViewModel"
+             x:Class="TransitManager.Mobile.Views.AddEditPaiementPage"
+             Title="Modifier le Paiement">
+			 
+    <ContentPage.Resources>
+        <converters:EnumToStringConverter x:Key="EnumToStringConverter" />
+    </ContentPage.Resources>
+    <ScrollView>
+        <VerticalStackLayout Spacing="10" Padding="20">
+            
+			<Label Text="Type de paiement" FontSize="Caption"/>
+			<Picker ItemsSource="{Binding PaymentTypes}" 
+					SelectedItem="{Binding Paiement.ModePaiement, Converter={StaticResource EnumToStringConverter}}"/>
+
+            <Label Text="Montant" FontSize="Caption"/>
+            <Entry Text="{Binding Paiement.Montant}" Keyboard="Numeric"/>
+            
+            <Label Text="Date du paiement" FontSize="Caption"/>
+            <DatePicker Date="{Binding Paiement.DatePaiement}"/>
+
+            <Label Text="Commentaire (optionnel)" FontSize="Caption"/>
+            <Editor Text="{Binding Paiement.Commentaires}" AutoSize="TextChanges" HeightRequest="100"/>
+            
+            <Button Text="Enregistrer" Command="{Binding SaveCommand}" Margin="0,30,0,0"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

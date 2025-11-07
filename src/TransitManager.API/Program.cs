@@ -16,7 +16,10 @@ var builder = WebApplication.CreateBuilder(args);
 // --- CONFIGURATION DE LA CONNEXION À LA BASE DE DONNÉES ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<TransitContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString)
+           // --- AJOUTER CETTE LIGNE POUR VOIR LES REQUÊTES SQL ---
+           .LogTo(Console.WriteLine, LogLevel.Information)
+);
 
 // --- INJECTION DES DÉPENDANCES (SERVICES ET REPOSITORIES) ---
 // Services de l'application

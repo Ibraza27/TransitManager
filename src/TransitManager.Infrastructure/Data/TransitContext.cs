@@ -48,7 +48,7 @@ namespace TransitManager.Infrastructure.Data
                 Nom = "Administrateur",
                 Prenom = "Système",
                 Email = "admin@transitmanager.com",
-                MotDePasseHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+                MotDePasseHash = "$2a$11$Tb9CvmOW2h/YNRaP.3QZsOo3jxIN0IN.M4khQYoZu7Ji8i82WyDxu",
                 Role = Core.Enums.RoleUtilisateur.Administrateur,
                 DateCreation = DateTime.UtcNow,
                 Actif = true
@@ -203,14 +203,5 @@ namespace TransitManager.Infrastructure.Data
             return System.Text.Json.JsonSerializer.Serialize(values);
         }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-            {
-                optionsBuilder.UseNpgsql("Host=localhost;Database=TransitManager;Username=postgres;Password=postgres")
-                    .EnableSensitiveDataLogging()
-                    .EnableDetailedErrors();
-            }
-        }
     }
 }

@@ -19,7 +19,8 @@ namespace TransitManager.Web.Components.Pages
         [Inject]
         private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
 
-        protected LoginRequestDto loginModel = new();
+		[SupplyParameterFromForm]
+        protected LoginRequestDto loginModel { get; set; } = new();
         protected string errorMessage = string.Empty;
         protected bool isBusy = false;
         protected bool showPassword = false;
@@ -61,7 +62,7 @@ namespace TransitManager.Web.Components.Pages
             {
                 var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
                 await customAuthStateProvider.MarkUserAsAuthenticated(result.Token);
-                NavigationManager.NavigateTo("/");
+                NavigationManager.NavigateTo("/", forceLoad: true);
             }
             else
             {

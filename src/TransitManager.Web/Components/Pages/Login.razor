@@ -1,13 +1,13 @@
 @page "/login"
+@rendermode InteractiveServer
 
 <h3>Connexion</h3>
-
 @if (!string.IsNullOrEmpty(errorMessage))
 {
     <div class="alert alert-danger">@errorMessage</div>
 }
 
-<EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="login">
+<EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="login" method="post">
     <DataAnnotationsValidator />
     <div class="form-group">
         <label for="email">Email</label>

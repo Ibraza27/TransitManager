@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace TransitManager.API.Controllers
 {
-	[Authorize]
+	[Authorize(Policy = "AllowInternalOrAuthenticated")]
     [ApiController]
     [Route("api/[controller]")]
     public class ColisController : ControllerBase

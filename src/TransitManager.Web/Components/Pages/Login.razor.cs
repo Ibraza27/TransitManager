@@ -19,8 +19,14 @@ namespace TransitManager.Web.Components.Pages
         [Inject]
         private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
 
-		[SupplyParameterFromForm]
+        [SupplyParameterFromForm]
         protected LoginRequestDto loginModel { get; set; } = new();
+
+        // --- DÉBUT DES MODIFICATIONS ---
+        [SupplyParameterFromQuery]
+        private string? ReturnUrl { get; set; }
+        // --- FIN DES MODIFICATIONS ---
+
         protected string errorMessage = string.Empty;
         protected bool isBusy = false;
         protected bool showPassword = false;
@@ -29,40 +35,24 @@ namespace TransitManager.Web.Components.Pages
         protected void TogglePasswordVisibility()
         {
             showPassword = !showPassword;
-            passwordInputType = "password";
-            if (showPassword)
-            {
-                passwordInputType = "text";
-            }
+            passwordInputType = showPassword ? "text" : "password";
         }
 
         protected async Task HandleLogin()
         {
             isBusy = true;
             errorMessage = string.Empty;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
 
-            // --- LOG DE DÉBOGAGE CRUCIAL ---
-            Console.WriteLine($"[Blazor] HandleLogin déclenché. Envoi des données : Email='{loginModel.Email}', Password='{loginModel.Password}'");
-
-            LoginResponseDto? result = null;
-            try
-            {
-                result = await ApiService.LoginAsync(loginModel);
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Une erreur de communication est survenue: {ex.Message}";
-                isBusy = false;
-                StateHasChanged();
-                return;
-            }
+            var result = await ApiService.LoginAsync(loginModel);
             
             if (result != null && result.Success && !string.IsNullOrEmpty(result.Token))
             {
                 var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
                 await customAuthStateProvider.MarkUserAsAuthenticated(result.Token);
-                NavigationManager.NavigateTo("/");
+                
+                // --- MODIFIER CETTE LIGNE ---
+                NavigationManager.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
             }
             else
             {
@@ -70,7 +60,7 @@ namespace TransitManager.Web.Components.Pages
             }
 
             isBusy = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 }

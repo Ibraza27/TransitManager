@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace TransitManager.API.Controllers
 {
-
+	[Authorize(Policy = "AllowInternalOrAuthenticated")]
     [ApiController]
     [Route("api/[controller]")]
     public class ConteneursController : ControllerBase

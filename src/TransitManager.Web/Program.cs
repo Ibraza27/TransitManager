@@ -2,43 +2,50 @@ using Microsoft.AspNetCore.Components.Authorization;
 using TransitManager.Web.Auth;
 using TransitManager.Web.Services;
 using TransitManager.Web.Components;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- SERVICES ---
 
-// Ajouter les services Razor Components et définir le mode interactif Server
+// 1. Enregistre les services Blazor Server (y compris IJSRuntime)
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Services d'authentification
-builder.Services.AddAuthenticationCore();
+// 2. Configure l'authentification pour gérer les redirections
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+    });
+
+// 3. Services d'autorisation standards
 builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
-builder.Services.AddHttpContextAccessor();
 
-// Services personnalisés
+// 4. Services personnalisés
+// IMPORTANT : Ces services dépendent de IJSRuntime, ils doivent être Scoped
 builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
+builder.Services.AddScoped<AuthHeaderHandler>(); // CHANGEMENT ICI: Scoped au lieu de Transient
 
-// Configuration HttpClient pour l'API
+// 5. Configuration du HttpClient
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
 if (string.IsNullOrEmpty(apiBaseUrl))
 {
     throw new InvalidOperationException("ApiBaseUrl is not configured in appsettings.json");
 }
 
-// --- LIGNE MODIFIÉE ---
-// On retire .AddHttpMessageHandler<AuthHeaderHandler>()
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
-});
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
-
-// --- APPLICATION (MIDDLEWARE PIPELINE) ---
 
 var app = builder.Build();
+
+// --- PIPELINE ---
 
 if (!app.Environment.IsDevelopment())
 {
@@ -48,12 +55,11 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseAntiforgery();
 
-// ORDRE IMPORTANT CI-DESSOUS
-app.UseRouting();
+// Le middleware d'authentification est nécessaire pour que la redirection [Authorize] fonctionne
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseAntiforgery(); // <-- VÉRIFIEZ BIEN QUE CETTE LIGNE EST PRÉSENTE ET À CET ENDROIT
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

@@ -1,13 +1,13 @@
 using TransitManager.Core.DTOs;
-using TransitManager.Core.Entities; // <-- AJOUTER CE USING
+using TransitManager.Core.Entities;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace TransitManager.Web.Services
 {
     public interface IApiService
     {
         Task<LoginResponseDto?> LoginAsync(LoginRequestDto loginRequest);
-        
-        // AJOUTER LA LIGNE CI-DESSOUS
-        Task<IEnumerable<Client>?> GetClientsAsync();
+        Task<IEnumerable<Client>?> GetClientsAsync(); // <-- Cette méthode reste, mais sera appelée différemment
     }
 }

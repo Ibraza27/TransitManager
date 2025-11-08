@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Net.Http.Headers; // <-- AJOUTER CE USING
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -11,10 +12,12 @@ namespace TransitManager.Web.Services
     {
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly ILocalStorageService _localStorage; // <-- AJOUTER CE CHAMP
 
-        public ApiService(HttpClient httpClient)
+        public ApiService(HttpClient httpClient, ILocalStorageService localStorage) // <-- MODIFIER LE CONSTRUCTEUR
         {
             _httpClient = httpClient;
+            _localStorage = localStorage; // <-- AJOUTER CETTE LIGNE
             _jsonOptions = new JsonSerializerOptions
             {
                 ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
@@ -22,6 +25,7 @@ namespace TransitManager.Web.Services
             };
         }
 
+        // La méthode LoginAsync n'a pas besoin de token, elle reste inchangée.
         public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto loginRequest)
         {
             var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginRequest);
@@ -43,11 +47,17 @@ namespace TransitManager.Web.Services
         {
             try
             {
+                // On récupère le token AVANT chaque requête
+                var token = await _localStorage.GetItemAsync<string>("authToken");
+                if (!string.IsNullOrEmpty(token))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }
+
                 return await _httpClient.GetFromJsonAsync<IEnumerable<Client>>("api/clients", _jsonOptions);
             }
             catch (HttpRequestException ex)
             {
-                // Gérer les erreurs de réseau ou les statuts 4xx/5xx
                 Console.WriteLine($"Erreur API: {ex.StatusCode} - {ex.Message}");
                 return null;
             }

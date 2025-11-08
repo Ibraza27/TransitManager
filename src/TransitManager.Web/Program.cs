@@ -17,11 +17,9 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<HttpContextAccessor>();
 
 // Services personnalisés
 builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
-builder.Services.AddTransient<AuthHeaderHandler>();
 
 // Configuration HttpClient pour l'API
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
@@ -29,11 +27,13 @@ if (string.IsNullOrEmpty(apiBaseUrl))
 {
     throw new InvalidOperationException("ApiBaseUrl is not configured in appsettings.json");
 }
+
+// --- LIGNE MODIFIÉE ---
+// On retire .AddHttpMessageHandler<AuthHeaderHandler>()
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
-})
-.AddHttpMessageHandler<AuthHeaderHandler>();
+});
 
 
 // --- APPLICATION (MIDDLEWARE PIPELINE) ---

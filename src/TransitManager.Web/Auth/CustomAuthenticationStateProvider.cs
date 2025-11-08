@@ -3,13 +3,14 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using TransitManager.Web.Services;
+using System.Collections.Generic; // Assurez-vous que ce using est présent
 
 namespace TransitManager.Web.Auth
 {
     public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
         private readonly ILocalStorageService _localStorage;
-        private ClaimsPrincipal _anonymous = new ClaimsPrincipal(new ClaimsIdentity());
+        private readonly ClaimsPrincipal _anonymous = new ClaimsPrincipal(new ClaimsIdentity());
 
         public CustomAuthenticationStateProvider(ILocalStorageService localStorage)
         {

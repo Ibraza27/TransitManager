@@ -62,7 +62,7 @@ namespace TransitManager.Web.Components.Pages
             {
                 var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
                 await customAuthStateProvider.MarkUserAsAuthenticated(result.Token);
-                NavigationManager.NavigateTo("/", forceLoad: true);
+                NavigationManager.NavigateTo("/");
             }
             else
             {

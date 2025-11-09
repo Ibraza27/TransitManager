@@ -23,7 +23,7 @@ namespace TransitManager.Web.Components.Layout
         private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
         {
             var state = await task;
-            Console.WriteLine($"[Blazor] MainLayout: L'état d'authentification a changé. Utilisateur authentifié : {state.User.Identity?.IsAuthenticated}");
+            Console.WriteLine($"[Blazor] MainLayout: État d'authentification changé. Authentifié: {state.User.Identity?.IsAuthenticated}, Nom: {state.User.Identity?.Name}");
             await InvokeAsync(StateHasChanged);
         }
 
@@ -32,7 +32,7 @@ namespace TransitManager.Web.Components.Layout
             Console.WriteLine("[Blazor] MainLayout: Demande de déconnexion.");
             var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
             await customAuthStateProvider.MarkUserAsLoggedOut();
-            NavigationManager.NavigateTo("/");
+            NavigationManager.NavigateTo("/", forceLoad: true);
         }
 
         public void Dispose()

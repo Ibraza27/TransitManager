@@ -1,61 +1,122 @@
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TransitManager.Core.DTOs;
 using TransitManager.Core.Entities;
-using System.Collections.Generic; // S'assurer que ce using est là
+using System.Collections.Generic;
 
 namespace TransitManager.Web.Services
 {
     public class ApiService : IApiService
     {
         private readonly HttpClient _httpClient;
+        private readonly ILocalStorageService _localStorage;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        // --- RETOUR AU CONSTRUCTEUR SIMPLE ---
-		public ApiService(HttpClient httpClient)
+        public ApiService(HttpClient httpClient, ILocalStorageService localStorage)
+        {
+            _httpClient = httpClient;
+            _localStorage = localStorage;
+            _jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+        }
+
+
+		private async Task PrepareAuthenticatedRequestAsync()
 		{
-			_httpClient = httpClient;
-			_jsonOptions = new JsonSerializerOptions
+			try
 			{
-				ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
-				PropertyNameCaseInsensitive = true
-			};
+				var token = await _localStorage.GetItemAsync<string>("authToken");
+				Console.WriteLine($"[ApiService] PrepareAuthenticatedRequestAsync - Token présent: {!string.IsNullOrEmpty(token)}");
+				
+				_httpClient.DefaultRequestHeaders.Authorization = null;
+				
+				if (!string.IsNullOrWhiteSpace(token))
+				{
+					_httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+					Console.WriteLine($"[ApiService] PrepareAuthenticatedRequestAsync - Header Auth défini");
+				}
+				else
+				{
+					Console.WriteLine("[ApiService] PrepareAuthenticatedRequestAsync - Aucun token trouvé");
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] PrepareAuthenticatedRequestAsync - Erreur: {ex.Message}");
+			}
 		}
 
-        public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto loginRequest)
-        {
-            var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginRequest);
 
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadFromJsonAsync<LoginResponseDto>(_jsonOptions);
-            }
-            
-            // Si le login échoue, on peut essayer de lire le message d'erreur
-            if (response.Content != null && response.Content.Headers.ContentLength > 0)
-            {
-                var errorResponse = await response.Content.ReadFromJsonAsync<LoginResponseDto>(_jsonOptions);
-                return errorResponse;
-            }
+		public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto loginRequest)
+		{
+			try
+			{
+				Console.WriteLine($"[ApiService] Envoi login: {loginRequest.Email}");
+				
+				var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginRequest);
+				
+				Console.WriteLine($"[ApiService] Réponse: {response.StatusCode}");
+				
+				if (response.IsSuccessStatusCode && response.Content != null)
+				{
+					var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>(_jsonOptions);
+					Console.WriteLine($"[ApiService] Succès: {result?.Success}, Token: {!string.IsNullOrEmpty(result?.Token)}");
+					return result;
+				}
+				else
+				{
+					var errorContent = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"[ApiService] Erreur HTTP {response.StatusCode}: {errorContent}");
+				}
+				
+				return new LoginResponseDto { Success = false, Message = $"Erreur (Code: {response.StatusCode})." };
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] Exception: {ex.Message}");
+				return new LoginResponseDto { Success = false, Message = $"Erreur réseau: {ex.Message}" };
+			}
+		}
 
-            return new LoginResponseDto { Success = false, Message = $"Erreur (Code: {response.StatusCode})." };
-        }
 
-        // --- LA MÉTHODE REDEVIENT SIMPLE ---
-        public async Task<IEnumerable<Client>?> GetClientsAsync()
-        {
-            try
-            {
-                // Plus besoin de gérer le token ici.
-                return await _httpClient.GetFromJsonAsync<IEnumerable<Client>>("api/clients", _jsonOptions);
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.WriteLine($"Erreur API GetClients: {ex.StatusCode} - {ex.Message}");
-                return null;
-            }
-        }
+		public async Task<IEnumerable<Client>?> GetClientsAsync()
+		{
+			try
+			{
+				Console.WriteLine("[ApiService] GetClientsAsync - Préparation de la requête authentifiée");
+				await PrepareAuthenticatedRequestAsync();
+
+				Console.WriteLine($"[ApiService] GetClientsAsync - Envoi requête GET à api/clients");
+				Console.WriteLine($"[ApiService] GetClientsAsync - Header Auth: {_httpClient.DefaultRequestHeaders.Authorization}");
+
+				var response = await _httpClient.GetAsync("api/clients");
+				
+				Console.WriteLine($"[ApiService] GetClientsAsync - Réponse: {response.StatusCode}");
+				
+				if (response.IsSuccessStatusCode)
+				{
+					var clients = await response.Content.ReadFromJsonAsync<IEnumerable<Client>>(_jsonOptions);
+					Console.WriteLine($"[ApiService] GetClientsAsync - Succès: {clients?.Count() ?? 0} clients");
+					return clients;
+				}
+				else
+				{
+					var errorContent = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"[ApiService] GetClientsAsync - Erreur {response.StatusCode}: {errorContent}");
+					return null;
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] GetClientsAsync - Exception: {ex.Message}");
+				Console.WriteLine($"[ApiService] GetClientsAsync - StackTrace: {ex.StackTrace}");
+				return null;
+			}
+		}
     }
 }

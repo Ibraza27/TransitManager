@@ -11,7 +11,39 @@
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <CascadingAuthenticationState>
+        <Router AppAssembly="@typeof(Program).Assembly">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(TransitManager.Web.Components.Layout.MainLayout)">
+                    <NotAuthorized>
+                        @if (context.User.Identity?.IsAuthenticated ?? false)
+                        {
+                            <p>Accès refusé. Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
+                        }
+                        else
+                        {
+                            <RedirectToLogin />
+                        }
+                    </NotAuthorized>
+                    <Authorizing>
+                        <div class="loading-container">
+                            <p>Vérification de l'autorisation en cours...</p>
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                        </div>
+                    </Authorizing>
+                </AuthorizeRouteView>
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            </Found>
+            <NotFound>
+                <PageTitle>Introuvable</PageTitle>
+                <LayoutView Layout="@typeof(TransitManager.Web.Components.Layout.MainLayout)">
+                    <p role="alert">Désolé, il n'y a rien à cette adresse.</p>
+                </LayoutView>
+            </NotFound>
+        </Router>
+    </CascadingAuthenticationState>
     <script src="_framework/blazor.server.js"></script>
 </body>
 </html>

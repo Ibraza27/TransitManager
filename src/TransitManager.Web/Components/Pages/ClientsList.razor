@@ -1,16 +1,32 @@
 @page "/clients"
+@rendermode InteractiveServer
 @attribute [Authorize(Roles = "Administrateur")]
+@inject IApiService ApiService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Clients - TransitManager</PageTitle>
 
 <h3>Liste des Clients</h3>
 
 @if (clients == null)
 {
-    <p><em>Chargement des clients...</em></p>
+    <div class="loading-container">
+        <p><em>Chargement des clients...</em></p>
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+    </div>
+}
+else if (!clients.Any())
+{
+    <div class="alert alert-info">
+        Aucun client trouvé.
+    </div>
 }
 else
 {
-    <table class="table">
-        <thead>
+    <table class="table table-striped">
+        <thead class="table-dark">
             <tr>
                 <th>Code Client</th>
                 <th>Nom Complet</th>
@@ -30,4 +46,40 @@ else
             }
         </tbody>
     </table>
+}
+
+@code {
+    private IEnumerable<Client>? clients;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("[ClientsList] OnInitializedAsync - Début");
+        
+        try
+        {
+            // Vérifier l'authentification
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            Console.WriteLine($"[ClientsList] Utilisateur authentifié: {authState.User.Identity?.IsAuthenticated}");
+            Console.WriteLine($"[ClientsList] Rôle: {string.Join(", ", authState.User.Claims.Where(c => c.Type == "role").Select(c => c.Value))}");
+
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                Console.WriteLine("[ClientsList] Appel de ApiService.GetClientsAsync...");
+                clients = await ApiService.GetClientsAsync();
+                Console.WriteLine($"[ClientsList] Chargement terminé. {clients?.Count() ?? 0} client(s) trouvé(s).");
+                
+                // Forcer le rendu
+                StateHasChanged();
+            }
+            else
+            {
+                Console.WriteLine("[ClientsList] Utilisateur non authentifié - redirection nécessaire");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ClientsList] Erreur lors du chargement : {ex.Message}");
+            Console.WriteLine($"[ClientsList] StackTrace: {ex.StackTrace}");
+        }
+    }
 }

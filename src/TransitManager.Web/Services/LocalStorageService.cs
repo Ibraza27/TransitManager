@@ -23,10 +23,9 @@ namespace TransitManager.Web.Services
 
                 return JsonSerializer.Deserialize<T>(json);
             }
-            // Cette exception est levée pendant le pré-rendu statique. C'est normal.
-            // On la capture et on retourne la valeur par défaut (null), ce qui signifie "non connecté".
             catch (InvalidOperationException)
             {
+                // Ignorer l'erreur pendant le pré-rendu
                 return default;
             }
         }
@@ -40,7 +39,7 @@ namespace TransitManager.Web.Services
             }
             catch (InvalidOperationException)
             {
-                // Ignorer l'erreur si on essaie d'écrire pendant le pré-rendu
+                // Ignorer l'erreur pendant le pré-rendu
             }
         }
 
@@ -52,7 +51,7 @@ namespace TransitManager.Web.Services
             }
             catch (InvalidOperationException)
             {
-                // Ignorer l'erreur si on essaie d'écrire pendant le pré-rendu
+                // Ignorer l'erreur pendant le pré-rendu
             }
         }
     }

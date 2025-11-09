@@ -1,31 +1,93 @@
 @page "/login"
 @rendermode InteractiveServer
+@inject IApiService ApiService
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Connexion - TransitManager</PageTitle>
 
 <h3>Connexion</h3>
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger">@errorMessage</div>
-}
 
-<EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="login" method="post">
+<EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="loginForm" method="post">
     <DataAnnotationsValidator />
-    <div class="form-group">
-        <label for="email">Email</label>
-        <InputText id="email" class="form-control" @bind-Value="loginModel.Email" />
+    <ValidationSummary />
+
+    <div class="form-group mb-3">
+        <label for="email" class="form-label">Email</label>
+        <InputText id="email" @bind-Value="loginModel.Email" class="form-control" />
         <ValidationMessage For="@(() => loginModel.Email)" />
     </div>
-    <div class="form-group mt-3">
-        <label for="password">Mot de passe</label>
-        <div class="input-group">
-            <InputText id="password" type="@passwordInputType" class="form-control" @bind-Value="loginModel.Password" />
-            <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordVisibility">
-                <span class="oi @(showPassword ? "oi-eye-closed" : "oi-eye")"></span>
-            </button>
-        </div>
+
+    <div class="form-group mb-3">
+        <label for="password" class="form-label">Mot de passe</label>
+        <InputText id="password" @bind-Value="loginModel.Password" type="password" class="form-control" />
         <ValidationMessage For="@(() => loginModel.Password)" />
     </div>
-    <button type="submit" class="btn btn-primary mt-3" disabled="@isBusy">
-        @if(isBusy) { <span class="spinner-border spinner-border-sm"></span> }
-        Se connecter
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span> Connexion en cours...</span>
+        }
+        else
+        {
+            <span>Se connecter</span>
+        }
     </button>
 </EditForm>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginRequestDto loginModel { get; set; } = new();
+
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        StateHasChanged(); // Force le rendu pour montrer le loading
+
+        try
+        {
+            Console.WriteLine($"[Login] Tentative de connexion avec: {loginModel.Email}");
+
+            var result = await ApiService.LoginAsync(loginModel);
+
+            if (result?.Success == true && !string.IsNullOrEmpty(result.Token))
+            {
+                Console.WriteLine($"[Login] Token reçu, longueur: {result.Token.Length}");
+                
+                // Sauvegarder le token IMMÉDIATEMENT
+                await AuthStateProvider.MarkUserAsAuthenticated(result.Token);
+                Console.WriteLine("[Login] Token sauvegardé dans le localStorage");
+                
+                // Navigation IMMÉDIATE sans attendre
+                Console.WriteLine("[Login] Redirection vers /clients");
+                NavigationManager.NavigateTo("/clients", forceLoad: false);
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "Échec de la connexion";
+                Console.WriteLine($"[Login] Échec: {errorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur de connexion: {ex.Message}";
+            Console.WriteLine($"[Login] Exception: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

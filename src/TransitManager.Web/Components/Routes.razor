@@ -1,0 +1,175 @@
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    @if (_authCheckComplete)
+                    {
+                        @if (context.User.Identity?.IsAuthenticated ?? false)
+                        {
+                            <div class="alert alert-warning">
+                                <h4>🚫 Accès refusé</h4>
+                                <p>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
+                                <a href="/" class="btn btn-secondary">Retour à l'accueil</a>
+                            </div>
+                        }
+                        else
+                        {
+                            <RedirectToLogin />
+                        }
+                    }
+                    else
+                    {
+                        <div class="loading-container">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Vérification des permissions...</span>
+                            </div>
+                            <p class="mt-2">🔐 Vérification des permissions en cours...</p>
+                            <div class="debug-info">
+                                <small class="text-muted">
+                                    Routes.razor: AuthCheck en cours...
+                                </small>
+                            </div>
+                        </div>
+                    }
+                </NotAuthorized>
+                <Authorizing>
+                    <div class="loading-container">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="mt-2">⏳ Vérification de l'autorisation en cours...</p>
+                    </div>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Introuvable</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <div class="alert alert-danger">
+                    <h1>❌ Page introuvable</h1>
+                    <p>Désolé, il n'y a rien à cette adresse.</p>
+                    <a href="/" class="btn btn-primary">Retour à l'accueil</a>
+                </div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    private bool _authCheckComplete = false;
+    private bool _componentInitialized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("🛣️ [Routes] === DÉBUT OnInitializedAsync ===");
+        
+        try
+        {
+            _componentInitialized = true;
+            
+            AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+            Console.WriteLine("🛣️ [Routes] ✅ Abonnement aux changements d'authentification");
+
+            Console.WriteLine("🛣️ [Routes] 🔐 Démarrage de la vérification d'authentification...");
+            await CheckAuthStatus();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🛣️ [Routes] 💥 Erreur dans OnInitializedAsync: {ex.Message}");
+            Console.WriteLine($"🛣️ [Routes] StackTrace: {ex.StackTrace}");
+            _authCheckComplete = true;
+        }
+        
+        Console.WriteLine("🛣️ [Routes] === FIN OnInitializedAsync ===");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("🛣️ [Routes] 🔄 === DÉBUT OnAfterRenderAsync (First Render) ===");
+            
+            try
+            {
+                Console.WriteLine("🛣️ [Routes] 📍 Premier rendu terminé - JavaScript disponible");
+                
+                await JSRuntime.InvokeVoidAsync("showBlazorApp");
+                Console.WriteLine("🛣️ [Routes] ✅ Application Blazor affichée");
+
+                await Task.Delay(100);
+                await CheckAuthStatus();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"🛣️ [Routes] 💥 Erreur dans OnAfterRenderAsync: {ex.Message}");
+            }
+            
+            Console.WriteLine("🛣️ [Routes] 🔄 === FIN OnAfterRenderAsync (First Render) ===");
+        }
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        Console.WriteLine("🛣️ [Routes] 🔄 === DÉBUT OnAuthenticationStateChanged ===");
+        
+        try
+        {
+            Console.WriteLine("🛣️ [Routes] 🔄 Changement d'état d'authentification détecté");
+            await CheckAuthStatus();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🛣️ [Routes] 💥 Erreur dans OnAuthenticationStateChanged: {ex.Message}");
+        }
+        
+        Console.WriteLine("🛣️ [Routes] 🔄 === FIN OnAuthenticationStateChanged ===");
+    }
+
+    private async Task CheckAuthStatus()
+    {
+        Console.WriteLine("🛣️ [Routes] 🔐 === DÉBUT CheckAuthStatus ===");
+        
+        try
+        {
+            Console.WriteLine("🛣️ [Routes] 🔐 Tentative de récupération de l'état d'authentification...");
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            Console.WriteLine($"🛣️ [Routes] 🔐 Statut reçu: Authentifié={authState.User.Identity?.IsAuthenticated}");
+            
+            _authCheckComplete = true;
+            Console.WriteLine("🛣️ [Routes] ✅ Vérification d'authentification terminée");
+            
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🛣️ [Routes] ❌ Erreur lors de la vérification: {ex.Message}");
+            Console.WriteLine($"🛣️ [Routes] StackTrace: {ex.StackTrace}");
+            _authCheckComplete = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        
+        Console.WriteLine("🛣️ [Routes] 🔐 === FIN CheckAuthStatus ===");
+    }
+
+    public void Dispose()
+    {
+        Console.WriteLine("🛣️ [Routes] 🧹 === DÉBUT Dispose ===");
+        try
+        {
+            AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+            Console.WriteLine("🛣️ [Routes] 🧹 ✅ Désabonnement des événements");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🛣️ [Routes] 🧹 ❌ Erreur lors du nettoyage: {ex.Message}");
+        }
+        Console.WriteLine("🛣️ [Routes] 🧹 === FIN Dispose ===");
+    }
+}

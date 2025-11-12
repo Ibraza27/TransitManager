@@ -8,42 +8,50 @@
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="TransitManager.Web.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="RenderMode.InteractiveServer" />
 </head>
 <body>
-    <CascadingAuthenticationState>
-        <Router AppAssembly="@typeof(Program).Assembly">
-            <Found Context="routeData">
-                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(TransitManager.Web.Components.Layout.MainLayout)">
-                    <NotAuthorized>
-                        @if (context.User.Identity?.IsAuthenticated ?? false)
-                        {
-                            <p>Accès refusé. Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
-                        }
-                        else
-                        {
-                            <RedirectToLogin />
-                        }
-                    </NotAuthorized>
-                    <Authorizing>
-                        <div class="loading-container">
-                            <p>Vérification de l'autorisation en cours...</p>
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Chargement...</span>
-                            </div>
-                        </div>
-                    </Authorizing>
-                </AuthorizeRouteView>
-                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-            </Found>
-            <NotFound>
-                <PageTitle>Introuvable</PageTitle>
-                <LayoutView Layout="@typeof(TransitManager.Web.Components.Layout.MainLayout)">
-                    <p role="alert">Désolé, il n'y a rien à cette adresse.</p>
-                </LayoutView>
-            </NotFound>
-        </Router>
-    </CascadingAuthenticationState>
+    <!-- COMPLÈTEMENT SANS PRÉ-RENDU - Chargement initial vide -->
+    <div id="app-loading">
+        <div class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement de l'application...</span>
+            </div>
+            <p class="mt-2">🚀 Initialisation de TransitManager...</p>
+            <div class="debug-info">
+                <small class="text-muted">
+                    App.razor: Chargement initial sans pré-rendu
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- L'application Blazor sera injectée ici après initialisation -->
+    <div id="blazor-app" style="display: none;">
+        <Routes @rendermode="RenderMode.InteractiveServer" />
+    </div>
+
     <script src="_framework/blazor.server.js"></script>
+    
+    <script>
+        console.log("🔄 [Script] Démarrage de l'initialisation Blazor...");
+        
+        window.showBlazorApp = function() {
+            console.log("🎯 [Script] Affichage de l'application Blazor");
+            try {
+                document.getElementById('app-loading').style.display = 'none';
+                document.getElementById('blazor-app').style.display = 'block';
+                console.log("✅ [Script] Application affichée avec succès");
+            } catch (error) {
+                console.error("❌ [Script] Erreur lors de l'affichage:", error);
+            }
+        };
+
+        // Afficher l'app après un délai de sécurité
+        setTimeout(function() {
+            console.log("⏰ [Script] Timer de sécurité déclenché");
+            window.showBlazorApp();
+        }, 3000);
+    </script>
 </body>
 </html>

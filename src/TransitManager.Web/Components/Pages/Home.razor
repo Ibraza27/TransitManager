@@ -1,41 +1,32 @@
 ﻿@page "/"
-@inject NavigationManager Navigation
-@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Accueil - TransitManager</PageTitle>
 
+<h1>Bienvenue sur TransitManager</h1>
+
 <AuthorizeView>
-    <Authorized>
-        <div class="text-center">
-            <h3>Redirection vers les clients...</h3>
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Chargement...</span>
+    <Authorized Context="AuthContext">
+        <div class="alert alert-success">
+            <h4>Connexion réussie !</h4>
+            <p>Vous êtes connecté en tant que : <strong>@AuthContext.User.Identity?.Name</strong></p>
+            <p>Rôle : <strong>@AuthContext.User.FindFirst(ClaimTypes.Role)?.Value</strong></p>
+        </div>
+        
+        <div class="mt-4">
+            <h5>Navigation rapide</h5>
+            <div class="d-grid gap-2 d-md-block">
+                <AuthorizeView Roles="Administrateur" Context="AdminContext">
+                    <Authorized>
+                        <a href="clients" class="btn btn-primary me-2">Gérer les clients</a>
+                    </Authorized>
+                </AuthorizeView>
+                <a href="/" class="btn btn-outline-secondary">Actualiser</a>
             </div>
         </div>
     </Authorized>
     <NotAuthorized>
-        <div class="text-center">
-            <h3>Redirection vers la connexion...</h3>
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Chargement...</span>
-            </div>
+        <div class="alert alert-info">
+            <p>Veuillez vous <a href="login" class="alert-link">connecter</a> pour accéder aux fonctionnalités.</p>
         </div>
     </NotAuthorized>
 </AuthorizeView>
-
-@code {
-    protected override async Task OnInitializedAsync()
-    {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        if (authState.User.Identity?.IsAuthenticated == true)
-        {
-            Console.WriteLine("[Home] Utilisateur authentifié, redirection vers /clients");
-            Navigation.NavigateTo("/clients", forceLoad: true);
-        }
-        else
-        {
-            Console.WriteLine("[Home] Utilisateur non authentifié, redirection vers /login");
-            Navigation.NavigateTo("/login", forceLoad: true);
-        }
-    }
-}

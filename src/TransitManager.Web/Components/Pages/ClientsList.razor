@@ -1,30 +1,72 @@
 @page "/clients"
-@rendermode InteractiveServer
 @attribute [Authorize(Roles = "Administrateur")]
 @inject IApiService ApiService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@implements IDisposable
 
 <PageTitle>Clients - TransitManager</PageTitle>
 
 <h3>Liste des Clients</h3>
 
-@if (clients == null)
+@if (!_isAuthenticated && !_authCheckComplete)
 {
     <div class="loading-container">
-        <p><em>Chargement des clients...</em></p>
         <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Chargement...</span>
+            <span class="visually-hidden">Initialisation...</span>
+        </div>
+        <p class="mt-2">🛡️ Initialisation de la sécurité en cours...</p>
+        <div class="debug-info">
+            <small class="text-muted">
+                Étape: Pré-authentification | AuthCheck: @_authCheckComplete | Authentifié: @_isAuthenticated
+            </small>
         </div>
     </div>
 }
-else if (!clients.Any())
+else if (!_isAuthenticated && _authCheckComplete)
+{
+    <div class="alert alert-warning">
+        <h4>🔒 Accès non autorisé</h4>
+        <p>Vous devez être connecté pour accéder à cette page.</p>
+        <a href="/login" class="btn btn-primary">Se connecter</a>
+    </div>
+}
+else if (_isLoading)
+{
+    <div class="loading-container">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+        <p class="mt-2">📦 Chargement des clients en cours...</p>
+        <div class="debug-info">
+            <small class="text-muted">
+                Étape: Chargement données | AuthCheck: @_authCheckComplete | Authentifié: @_isAuthenticated | Loading: @_isLoading
+            </small>
+        </div>
+    </div>
+}
+else if (_clients == null)
+{
+    <div class="alert alert-danger">
+        <h4>❌ Erreur de chargement</h4>
+        <p>Impossible de charger la liste des clients.</p>
+        <button class="btn btn-secondary" @onclick="LoadClientsData">Réessayer</button>
+    </div>
+}
+else if (!_clients.Any())
 {
     <div class="alert alert-info">
-        Aucun client trouvé.
+        <h4>📭 Aucun client</h4>
+        <p>Aucun client trouvé dans la base de données.</p>
     </div>
 }
 else
 {
+    <div class="alert alert-success">
+        <h4>✅ Données chargées avec succès</h4>
+        <p>@_clients.Count() client(s) trouvé(s)</p>
+    </div>
+
     <table class="table table-striped">
         <thead class="table-dark">
             <tr>
@@ -35,7 +77,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var client in clients)
+            @foreach (var client in _clients)
             {
                 <tr>
                     <td>@client.CodeClient</td>
@@ -46,40 +88,198 @@ else
             }
         </tbody>
     </table>
+    
+    <div class="debug-info">
+        <small class="text-muted">
+            🔍 Debug: AuthCheck: @_authCheckComplete | Authentifié: @_isAuthenticated | Loading: @_isLoading | Clients: @(_clients?.Count() ?? 0)
+        </small>
+    </div>
 }
 
 @code {
-    private IEnumerable<Client>? clients;
+    private IEnumerable<Client>? _clients;
+    private bool _isLoading = false;
+    private bool _authCheckComplete = false;
+    private bool _isAuthenticated = false;
+    private bool _componentInitialized = false;
+    private AuthenticationState? _currentAuthState;
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine("[ClientsList] OnInitializedAsync - Début");
+        Console.WriteLine("🚀 [ClientsList] === DÉBUT OnInitializedAsync ===");
         
         try
         {
-            // Vérifier l'authentification
+            _componentInitialized = true;
+            
+            // S'abonner aux changements d'authentification
+            AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+            Console.WriteLine("🚀 [ClientsList] ✅ Abonnement aux changements d'authentification");
+
+            Console.WriteLine("🚀 [ClientsList] === FIN OnInitializedAsync ===");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚀 [ClientsList] 💥 Erreur dans OnInitializedAsync: {ex.Message}");
+            Console.WriteLine($"🚀 [ClientsList] StackTrace: {ex.StackTrace}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("🚀 [ClientsList] 🔄 === DÉBUT OnAfterRenderAsync (First Render) ===");
+            
+            try
+            {
+                Console.WriteLine("🚀 [ClientsList] 📍 Premier rendu terminé - JavaScript disponible maintenant");
+                
+                // Attendre un peu pour laisser le temps au DOM de se stabiliser
+                await Task.Delay(100);
+                
+                // Commencer la vérification d'authentification APRÈS le premier rendu
+                Console.WriteLine("🚀 [ClientsList] 📍 Démarrage de la vérification d'authentification");
+                await CheckAuthenticationStatus();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"🚀 [ClientsList] 💥 Erreur dans OnAfterRenderAsync: {ex.Message}");
+            }
+            
+            Console.WriteLine("🚀 [ClientsList] 🔄 === FIN OnAfterRenderAsync (First Render) ===");
+        }
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        Console.WriteLine("🚀 [ClientsList] 🔄 === DÉBUT OnAuthenticationStateChanged ===");
+        
+        try
+        {
+            var authState = await task;
+            Console.WriteLine($"🚀 [ClientsList] 🔄 Nouvel état: Authentifié={authState.User.Identity?.IsAuthenticated}");
+            
+            if (authState.User.Identity?.IsAuthenticated == true && !_isAuthenticated)
+            {
+                Console.WriteLine("🚀 [ClientsList] 🔄 Passage à l'état authentifié - déclenchement du chargement");
+                _isAuthenticated = true;
+                _authCheckComplete = true;
+                await LoadClientsData();
+            }
+            else if (!authState.User.Identity?.IsAuthenticated == true && _isAuthenticated)
+            {
+                Console.WriteLine("🚀 [ClientsList] 🔄 Passage à l'état non authentifié");
+                _isAuthenticated = false;
+                _authCheckComplete = true;
+            }
+            
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚀 [ClientsList] ❌ Erreur dans OnAuthenticationStateChanged: {ex.Message}");
+        }
+        
+        Console.WriteLine("🚀 [ClientsList] 🔄 === FIN OnAuthenticationStateChanged ===");
+    }
+
+    private async Task CheckAuthenticationStatus()
+    {
+        Console.WriteLine("🚀 [ClientsList] 🔐 === DÉBUT CheckAuthenticationStatus ===");
+        
+        try
+        {
+            Console.WriteLine("🚀 [ClientsList] 🔐 Tentative de récupération de l'état d'authentification...");
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            Console.WriteLine($"[ClientsList] Utilisateur authentifié: {authState.User.Identity?.IsAuthenticated}");
-            Console.WriteLine($"[ClientsList] Rôle: {string.Join(", ", authState.User.Claims.Where(c => c.Type == "role").Select(c => c.Value))}");
+            _currentAuthState = authState;
+            
+            Console.WriteLine($"🚀 [ClientsList] 🔐 État reçu: Authentifié={authState.User.Identity?.IsAuthenticated}");
+            Console.WriteLine($"🚀 [ClientsList] 🔐 Nom: {authState.User.Identity?.Name}");
+            Console.WriteLine($"🚀 [ClientsList] 🔐 Rôles: {string.Join(", ", authState.User.Claims.Where(c => c.Type == "role" || c.Type == ClaimTypes.Role).Select(c => c.Value))}");
 
             if (authState.User.Identity?.IsAuthenticated == true)
             {
-                Console.WriteLine("[ClientsList] Appel de ApiService.GetClientsAsync...");
-                clients = await ApiService.GetClientsAsync();
-                Console.WriteLine($"[ClientsList] Chargement terminé. {clients?.Count() ?? 0} client(s) trouvé(s).");
+                Console.WriteLine("🚀 [ClientsList] 🔐 ✅ Utilisateur authentifié");
+                _isAuthenticated = true;
+                _authCheckComplete = true;
                 
-                // Forcer le rendu
-                StateHasChanged();
+                // Charger les données si pas déjà fait
+                if (_clients == null && !_isLoading)
+                {
+                    Console.WriteLine("🚀 [ClientsList] 🔐 Déclenchement du chargement des données...");
+                    await LoadClientsData();
+                }
             }
             else
             {
-                Console.WriteLine("[ClientsList] Utilisateur non authentifié - redirection nécessaire");
+                Console.WriteLine("🚀 [ClientsList] 🔐 ❌ Utilisateur NON authentifié");
+                _isAuthenticated = false;
+                _authCheckComplete = true;
+                
+                Console.WriteLine("🚀 [ClientsList] 🔐 🔄 Composant initialisé mais non authentifié - état final");
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ClientsList] Erreur lors du chargement : {ex.Message}");
-            Console.WriteLine($"[ClientsList] StackTrace: {ex.StackTrace}");
+            Console.WriteLine($"🚀 [ClientsList] 🔐 💥 Erreur lors de la vérification: {ex.Message}");
+            Console.WriteLine($"🚀 [ClientsList] 🔐 StackTrace: {ex.StackTrace}");
+            _authCheckComplete = true;
+            _isAuthenticated = false;
+            await InvokeAsync(StateHasChanged);
         }
+        
+        Console.WriteLine("🚀 [ClientsList] 🔐 === FIN CheckAuthenticationStatus ===");
+    }
+
+    private async Task LoadClientsData()
+    {
+        Console.WriteLine("🚀 [ClientsList] 📦 === DÉBUT LoadClientsData ===");
+        
+        try
+        {
+            if (!_isAuthenticated)
+            {
+                Console.WriteLine("🚀 [ClientsList] 📦 ⏳ Chargement retardé - utilisateur non authentifié");
+                return;
+            }
+
+            _isLoading = true;
+            await InvokeAsync(StateHasChanged); // Force l'affichage du loading
+
+            Console.WriteLine("🚀 [ClientsList] 📦 Appel de l'API pour récupérer les clients...");
+            _clients = await ApiService.GetClientsAsync();
+            Console.WriteLine($"🚀 [ClientsList] 📦 Chargement terminé: {_clients?.Count() ?? 0} client(s)");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚀 [ClientsList] 📦 💥 Erreur lors du chargement: {ex.Message}");
+            Console.WriteLine($"🚀 [ClientsList] 📦 StackTrace: {ex.StackTrace}");
+            _clients = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            Console.WriteLine("🚀 [ClientsList] 📦 🔄 Mise à jour de l'interface utilisateur");
+            await InvokeAsync(StateHasChanged);
+        }
+        
+        Console.WriteLine("🚀 [ClientsList] 📦 === FIN LoadClientsData ===");
+    }
+
+    public void Dispose()
+    {
+        Console.WriteLine("🚀 [ClientsList] 🧹 === DÉBUT Dispose ===");
+        try
+        {
+            AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+            Console.WriteLine("🚀 [ClientsList] 🧹 ✅ Désabonnement des événements");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🚀 [ClientsList] 🧹 ❌ Erreur lors du nettoyage: {ex.Message}");
+        }
+        Console.WriteLine("🚀 [ClientsList] 🧹 === FIN Dispose ===");
     }
 }

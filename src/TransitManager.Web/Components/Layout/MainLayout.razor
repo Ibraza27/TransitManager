@@ -1,4 +1,7 @@
 @inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@implements IDisposable
 
 <div class="page">
     <div class="sidebar">
@@ -8,12 +11,14 @@
     <main>
         <div class="top-row px-4">
             <AuthorizeView>
-                <Authorized>
-                    Bonjour, @context.User.Identity?.Name!
-                    <a href="javascript:void(0)" @onclick="Logout">Se déconnecter</a>
+                <Authorized Context="AuthContext">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">👋 Bonjour, @AuthContext.User.Identity?.Name!</span>
+                        <a href="javascript:void(0)" class="btn btn-outline-secondary btn-sm" @onclick="Logout">🚪 Déconnexion</a>
+                    </div>
                 </Authorized>
                 <NotAuthorized>
-                    <a href="login">Se connecter</a>
+                    <a href="login" class="btn btn-primary btn-sm">🔑 Connexion</a>
                 </NotAuthorized>
             </AuthorizeView>
         </div>
@@ -23,3 +28,125 @@
         </article>
     </main>
 </div>
+
+@code {
+    private bool _isInitializing = true;
+    private bool _componentInitialized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("🏗️ [MainLayout] === DÉBUT OnInitializedAsync ===");
+        
+        try
+        {
+            _componentInitialized = true;
+            
+            AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+            Console.WriteLine("🏗️ [MainLayout] ✅ Abonnement aux changements d'authentification");
+            
+            // Initialiser l'authentification
+            if (AuthStateProvider is CustomAuthenticationStateProvider customProvider)
+            {
+                Console.WriteLine("🏗️ [MainLayout] 🔐 Initialisation de l'authentification...");
+                await customProvider.InitializeAsync();
+            }
+            
+            _isInitializing = false;
+            Console.WriteLine("🏗️ [MainLayout] ✅ Initialisation terminée");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🏗️ [MainLayout] 💥 Erreur dans OnInitializedAsync: {ex.Message}");
+            Console.WriteLine($"🏗️ [MainLayout] StackTrace: {ex.StackTrace}");
+            _isInitializing = false;
+        }
+        
+        Console.WriteLine("🏗️ [MainLayout] === FIN OnInitializedAsync ===");
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("🏗️ [MainLayout] 🔄 === DÉBUT OnAfterRenderAsync (First Render) ===");
+            Console.WriteLine("🏗️ [MainLayout] 📍 Premier rendu terminé");
+            
+            try
+            {
+                // Forcer une mise à jour après le premier rendu
+                await InvokeAsync(StateHasChanged);
+                Console.WriteLine("🏗️ [MainLayout] 🔄 Interface mise à jour");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"🏗️ [MainLayout] 💥 Erreur dans OnAfterRenderAsync: {ex.Message}");
+            }
+            
+            Console.WriteLine("🏗️ [MainLayout] 🔄 === FIN OnAfterRenderAsync (First Render) ===");
+        }
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        Console.WriteLine("🏗️ [MainLayout] 🔄 === DÉBUT OnAuthenticationStateChanged ===");
+        
+        try
+        {
+            var state = await task;
+            Console.WriteLine($"🏗️ [MainLayout] 🔄 Nouvel état: Authentifié={state.User.Identity?.IsAuthenticated}");
+            
+            if (!_isInitializing)
+            {
+                Console.WriteLine("🏗️ [MainLayout] 🔄 Mise à jour de l'interface");
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🏗️ [MainLayout] ❌ Erreur dans OnAuthenticationStateChanged: {ex.Message}");
+        }
+        
+        Console.WriteLine("🏗️ [MainLayout] 🔄 === FIN OnAuthenticationStateChanged ===");
+    }
+
+    private async Task Logout()
+    {
+        Console.WriteLine("🏗️ [MainLayout] 🚪 === DÉBUT Logout ===");
+        
+        try
+        {
+            if (AuthStateProvider is CustomAuthenticationStateProvider customProvider)
+            {
+                await customProvider.MarkUserAsLoggedOut();
+                Console.WriteLine("🏗️ [MainLayout] ✅ Utilisateur déconnecté");
+                NavigationManager.NavigateTo("/login", forceLoad: true);
+            }
+            else
+            {
+                Console.WriteLine("🏗️ [MainLayout] ❌ Impossible de caster AuthStateProvider");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🏗️ [MainLayout] 💥 Erreur lors de la déconnexion: {ex.Message}");
+        }
+        
+        Console.WriteLine("🏗️ [MainLayout] 🚪 === FIN Logout ===");
+    }
+
+    public void Dispose()
+    {
+        Console.WriteLine("🏗️ [MainLayout] 🧹 === DÉBUT Dispose ===");
+        try
+        {
+            AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+            Console.WriteLine("🏗️ [MainLayout] 🧹 ✅ Désabonnement des événements");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"🏗️ [MainLayout] 🧹 ❌ Erreur lors du nettoyage: {ex.Message}");
+        }
+        Console.WriteLine("🏗️ [MainLayout] 🧹 === FIN Dispose ===");
+    }
+}

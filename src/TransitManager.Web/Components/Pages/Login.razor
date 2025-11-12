@@ -1,27 +1,24 @@
 @page "/login"
-@rendermode InteractiveServer
 @inject IApiService ApiService
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@implements IDisposable
 
 <PageTitle>Connexion - TransitManager</PageTitle>
 
 <h3>Connexion</h3>
 
-<EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="loginForm" method="post">
+<EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
     <DataAnnotationsValidator />
-    <ValidationSummary />
-
+    
     <div class="form-group mb-3">
         <label for="email" class="form-label">Email</label>
         <InputText id="email" @bind-Value="loginModel.Email" class="form-control" />
-        <ValidationMessage For="@(() => loginModel.Email)" />
     </div>
 
     <div class="form-group mb-3">
         <label for="password" class="form-label">Mot de passe</label>
         <InputText id="password" @bind-Value="loginModel.Password" type="password" class="form-control" />
-        <ValidationMessage For="@(() => loginModel.Password)" />
     </div>
 
     @if (!string.IsNullOrEmpty(errorMessage))
@@ -48,46 +45,70 @@
 
     private bool isLoading = false;
     private string errorMessage = string.Empty;
+    private bool _shouldNavigate = false;
+    private string _navigateTo = "/";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldNavigate)
+        {
+            Console.WriteLine("🔀 [Login] Navigation différée déclenchée");
+            _shouldNavigate = false;
+            await Task.Delay(100); // Petit délai pour laisser le temps à l'UI de se mettre à jour
+            NavigationManager.NavigateTo(_navigateTo, forceLoad: false);
+        }
+    }
 
     private async Task HandleLogin()
     {
+        Console.WriteLine("🔐 [Login] === DÉBUT HandleLogin ===");
         isLoading = true;
         errorMessage = string.Empty;
-        StateHasChanged(); // Force le rendu pour montrer le loading
+        StateHasChanged(); // Force le rendu pour afficher le spinner
 
         try
         {
-            Console.WriteLine($"[Login] Tentative de connexion avec: {loginModel.Email}");
-
+            Console.WriteLine($"🔐 [Login] Tentative de connexion pour: {loginModel.Email}");
             var result = await ApiService.LoginAsync(loginModel);
 
             if (result?.Success == true && !string.IsNullOrEmpty(result.Token))
             {
-                Console.WriteLine($"[Login] Token reçu, longueur: {result.Token.Length}");
+                Console.WriteLine("🔐 [Login] ✅ Connexion réussie, marquage de l'utilisateur comme authentifié");
                 
-                // Sauvegarder le token IMMÉDIATEMENT
+                // Sauvegarde le token et met à jour l'état d'authentification
                 await AuthStateProvider.MarkUserAsAuthenticated(result.Token);
-                Console.WriteLine("[Login] Token sauvegardé dans le localStorage");
                 
-                // Navigation IMMÉDIATE sans attendre
-                Console.WriteLine("[Login] Redirection vers /clients");
-                NavigationManager.NavigateTo("/clients", forceLoad: false);
+                Console.WriteLine("🔐 [Login] ✅ Utilisateur authentifié, préparation de la navigation");
+                
+                // CORRECTION : Utiliser une navigation différée
+                _shouldNavigate = true;
+                _navigateTo = "/";
+                
+                // Forcer le rendu pour déclencher OnAfterRenderAsync
+                StateHasChanged();
             }
             else
             {
                 errorMessage = result?.Message ?? "Échec de la connexion";
-                Console.WriteLine($"[Login] Échec: {errorMessage}");
+                isLoading = false;
+                Console.WriteLine($"🔐 [Login] ❌ Échec de la connexion: {errorMessage}");
+                StateHasChanged();
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"Erreur de connexion: {ex.Message}";
-            Console.WriteLine($"[Login] Exception: {ex}");
-        }
-        finally
-        {
             isLoading = false;
+            Console.WriteLine($"🔐 [Login] 💥 Exception: {ex.Message}");
+            Console.WriteLine($"🔐 [Login] StackTrace: {ex.StackTrace}");
             StateHasChanged();
         }
+        
+        Console.WriteLine("🔐 [Login] === FIN HandleLogin ===");
+    }
+
+    public void Dispose()
+    {
+        Console.WriteLine("🔐 [Login] 🧹 Composant nettoyé");
     }
 }

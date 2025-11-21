@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace TransitManager.API.Controllers
 {
-	[Authorize]
+
     [ApiController]
     [Route("api/[controller]")]
     public class PaiementsController : ControllerBase

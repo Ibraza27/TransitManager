@@ -98,16 +98,30 @@
                         
                         <Separator Margin="16,10"/>
 
-                        <ListBoxItem ToolTip="Gestion Financière">
-                            <RadioButton GroupName="MenuItems"
-                                         Command="{Binding NavigateCommand}" CommandParameter="Finance"
-                                         Style="{StaticResource MenuRadioButtonStyle}">
-                                <StackPanel Orientation="Horizontal">
-                                    <materialDesign:PackIcon Kind="Finance" VerticalAlignment="Center" Margin="16,0"/>
-                                    <TextBlock Text="Finance" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </RadioButton>
-                        </ListBoxItem>
+						<ListBoxItem ToolTip="Gestion Financière">
+							<RadioButton GroupName="MenuItems"
+										 Command="{Binding NavigateCommand}" CommandParameter="Finance"
+										 Style="{StaticResource MenuRadioButtonStyle}">
+								<StackPanel Orientation="Horizontal">
+									<materialDesign:PackIcon Kind="Finance" VerticalAlignment="Center" Margin="16,0"/>
+									<TextBlock Text="Finance" VerticalAlignment="Center"/>
+								</StackPanel>
+							</RadioButton>
+						</ListBoxItem>
+
+
+						<Separator Margin="16,10"/>
+						<ListBoxItem ToolTip="Gestion des Utilisateurs">
+							<RadioButton GroupName="MenuItems"
+										 Command="{Binding NavigateCommand}" CommandParameter="Users"
+										 Style="{StaticResource MenuRadioButtonStyle}">
+								<StackPanel Orientation="Horizontal">
+									<materialDesign:PackIcon Kind="AccountCog" VerticalAlignment="Center" Margin="16,0"/>
+									<TextBlock Text="Utilisateurs" VerticalAlignment="Center"/>
+								</StackPanel>
+							</RadioButton>
+						</ListBoxItem>
+
 
                     </ListBox>
                 </ScrollViewer>

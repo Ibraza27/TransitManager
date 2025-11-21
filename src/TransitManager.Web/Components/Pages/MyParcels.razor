@@ -1,0 +1,344 @@
+@page "/my-parcels"
+@using TransitManager.Core.Enums
+@using System.Globalization
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<PageTitle>Mes Colis - Hippocampe Import-Export</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-primary fw-bold"><i class="bi bi-box-seam me-2"></i>Mes Colis</h2>
+            <p class="text-muted mb-0">Suivez l'état de vos expéditions en temps réel.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- BOUTON NOUVEAU COLIS -->
+            <button class="btn btn-success" @onclick="CreateNewParcel">
+                <i class="bi bi-plus-lg me-2"></i>Nouveau Colis
+            </button>
+            <button class="btn btn-outline-primary" @onclick="LoadParcels">
+                <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+            </button>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Filtres -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body bg-light">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted">RECHERCHE</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0" 
+                                   placeholder="Code-barres, client, désignation..." 
+                                   @bind="SearchTerm" @bind:event="oninput" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">STATUT</label>
+                        <select class="form-select" @bind="SelectedStatus">
+                            <option value="">Tous les statuts</option>
+                            @foreach (var status in Enum.GetValues<StatutColis>())
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">CONTENEUR</label>
+                        <select class="form-select" @bind="SelectedContainer">
+                            <option value="">Tous les conteneurs</option>
+                            @foreach (var container in _containers)
+                            {
+                                <option value="@container">@container</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-secondary w-100" @onclick="ResetFilters">
+                            <i class="bi bi-x-lg me-1"></i> Effacer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tableau -->
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-secondary">
+                        <tr>
+                            <th scope="col" class="ps-4">Code-barres</th>
+                            <!-- NOUVELLE COLONNE CLIENT -->
+                            <th scope="col">Client</th>
+                            <th scope="col">Désignation</th>
+                            <th scope="col">Destination</th>
+                            <th scope="col">Conteneur</th>
+                            <th scope="col" class="text-center">Pcs</th>
+                            <th scope="col" class="text-end">Total</th>
+                            <th scope="col" class="text-end">Payé</th>
+                            <th scope="col" class="text-end">Restant</th>
+                            <th scope="col" class="text-center">Statut</th>
+                            <!-- COLONNE ACTIONS -->
+                            <th scope="col" class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (FilteredParcels.Any())
+                        {
+                            @foreach (var colis in FilteredParcels)
+                            {
+                                <!-- APPLICATION DE LA CLASSE POUR LE RETARD -->
+                                <tr class="@GetRowClass(colis)">
+                                    <td class="ps-4 fw-bold text-primary font-monospace">
+                                        <i class="bi bi-upc-scan me-2 text-muted"></i>
+                                        @(string.IsNullOrEmpty(colis.AllBarcodes) ? "N/A" : colis.AllBarcodes.Split(',').FirstOrDefault())
+                                    </td>
+                                    <!-- DONNÉES CLIENT -->
+                                    <td>
+                                        <div class="fw-bold text-dark">@colis.ClientNomComplet</div>
+                                        @if (!string.IsNullOrEmpty(colis.ClientTelephonePrincipal))
+                                        {
+                                            <small class="text-muted"><i class="bi bi-telephone-fill me-1" style="font-size: 0.7rem;"></i>@colis.ClientTelephonePrincipal</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="fw-medium">@colis.Designation</div>
+                                        <small class="text-muted">Ref: @colis.NumeroReference</small>
+                                    </td>
+                                    <td>@colis.DestinationFinale</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(colis.ConteneurNumeroDossier))
+                                        {
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="bi bi-box me-1"></i> @colis.ConteneurNumeroDossier
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small fst-italic">Non assigné</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">@colis.NombrePieces</td>
+                                    <td class="text-end fw-bold">@colis.PrixTotal.ToString("C0", _culture)</td>
+                                    <td class="text-end text-success">@colis.SommePayee.ToString("C0", _culture)</td>
+                                    <td class="text-end">
+                                        @if (colis.RestantAPayer > 0)
+                                        {
+                                            <span class="text-danger fw-bold">@colis.RestantAPayer.ToString("C0", _culture)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-success"><i class="bi bi-check-all"></i> Soldé</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill @GetStatusBadgeClass(colis.Statut)">
+                                            @colis.Statut
+                                        </span>
+                                        <!-- Indicateur visuel de retard -->
+                                        @if(IsColisEnRetard(colis))
+                                        {
+                                            <div class="text-danger small fw-bold mt-1" style="font-size: 0.7rem;">
+                                                <i class="bi bi-exclamation-circle-fill"></i> Retard > 5j
+                                            </div>
+                                        }
+                                    </td>
+                                    <!-- BOUTON ÉDITER -->
+                                    <td class="text-end pe-4">
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditParcel(colis.Id)" title="Modifier">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="11" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    Aucun colis trouvé avec ces critères.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (FilteredParcels.Any())
+                    {
+                        <tfoot class="bg-light fw-bold">
+                            <tr>
+                                <td colspan="5" class="text-end text-secondary">TOTAUX :</td>
+                                <!-- TOTAL PIÈCES AJOUTÉ -->
+                                <td class="text-center">@FilteredParcels.Sum(c => c.NombrePieces) pce(s)</td>
+                                <td class="text-end">@FilteredParcels.Sum(c => c.PrixTotal).ToString("C0", _culture)</td>
+                                <td class="text-end text-success">@FilteredParcels.Sum(c => c.SommePayee).ToString("C0", _culture)</td>
+                                <td class="text-end text-danger">@FilteredParcels.Sum(c => c.RestantAPayer).ToString("C0", _culture)</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    /* Style personnalisé pour les lignes en retard */
+    .row-retard {
+        background-color: #fff5f5 !important; /* Fond rouge très clair */
+    }
+    .row-retard td {
+        color: #b02a37; /* Texte rouge foncé */
+    }
+    /* On s'assure que le hover reste visible */
+    .table-hover .row-retard:hover {
+        background-color: #ffe0e3 !important;
+    }
+</style>
+
+@code {
+    private IEnumerable<ColisListItemDto> _allParcels = new List<ColisListItemDto>();
+    private bool _isLoading = true;
+    private CultureInfo _culture = CultureInfo.GetCultureInfo("fr-FR");
+    private List<string> _containers = new();
+
+    private string _searchTerm = "";
+    public string SearchTerm 
+    { 
+        get => _searchTerm; 
+        set { _searchTerm = value; StateHasChanged(); }
+    }
+
+    private StatutColis? _selectedStatus;
+    public StatutColis? SelectedStatus
+    {
+        get => _selectedStatus;
+        set { _selectedStatus = value; StateHasChanged(); }
+    }
+
+    private string _selectedContainer = "";
+    public string SelectedContainer
+    {
+        get => _selectedContainer;
+        set { _selectedContainer = value; StateHasChanged(); }
+    }
+
+    private IEnumerable<ColisListItemDto> FilteredParcels
+    {
+        get
+        {
+            var query = _allParcels;
+
+            if (!string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                var lowerTerm = SearchTerm.ToLower();
+                query = query.Where(c => 
+                    (c.AllBarcodes?.ToLower().Contains(lowerTerm) ?? false) ||
+                    (c.Designation?.ToLower().Contains(lowerTerm) ?? false) ||
+                    (c.DestinationFinale?.ToLower().Contains(lowerTerm) ?? false) ||
+                    (c.NumeroReference?.ToLower().Contains(lowerTerm) ?? false) ||
+                    // AJOUT DU FILTRE SUR LE NOM DU CLIENT
+                    (c.ClientNomComplet?.ToLower().Contains(lowerTerm) ?? false)
+                );
+            }
+
+            if (SelectedStatus.HasValue)
+            {
+                query = query.Where(c => c.Statut == SelectedStatus.Value);
+            }
+
+            if (!string.IsNullOrEmpty(SelectedContainer))
+            {
+                query = query.Where(c => c.ConteneurNumeroDossier == SelectedContainer);
+            }
+
+            return query.OrderByDescending(c => c.DateArrivee);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadParcels();
+    }
+
+    private async Task LoadParcels()
+    {
+        _isLoading = true;
+        var result = await ApiService.GetMyColisAsync();
+        if (result != null)
+        {
+            _allParcels = result;
+            
+            _containers = _allParcels
+                .Where(c => !string.IsNullOrEmpty(c.ConteneurNumeroDossier))
+                .Select(c => c.ConteneurNumeroDossier!)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
+        }
+        _isLoading = false;
+    }
+
+    private void ResetFilters()
+    {
+        SearchTerm = "";
+        SelectedStatus = null;
+        SelectedContainer = "";
+    }
+
+    // Méthode pour déterminer si un colis est en retard (Logique métier)
+    private bool IsColisEnRetard(ColisListItemDto colis)
+    {
+        return colis.Statut == StatutColis.EnAttente && (DateTime.UtcNow - colis.DateArrivee).TotalDays > 5;
+    }
+
+    // Méthode pour la classe CSS de la ligne
+    private string GetRowClass(ColisListItemDto colis)
+    {
+        return IsColisEnRetard(colis) ? "row-retard" : "";
+    }
+
+    private string GetStatusBadgeClass(StatutColis status)
+    {
+        return status switch
+        {
+            StatutColis.EnAttente => "bg-warning text-dark",
+            StatutColis.Affecte => "bg-info text-dark",
+            StatutColis.EnTransit => "bg-primary",
+            StatutColis.Arrive => "bg-info",
+            StatutColis.EnDedouanement => "bg-secondary",
+            StatutColis.Livre => "bg-success",
+            StatutColis.Probleme => "bg-danger",
+            StatutColis.Perdu => "bg-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+    // --- Méthodes pour les boutons d'action ---
+    private void CreateNewParcel()
+    {
+        // On active la navigation vers la page de création
+        Navigation.NavigateTo("/colis/create"); 
+    }
+
+    private void EditParcel(Guid id)
+    {
+        // On active la navigation vers la page d'édition avec l'ID
+        Navigation.NavigateTo($"/colis/edit/{id}");
+    }
+}

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,12 +8,50 @@
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="TransitManager.Web.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="RenderMode.InteractiveServer" />
 </head>
-
 <body>
-    <Routes />
-    <script src="_framework/blazor.server.js"></script>
-</body>
+    <!-- COMPLÈTEMENT SANS PRÉ-RENDU - Chargement initial vide -->
+    <div id="app-loading">
+        <div class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement de l'application...</span>
+            </div>
+            <p class="mt-2">🚀 Initialisation de TransitManager...</p>
+            <div class="debug-info">
+                <small class="text-muted">
+                    App.razor: Chargement initial sans pré-rendu
+                </small>
+            </div>
+        </div>
+    </div>
 
+    <!-- L'application Blazor sera injectée ici après initialisation -->
+    <div id="blazor-app" style="display: none;">
+        <Routes @rendermode="RenderMode.InteractiveServer" />
+    </div>
+
+    <script src="_framework/blazor.server.js"></script>
+    
+    <script>
+        console.log("🔄 [Script] Démarrage de l'initialisation Blazor...");
+        
+        window.showBlazorApp = function() {
+            console.log("🎯 [Script] Affichage de l'application Blazor");
+            try {
+                document.getElementById('app-loading').style.display = 'none';
+                document.getElementById('blazor-app').style.display = 'block';
+                console.log("✅ [Script] Application affichée avec succès");
+            } catch (error) {
+                console.error("❌ [Script] Erreur lors de l'affichage:", error);
+            }
+        };
+
+        // Afficher l'app après un délai de sécurité
+        setTimeout(function() {
+            console.log("⏰ [Script] Timer de sécurité déclenché");
+            window.showBlazorApp();
+        }, 3000);
+    </script>
+</body>
 </html>

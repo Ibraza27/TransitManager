@@ -210,7 +210,8 @@ namespace TransitManager.WPF.ViewModels
 		public ObservableCollection<StatutColis> AvailableStatuses { get; } = new();
 		public bool HasInventaire => Colis != null && !string.IsNullOrEmpty(Colis.InventaireJson) && Colis.InventaireJson != "[]";
 		
-		public bool HasPaiements => Colis != null && Colis.Paiements.Any();
+		// Remplacez la propriété existante par celle-ci :
+		public bool HasPaiements => Colis != null && (Colis.Paiements.Any() || Colis.SommePayee > 0);
 
 
         #region Commandes
@@ -318,6 +319,7 @@ namespace TransitManager.WPF.ViewModels
 			using var scope = _serviceProvider.CreateScope();
 			var paiementViewModel = scope.ServiceProvider.GetRequiredService<PaiementColisViewModel>();
 			
+			// On passe les données actuelles
 			await paiementViewModel.InitializeAsync(Colis.Id, Colis.ClientId, Colis.PrixTotal);
 
 			var paiementWindow = new Views.Paiements.PaiementColisView(paiementViewModel)
@@ -327,8 +329,16 @@ namespace TransitManager.WPF.ViewModels
 
 			if (paiementWindow.ShowDialog() == true)
 			{
+				// 1. Mettre à jour le montant affiché immédiatement
 				Colis.SommePayee = paiementViewModel.TotalValeur;
+
+				// 2. On force la notification pour 'HasPaiements' pour dégriser les champs si nécessaire
+				// Même si la liste .Paiements n'est pas rechargée, on sait qu'il y en a si le total > 0
 				OnPropertyChanged(nameof(HasPaiements));
+				
+				// 3. On signale que le colis a changé pour activer le bouton "Enregistrer"
+				// (Ceci est géré par le setter de SommePayee si vous avez mis SetProperty, sinon :)
+				SaveCommand.NotifyCanExecuteChanged();
 			}
 		}
 
@@ -567,10 +577,13 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        private async Task OpenInventaire()
+		private async Task OpenInventaire()
 		{
 			if (Colis == null) return;
+			
+			// On passe le JSON actuel
 			var inventaireViewModel = new InventaireViewModel(Colis.InventaireJson);
+			
 			var inventaireWindow = new Views.Inventaire.InventaireView(inventaireViewModel)
 			{
 				Owner = System.Windows.Application.Current.MainWindow
@@ -578,28 +591,18 @@ namespace TransitManager.WPF.ViewModels
 
 			if (inventaireWindow.ShowDialog() == true)
 			{
-                // --- DÉBUT DE LA CORRECTION WPF ---
-                // On utilise le nouveau DTO et la nouvelle méthode de service
-                var dto = new UpdateInventaireDto
-                {
-                    ColisId = Colis.Id,
-                    InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items),
-                    TotalPieces = inventaireViewModel.TotalQuantite,
-                    TotalValeurDeclaree = inventaireViewModel.TotalValeur
-                };
-
-                await _colisService.UpdateInventaireAsync(dto);
-                
-                // On rafraîchit les données locales après la sauvegarde
-                Colis.InventaireJson = dto.InventaireJson;
-                Colis.NombrePieces = dto.TotalPieces;
-                Colis.ValeurDeclaree = dto.TotalValeurDeclaree;
+				// CORRECTION : Utiliser GetJson() qui force le format camelCase
+				Colis.InventaireJson = inventaireViewModel.GetJson();
+				
+				Colis.NombrePieces = inventaireViewModel.TotalQuantite;
+				Colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
+				
+				// Cette méthode utilise aussi la sérialisation camelCase dans le DTO si vous l'avez configuré
+				// Mais ici on a modifié directement l'objet Colis, ce qui est correct.
 				
 				OnPropertyChanged(nameof(HasInventaire));
-                // --- FIN DE LA CORRECTION WPF ---
 			}
 		}
-
 
 
 		public async Task InitializeAsync(Guid colisId)
@@ -658,13 +661,16 @@ namespace TransitManager.WPF.ViewModels
 
 		private void LoadAvailableStatuses()
 		{
-			var currentStatus = Colis?.Statut; // Sauvegarder le statut
-			AvailableStatuses.Clear();
 			if (Colis == null) return;
+			
+			var currentStatus = Colis.Statut; // Sauvegarder le statut actuel
+
+			AvailableStatuses.Clear();
 
 			var statuses = new HashSet<StatutColis>
 			{
-				Colis.Statut,
+				// Toujours inclure le statut actuel pour éviter l'erreur de binding
+				currentStatus, 
 				StatutColis.EnAttente,
 				StatutColis.Affecte,
 				StatutColis.Probleme,
@@ -678,18 +684,16 @@ namespace TransitManager.WPF.ViewModels
 				statuses.Add(GetNormalStatusFromContainerDates(SelectedConteneur));
 			}
 
+			// On trie et on ajoute
 			foreach (var s in statuses.OrderBy(s => s.ToString()))
 			{
 				AvailableStatuses.Add(s);
 			}
-
-			// Rétablir le statut sur l'objet au cas où Clear l'aurait affecté via le binding
-			if (currentStatus.HasValue)
-			{
-				Colis.Statut = currentStatus.Value;
-			}
+			
+			// IMPORTANT : On force la notification du changement de statut pour que la ComboBox se rafraîchisse
+			OnPropertyChanged(nameof(Colis)); 
 		}
-		
+				
         private StatutColis GetNormalStatusFromContainerDates(Conteneur conteneur)
         {
             if (conteneur.DateCloture.HasValue) return StatutColis.Livre;

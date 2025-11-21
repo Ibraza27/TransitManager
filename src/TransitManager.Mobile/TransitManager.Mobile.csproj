@@ -45,6 +45,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="appsettings.json" />
 	  <None Remove="Resources\Images\camion_plan.png" />
 	  <None Remove="Resources\Images\clear_icon.png" />
 	  <None Remove="Resources\Images\dotnet_bot.png" />
@@ -57,6 +58,10 @@
 	  <None Remove="Resources\Images\vehicule_plan.png" />
 	  <None Remove="Resources\Images\voiture_plan.png" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="appsettings.json" />
+	</ItemGroup>
 	
 
 	<!--
@@ -65,6 +70,7 @@
 	-->
 	<ItemGroup>
 		<!-- Packages MAUI par défaut -->
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="" />

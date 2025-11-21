@@ -24,13 +24,17 @@ namespace TransitManager.Infrastructure.Repositories
 
     public class ClientRepository : GenericRepository<Client>, IClientRepository
     {
-        public ClientRepository(TransitContext context) : base(context)
+        private readonly IDbContextFactory<TransitContext> _contextFactory;
+
+        public ClientRepository(IDbContextFactory<TransitContext> contextFactory) : base(contextFactory)
         {
+            _contextFactory = contextFactory;
         }
 
         public async Task<Client?> GetByCodeAsync(string codeClient)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Client>()
                 .Include(c => c.Colis)
                 .Include(c => c.Paiements)
                 .FirstOrDefaultAsync(c => c.CodeClient == codeClient && c.Actif);
@@ -38,7 +42,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<Client?> GetWithDetailsAsync(Guid id)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Client>()
                 .Include(c => c.Colis)
                     .ThenInclude(col => col.Conteneur)
                 .Include(c => c.Paiements)
@@ -47,7 +52,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Client>> GetActiveClientsAsync()
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Client>()
                 .Where(c => c.Actif)
                 .OrderBy(c => c.Nom)
                 .ThenBy(c => c.Prenom)
@@ -56,12 +62,11 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Client>> SearchAsync(string searchTerm)
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             if (string.IsNullOrWhiteSpace(searchTerm))
                 return await GetActiveClientsAsync();
-
             searchTerm = searchTerm.ToLower();
-
-            return await _dbSet
+            return await context.Set<Client>()
                 .Where(c => c.Actif && (
                     c.CodeClient.ToLower().Contains(searchTerm) ||
                     c.Nom.ToLower().Contains(searchTerm) ||
@@ -80,54 +85,53 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Client>> GetFideleClientsAsync()
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Client>()
                 .Where(c => c.Actif && c.EstClientFidele)
                 .OrderBy(c => c.Nom)
                 .ThenBy(c => c.Prenom)
                 .ToListAsync();
         }
 
-		public async Task<IEnumerable<Client>> GetClientsWithUnpaidBalanceAsync()
-		{
-			return await _dbSet
-				.Where(c => c.Actif && c.Impayes > 0) // MODIFIÉ
-				.OrderByDescending(c => c.Impayes) // MODIFIÉ
-				.ToListAsync();
-		}
+        public async Task<IEnumerable<Client>> GetClientsWithUnpaidBalanceAsync()
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Client>()
+                .Where(c => c.Actif && c.Impayes > 0)
+                .OrderByDescending(c => c.Impayes)
+                .ToListAsync();
+        }
 
         public async Task<bool> IsEmailUniqueAsync(string email, Guid? excludeId = null)
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             if (string.IsNullOrWhiteSpace(email))
                 return true;
-
-            var query = _dbSet.Where(c => c.Email == email && c.Actif);
-
+            var query = context.Set<Client>().Where(c => c.Email == email && c.Actif);
             if (excludeId.HasValue)
             {
                 query = query.Where(c => c.Id != excludeId.Value);
             }
-
             return !await query.AnyAsync();
         }
 
         public async Task<bool> IsPhoneUniqueAsync(string phone, Guid? excludeId = null)
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             if (string.IsNullOrWhiteSpace(phone))
                 return true;
-
-            var query = _dbSet.Where(c => c.TelephonePrincipal == phone && c.Actif);
-
+            var query = context.Set<Client>().Where(c => c.TelephonePrincipal == phone && c.Actif);
             if (excludeId.HasValue)
             {
                 query = query.Where(c => c.Id != excludeId.Value);
             }
-
             return !await query.AnyAsync();
         }
 
         public async Task<IEnumerable<string?>> GetAllCitiesAsync()
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Client>()
                 .Where(c => c.Actif && c.Ville != null)
                 .Select(c => c.Ville)
                 .Distinct()
@@ -137,7 +141,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<Dictionary<string, int>> GetClientsByLocationAsync()
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Client>()
                 .Where(c => c.Actif && c.Ville != null)
                 .GroupBy(c => c.Ville!)
                 .Select(g => new { Ville = g.Key, Count = g.Count() })

@@ -1,0 +1,176 @@
+// src/TransitManager.Infrastructure/Services/UserService.cs
+
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using TransitManager.Core.Entities;
+using TransitManager.Core.Enums;
+using TransitManager.Core.Exceptions;
+using TransitManager.Core.Interfaces;
+using TransitManager.Infrastructure.Data;
+using BCryptNet = BCrypt.Net.BCrypt;
+
+namespace TransitManager.Infrastructure.Services
+{
+    public class UserService : IUserService
+    {
+        private readonly IDbContextFactory<TransitContext> _contextFactory;
+        private readonly IAuthenticationService _authenticationService;
+
+        public UserService(IDbContextFactory<TransitContext> contextFactory, IAuthenticationService authenticationService)
+        {
+            _contextFactory = contextFactory;
+            _authenticationService = authenticationService;
+        }
+
+        public async Task<Utilisateur?> GetByIdAsync(Guid id)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            // On inclut le client lié pour l'affichage
+            return await context.Utilisateurs
+                .Include(u => u.Client)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == id);
+        }
+
+        public async Task<IEnumerable<Utilisateur>> GetAllAsync()
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Utilisateurs
+                .Include(u => u.Client) // Inclure les infos du client si lié
+                .AsNoTracking()
+                .OrderBy(u => u.Nom)
+                .ThenBy(u => u.Prenom)
+                .ToListAsync();
+        }
+
+        public async Task<Utilisateur> CreateAsync(Utilisateur user, string password)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            
+            // Valider que le nom d'utilisateur et l'email sont uniques
+            if (await context.Utilisateurs.AnyAsync(u => u.NomUtilisateur == user.NomUtilisateur))
+                throw new InvalidOperationException("Ce nom d'utilisateur est déjà pris.");
+            if (await context.Utilisateurs.AnyAsync(u => u.Email == user.Email))
+                throw new InvalidOperationException("Cette adresse email est déjà utilisée.");
+                
+            user.MotDePasseHash = BCryptNet.HashPassword(password);
+            
+            // Si on lie un client, on synchronise les données
+            if (user.ClientId.HasValue)
+            {
+                var client = await context.Clients.FindAsync(user.ClientId.Value);
+                if (client != null)
+                {
+                    user.Nom = client.Nom;
+                    user.Prenom = client.Prenom;
+                    user.Email = client.Email ?? user.Email;
+                    user.Telephone = client.TelephonePrincipal;
+                }
+            }
+            
+            await context.Utilisateurs.AddAsync(user);
+            await context.SaveChangesAsync();
+            return user;
+        }
+
+		public async Task<Utilisateur> UpdateAsync(Utilisateur userFromUI) // Renommer le paramètre pour plus de clarté
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			// === DÉBUT DE LA CORRECTION ===
+			
+			// 1. Récupérer l'entité existante de la base de données, SANS AsNoTracking()
+			var userInDb = await context.Utilisateurs.FirstOrDefaultAsync(u => u.Id == userFromUI.Id);
+			if (userInDb == null)
+			{
+				throw new InvalidOperationException("L'utilisateur que vous essayez de modifier a été supprimé.");
+			}
+
+			// 2. Vérifier manuellement la concurrence
+			if (userFromUI.RowVersion != null && !userInDb.RowVersion.SequenceEqual(userFromUI.RowVersion))
+			{
+				throw new DbUpdateConcurrencyException("Les données ont été modifiées par un autre utilisateur.");
+			}
+
+			// 3. Copier les valeurs modifiées de l'UI vers l'entité suivie par le DbContext
+			context.Entry(userInDb).CurrentValues.SetValues(userFromUI);
+
+			// Si on lie un client, on synchronise les données
+			if (userInDb.ClientId.HasValue)
+			{
+				var client = await context.Clients.FindAsync(userInDb.ClientId.Value);
+				if (client != null)
+				{
+					// Note: Le service d'authentification a besoin d'être adapté pour utiliser la DbContextFactory
+					// Pour l'instant, on fait la synchro manuellement ici.
+					userInDb.Nom = client.Nom;
+					userInDb.Prenom = client.Prenom;
+					userInDb.Email = client.Email ?? userInDb.Email;
+					userInDb.Telephone = client.TelephonePrincipal;
+				}
+			}
+
+			try
+			{
+				await context.SaveChangesAsync();
+				return userInDb; // Retourner l'entité mise à jour
+			}
+			catch (DbUpdateConcurrencyException)
+			{
+				// Cette exception peut encore se produire si les données changent EXACTEMENT
+				// entre notre chargement et SaveChangesAsync(). On la relance pour que l'UI la gère.
+				throw new ConcurrencyException("Ce compte a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
+			}
+			// === FIN DE LA CORRECTION ===
+		}
+        public async Task<bool> DeleteAsync(Guid id)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var user = await context.Utilisateurs.FindAsync(id);
+            if (user == null) return false;
+            
+            // Suppression logique
+            user.Actif = false;
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<string?> ResetPasswordAsync(Guid id)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var user = await context.Utilisateurs.FindAsync(id);
+            if (user == null) return null;
+
+            string temporaryPassword = GenerateTemporaryPassword();
+            user.MotDePasseHash = BCryptNet.HashPassword(temporaryPassword);
+            user.DoitChangerMotDePasse = true; // Forcer le changement au prochain login
+
+            await context.SaveChangesAsync();
+            return temporaryPassword;
+        }
+
+        public async Task<IEnumerable<Client>> GetUnlinkedClientsAsync()
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            // On récupère les clients qui n'ont pas de UserAccount associé
+            return await context.Clients
+                .Where(c => c.UserAccount == null && c.Actif)
+                .OrderBy(c => c.Nom)
+                .ThenBy(c => c.Prenom)
+                .ToListAsync();
+        }
+
+        private string GenerateTemporaryPassword(int length = 10)
+        {
+            const string validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()";
+            var sb = new StringBuilder();
+            var rand = new Random();
+            while (0 < length--) { sb.Append(validChars[rand.Next(validChars.Length)]); }
+            return sb.ToString();
+        }
+    }
+}

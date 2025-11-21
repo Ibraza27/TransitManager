@@ -26,13 +26,17 @@ namespace TransitManager.Infrastructure.Repositories
 
     public class ColisRepository : GenericRepository<Colis>, IColisRepository
     {
-        public ColisRepository(TransitContext context) : base(context)
+        private readonly IDbContextFactory<TransitContext> _contextFactory;
+
+        public ColisRepository(IDbContextFactory<TransitContext> contextFactory) : base(contextFactory)
         {
+            _contextFactory = contextFactory;
         }
 
         public async Task<Colis?> GetByBarcodeAsync(string barcode)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
                 .FirstOrDefaultAsync(c => c.Barcodes.Any(b => b.Value == barcode) && c.Actif);
@@ -40,7 +44,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<Colis?> GetByReferenceAsync(string reference)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
                 .FirstOrDefaultAsync(c => c.NumeroReference == reference && c.Actif);
@@ -48,7 +53,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<Colis?> GetWithDetailsAsync(Guid id)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
                 .FirstOrDefaultAsync(c => c.Id == id && c.Actif);
@@ -56,7 +62,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Colis>> GetByClientAsync(Guid clientId)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Include(c => c.Conteneur)
                 .Where(c => c.ClientId == clientId && c.Actif)
                 .OrderByDescending(c => c.DateArrivee)
@@ -65,7 +72,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Colis>> GetByConteneurAsync(Guid conteneurId)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Include(c => c.Client)
                 .Where(c => c.ConteneurId == conteneurId && c.Actif)
                 .OrderBy(c => c.Client!.Nom)
@@ -75,7 +83,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Colis>> GetByStatusAsync(StatutColis statut)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
                 .Where(c => c.Statut == statut && c.Actif)
@@ -85,7 +94,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Colis>> GetUnassignedAsync()
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Include(c => c.Client)
                 .Where(c => c.ConteneurId == null && c.Actif && c.Statut == StatutColis.EnAttente)
                 .OrderBy(c => c.DateArrivee)
@@ -94,7 +104,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Colis>> GetRecentAsync(int count)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Include(c => c.Client)
                 .Where(c => c.Actif)
                 .OrderByDescending(c => c.DateArrivee)
@@ -104,7 +115,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Colis>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
                 .Where(c => c.DateArrivee >= startDate && c.DateArrivee <= endDate && c.Actif)
@@ -114,7 +126,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<Dictionary<StatutColis, int>> GetStatisticsByStatusAsync()
         {
-            return await _dbSet
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Set<Colis>()
                 .Where(c => c.Actif)
                 .GroupBy(c => c.Statut)
                 .Select(g => new { Statut = g.Key, Count = g.Count() })
@@ -123,12 +136,11 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Colis>> SearchAsync(string searchTerm)
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             if (string.IsNullOrWhiteSpace(searchTerm))
                 return await GetAllAsync();
-
             searchTerm = searchTerm.ToLower();
-
-            return await _dbSet
+            return await context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
                 .Where(c => c.Actif && (

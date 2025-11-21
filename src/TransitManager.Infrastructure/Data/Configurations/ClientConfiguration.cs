@@ -116,6 +116,13 @@ namespace TransitManager.Infrastructure.Data.Configurations
 				.WithOne(v => v.Client)
 				.HasForeignKey(v => v.ClientId)
 				.OnDelete(DeleteBehavior.Restrict);
+				
+            // Configuration de la relation un-à-un entre Client et Utilisateur
+            builder.HasOne(c => c.UserAccount)
+                   .WithOne(u => u.Client)
+                   .HasForeignKey<Utilisateur>(u => u.ClientId)
+                   .IsRequired(false) // Un utilisateur n'est pas obligatoirement lié à un client
+                   .OnDelete(DeleteBehavior.SetNull); // Si on supprime un client, le ClientId de l'utilisateur devient null
 
             // Propriétés calculées (ignorées par EF)
             builder.Ignore(c => c.NomComplet);

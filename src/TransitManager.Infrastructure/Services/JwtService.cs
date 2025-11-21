@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens; // <-- Vient du premier package
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt; // <-- Vient du second package
-using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims; // <-- Assurez-vous que ce using est là
 using System.Text;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
@@ -23,15 +23,16 @@ namespace TransitManager.Infrastructure.Services
         {
             var claims = new List<Claim>
             {
+                // On utilise les constantes standard pour les types de claims
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Name, user.NomComplet),
+                new Claim(ClaimTypes.Name, user.NomComplet), // MODIFICATION ICI
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.ToString())
+                new Claim(ClaimTypes.Role, user.Role.ToString()) // MODIFICATION ICI
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expires = DateTime.Now.AddDays(7); // Durée de validité du jeton
+            var expires = DateTime.Now.AddDays(7); 
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],

@@ -14,7 +14,7 @@ namespace TransitManager.Infrastructure.Services
 {
     public class PaiementService : IPaiementService
     {
-        private readonly TransitContext _context;
+        private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;
         private readonly IExportService _exportService;
         private readonly IClientService _clientService;
@@ -23,7 +23,7 @@ namespace TransitManager.Infrastructure.Services
         private readonly IColisService _colisService;
 
         public PaiementService(
-            TransitContext context,
+            IDbContextFactory<TransitContext> contextFactory,
             INotificationService notificationService,
             IExportService exportService,
             IClientService clientService,
@@ -31,7 +31,7 @@ namespace TransitManager.Infrastructure.Services
             IVehiculeService vehiculeService,
             IColisService colisService)
         {
-            _context = context;
+            _contextFactory = contextFactory;
             _notificationService = notificationService;
             _exportService = exportService;
             _clientService = clientService;
@@ -42,7 +42,8 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<Paiement?> GetByIdAsync(Guid id)
         {
-            return await _context.Paiements
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Paiements
                 .Include(p => p.Client)
                 .Include(p => p.Conteneur)
                 .AsNoTracking()
@@ -51,7 +52,8 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<IEnumerable<Paiement>> GetAllAsync()
         {
-            return await _context.Paiements
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Paiements
                 .Include(p => p.Client)
                 .Include(p => p.Conteneur)
                 .AsNoTracking()
@@ -61,7 +63,8 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<IEnumerable<Paiement>> GetByClientAsync(Guid clientId)
         {
-            return await _context.Paiements
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Paiements
                 .Include(p => p.Conteneur)
                 .Where(p => p.ClientId == clientId)
                 .AsNoTracking()
@@ -71,7 +74,8 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<IEnumerable<Paiement>> GetByConteneurAsync(Guid conteneurId)
         {
-            return await _context.Paiements
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Paiements
                 .Include(p => p.Client)
                 .Where(p => p.ConteneurId == conteneurId)
                 .AsNoTracking()
@@ -81,9 +85,10 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<IEnumerable<Paiement>> GetByPeriodAsync(DateTime debut, DateTime fin)
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             var debutUtc = debut.ToUniversalTime();
             var finUtc = fin.ToUniversalTime();
-            return await _context.Paiements
+            return await context.Paiements
                 .Include(p => p.Client)
                 .Include(p => p.Conteneur)
                 .Where(p => p.DatePaiement >= debutUtc && p.DatePaiement < finUtc)
@@ -94,18 +99,19 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<Paiement> CreateAsync(Paiement paiement)
         {
-            var client = await _context.Clients.FindAsync(paiement.ClientId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var client = await context.Clients.FindAsync(paiement.ClientId);
             if (client == null)
             {
                 throw new InvalidOperationException("Client non trouvé.");
             }
             if (string.IsNullOrEmpty(paiement.NumeroRecu))
             {
-                paiement.NumeroRecu = await GenerateUniqueReceiptNumberAsync(_context);
+                paiement.NumeroRecu = await GenerateUniqueReceiptNumberAsync(context);
             }
             paiement.Statut = StatutPaiement.Paye;
-            _context.Paiements.Add(paiement);
-            await _context.SaveChangesAsync();
+            context.Paiements.Add(paiement);
+            await context.SaveChangesAsync();
             _messenger.Send(new PaiementUpdatedMessage());
             if (paiement.VehiculeId.HasValue)
             {
@@ -115,7 +121,6 @@ namespace TransitManager.Infrastructure.Services
             {
                 await _colisService.RecalculateAndUpdateColisStatisticsAsync(paiement.ColisId.Value);
             }
-
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
             await _notificationService.NotifyAsync(
                 "Paiement reçu",
@@ -126,10 +131,10 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<Paiement> UpdateAsync(Paiement paiement)
         {
-            _context.Paiements.Update(paiement);
-            await _context.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            context.Paiements.Update(paiement);
+            await context.SaveChangesAsync();
             _messenger.Send(new PaiementUpdatedMessage());
-
             if (paiement.VehiculeId.HasValue)
             {
                 await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(paiement.VehiculeId.Value);
@@ -144,16 +149,15 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            var paiement = await _context.Paiements.FindAsync(id);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var paiement = await context.Paiements.FindAsync(id);
             if (paiement == null) return false;
-
             var clientId = paiement.ClientId;
             var vehiculeId = paiement.VehiculeId;
             var colisId = paiement.ColisId;
             paiement.Actif = false;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             _messenger.Send(new PaiementUpdatedMessage());
-
             if (vehiculeId.HasValue)
             {
                 await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(vehiculeId.Value);
@@ -168,10 +172,11 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<bool> ValidatePaymentAsync(Guid paiementId)
         {
-            var paiement = await _context.Paiements.FindAsync(paiementId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var paiement = await context.Paiements.FindAsync(paiementId);
             if (paiement == null) return false;
             paiement.Statut = StatutPaiement.Paye;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             _messenger.Send(new PaiementUpdatedMessage());
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
             return true;
@@ -179,51 +184,52 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<bool> CancelPaymentAsync(Guid paiementId, string raison)
         {
-            var paiement = await _context.Paiements.FindAsync(paiementId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var paiement = await context.Paiements.FindAsync(paiementId);
             if (paiement == null) return false;
             paiement.Statut = StatutPaiement.Annule;
             paiement.Commentaires = $"Annulé : {raison}";
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             _messenger.Send(new PaiementUpdatedMessage());
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
             return true;
         }
 
-        public async Task<decimal> GetMonthlyRevenueAsync(DateTime month)
-        {
-            var debutMois = new DateTime(month.Year, month.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var debutMoisSuivant = debutMois.AddMonths(1);
-            return await _context.Paiements
-                .Where(p => p.Statut == StatutPaiement.Paye &&
-                            p.DatePaiement >= debutMois &&
-                            p.DatePaiement < debutMoisSuivant)
-                .SumAsync(p => p.Montant);
-        }
+		public async Task<decimal> GetMonthlyRevenueAsync(DateTime month)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			var debutMois = new DateTime(month.Year, month.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+			var debutMoisSuivant = debutMois.AddMonths(1);
+			return await context.Paiements
+				.Where(p => p.Actif && p.Statut == StatutPaiement.Paye &&
+							p.DatePaiement >= debutMois &&
+							p.DatePaiement < debutMoisSuivant)
+				.SumAsync(p => p.Montant);
+		}
+		
+		public async Task<decimal> GetPendingAmountAsync()
+		{
+			// Ceci est une approximation. Une vraie logique se baserait sur des factures.
+			// Pour le moment, on retourne le total des impayés des clients.
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			return await context.Clients.Where(c => c.Actif).SumAsync(c => c.Impayes);
+		}
 
-        public async Task<decimal> GetPendingAmountAsync()
-        {
-            var totalFacture = await _context.Colis
-                .Where(c => c.Actif)
-                .SumAsync(c => c.ValeurDeclaree * 0.1m);
-            var totalPaye = await _context.Paiements
-                .Where(p => p.Statut == StatutPaiement.Paye)
-                .SumAsync(p => p.Montant);
-            return totalFacture - totalPaye;
-        }
-
-        public async Task<IEnumerable<Paiement>> GetOverduePaymentsAsync()
-        {
-            return await _context.Paiements
-                .Include(p => p.Client)
-                .Where(p => p.DateEcheance.HasValue && p.DateEcheance.Value < DateTime.UtcNow && p.Statut != StatutPaiement.Paye)
-                .AsNoTracking()
-                .OrderBy(p => p.DateEcheance)
-                .ToListAsync();
-        }
+		public async Task<IEnumerable<Paiement>> GetOverduePaymentsAsync()
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			return await context.Paiements
+				.Include(p => p.Client)
+				.Where(p => p.Actif && p.DateEcheance.HasValue && p.DateEcheance.Value < DateTime.UtcNow && p.Statut != StatutPaiement.Paye)
+				.AsNoTracking()
+				.OrderBy(p => p.DateEcheance)
+				.ToListAsync();
+		}
 
         public async Task<Dictionary<TypePaiement, decimal>> GetPaymentsByTypeAsync(DateTime debut, DateTime fin)
         {
-            return await _context.Paiements
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Paiements
                 .Where(p => p.DatePaiement >= debut && p.DatePaiement <= fin && p.Statut == StatutPaiement.Paye)
                 .GroupBy(p => p.ModePaiement)
                 .ToDictionaryAsync(g => g.Key, g => g.Sum(p => p.Montant));
@@ -231,7 +237,8 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<bool> SendPaymentReminderAsync(Guid clientId)
         {
-            var client = await _context.Clients.FindAsync(clientId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var client = await context.Clients.FindAsync(clientId);
             if (client == null) return false;
             var balance = await GetClientBalanceAsync(clientId);
             if (balance <= 0) return false;
@@ -241,7 +248,7 @@ namespace TransitManager.Infrastructure.Services
                 TypeNotification.RetardPaiement,
                 PrioriteNotification.Haute
             );
-            var paiementsEnRetard = await _context.Paiements
+            var paiementsEnRetard = await context.Paiements
                 .Where(p => p.ClientId == clientId && p.DateEcheance.HasValue && p.DateEcheance.Value < DateTime.UtcNow)
                 .ToListAsync();
             foreach (var paiement in paiementsEnRetard)
@@ -249,11 +256,9 @@ namespace TransitManager.Infrastructure.Services
                 paiement.RappelEnvoye = true;
                 paiement.DateDernierRappel = DateTime.UtcNow;
             }
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             _messenger.Send(new PaiementUpdatedMessage());
-
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId);
-
             return true;
         }
 
@@ -269,11 +274,13 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<decimal> GetClientBalanceAsync(Guid clientId)
         {
-            return await CalculateClientBalanceAsync(clientId, _context);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await CalculateClientBalanceAsync(clientId, context);
         }
 
         public async Task<bool> RecordPartialPaymentAsync(Guid clientId, decimal montant, TypePaiement type, string? reference = null)
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             var paiement = new Paiement
             {
                 ClientId = clientId,
@@ -290,7 +297,8 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<IEnumerable<Paiement>> GetByColisAsync(Guid colisId)
         {
-            return await _context.Paiements
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Paiements
                 .Include(p => p.Client)
                 .Where(p => p.ColisId == colisId)
                 .AsNoTracking()
@@ -300,20 +308,12 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<IEnumerable<Paiement>> GetByVehiculeAsync(Guid vehiculeId)
         {
-            return await _context.Paiements
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Paiements
                 .Where(p => p.VehiculeId == vehiculeId)
                 .AsNoTracking()
                 .OrderByDescending(p => p.DatePaiement)
                 .ToListAsync();
-        }
-
-        private async Task UpdateClientBalanceAsync(Guid clientId, TransitContext context)
-        {
-            var client = await context.Clients.FindAsync(clientId);
-            if (client != null)
-            {
-                client.Impayes = await CalculateClientBalanceAsync(clientId, context);
-            }
         }
 
         private async Task<decimal> CalculateClientBalanceAsync(Guid clientId, TransitContext context)

@@ -143,5 +143,63 @@ namespace TransitManager.API.Controllers
                 return StatusCode(500, "Une erreur interne est survenue.");
             }
         }
+		
+		// GET: api/colis/mine
+		[HttpGet("mine")]
+		public async Task<ActionResult<IEnumerable<ColisListItemDto>>> GetMyColis()
+		{
+			try
+			{
+				// 1. Récupérer l'ID de l'utilisateur
+				var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+				if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+				{
+					return Unauthorized();
+				}
+
+				// 2. Vérifier le rôle (Admin ou pas ?)
+				var roleClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Role);
+				bool isAdmin = roleClaim != null && roleClaim.Value == "Administrateur";
+
+				IEnumerable<Colis> colisList;
+
+				if (isAdmin)
+				{
+					// Si Admin : On récupère TOUT via la méthode existante GetAllAsync
+					colisList = await _colisService.GetAllAsync();
+				}
+				else
+				{
+					// Si Client : On récupère seulement les siens via la méthode qu'on a créée
+					colisList = await _colisService.GetByUserIdAsync(userId);
+				}
+
+				// 3. Mapping vers le DTO (identique pour les deux cas)
+				var colisDtos = colisList.Select(c => new ColisListItemDto
+				{
+					Id = c.Id,
+					NumeroReference = c.NumeroReference,
+					Designation = c.Designation,
+					Statut = c.Statut,
+					ClientNomComplet = c.Client?.NomComplet ?? "N/A",
+					ClientTelephonePrincipal = c.Client?.TelephonePrincipal,
+					ConteneurNumeroDossier = c.Conteneur?.NumeroDossier,
+					AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)),
+					DestinationFinale = c.DestinationFinale,
+					DateArrivee = c.DateArrivee,
+					NombrePieces = c.NombrePieces,
+					PrixTotal = c.PrixTotal,
+					SommePayee = c.SommePayee
+				});
+
+				return Ok(colisDtos);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Erreur lors de la récupération des colis.");
+				return StatusCode(500, "Une erreur interne est survenue.");
+			}
+		}
+		
     }
 }

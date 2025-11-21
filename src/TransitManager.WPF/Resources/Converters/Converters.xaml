@@ -8,5 +8,7 @@
     <converters:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter" />
     <converters:InvertedBooleanConverter x:Key="InvertedBooleanConverter" />
     <converters:ToUpperConverter x:Key="ToUpperConverter" />
+	<converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+	<converters:MultiBooleanToVisibilityConverter x:Key="MultiBooleanToVisibilityConverter" />
 
 </ResourceDictionary>

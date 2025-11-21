@@ -1,0 +1,130 @@
+<UserControl x:Class="TransitManager.WPF.Views.Users.UserDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="900">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <materialDesign:Card Grid.Row="0" Padding="20" Margin="10">
+            <Grid>
+                <TextBlock Text="{Binding Title}" Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Enregistrer" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0"/>
+                    <Button Content="Annuler" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <!-- Colonne Gauche -->
+                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                    <materialDesign:Card Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="Informations du Compte" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,20"/>
+                            <TextBox Text="{Binding User.NomUtilisateur, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Nom d'utilisateur *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15"/>
+                            <!-- === DÉBUT DES MODIFICATIONS === -->
+                            <TextBox Text="{Binding User.Prenom, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Prénom *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15" IsEnabled="{Binding CanEditDetails}"/>
+                            <TextBox Text="{Binding User.Nom, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Nom *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15" IsEnabled="{Binding CanEditDetails}"/>
+                            <TextBox Text="{Binding User.Email, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Email *" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15" IsEnabled="{Binding CanEditDetails}"/>
+                            <TextBox Text="{Binding User.Telephone, UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Téléphone" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,15" IsEnabled="{Binding CanEditDetails}"/>
+                            <!-- === FIN DES MODIFICATIONS === -->
+                            <ComboBox ItemsSource="{Binding RolesList}" SelectedItem="{Binding User.Role}" materialDesign:HintAssist.Hint="Rôle *" Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+                    <materialDesign:Card Padding="20" Margin="0,10,0,0">
+                        <StackPanel>
+							<materialDesign:Card Padding="20" Margin="0,10,0,0">
+								<StackPanel>
+									<TextBlock Text="Liaison Client" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,15"/>
+
+									<ComboBox ItemsSource="{Binding UnlinkedClients}"
+											  SelectedItem="{Binding SelectedClient, UpdateSourceTrigger=PropertyChanged}"
+											  DisplayMemberPath="NomComplet"
+											  materialDesign:HintAssist.Hint="Rechercher et lier un client"
+											  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+											  IsEnabled="{Binding IsClientRoleSelected}"
+											  IsEditable="True"
+											  IsTextSearchEnabled="False"
+											  StaysOpenOnEdit="True"
+											  IsDropDownOpen="{Binding IsClientDropDownOpen, Mode=TwoWay}"
+											  Text="{Binding ClientSearchText, UpdateSourceTrigger=PropertyChanged}"
+											  materialDesign:ComboBoxAssist.ShowSelectedItem="True"/>
+											  
+									<TextBlock Text="Ce champ est actif uniquement si le rôle 'Client' est sélectionné." 
+											   FontSize="10" 
+											   Foreground="Gray" 
+											   Margin="0,5,0,0"
+											   Visibility="{Binding IsClientRoleSelected, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+								</StackPanel>
+							</materialDesign:Card>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+                <!-- Colonne Droite -->
+                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <materialDesign:Card Padding="20" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Sécurité et Mot de Passe" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,15"/>
+                            <Grid>
+                                <PasswordBox x:Name="PasswordBox"
+                                             materialDesign:HintAssist.Hint="Nouveau mot de passe"
+                                             materialDesign:PasswordBoxAssist.Password="{Binding NewPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                                             Visibility="{Binding ElementName=ShowPasswordToggleButton, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                <TextBox Text="{Binding NewPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         materialDesign:HintAssist.Hint="Nouveau mot de passe"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Visibility="{Binding ElementName=ShowPasswordToggleButton, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <ToggleButton x:Name="ShowPasswordToggleButton"
+                                              Style="{StaticResource MaterialDesignActionToggleButton}"
+                                              VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0">
+                                    <materialDesign:ToggleButtonAssist.OnContent>
+                                        <materialDesign:PackIcon Kind="EyeOff" />
+                                    </materialDesign:ToggleButtonAssist.OnContent>
+                                    <materialDesign:PackIcon Kind="Eye" />
+                                </ToggleButton>
+                            </Grid>
+                            <Button Content="Réinitialiser avec un mot de passe aléatoire" Command="{Binding ResetPasswordCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,10,0,0"/>
+							<StackPanel Orientation="Horizontal" Margin="0,10,0,0"
+										Visibility="{Binding TemporaryPassword, Converter={StaticResource NullToVisibilityConverter}}">
+								
+								<TextBox Text="{Binding TemporaryPassword}" 
+										 IsReadOnly="True" 
+										 BorderThickness="0" 
+										 VerticalAlignment="Center"
+										 FontWeight="Bold"
+										 Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+										 
+								<Button Command="{Binding CopyTemporaryPasswordCommand}"
+										Style="{StaticResource MaterialDesignToolButton}"
+										ToolTip="Copier le mot de passe"
+										Margin="10,0,0,0">
+									<materialDesign:PackIcon Kind="ContentCopy"/>
+								</Button>
+							</StackPanel>
+                        </StackPanel>
+                    </materialDesign:Card>
+                    <materialDesign:Card Padding="20" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Statut du Compte" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,15"/>
+                            <CheckBox IsChecked="{Binding User.Actif}" Content="Compte Actif" Margin="0,0,0,10"/>
+                            <CheckBox IsChecked="{Binding User.DoitChangerMotDePasse}" Content="Forcer le changement de mot de passe à la prochaine connexion" Margin="0,0,0,10"/>
+                            <TextBox Text="{Binding User.DerniereConnexion, StringFormat='dd/MM/yyyy HH:mm', TargetNullValue='Jamais'}" materialDesign:HintAssist.Hint="Dernière connexion" IsReadOnly="True" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,10"/>
+                            <TextBox Text="{Binding User.DateVerrouillage, StringFormat='dd/MM/yyyy HH:mm', TargetNullValue='Non verrouillé'}" materialDesign:HintAssist.Hint="Date de verrouillage" IsReadOnly="True" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

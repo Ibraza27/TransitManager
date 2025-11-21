@@ -9,13 +9,18 @@ namespace TransitManager.Core.DTOs
         public string Designation { get; set; } = string.Empty;
         public StatutColis Statut { get; set; }
         public string ClientNomComplet { get; set; } = string.Empty;
+        public string? ClientTelephonePrincipal { get; set; }
         public string? ConteneurNumeroDossier { get; set; }
-		public string AllBarcodes { get; set; } = string.Empty;
-        
-        // --- DÉBUT DE L'AJOUT ---
+        public string AllBarcodes { get; set; } = string.Empty;
         public string DestinationFinale { get; set; } = string.Empty;
         public DateTime DateArrivee { get; set; }
-		public string? ClientTelephonePrincipal { get; set; }
-        // --- FIN DE L'AJOUT ---
+
+        // --- AJOUTS POUR LA VUE WEB ---
+        public int NombrePieces { get; set; }
+        public decimal PrixTotal { get; set; }
+        public decimal SommePayee { get; set; }
+        
+        // Propriété calculée simple (le calcul réel se fera lors du mapping)
+        public decimal RestantAPayer => PrixTotal - SommePayee;
     }
 }

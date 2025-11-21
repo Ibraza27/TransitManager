@@ -203,14 +203,5 @@ namespace TransitManager.Infrastructure.Data
             return System.Text.Json.JsonSerializer.Serialize(values);
         }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-            {
-                optionsBuilder.UseNpgsql("Host=localhost;Database=TransitManager;Username=postgres;Password=postgres")
-                    .EnableSensitiveDataLogging()
-                    .EnableDetailedErrors();
-            }
-        }
     }
 }

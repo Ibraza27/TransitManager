@@ -1,7 +1,121 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Accueil - Hippocampe Import-Export</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container mt-5">
+    
+    <!-- Section En-tête (Visible pour tout le monde) -->
+    <div class="text-center mb-5">
+        <!-- Logo -->
+        <img src="images/logo.jpg" alt="Logo Hippocampe" class="img-fluid mb-4 logo-accueil" />
+        
+        <!-- Nom de l'entreprise -->
+        <h1 class="display-4 fw-bold text-primary">Hippocampe Import-Export</h1>
+        <p class="lead text-muted">Votre partenaire de confiance pour le transit international</p>
+    </div>
 
-Welcome to your new app.
+    <AuthorizeView>
+        <!-- Contenu pour les utilisateurs CONNECTÉS -->
+        <Authorized Context="AuthContext">
+            <div class="card shadow-sm border-primary mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">👋 Espace Personnel</h5>
+                </div>
+                <div class="card-body">
+                    <h4>Bienvenue, <strong>@AuthContext.User.Identity?.Name</strong> !</h4>
+                    <p>Vous êtes connecté en tant que : <span class="badge bg-info text-dark">@AuthContext.User.FindFirst(ClaimTypes.Role)?.Value</span></p>
+                    
+                    <hr />
+                    
+                    <h5>Accès Rapide</h5>
+                    <div class="d-grid gap-2 d-md-block mt-3">
+                        <AuthorizeView Roles="Administrateur" Context="AdminContext">
+                            <Authorized>
+                                <a href="clients" class="btn btn-outline-primary me-2">
+                                    <i class="bi bi-people"></i> Gérer les clients
+                                </a>
+                            </Authorized>
+                        </AuthorizeView>
+                        <!-- Vous pourrez ajouter d'autres liens ici (Colis, Tracking, etc.) -->
+                    </div>
+                </div>
+            </div>
+        </Authorized>
+
+        <!-- Contenu pour les utilisateurs NON CONNECTÉS (Visiteurs) -->
+        <NotAuthorized>
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card shadow-lg border-0 rounded-3">
+                        <div class="card-body p-5">
+                            
+                            <!-- Informations de contact -->
+                            <div class="row text-center">
+                                <div class="col-md-6 mb-4">
+                                    <div class="mb-2">
+                                        <i class="bi bi-geo-alt-fill text-primary fs-2"></i>
+                                    </div>
+                                    <h5 class="fw-bold">Adresse de l'entrepôt</h5>
+                                    <p class="text-muted">
+                                        7 RUE PASCAL<br />
+                                        33370 TRESSES<br />
+                                        FRANCE
+                                    </p>
+                                </div>
+                                
+                                <div class="col-md-6 mb-4">
+                                    <div class="mb-2">
+                                        <i class="bi bi-envelope-fill text-primary fs-2"></i>
+                                    </div>
+                                    <h5 class="fw-bold">Contact</h5>
+                                    <p class="mb-1">
+                                        <a href="mailto:bordeaux@h-import-export.com" class="text-decoration-none text-dark">
+                                            bordeaux@h-import-export.com
+                                        </a>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="row text-center border-top pt-4">
+                                <div class="col-md-6 mb-3">
+                                    <h6 class="fw-bold text-uppercase text-secondary">Téléphone Mobile</h6>
+                                    <p class="fs-5">06 99 56 93 58</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <h6 class="fw-bold text-uppercase text-secondary">Téléphone Fixe</h6>
+                                    <p class="fs-5">09.81.72.45.40</p>
+                                </div>
+                            </div>
+
+                            <!-- Bouton de connexion -->
+                            <div class="d-grid gap-2 mt-4">
+                                <a href="login" class="btn btn-primary btn-lg rounded-pill">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i> Accéder à mon espace client
+                                </a>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+    
+    <!-- Pied de page simple -->
+    <footer class="mt-5 text-center text-muted">
+        <small>&copy; @DateTime.Now.Year Hippocampe Import-Export. Tous droits réservés.</small>
+    </footer>
+
+</div>
+
+<style>
+    .logo-accueil {
+        max-height: 150px;
+        border-radius: 15px;
+        /* Petit effet d'ombre sur le logo */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+    }
+    
+    /* Ajout d'icônes Bootstrap si elles ne sont pas chargées par défaut */
+    @@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css");
+</style>

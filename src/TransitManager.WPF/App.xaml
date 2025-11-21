@@ -12,6 +12,7 @@
              xmlns:conteneurs="clr-namespace:TransitManager.WPF.Views.Conteneurs"
 			 xmlns:viewsFinance="clr-namespace:TransitManager.WPF.Views.Finance"
 			 xmlns:viewsNotifications="clr-namespace:TransitManager.WPF.Views.Notifications"
+			 xmlns:viewsUsers="clr-namespace:TransitManager.WPF.Views.Users"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
 
 
@@ -89,6 +90,14 @@
 				<viewsFinance:FinanceView />
 			</DataTemplate>
 
+			<DataTemplate DataType="{x:Type viewModels:UserViewModel}">
+				<viewsUsers:UserListView />
+			</DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModels:UserDetailViewModel}">
+                <viewsUsers:UserDetailView />
+            </DataTemplate>
+            
         </ResourceDictionary>
-    </Application.Resources>
+	</Application.Resources>
 </Application>

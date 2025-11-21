@@ -25,7 +25,10 @@ using TransitManager.WPF.Views.Finance;
 using TransitManager.WPF.Views.Notifications;
 using System.Globalization; 
 using System.Threading;    
-using System.Windows.Markup; 
+using System.Windows.Markup;
+using TransitManager.WPF.Views.Users;
+using TransitManager.WPF.Services; 
+using System.Threading.Tasks;
 
 namespace TransitManager.WPF
 {
@@ -46,8 +49,15 @@ namespace TransitManager.WPF
 
         protected override async void OnStartup(StartupEventArgs e)
         {
-            base.OnStartup(e);
+            // 1. Afficher le Splash Screen immédiatement
+            // On désactive temporairement le ShutdownMode pour que la fermeture du Splash ne tue pas l'app
+            this.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+            var splashVm = new ViewModels.SplashViewModel();
+            var splashScreen = new SplashView { DataContext = splashVm };
+            splashScreen.Show();
+
+            // Logger Configuration (On le garde ici ou on le met dans la Task, peu importe, c'est rapide)
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.File("logs/transitmanager-.txt",
@@ -57,75 +67,108 @@ namespace TransitManager.WPF
 
             try
             {
-                Log.Information("Démarrage de Transit Manager");
+                Log.Information("Démarrage de Transit Manager (Splash Screen)...");
 
-                _host = Host.CreateDefaultBuilder(e.Args)
-                    .ConfigureAppConfiguration((context, config) =>
-                    {
-                        config.SetBasePath(Directory.GetCurrentDirectory())
-                              .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-							  .AddJsonFile("appsettings.override.json", optional: true, reloadOnChange: true);
-                    })
-                    .ConfigureServices((context, services) => ConfigureServices(context.Configuration, services))
-                    .UseSerilog()
-                    .Build();
+                // 2. Lancer l'initialisation lourde en arrière-plan
+                // Cela permet à l'UI du Splash Screen (le spinner) de tourner de manière fluide
+                await Task.Run(async () =>
+                {
+                    UpdateStatus(splashVm, "Configuration des services...");
+                    
+                    // Construction de l'hôte
+                    _host = Host.CreateDefaultBuilder(e.Args)
+                        .ConfigureAppConfiguration((context, config) =>
+                        {
+                            config.SetBasePath(Directory.GetCurrentDirectory())
+                                  .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                                  .AddJsonFile("appsettings.override.json", optional: true, reloadOnChange: true);
+                        })
+                        .ConfigureServices((context, services) => ConfigureServices(context.Configuration, services))
+                        .UseSerilog()
+                        .Build();
 
-                await _host.StartAsync();
+                    UpdateStatus(splashVm, "Démarrage des services...");
+                    await _host.StartAsync();
+                    
+                    // Récupération des services UI (doit être fait sur le thread principal plus tard, 
+                    // mais on prépare ce qu'on peut ici)
+                });
+
+                // 3. Initialisation des composants UI sur le thread principal
                 _notifier = _host.Services.GetRequiredService<Notifier>();
-				
-				// ======================= DÉBUT DE L'AJOUT =======================
-				// Démarrer le client SignalR
-				var signalRClient = _host.Services.GetRequiredService<SignalRClientService>();
-				await signalRClient.StartAsync();
-				// ======================== FIN DE L'AJOUT ========================
 
+                splashVm.LoadingStatus = "Connexion au serveur...";
+                var signalRClient = _host.Services.GetRequiredService<SignalRClientService>();
+                // On lance la connexion mais on n'attend pas forcément qu'elle soit finie pour afficher l'app
+                // ou on l'attend si c'est critique :
+                await signalRClient.StartAsync();
+
+                splashVm.LoadingStatus = "Préparation de l'interface...";
+                
+                // Création de la fenêtre principale
                 var mainWindow = _host.Services.GetRequiredService<MainWindow>();
-                Current.MainWindow = mainWindow;
-
+                
+                // Initialisation du ViewModel principal
                 if (mainWindow.DataContext is MainViewModel mainViewModel)
                 {
                     await mainViewModel.InitializeAsync();
                 }
 
+                // 4. Transition
+                // On remet le mode d'arrêt normal (quand la fenêtre principale ferme, l'app ferme)
+                this.ShutdownMode = ShutdownMode.OnMainWindowClose;
+                this.MainWindow = mainWindow;
+                
                 mainWindow.Show();
+                splashScreen.Close();
             }
-			catch (Exception ex)
-			{
-				Log.Fatal(ex, "Une erreur fatale s'est produite lors du démarrage");
-				System.Windows.MessageBox.Show($"Une erreur critique est survenue: {ex.Message}\n\n{ex.InnerException?.Message}", "Erreur de Démarrage", MessageBoxButton.OK, MessageBoxImage.Error);
-				Shutdown(-1);
-			}
+            catch (Exception ex)
+            {
+                splashScreen.Close(); // Fermer le splash en cas d'erreur
+                Log.Fatal(ex, "Une erreur fatale s'est produite lors du démarrage");
+                System.Windows.MessageBox.Show($"Une erreur critique est survenue lors du démarrage :\n{ex.Message}\n\n{ex.InnerException?.Message}", "Erreur de Démarrage", MessageBoxButton.OK, MessageBoxImage.Error);
+                Shutdown(-1);
+            }
         }
 
-        private void ConfigureServices(IConfiguration configuration, IServiceCollection services)
+        // Petite méthode utilitaire pour mettre à jour le texte du splash depuis un thread background
+        private void UpdateStatus(ViewModels.SplashViewModel vm, string message)
         {
-            services.AddSingleton(configuration);
+            Dispatcher.Invoke(() => vm.LoadingStatus = message);
+        }
 
-            // Base de données : Utilisation de la DbContextFactory, la meilleure pratique pour WPF.
-            services.AddDbContextFactory<TransitContext>(options =>
-                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+		private void ConfigureServices(IConfiguration configuration, IServiceCollection services)
+		{
+			services.AddSingleton(configuration);
 
-            // Repositories (peuvent rester Scoped ou passer en Transient, Transient est plus sûr)
-            services.AddTransient(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-            services.AddTransient<IClientRepository, ClientRepository>();
-            services.AddTransient<IColisRepository, ColisRepository>();
-            services.AddTransient<IConteneurRepository, ConteneurRepository>();
+			// VÉRIFIEZ BIEN QUE CETTE LIGNE EST PRÉSENTE ET QUE AddDbContext N'EST PLUS LÀ
+			services.AddDbContextFactory<TransitContext>(options =>
+				options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
-            // Services métier (doivent être Transient car ils dépendent de la DbContextFactory)
-            services.AddSingleton<IClientService, ClientService>();
-            services.AddTransient<IColisService, ColisService>();
+			// VÉRIFIEZ QUE VOS SERVICES ET REPOSITORIES SONT BIEN ENREGISTRÉS EN TRANSIENT
+			services.AddTransient(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+			services.AddTransient<IClientRepository, ClientRepository>();
+			services.AddTransient<IColisRepository, ColisRepository>();
+			services.AddTransient<IConteneurRepository, ConteneurRepository>();
+
+			// 3. Services métier : Doivent être Transient pour garantir une nouvelle instance à chaque fois.
+			services.AddTransient<IClientService, ClientService>();
+			services.AddTransient<IColisService, ColisService>();
 			services.AddTransient<IVehiculeService, VehiculeService>();
-            services.AddTransient<IConteneurService, ConteneurService>();
-            services.AddTransient<IPaiementService, PaiementService>();
-            services.AddTransient<INotificationService, NotificationService>();
-            services.AddTransient<IAuthenticationService, AuthenticationService>();
-			services.AddSingleton<INotificationHubService, NotificationHubService>();
-            
-            // Services d'infrastructure (Scoped est ok ici car pas de DbContext)
-            services.AddScoped<IBarcodeService, BarcodeService>();
-            services.AddScoped<IExportService, ExportService>();
-            services.AddScoped<IBackupService, BackupService>();
-			services.AddScoped<IPrintingService, PrintingService>();
+			services.AddTransient<IConteneurService, ConteneurService>();
+			services.AddTransient<IPaiementService, PaiementService>();
+			services.AddTransient<IAuthenticationService, AuthenticationService>();
+			services.AddTransient<IUserService, UserService>();
+			
+			// Les services sans état ou qui gèrent des connexions peuvent rester Singleton
+			services.AddSingleton<INotificationHubService, NotificationHubService>(); 
+			services.AddSingleton<INotificationService, NotificationService>(); // Supposant qu'il gère des événements globaux
+
+			// 4. Services d'infrastructure
+			services.AddTransient<IBarcodeService, BarcodeService>();
+			services.AddTransient<IExportService, ExportService>();
+			services.AddTransient<IBackupService, BackupService>();
+			services.AddTransient<IPrintingService, PrintingService>();
 			
 			services.AddSingleton<CommunityToolkit.Mvvm.Messaging.IMessenger>(CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default);
 
@@ -133,29 +176,50 @@ namespace TransitManager.WPF
             services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<IDialogService, DialogService>();
 			services.AddSingleton<SignalRClientService>();
+			
+			// === DÉBUT DE LA CORRECTION ===
+			// On récupère la clé secrète depuis la configuration
+			string? internalSecret = configuration["InternalSecret"];
+			if (string.IsNullOrEmpty(internalSecret))
+			{
+				throw new InvalidOperationException("La clé secrète interne 'InternalSecret' n'est pas configurée dans appsettings.json.");
+			}
 
-            // AutoMapper
-            services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+			services.AddHttpClient("API", client =>
+			{
+				client.BaseAddress = new Uri(configuration["ApiBaseUrl"] ?? "https://localhost:7243");
+				// On ajoute l'en-tête par défaut à ce client nommé
+				client.DefaultRequestHeaders.Add("X-Internal-Secret", internalSecret);
+			});
+			
+			// On enregistre IApiClient pour qu'il utilise le client HTTP configuré ci-dessus.
+			services.AddScoped<IApiClient, ApiClient>();
+			// === FIN DE LA CORRECTION ===
 
-            // ViewModels (Transient pour qu'ils soient recréés à chaque navigation)
-            services.AddTransient<LoginViewModel>();
-            services.AddTransient<MainViewModel>();
-            services.AddTransient<DashboardViewModel>();
-            services.AddTransient<ClientViewModel>();
-            services.AddTransient<ClientDetailViewModel>();
-            services.AddTransient<ColisViewModel>();
+			// AutoMapper
+			services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+			// ViewModels : Doivent être Transient.
+			services.AddTransient<LoginViewModel>();
+			services.AddTransient<MainViewModel>();
+			services.AddTransient<DashboardViewModel>();
+			services.AddTransient<ClientViewModel>();
+			services.AddTransient<ClientDetailViewModel>();
+			services.AddTransient<ColisViewModel>();
 			services.AddTransient<ColisDetailViewModel>();
 			services.AddTransient<VehiculeViewModel>();
 			services.AddTransient<VehiculeDetailViewModel>();
-            services.AddTransient<ConteneurViewModel>();
+			services.AddTransient<ConteneurViewModel>();
 			services.AddTransient<ConteneurDetailViewModel>();
 			services.AddTransient<AddColisToConteneurViewModel>();
 			services.AddTransient<AddVehiculeToConteneurViewModel>();
-            services.AddTransient<NotificationsViewModel>();
+			services.AddTransient<NotificationsViewModel>();
 			services.AddTransient<PaiementColisViewModel>();
 			services.AddTransient<PaiementVehiculeViewModel>();
 			services.AddTransient<PrintPreviewViewModel>();
 			services.AddTransient<FinanceViewModel>();
+			services.AddTransient<UserViewModel>();
+			services.AddTransient<UserDetailViewModel>();
 
             // Views (Transient)
             services.AddTransient<LoginView>();
@@ -179,6 +243,8 @@ namespace TransitManager.WPF
             services.AddTransient<FactureView>();
             services.AddTransient<NotificationsView>();
 			services.AddTransient<FinanceView>();
+			services.AddTransient<UserListView>();
+			services.AddTransient<UserDetailView>();
 
             // Service de Notification (Toast)
             services.AddSingleton(provider => new Notifier(cfg =>

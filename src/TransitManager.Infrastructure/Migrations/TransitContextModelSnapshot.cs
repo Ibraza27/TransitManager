@@ -909,6 +909,9 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Property<bool>("Actif")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("CreePar")
                         .HasColumnType("text");
 
@@ -1012,6 +1015,9 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ClientId")
+                        .IsUnique();
+
                     b.ToTable("Utilisateurs", (string)null);
 
                     b.HasData(
@@ -1019,7 +1025,7 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 11, 6, 18, 10, 10, 572, DateTimeKind.Utc).AddTicks(6595),
+                            DateCreation = new DateTime(2025, 11, 13, 19, 40, 23, 770, DateTimeKind.Utc).AddTicks(2183),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             FuseauHoraire = "Europe/Paris",
@@ -1270,6 +1276,16 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Navigation("Vehicule");
                 });
 
+            modelBuilder.Entity("TransitManager.Core.Entities.Utilisateur", b =>
+                {
+                    b.HasOne("TransitManager.Core.Entities.Client", "Client")
+                        .WithOne("UserAccount")
+                        .HasForeignKey("TransitManager.Core.Entities.Utilisateur", "ClientId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Client");
+                });
+
             modelBuilder.Entity("TransitManager.Core.Entities.Vehicule", b =>
                 {
                     b.HasOne("TransitManager.Core.Entities.Client", "Client")
@@ -1293,6 +1309,8 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Navigation("Colis");
 
                     b.Navigation("Paiements");
+
+                    b.Navigation("UserAccount");
 
                     b.Navigation("Vehicules");
                 });

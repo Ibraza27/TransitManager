@@ -10,26 +10,47 @@ namespace TransitManager.Core.Entities
     /// </summary>
     public class Utilisateur : BaseEntity
     {
+        // --- Champs privés ---
+        private string _nomUtilisateur = string.Empty;
+        private string _nom = string.Empty;
+        private string _prenom = string.Empty;
+        private string _email = string.Empty;
+        private string? _telephone;
+        private RoleUtilisateur _role;
+        private Guid? _clientId;
+
         /// <summary>
         /// Nom d'utilisateur unique
         /// </summary>
         [Required]
         [StringLength(50)]
-        public string NomUtilisateur { get; set; } = string.Empty;
+        public string NomUtilisateur 
+        { 
+            get => _nomUtilisateur; 
+            set => SetProperty(ref _nomUtilisateur, value); 
+        }
 
         /// <summary>
         /// Nom de famille
         /// </summary>
         [Required]
         [StringLength(100)]
-        public string Nom { get; set; } = string.Empty;
+        public string Nom 
+        { 
+            get => _nom; 
+            set => SetProperty(ref _nom, value); 
+        }
 
         /// <summary>
         /// Prénom
         /// </summary>
         [Required]
         [StringLength(100)]
-        public string Prenom { get; set; } = string.Empty;
+        public string Prenom 
+        { 
+            get => _prenom; 
+            set => SetProperty(ref _prenom, value); 
+        }
 
         /// <summary>
         /// Adresse email
@@ -37,7 +58,11 @@ namespace TransitManager.Core.Entities
         [Required]
         [EmailAddress]
         [StringLength(150)]
-        public string Email { get; set; } = string.Empty;
+        public string Email 
+        { 
+            get => _email; 
+            set => SetProperty(ref _email, value); 
+        }
 
         /// <summary>
         /// Mot de passe hashé
@@ -53,13 +78,21 @@ namespace TransitManager.Core.Entities
         /// <summary>
         /// Rôle de l'utilisateur
         /// </summary>
-        public RoleUtilisateur Role { get; set; }
+        public RoleUtilisateur Role 
+        { 
+            get => _role; 
+            set => SetProperty(ref _role, value); // C'est ICI que la magie opère pour le champ grisé
+        }
 
         /// <summary>
         /// Téléphone
         /// </summary>
         [StringLength(20)]
-        public string? Telephone { get; set; }
+        public string? Telephone 
+        { 
+            get => _telephone; 
+            set => SetProperty(ref _telephone, value); 
+        }
 
         /// <summary>
         /// Photo de profil (chemin)
@@ -139,6 +172,21 @@ namespace TransitManager.Core.Entities
         /// Indique si les notifications SMS sont activées
         /// </summary>
         public bool NotificationsSMS { get; set; } = false;
+		
+        /// <summary>
+        /// ID du client associé (si cet utilisateur est un compte client).
+        /// Null pour les utilisateurs internes (admin, opérateur...).
+        /// </summary>
+        public Guid? ClientId
+        {
+            get => _clientId;
+            set => SetProperty(ref _clientId, value);
+        }
+
+        /// <summary>
+        /// Propriété de navigation vers l'entité Client associée.
+        /// </summary>
+        public virtual Client? Client { get; set; }
 
         /// <summary>
         /// Historique des actions (pour l'audit)

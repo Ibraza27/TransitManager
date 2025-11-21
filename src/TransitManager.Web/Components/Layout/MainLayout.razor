@@ -1,4 +1,7 @@
+
 @inherits LayoutComponentBase
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
 
 <div class="page">
     <div class="sidebar">
@@ -8,12 +11,20 @@
     <main>
         <div class="top-row px-4">
             <AuthorizeView>
-                <Authorized>
-                    Bonjour, @context.User.Identity?.Name!
-                    <a href="javascript:void(0)" @onclick="Logout">Se déconnecter</a>
+                <Authorized Context="AuthContext">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">👋 Bonjour, @AuthContext.User.Identity?.Name!</span>
+                        
+                        @* === DÉBUT MODIFICATION LOGOUT === *@
+                        <form action="/account/logout" method="post">
+                            <AntiforgeryToken />
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">🚪 Déconnexion</button>
+                        </form>
+
+                    </div>
                 </Authorized>
                 <NotAuthorized>
-                    <a href="login">Se connecter</a>
+                    <a href="/login" class="btn btn-primary btn-sm">🔑 Connexion</a>
                 </NotAuthorized>
             </AuthorizeView>
         </div>
@@ -24,16 +35,22 @@
     </main>
 </div>
 
-@inject AuthenticationStateProvider AuthStateProvider
-@inject NavigationManager NavigationManager
-
 @code {
+    [Inject] private IApiService ApiService { get; set; } = default!;
+
     private async Task Logout()
     {
-        // On doit caster (convertir) AuthStateProvider vers notre type personnalisé
-        // pour pouvoir appeler notre méthode spécifique MarkUserAsLoggedOut.
-        var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
-        await customAuthStateProvider.MarkUserAsLoggedOut();
-        NavigationManager.NavigateTo("/");
+        Console.WriteLine("🏗️ [MainLayout] 🚪 Tentative de déconnexion...");
+        
+        // === DÉBUT DE LA MODIFICATION ===
+        // 1. Appeler l'API pour supprimer le cookie
+        await ApiService.LogoutAsync();
+
+        // 2. Nettoyer l'état côté client (localStorage et état Blazor)
+        await AuthStateProvider.MarkUserAsLoggedOut();
+        
+        // 3. Rediriger
+        NavigationManager.NavigateTo("/login", forceLoad: true);
+        // === FIN DE LA MODIFICATION ===
     }
 }

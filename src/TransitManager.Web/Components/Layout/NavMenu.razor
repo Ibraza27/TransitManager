@@ -1,20 +1,53 @@
-﻿<div class="nav-scrollable" onclick="document.body.classList.toggle('sidebar-toggle')">
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">TransitManager</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Accueil
+                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Accueil
             </NavLink>
         </div>
-
-        @* ---- DÉBUT DE L'AJOUT ---- *@
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="profile">
+                        <span class="bi bi-person-circle" aria-hidden="true"></span> Mon Profil
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>	
+		<AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="my-parcels">
+                        <span class="bi bi-box-seam-fill" aria-hidden="true"></span> Mes Colis
+                    </NavLink>
+                </div>
+                <!-- (Le lien profil est ici) -->
+            </Authorized>
+        </AuthorizeView>			
         <AuthorizeView Roles="Administrateur">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="clients">
-                    <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Clients
-                </NavLink>
-            </div>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="clients">
+                        <span class="bi bi-people-fill" aria-hidden="true"></span> Clients
+                    </NavLink>
+                </div>
+            </Authorized>
         </AuthorizeView>
-        @* ---- FIN DE L'AJOUT ---- *@
-
     </nav>
 </div>
+@code {
+    private bool collapseNavMenu = true;
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

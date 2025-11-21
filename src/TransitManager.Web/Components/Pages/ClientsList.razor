@@ -1,18 +1,48 @@
 @page "/clients"
 @attribute [Authorize(Roles = "Administrateur")]
-
 @inject IApiService ApiService
+@implements IDisposable
+
+<PageTitle>Clients - TransitManager</PageTitle>
 
 <h3>Liste des Clients</h3>
 
-@if (clients == null)
+@* === DÉBUT DE LA MODIFICATION === *@
+
+@if (_isLoading)
 {
-    <p><em>Chargement des clients...</em></p>
+    <div class="text-center p-5">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+        <p class="mt-3 text-muted">Chargement de la liste des clients...</p>
+    </div>
+}
+else if (_loadError)
+{
+    <div class="alert alert-danger">
+        <h4>❌ Erreur de chargement</h4>
+        <p>Impossible de charger la liste des clients. Veuillez vérifier la connexion à l'API.</p>
+        <button class="btn btn-secondary" @onclick="LoadClientsData" disabled="@_isLoading">
+            Réessayer
+        </button>
+    </div>
+}
+else if (_clients == null || !_clients.Any())
+{
+    <div class="alert alert-info">
+        <h4>📭 Aucun client</h4>
+        <p>Aucun client n'a été trouvé.</p>
+    </div>
 }
 else
 {
-    <table class="table">
-        <thead>
+    <div class="alert alert-success">
+        <p>✅ @_clients.Count() client(s) trouvé(s).</p>
+    </div>
+
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
             <tr>
                 <th>Code Client</th>
                 <th>Nom Complet</th>
@@ -21,7 +51,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var client in clients)
+            @foreach (var client in _clients)
             {
                 <tr>
                     <td>@client.CodeClient</td>
@@ -34,19 +64,78 @@ else
     </table>
 }
 
+@* === FIN DE LA MODIFICATION === *@
+
 @code {
-    private IEnumerable<TransitManager.Core.Entities.Client>? clients;
+    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+    
+    private IEnumerable<Client>? _clients;
+    private bool _isLoading = true; // On commence en mode chargement
+    private bool _loadError = false; // Nouveau flag pour gérer les erreurs
+    private bool _isAuthenticated = false;
 
     protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine("🚀 [ClientsList] === OnInitializedAsync ===");
+        AuthStateProvider.AuthenticationStateChanged += HandleAuthenticationStateChanged;
+        
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            _isAuthenticated = true;
+            await LoadClientsData();
+        }
+        else
+        {
+            _isLoading = false; // On n'est pas authentifié, donc on arrête de charger
+        }
+    }
+
+    private async void HandleAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        var authState = await task;
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadClientsData()
+    {
+        Console.WriteLine("🚀 [ClientsList] 📦 === DÉBUT LoadClientsData ===");
+        _isLoading = true;
+        _loadError = false;
+        await InvokeAsync(StateHasChanged);
+
         try
         {
-            clients = await ApiService.GetClientsAsync();
+            if (!_isAuthenticated)
+            {
+                Console.WriteLine("🚀 [ClientsList] 📦 ⏳ Chargement annulé - utilisateur non authentifié");
+                _loadError = true;
+                return;
+            }
+
+            _clients = await ApiService.GetClientsAsync();
+            if (_clients == null)
+            {
+                _loadError = true;
+            }
         }
         catch (Exception ex)
         {
-            // Gérer le cas où l'API n'est pas accessible ou le token est expiré
-            Console.WriteLine($"Erreur lors du chargement des clients : {ex.Message}");
+            Console.WriteLine($"🚀 [ClientsList] 📦 💥 Erreur lors du chargement: {ex.Message}");
+            _loadError = true;
+            _clients = null;
         }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+            Console.WriteLine("🚀 [ClientsList] 📦 === FIN LoadClientsData ===");
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= HandleAuthenticationStateChanged;
     }
 }

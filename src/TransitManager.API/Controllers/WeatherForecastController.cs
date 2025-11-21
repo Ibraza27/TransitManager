@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace TransitManager.API.Controllers
 {
-	[Authorize]
+
     [ApiController]
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase

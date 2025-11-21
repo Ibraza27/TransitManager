@@ -22,8 +22,9 @@ namespace TransitManager.Core.DTOs
         public string? InstructionsSpeciales { get; set; }
         public TypeColis Type { get; set; }
         public TypeEnvoi TypeEnvoi { get; set; }
-
-        // --- AJOUTS ---
         public Guid? ConteneurId { get; set; }
+
+        // --- AJOUTER CETTE LIGNE ---
+        public string? InventaireJson { get; set; }
     }
 }

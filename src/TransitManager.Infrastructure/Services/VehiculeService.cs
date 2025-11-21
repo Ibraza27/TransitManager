@@ -13,23 +13,26 @@ namespace TransitManager.Infrastructure.Services
 {
     public class VehiculeService : IVehiculeService
     {
-        private readonly TransitContext _context;
+        private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly IConteneurService _conteneurService;
         private readonly IClientService _clientService;
 
-        public VehiculeService(TransitContext context, IConteneurService conteneurService, IClientService clientService)
+        public VehiculeService(
+            IDbContextFactory<TransitContext> contextFactory,
+            IConteneurService conteneurService,
+            IClientService clientService)
         {
-            _context = context;
+            _contextFactory = contextFactory;
             _conteneurService = conteneurService;
             _clientService = clientService;
         }
 
         public async Task<Vehicule> CreateAsync(Vehicule vehicule)
         {
-            _context.Vehicules.Add(vehicule);
-            await _context.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            context.Vehicules.Add(vehicule);
+            await context.SaveChangesAsync();
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
-
             if (vehicule.ConteneurId.HasValue)
             {
                 await _conteneurService.RecalculateStatusAsync(vehicule.ConteneurId.Value);
@@ -39,24 +42,24 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<Vehicule> UpdateAsync(Vehicule vehicule)
         {
-            var vehiculeInDb = await _context.Vehicules.FindAsync(vehicule.Id);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var vehiculeInDb = await context.Vehicules.FindAsync(vehicule.Id);
             if (vehiculeInDb == null)
             {
                 throw new InvalidOperationException("Le véhicule que vous essayez de modifier n'existe plus.");
             }
-
             var originalConteneurId = vehiculeInDb.ConteneurId;
             if (vehicule.Statut == StatutVehicule.Retourne)
             {
                 vehicule.ConteneurId = null;
             }
-            _context.Entry(vehiculeInDb).CurrentValues.SetValues(vehicule);
+            context.Entry(vehiculeInDb).CurrentValues.SetValues(vehicule);
             vehiculeInDb.ClientId = vehicule.ClientId;
             vehiculeInDb.ConteneurId = vehicule.ConteneurId;
-            _context.Entry(vehiculeInDb).Property("RowVersion").OriginalValue = vehicule.RowVersion;
+            context.Entry(vehiculeInDb).Property("RowVersion").OriginalValue = vehicule.RowVersion;
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -71,7 +74,6 @@ namespace TransitManager.Infrastructure.Services
                     throw new ConcurrencyException("Ce véhicule a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
                 }
             }
-
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehiculeInDb.ClientId);
             if (originalConteneurId.HasValue)
             {
@@ -86,35 +88,37 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<bool> AssignToConteneurAsync(Guid vehiculeId, Guid conteneurId)
         {
-            var vehicule = await _context.Vehicules.FindAsync(vehiculeId);
-            var conteneur = await _context.Conteneurs.FindAsync(conteneurId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var vehicule = await context.Vehicules.FindAsync(vehiculeId);
+            var conteneur = await context.Conteneurs.FindAsync(conteneurId);
             var canReceiveStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation, StatutConteneur.Probleme };
             if (vehicule == null || conteneur == null || !canReceiveStatuses.Contains(conteneur.Statut)) return false;
-
             vehicule.ConteneurId = conteneurId;
             vehicule.Statut = StatutVehicule.Affecte;
             vehicule.NumeroPlomb = conteneur.NumeroPlomb;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             await _conteneurService.RecalculateStatusAsync(conteneurId);
             return true;
         }
 
         public async Task<bool> RemoveFromConteneurAsync(Guid vehiculeId)
         {
-            var vehicule = await _context.Vehicules.FindAsync(vehiculeId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var vehicule = await context.Vehicules.FindAsync(vehiculeId);
             if (vehicule == null || !vehicule.ConteneurId.HasValue) return false;
             var originalConteneurId = vehicule.ConteneurId.Value;
             vehicule.ConteneurId = null;
             vehicule.Statut = StatutVehicule.EnAttente;
             vehicule.NumeroPlomb = null;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             await _conteneurService.RecalculateStatusAsync(originalConteneurId);
             return true;
         }
 
         public async Task<Vehicule?> GetByIdAsync(Guid id)
         {
-            return await _context.Vehicules
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Vehicules
                 .Include(v => v.Client)
                 .Include(v => v.Paiements)
                 .Include(v => v.Conteneur)
@@ -124,30 +128,44 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<IEnumerable<Vehicule>> GetAllAsync()
         {
-            return await _context.Vehicules.Include(v => v.Client).Include(v => v.Conteneur).AsNoTracking().OrderByDescending(v => v.DateCreation).ToListAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Vehicules
+                .Include(v => v.Client)
+                .Include(v => v.Conteneur)
+                .AsNoTracking()
+                .OrderByDescending(v => v.DateCreation)
+                .ToListAsync();
         }
 
         public async Task<IEnumerable<Vehicule>> GetByClientAsync(Guid clientId)
         {
-            return await _context.Vehicules.Include(v => v.Client).Where(v => v.ClientId == clientId).AsNoTracking().OrderByDescending(v => v.DateCreation).ToListAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Vehicules
+                .Include(v => v.Client)
+                .Where(v => v.ClientId == clientId)
+                .AsNoTracking()
+                .OrderByDescending(v => v.DateCreation)
+                .ToListAsync();
         }
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            var vehicule = await _context.Vehicules.FindAsync(id);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var vehicule = await context.Vehicules.FindAsync(id);
             if (vehicule == null) return false;
             var clientId = vehicule.ClientId;
             vehicule.Actif = false;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId);
             return true;
         }
 
         public async Task<IEnumerable<Vehicule>> SearchAsync(string searchTerm)
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             if (string.IsNullOrWhiteSpace(searchTerm)) return await GetAllAsync();
             var searchTerms = searchTerm.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var query = _context.Vehicules
+            var query = context.Vehicules
                                .Include(v => v.Client)
                                .Include(v => v.Conteneur)
                                .AsNoTracking();
@@ -167,18 +185,18 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task RecalculateAndUpdateVehiculeStatisticsAsync(Guid vehiculeId)
         {
-            var vehicule = await _context.Vehicules.FirstOrDefaultAsync(v => v.Id == vehiculeId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var vehicule = await context.Vehicules.FirstOrDefaultAsync(v => v.Id == vehiculeId);
             if (vehicule != null)
             {
                 var validStatuses = new[] { StatutPaiement.Paye, StatutPaiement.Valide };
-                var totalPaye = await _context.Paiements
+                var totalPaye = await context.Paiements
                     .Where(p => p.VehiculeId == vehiculeId &&
                                 p.Actif &&
                                 validStatuses.Contains(p.Statut))
                     .SumAsync(p => p.Montant);
                 vehicule.SommePayee = totalPaye;
-                await _context.SaveChangesAsync();
-
+                await context.SaveChangesAsync();
                 await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
             }
         }

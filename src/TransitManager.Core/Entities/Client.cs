@@ -100,6 +100,11 @@ namespace TransitManager.Core.Entities
 		public virtual ICollection<Vehicule> Vehicules { get; set; } = new List<Vehicule>();
         public virtual ICollection<Paiement> Paiements { get; set; } = new List<Paiement>();
         // --- FIN DE LA MODIFICATION ---
+		
+        /// <summary>
+        /// Compte utilisateur associé à ce client, s'il en a un.
+        /// </summary>
+        public virtual Utilisateur? UserAccount { get; set; }
         
         // --- Constructeur et Méthodes ---
         public Client()

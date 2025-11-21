@@ -1,0 +1,204 @@
+@using System.Text.Json
+@using TransitManager.Core.Entities
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-clipboard-check me-2"></i>Inventaire du colis</h5>
+                    <button type="button" class="btn-close" @onclick="Cancel"></button>
+                </div>
+                <div class="modal-body">
+                    @if (IsReadOnly)
+                    {
+                        <div class="alert alert-info small py-2">
+                            <i class="bi bi-lock me-2"></i>Mode lecture seule (Modification non autorisée).
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Formulaire d'ajout / Édition -->
+                        <div class="card bg-light mb-3 border-0">
+                            <div class="card-body p-3">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="small text-muted fw-bold">Désignation</label>
+                                        <input type="text" class="form-control form-control-sm" @bind="_newItem.Designation" placeholder="Ex: Chemises..." />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="small text-muted fw-bold">Quantité</label>
+                                        <input type="number" class="form-control form-control-sm" @bind="_newItem.Quantite" min="1" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="small text-muted fw-bold">Valeur (€)</label>
+                                        <input type="number" class="form-control form-control-sm" @bind="_newItem.Valeur" min="0" step="0.01" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="small text-muted fw-bold">Date</label>
+                                        <input type="date" class="form-control form-control-sm" @bind="_newItem.Date" />
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button class="btn btn-sm btn-success w-100" @onclick="AddItem" 
+                                                disabled="@string.IsNullOrWhiteSpace(_newItem.Designation)"
+                                                title="Ajouter / Mettre à jour">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Tableau -->
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover table-bordered mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Désignation</th>
+                                    <th class="text-center">Qté</th>
+                                    <th class="text-end">Valeur U.</th>
+                                    <th class="text-end">Total</th>
+                                    @if (!IsReadOnly) { <th style="width: 80px;" class="text-center">Actions</th> }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _items.OrderByDescending(i => i.Date))
+                                {
+                                    <tr>
+                                        <td>@item.Date.ToString("dd/MM/yyyy")</td>
+                                        <td>@item.Designation</td>
+                                        <td class="text-center fw-bold">@item.Quantite</td>
+                                        <td class="text-end">@item.Valeur.ToString("C2")</td>
+                                        <td class="text-end text-primary">@((item.Valeur * item.Quantite).ToString("C2"))</td> <!-- Calcul simple si valeur est unitaire, sinon juste valeur -->
+                                        
+                                        @if (!IsReadOnly)
+                                        {
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary border-0" @onclick="() => EditItem(item)" title="Modifier">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger border-0" @onclick="() => RemoveItem(item)" title="Supprimer">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                                @if (!_items.Any())
+                                {
+                                    <tr><td colspan="6" class="text-center text-muted fst-italic py-3">Aucun article dans l'inventaire</td></tr>
+                                }
+                            </tbody>
+                            <tfoot class="fw-bold bg-light">
+                                <tr>
+                                    <td colspan="2" class="text-end">TOTAUX :</td>
+                                    <td class="text-center">@_items.Sum(i => i.Quantite)</td>
+                                    <td></td>
+                                    <td class="text-end text-primary">@_items.Sum(i => i.Valeur).ToString("C2")</td>
+                                    @if (!IsReadOnly) { <td></td> }
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Annuler</button>
+                    @if (!IsReadOnly)
+                    {
+                        <button type="button" class="btn btn-primary px-4" @onclick="Save">
+                            <i class="bi bi-save me-2"></i>Valider l'inventaire
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public bool IsReadOnly { get; set; }
+    [Parameter] public string? JsonData { get; set; }
+    [Parameter] public EventCallback<string> OnSave { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<InventaireItem> _items = new();
+    private InventaireItem _newItem = new() { Date = DateTime.Now, Quantite = 1 };
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            // CORRECTION MAJEURE : JsonSerializerOptions pour éviter d'effacer les données existantes
+            var options = new JsonSerializerOptions 
+            { 
+                PropertyNameCaseInsensitive = true 
+            };
+
+            if (!string.IsNullOrEmpty(JsonData) && JsonData != "[]" && JsonData != "null")
+            {
+                try
+                {
+                    // On recharge la liste à chaque ouverture pour être sûr d'avoir la version à jour
+                    _items = JsonSerializer.Deserialize<List<InventaireItem>>(JsonData, options) ?? new List<InventaireItem>();
+                }
+                catch 
+                { 
+                    _items = new List<InventaireItem>(); 
+                }
+            }
+            else if (!_items.Any()) // Si pas de JSON, on initialise vide seulement si pas déjà rempli
+            {
+                _items = new List<InventaireItem>();
+            }
+            
+            // Reset form
+            _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
+        }
+    }
+
+    private void AddItem()
+    {
+        // On ajoute une copie pour éviter les références liées au formulaire
+        _items.Add(new InventaireItem 
+        { 
+            Designation = _newItem.Designation, 
+            Quantite = _newItem.Quantite, 
+            Valeur = _newItem.Valeur, 
+            Date = _newItem.Date 
+        });
+        
+        // Reset formulaire
+        _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
+    }
+
+    private void EditItem(InventaireItem item)
+    {
+        // Pour modifier, on remet les valeurs dans le formulaire et on supprime l'ancienne ligne
+        // L'utilisateur devra cliquer sur "Ajouter" (coche verte) pour valider la modif
+        _newItem = new InventaireItem 
+        { 
+            Designation = item.Designation, 
+            Quantite = item.Quantite, 
+            Valeur = item.Valeur, 
+            Date = item.Date 
+        };
+        
+        _items.Remove(item);
+    }
+
+    private void RemoveItem(InventaireItem item) => _items.Remove(item);
+
+    private async Task Save()
+    {
+        var json = JsonSerializer.Serialize(_items);
+        await OnSave.InvokeAsync(json);
+    }
+
+    private async Task Cancel() => await OnClose.InvokeAsync();
+}

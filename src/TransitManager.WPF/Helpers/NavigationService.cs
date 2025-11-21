@@ -56,6 +56,8 @@ namespace TransitManager.WPF.Helpers
             _viewModelMappings["ConteneurDetail"] = typeof(ConteneurDetailViewModel);
             _viewModelMappings["Notifications"] = typeof(NotificationsViewModel);
 			_viewModelMappings["Finance"] = typeof(FinanceViewModel);
+			_viewModelMappings["Users"] = typeof(UserViewModel);
+			_viewModelMappings["UserDetail"] = typeof(UserDetailViewModel);
         }
 
         public void NavigateTo(string viewName)

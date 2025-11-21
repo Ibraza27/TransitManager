@@ -1,15 +1,21 @@
-﻿@using TransitManager.Web.Components.Layout
+
+@inject IJSRuntime JSRuntime
 
 <CascadingAuthenticationState>
-    <Router AppAssembly="typeof(Program).Assembly">
+    <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
-                    <h3>Accès non autorisé</h3>
-                    <p>Vous devez vous <a href="login">connecter</a> pour voir cette page.</p>
+
+                    <RedirectToLogin />
                 </NotAuthorized>
                 <Authorizing>
-                    <p>Vérification de l'autorisation en cours...</p>
+                    <div class="loading-container">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Autorisation...</span>
+                        </div>
+                        <p class="mt-2">🔐 Vérification de l'autorisation...</p>
+                    </div>
                 </Authorizing>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
@@ -17,8 +23,23 @@
         <NotFound>
             <PageTitle>Introuvable</PageTitle>
             <LayoutView Layout="@typeof(MainLayout)">
-                <p role="alert">Désolé, il n'y a rien à cette adresse.</p>
+                <div class="alert alert-danger">
+                    <h1>❌ Page introuvable</h1>
+                    <p>Désolé, il n'y a rien à cette adresse.</p>
+                    <a href="/" class="btn btn-primary">Retour à l'accueil</a>
+                </div>
             </LayoutView>
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+
+            await JSRuntime.InvokeVoidAsync("showBlazorApp");
+        }
+    }
+}

@@ -14,18 +14,18 @@ namespace TransitManager.Infrastructure.Services
 {
     public class BackupService : IBackupService
     {
-        private readonly TransitContext _context;
+        private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly IConfiguration _configuration;
         private readonly INotificationService _notificationService;
         private readonly string _backupDirectory;
         private System.Timers.Timer? _backupTimer;
 
         public BackupService(
-            TransitContext context,
+            IDbContextFactory<TransitContext> contextFactory,
             IConfiguration configuration,
             INotificationService notificationService)
         {
-            _context = context;
+            _contextFactory = contextFactory;
             _configuration = configuration;
             _notificationService = notificationService;
             _backupDirectory = Path.Combine(
@@ -104,7 +104,8 @@ namespace TransitManager.Infrastructure.Services
         {
             _backupTimer?.Dispose();
             _backupTimer = new System.Timers.Timer(interval.TotalMilliseconds);
-            _backupTimer.Elapsed += async (s, e) => {
+            _backupTimer.Elapsed += async (s, e) =>
+            {
                 await CreateBackupAsync();
                 await DeleteOldBackupsAsync(_configuration.GetValue<int>("AppSettings:BackupRetentionDays", 30));
             };
@@ -156,7 +157,8 @@ namespace TransitManager.Infrastructure.Services
 
         private async Task BackupDatabaseAsync(string outputPath)
         {
-            var connectionString = _context.Database.GetConnectionString();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var connectionString = context.Database.GetConnectionString();
             var builder = new NpgsqlConnectionStringBuilder(connectionString);
             var processInfo = new System.Diagnostics.ProcessStartInfo
             {
@@ -184,16 +186,17 @@ namespace TransitManager.Infrastructure.Services
 
         private async Task CreateBackupMetadataAsync(string backupPath)
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             var metadata = new BackupMetadata
             {
                 BackupDate = DateTime.UtcNow,
                 AppVersion = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "1.0.0",
-                DatabaseVersion = (await _context.Database.GetAppliedMigrationsAsync()).LastOrDefault() ?? "Initial",
+                DatabaseVersion = (await context.Database.GetAppliedMigrationsAsync()).LastOrDefault() ?? "Initial",
                 MachineName = Environment.MachineName,
                 UserName = Environment.UserName,
-                TotalClients = await _context.Clients.CountAsync(),
-                TotalColis = await _context.Colis.CountAsync(),
-                TotalConteneurs = await _context.Conteneurs.CountAsync(),
+                TotalClients = await context.Clients.CountAsync(),
+                TotalColis = await context.Colis.CountAsync(),
+                TotalConteneurs = await context.Conteneurs.CountAsync(),
                 TotalFiles = Directory.Exists(Path.Combine(backupPath, "Files")) ? Directory.GetFiles(Path.Combine(backupPath, "Files"), "*", SearchOption.AllDirectories).Length : 0
             };
             var json = System.Text.Json.JsonSerializer.Serialize(metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });

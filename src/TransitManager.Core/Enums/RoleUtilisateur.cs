@@ -1,3 +1,4 @@
+// src/TransitManager.Core/Enums/RoleUtilisateur.cs
 
 namespace TransitManager.Core.Enums
 {
@@ -7,6 +8,8 @@ namespace TransitManager.Core.Enums
         Gestionnaire,
         Operateur,
         Comptable,
-        Invite
+        Invite,
+        // === AJOUTER CETTE LIGNE ===
+        Client
     }
 }

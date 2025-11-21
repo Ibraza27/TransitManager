@@ -32,6 +32,7 @@
     <PackageReference Include="MahApps.Metro" />
     <PackageReference Include="MaterialDesignThemes" />
     <PackageReference Include="MaterialDesignThemes.MahApps" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />

@@ -20,8 +20,11 @@ using TransitManager.Core.DTOs;
 
 namespace TransitManager.WPF.ViewModels
 {
-    public class ColisViewModel : BaseViewModel, IRecipient<ClientUpdatedMessage>, IRecipient<ConteneurUpdatedMessage>
-    {
+	public partial class ColisViewModel : BaseViewModel, 
+		IRecipient<ClientUpdatedMessage>, 
+		IRecipient<ConteneurUpdatedMessage>,
+		IRecipient<EntityTotalPaidUpdatedMessage>
+	{
         #region Services
         private readonly IColisService _colisService;
         private readonly IClientService _clientService;
@@ -318,6 +321,22 @@ namespace TransitManager.WPF.ViewModels
             await LoadFilterDataAsync();
         }
         
+        public void Receive(EntityTotalPaidUpdatedMessage message)
+        {
+            // On cherche si le colis concerné est dans la liste actuellement affichée
+            var colisToUpdate = Colis.FirstOrDefault(c => c.Id == message.EntityId);
+            
+            if (colisToUpdate != null)
+            {
+                // On met à jour la valeur directement dans l'objet de la collection
+                // WPF détectera le changement via INotifyPropertyChanged de l'entité Colis
+                colisToUpdate.SommePayee = message.NewTotalPaid;
+                
+                // Optionnel : Recalculer les totaux globaux du bas de page
+                CalculateStatistics();
+            }
+        }
+		
 		public override async Task InitializeAsync()
 		{
 			// 1. On charge les données des filtres UNE SEULE FOIS.

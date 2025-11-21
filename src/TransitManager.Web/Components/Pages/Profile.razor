@@ -1,0 +1,227 @@
+@page "/profile"
+@using System.ComponentModel.DataAnnotations
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+
+<PageTitle>Mon Profil - Hippocampe Import-Export</PageTitle>
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="text-primary fw-bold"><i class="bi bi-person-circle me-2"></i>Mon Profil</h2>
+            <p class="text-muted">Gérez vos informations personnelles et vos préférences de sécurité.</p>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2">Récupération de vos informations...</p>
+        </div>
+    }
+    else if (_loadError)
+    {
+        <div class="alert alert-danger shadow-sm">
+            <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Erreur</h4>
+            <p>Impossible de charger votre profil. Vérifiez que votre compte est bien lié à une fiche client.</p>
+            <hr>
+            <button class="btn btn-outline-danger" @onclick="LoadProfile">Réessayer</button>
+        </div>
+    }
+    else
+    {
+        @if (_saveSuccess)
+        {
+            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> <strong>Succès !</strong> Vos informations ont été mises à jour.
+                <button type="button" class="btn-close" @onclick="() => _saveSuccess = false"></button>
+            </div>
+        }
+
+        @if (_saveError)
+        {
+            <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-x-circle-fill me-2"></i> <strong>Erreur :</strong> Une erreur est survenue lors de l'enregistrement. Vérifiez votre ancien mot de passe si vous tentez de le changer.
+                <button type="button" class="btn-close" @onclick="() => _saveError = false"></button>
+            </div>
+        }
+
+        <EditForm Model="@_profile" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            
+            <div class="row g-4">
+                <!-- Colonne Gauche : Infos Personnelles -->
+                <div class="col-lg-8">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="card-title mb-0 text-primary"><i class="bi bi-card-text me-2"></i>Informations Générales</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Nom</label>
+                                    <InputText @bind-Value="_profile.Nom" class="form-control" placeholder="Votre nom" />
+                                    <ValidationMessage For="@(() => _profile.Nom)" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Prénom</label>
+                                    <InputText @bind-Value="_profile.Prenom" class="form-control" placeholder="Votre prénom" />
+                                    <ValidationMessage For="@(() => _profile.Prenom)" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Email</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                        <InputText @bind-Value="_profile.Email" class="form-control" placeholder="email@exemple.com" />
+                                    </div>
+                                    <ValidationMessage For="@(() => _profile.Email)" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Téléphone Mobile</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                        <InputText @bind-Value="_profile.Telephone" class="form-control" placeholder="06..." />
+                                    </div>
+                                    <ValidationMessage For="@(() => _profile.Telephone)" />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Téléphone Fixe / Secondaire</label>
+                                    <InputText @bind-Value="_profile.TelephoneSecondaire" class="form-control" />
+                                </div>
+
+                                <div class="col-12">
+                                    <hr class="my-4 text-muted" />
+                                    <h6 class="text-primary mb-3"><i class="bi bi-geo-alt me-2"></i>Adresse de facturation</h6>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label">Adresse (Rue, Numéro)</label>
+                                    <InputTextArea @bind-Value="_profile.Adresse" class="form-control" rows="2" />
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <label class="form-label">Code Postal</label>
+                                    <InputText @bind-Value="_profile.CodePostal" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Ville</label>
+                                    <InputText @bind-Value="_profile.Ville" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Pays</label>
+                                    <InputText @bind-Value="_profile.Pays" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne Droite : Sécurité & Actions -->
+                <div class="col-lg-4">
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="card-title mb-0 text-danger"><i class="bi bi-shield-lock me-2"></i>Sécurité</h5>
+                        </div>
+                        <div class="card-body bg-light">
+                            <p class="small text-muted mb-3">Laissez ces champs vides si vous ne souhaitez pas changer votre mot de passe.</p>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Ancien mot de passe</label>
+                                <InputText type="password" @bind-Value="_profile.AncienMotDePasse" class="form-control" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Nouveau mot de passe</label>
+                                <InputText type="password" @bind-Value="_profile.NouveauMotDePasse" class="form-control" />
+                                <ValidationMessage For="@(() => _profile.NouveauMotDePasse)" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Confirmer nouveau mot de passe</label>
+                                <InputText type="password" @bind-Value="_profile.ConfirmerMotDePasse" class="form-control" />
+                                <ValidationMessage For="@(() => _profile.ConfirmerMotDePasse)" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg shadow-sm" disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Enregistrement...</span>
+                            }
+                            else
+                            {
+                                <span><i class="bi bi-save me-2"></i> Enregistrer les modifications</span>
+                            }
+                        </button>
+                        <a href="/" class="btn btn-outline-secondary">Retour à l'accueil</a>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private UserProfileDto _profile = new();
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private bool _loadError = false;
+    private bool _saveSuccess = false;
+    private bool _saveError = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        _isLoading = true;
+        _loadError = false;
+        
+        var profile = await ApiService.GetUserProfileAsync();
+        
+        if (profile != null)
+        {
+            _profile = profile;
+        }
+        else
+        {
+            _loadError = true;
+        }
+        
+        _isLoading = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _isSaving = true;
+        _saveSuccess = false;
+        _saveError = false;
+
+        var success = await ApiService.UpdateUserProfileAsync(_profile);
+
+        if (success)
+        {
+            _saveSuccess = true;
+            // Réinitialiser les champs de mot de passe pour sécurité
+            _profile.AncienMotDePasse = string.Empty;
+            _profile.NouveauMotDePasse = string.Empty;
+            _profile.ConfirmerMotDePasse = string.Empty;
+        }
+        else
+        {
+            _saveError = true;
+        }
+
+        _isSaving = false;
+    }
+}

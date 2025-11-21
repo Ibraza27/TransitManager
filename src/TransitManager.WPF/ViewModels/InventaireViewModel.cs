@@ -5,11 +5,21 @@ using System.Linq;
 using TransitManager.Core.Entities;
 using System.Collections.Specialized;
 using System.Collections.Generic;
+using System.Text.Json; // Indispensable
+using System.Text.Json.Serialization; // Indispensable
 
 namespace TransitManager.WPF.ViewModels
 {
     public class InventaireViewModel : ObservableObject
     {
+        // --- CONFIGURATION JSON STRICTE (Identique au Web/Mobile) ---
+        private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,        // Pour lire n'importe quel format
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // Pour ÉCRIRE en camelCase (standard Web)
+            WriteIndented = false
+        };
+
         private InventaireItem _newItem = new();
         public ObservableCollection<InventaireItem> Items { get; } = new();
 
@@ -34,6 +44,39 @@ namespace TransitManager.WPF.ViewModels
             Items.CollectionChanged += OnItemsCollectionChanged;
 
             LoadItems(inventaireJson);
+        }
+
+        // --- MÉTHODE PUBLIQUE POUR RÉCUPÉRER LE JSON FORMATÉ ---
+        public string GetJson()
+        {
+            // On utilise les options camelCase pour générer le string
+            return JsonSerializer.Serialize(Items, _jsonOptions);
+        }
+
+        private void LoadItems(string? json)
+        {
+            foreach(var item in Items) item.PropertyChanged -= OnItemPropertyChanged;
+            Items.Clear();
+
+            if (!string.IsNullOrEmpty(json) && json != "[]" && json != "null")
+            {
+                try
+                {
+                    // On utilise les options pour lire (insensible à la casse)
+                    var items = JsonSerializer.Deserialize<List<InventaireItem>>(json, _jsonOptions);
+                    
+                    if (items != null)
+                    {
+                        foreach (var item in items)
+                        {
+                            Items.Add(item);
+                        }
+                    }
+                }
+                catch { /* Ignorer les erreurs de JSON invalide */ }
+            }
+            
+            UpdateTotals();
         }
 
         private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -65,40 +108,18 @@ namespace TransitManager.WPF.ViewModels
             OnPropertyChanged(nameof(TotalValeur));
         }
 
-        private void LoadItems(string? json)
-        {
-            // On s'assure de se désabonner des anciens items avant de vider la liste
-            foreach(var item in Items) item.PropertyChanged -= OnItemPropertyChanged;
-            Items.Clear();
-
-            if (!string.IsNullOrEmpty(json))
-            {
-                try
-                {
-                    var items = System.Text.Json.JsonSerializer.Deserialize<List<InventaireItem>>(json);
-                    if (items != null)
-                    {
-                        foreach (var item in items)
-                        {
-                            Items.Add(item); // L'événement CollectionChanged s'occupera de s'abonner
-                        }
-                    }
-                }
-                catch { /* Ignorer les erreurs de JSON invalide */ }
-            }
-        }
-
         private bool CanAddItem()
         {
             return !string.IsNullOrWhiteSpace(NewItem.Designation) && NewItem.Quantite > 0;
         }
 
-		private void AddItem()
-		{
-			Items.Add(NewItem);
-			NewItem = new InventaireItem(); // Cette ligne crée un nouvel item avec la date du jour
-			NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
-		}
+        private void AddItem()
+        {
+            Items.Add(NewItem);
+            // Recréer un objet propre
+            NewItem = new InventaireItem { Date = System.DateTime.Now }; 
+            NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
+        }
 
         private void RemoveItem(InventaireItem? item)
         {

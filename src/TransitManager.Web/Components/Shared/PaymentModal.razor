@@ -1,0 +1,151 @@
+@using TransitManager.Core.Entities
+@using TransitManager.Core.Enums
+@inject IApiService ApiService
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-cash-coin me-2"></i>Gestion des Paiements</h5>
+                    <button type="button" class="btn-close" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    
+                    <div class="d-flex justify-content-between mb-3 p-3 bg-light rounded">
+                        <div>
+                            <span class="text-muted">Total à payer :</span>
+                            <span class="fw-bold fs-5">@TotalAmount.ToString("C2")</span>
+                        </div>
+                        <div>
+                            <span class="text-muted">Déjà payé :</span>
+                            <span class="fw-bold fs-5 text-success">@_payments.Sum(p => p.Montant).ToString("C2")</span>
+                        </div>
+                        <div>
+                            <span class="text-muted">Restant :</span>
+                            <span class="fw-bold fs-5 text-danger">@((TotalAmount - _payments.Sum(p => p.Montant)).ToString("C2"))</span>
+                        </div>
+                    </div>
+
+                    @if (IsAdmin)
+                    {
+                         <!-- Formulaire Ajout Admin -->
+                         <div class="card mb-3 border-primary">
+                             <div class="card-body p-2">
+                                 <div class="row g-2">
+                                     <div class="col-md-3">
+                                         <select class="form-select form-select-sm" @bind="_newPayment.ModePaiement">
+                                             @foreach (var type in Enum.GetValues<TypePaiement>())
+                                             {
+                                                 <option value="@type">@type</option>
+                                             }
+                                         </select>
+                                     </div>
+                                     <div class="col-md-3">
+                                         <input type="number" class="form-control form-control-sm" @bind="_newPayment.Montant" placeholder="Montant" />
+                                     </div>
+                                     <div class="col-md-4">
+                                         <input type="text" class="form-control form-control-sm" @bind="_newPayment.Commentaires" placeholder="Référence/Note" />
+                                     </div>
+                                     <div class="col-md-2">
+                                         <button class="btn btn-sm btn-primary w-100" @onclick="AddPayment">Ajouter</button>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+                    }
+
+                    <!-- Liste -->
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Mode</th>
+                                <th>Réf.</th>
+                                <th class="text-end">Montant</th>
+                                @if(IsAdmin) { <th></th> }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in _payments)
+                            {
+                                <tr>
+                                    <td>@p.DatePaiement.ToString("dd/MM/yyyy")</td>
+                                    <td>@p.ModePaiement</td>
+                                    <td><small>@p.Commentaires</small></td>
+                                    <td class="text-end fw-bold text-success">@p.Montant.ToString("C2")</td>
+                                    @if (IsAdmin)
+                                    {
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePayment(p)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public bool IsAdmin { get; set; }
+    [Parameter] public Guid ColisId { get; set; }
+    [Parameter] public Guid ClientId { get; set; }
+    [Parameter] public decimal TotalAmount { get; set; }
+    [Parameter] public EventCallback<decimal> OnPaymentsChanged { get; set; } // Renvoie le nouveau total payé
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<Paiement> _payments = new();
+    private Paiement _newPayment = new() { DatePaiement = DateTime.Now };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && ColisId != Guid.Empty)
+        {
+            await LoadPayments();
+        }
+    }
+
+    private async Task LoadPayments()
+    {
+        var result = await ApiService.GetPaiementsForColisAsync(ColisId);
+        if (result != null) _payments = result.ToList();
+    }
+
+    private async Task AddPayment()
+    {
+        _newPayment.ColisId = ColisId;
+        _newPayment.ClientId = ClientId;
+        // Création via API
+        var result = await ApiService.CreatePaiementAsync(_newPayment);
+        if (result != null)
+        {
+            _payments.Add(result);
+            _newPayment = new Paiement { DatePaiement = DateTime.Now, ModePaiement = _newPayment.ModePaiement };
+            await OnPaymentsChanged.InvokeAsync(_payments.Sum(p => p.Montant));
+        }
+    }
+
+    private async Task DeletePayment(Paiement p)
+    {
+        var success = await ApiService.DeletePaiementAsync(p.Id);
+        if (success)
+        {
+            _payments.Remove(p);
+            await OnPaymentsChanged.InvokeAsync(_payments.Sum(p => p.Montant));
+        }
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync();
+}

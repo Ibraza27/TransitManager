@@ -52,22 +52,40 @@ namespace TransitManager.WPF.ViewModels
             Items.CollectionChanged += (s, e) => UpdateTotals();
         }
 
-        public async Task InitializeAsync(Guid colisId, Guid clientId, decimal prixTotalColis)
-        {
-            _colisId = colisId;
-            _clientId = clientId;
-            PrixTotalColis = prixTotalColis;
-            
-            var existingPaiements = await _paiementService.GetByColisAsync(_colisId);
-            Items.Clear();
-            foreach (var p in existingPaiements)
-            {
-                p.PropertyChanged += OnItemPropertyChanged;
-                Items.Add(p);
-            }
-            ResetNewPaiement();
-            UpdateTotals();
-        }
+		private bool _isInitializing = false;
+
+		public async Task InitializeAsync(Guid colisId, Guid clientId, decimal prixTotalColis)
+		{
+			_isInitializing = true; // BLOQUER LES NOTIFICATIONS
+
+			_colisId = colisId;
+			_clientId = clientId;
+			PrixTotalColis = prixTotalColis;
+			
+			var existingPaiements = await _paiementService.GetByColisAsync(_colisId);
+			Items.Clear(); // Ceci ne déclenchera plus l'envoi de message "0"
+			
+			foreach (var p in existingPaiements)
+			{
+				p.PropertyChanged += OnItemPropertyChanged;
+				Items.Add(p);
+			}
+			
+			ResetNewPaiement();
+			
+			_isInitializing = false; // DÉBLOQUER
+			UpdateTotals(); // Mettre à jour une bonne fois pour toutes avec les vraies valeurs
+		}
+
+		private void UpdateTotals()
+		{
+			if (_isInitializing) return; // NE RIEN FAIRE SI EN COURS DE CHARGEMENT
+
+			OnPropertyChanged(nameof(TotalPaiements));
+			OnPropertyChanged(nameof(TotalValeur));
+			OnPropertyChanged(nameof(RestantAPayer));
+			_messenger.Send(new EntityTotalPaidUpdatedMessage(_colisId, TotalValeur));
+		}
         
         private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
@@ -77,13 +95,6 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        private void UpdateTotals()
-        {
-            OnPropertyChanged(nameof(TotalPaiements));
-            OnPropertyChanged(nameof(TotalValeur));
-            OnPropertyChanged(nameof(RestantAPayer));
-			_messenger.Send(new EntityTotalPaidUpdatedMessage(_colisId, TotalValeur));
-        }
 
         private bool CanAddItem() => NewPaiement.Montant > 0;
 

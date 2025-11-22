@@ -5,18 +5,18 @@ using System.Linq;
 using TransitManager.Core.Entities;
 using System.Collections.Specialized;
 using System.Collections.Generic;
-using System.Text.Json; // Indispensable
-using System.Text.Json.Serialization; // Indispensable
+using System.Text.Json; 
+using System.Text.Json.Serialization;
 
 namespace TransitManager.WPF.ViewModels
 {
     public class InventaireViewModel : ObservableObject
     {
-        // --- CONFIGURATION JSON STRICTE (Identique au Web/Mobile) ---
+        // Configuration identique au Web pour éviter les conflits
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true,        // Pour lire n'importe quel format
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // Pour ÉCRIRE en camelCase (standard Web)
+            PropertyNameCaseInsensitive = true,        // Lit PascalCase ET camelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // Écrit TOUJOURS en camelCase
             WriteIndented = false
         };
 
@@ -46,36 +46,29 @@ namespace TransitManager.WPF.ViewModels
             LoadItems(inventaireJson);
         }
 
-        // --- MÉTHODE PUBLIQUE POUR RÉCUPÉRER LE JSON FORMATÉ ---
+
+        // MÉTHODE IMPORTANTE : Récupérer le JSON propre
         public string GetJson()
         {
-            // On utilise les options camelCase pour générer le string
             return JsonSerializer.Serialize(Items, _jsonOptions);
         }
 
         private void LoadItems(string? json)
         {
-            foreach(var item in Items) item.PropertyChanged -= OnItemPropertyChanged;
             Items.Clear();
-
             if (!string.IsNullOrEmpty(json) && json != "[]" && json != "null")
             {
                 try
                 {
-                    // On utilise les options pour lire (insensible à la casse)
+                    // Utilise les options pour lire
                     var items = JsonSerializer.Deserialize<List<InventaireItem>>(json, _jsonOptions);
-                    
                     if (items != null)
                     {
-                        foreach (var item in items)
-                        {
-                            Items.Add(item);
-                        }
+                        foreach (var item in items) Items.Add(item);
                     }
                 }
-                catch { /* Ignorer les erreurs de JSON invalide */ }
+                catch { /* Ignorer */ }
             }
-            
             UpdateTotals();
         }
 
@@ -116,7 +109,6 @@ namespace TransitManager.WPF.ViewModels
         private void AddItem()
         {
             Items.Add(NewItem);
-            // Recréer un objet propre
             NewItem = new InventaireItem { Date = System.DateTime.Now }; 
             NewItem.PropertyChanged += (s, e) => AddItemCommand.NotifyCanExecuteChanged();
         }

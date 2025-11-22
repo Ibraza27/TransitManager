@@ -302,12 +302,14 @@ namespace TransitManager.WPF.ViewModels
             });
         }		
 		
+
 		public void Receive(EntityTotalPaidUpdatedMessage message)
 		{
-			// On vérifie si le message concerne bien le colis actuellement affiché.
+			// Ici, Colis est un objet unique, pas une liste.
+			// On vérifie simplement si le message concerne CE colis.
 			if (Colis != null && Colis.Id == message.EntityId)
 			{
-				// On met à jour la propriété SommePayee, ce qui mettra à jour l'UI en temps réel.
+				// On met à jour la propriété directement
 				Colis.SommePayee = message.NewTotalPaid;
 			}
 		}
@@ -340,6 +342,8 @@ namespace TransitManager.WPF.ViewModels
 				// (Ceci est géré par le setter de SommePayee si vous avez mis SetProperty, sinon :)
 				SaveCommand.NotifyCanExecuteChanged();
 			}
+			
+			_messenger.Send(new EntityTotalPaidUpdatedMessage(Colis.Id, Colis.SommePayee));
 		}
 
 		private async Task CheckPaiementModification()
@@ -581,7 +585,7 @@ namespace TransitManager.WPF.ViewModels
 		{
 			if (Colis == null) return;
 			
-			// On passe le JSON actuel
+			// On charge avec le JSON existant
 			var inventaireViewModel = new InventaireViewModel(Colis.InventaireJson);
 			
 			var inventaireWindow = new Views.Inventaire.InventaireView(inventaireViewModel)
@@ -591,16 +595,34 @@ namespace TransitManager.WPF.ViewModels
 
 			if (inventaireWindow.ShowDialog() == true)
 			{
-				// CORRECTION : Utiliser GetJson() qui force le format camelCase
-				Colis.InventaireJson = inventaireViewModel.GetJson();
+				// 1. Récupérer le JSON au format camelCase
+				var jsonClean = inventaireViewModel.GetJson();
 				
+				// 2. Mettre à jour l'objet local
+				Colis.InventaireJson = jsonClean;
 				Colis.NombrePieces = inventaireViewModel.TotalQuantite;
 				Colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
-				
-				// Cette méthode utilise aussi la sérialisation camelCase dans le DTO si vous l'avez configuré
-				// Mais ici on a modifié directement l'objet Colis, ce qui est correct.
-				
 				OnPropertyChanged(nameof(HasInventaire));
+
+				// 3. Sauvegarder IMMÉDIATEMENT en base via le DTO spécial
+				// Cela évite d'attendre le "Enregistrer" global et corrige la synchro
+				var updateDto = new UpdateInventaireDto
+				{
+					ColisId = Colis.Id,
+					InventaireJson = jsonClean,
+					TotalPieces = Colis.NombrePieces,
+					TotalValeurDeclaree = Colis.ValeurDeclaree
+				};
+
+				try 
+				{
+					await _colisService.UpdateInventaireAsync(updateDto);
+					// Pas de message de succès intrusif ici, c'est une sous-fenêtre
+				}
+				catch (Exception ex)
+				{
+					await _dialogService.ShowErrorAsync("Erreur", "Impossible de sauvegarder l'inventaire : " + ex.Message);
+				}
 			}
 		}
 

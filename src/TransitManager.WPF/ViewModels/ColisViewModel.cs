@@ -269,7 +269,9 @@ namespace TransitManager.WPF.ViewModels
         {
             if (colis == null) return;
 
+            // On charge avec le JSON existant
             var inventaireViewModel = new InventaireViewModel(colis.InventaireJson);
+            
             var inventaireWindow = new Views.Inventaire.InventaireView(inventaireViewModel)
             {
                 Owner = System.Windows.Application.Current.MainWindow
@@ -277,10 +279,14 @@ namespace TransitManager.WPF.ViewModels
 
             if (inventaireWindow.ShowDialog() == true)
             {
-                colis.InventaireJson = JsonSerializer.Serialize(inventaireViewModel.Items);
+                // --- CORRECTION : Utiliser GetJson() qui force le CamelCase ---
+                colis.InventaireJson = inventaireViewModel.GetJson();
+                // --------------------------------------------------------------
+
                 colis.NombrePieces = inventaireViewModel.TotalQuantite;
                 colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
 
+                // Création du DTO pour la mise à jour en base
                 var dto = new UpdateColisDto
                 {
                     Id = colis.Id,
@@ -288,9 +294,9 @@ namespace TransitManager.WPF.ViewModels
                     Designation = colis.Designation,
                     DestinationFinale = colis.DestinationFinale,
                     Barcodes = colis.Barcodes.Select(b => b.Value).ToList(),
-                    NombrePieces = colis.NombrePieces, // Mis à jour
+                    NombrePieces = colis.NombrePieces,
                     Volume = colis.Volume,
-                    ValeurDeclaree = colis.ValeurDeclaree, // Mis à jour
+                    ValeurDeclaree = colis.ValeurDeclaree,
                     PrixTotal = colis.PrixTotal,
                     SommePayee = colis.SommePayee,
                     Destinataire = colis.Destinataire,
@@ -304,13 +310,14 @@ namespace TransitManager.WPF.ViewModels
                     TypeEnvoi = colis.TypeEnvoi,
                     ConteneurId = colis.ConteneurId,
                     Statut = colis.Statut,
-                    InventaireJson = colis.InventaireJson // Mis à jour
+                    InventaireJson = colis.InventaireJson // Cette propriété contient maintenant le bon JSON camelCase
                 };
 
                 await _colisService.UpdateAsync(colis.Id, dto);
                 await LoadColisAsync();
             }
         }
+		
         public async void Receive(ClientUpdatedMessage message)
         {
             await LoadFilterDataAsync();

@@ -18,9 +18,12 @@ namespace TransitManager.WPF.ViewModels
     {
         private readonly IPaiementService _paiementService;
         private readonly IDialogService _dialogService;
-		private readonly IMessenger _messenger;
+        private readonly IMessenger _messenger;
         private Guid _clientId;
         private Guid _vehiculeId;
+
+        // --- AJOUT : Drapeau d'initialisation ---
+        private bool _isInitializing = false;
 
         private Paiement _newPaiement = new();
         public ObservableCollection<Paiement> Items { get; } = new();
@@ -42,7 +45,7 @@ namespace TransitManager.WPF.ViewModels
         {
             _paiementService = paiementService;
             _dialogService = dialogService;
-			_messenger = messenger;
+            _messenger = messenger;
             Title = "Détails des Paiements du Véhicule";
 
             AddItemCommand = new AsyncRelayCommand(AddItem, CanAddItem);
@@ -55,19 +58,28 @@ namespace TransitManager.WPF.ViewModels
 
         public async Task InitializeAsync(Guid vehiculeId, Guid clientId, decimal prixTotalVehicule)
         {
+            // --- DÉBUT MODIFICATION ---
+            _isInitializing = true; // Bloque les notifications
+
             _vehiculeId = vehiculeId;
             _clientId = clientId;
             PrixTotalVehicule = prixTotalVehicule;
             
             var existingPaiements = await _paiementService.GetByVehiculeAsync(_vehiculeId);
-            Items.Clear();
+            
+            Items.Clear(); // Ne déclenchera pas l'envoi de message "0" grâce au drapeau
+            
             foreach (var p in existingPaiements)
             {
                 p.PropertyChanged += OnItemPropertyChanged;
                 Items.Add(p);
             }
+            
             ResetNewPaiement();
-            UpdateTotals();
+
+            _isInitializing = false; // Débloque les notifications
+            UpdateTotals(); // Force une mise à jour finale avec les vraies valeurs
+            // --- FIN MODIFICATION ---
         }
 
         private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -77,10 +89,13 @@ namespace TransitManager.WPF.ViewModels
 
         private void UpdateTotals()
         {
+            // --- AJOUT : Garde de sécurité ---
+            if (_isInitializing) return; 
+
             OnPropertyChanged(nameof(TotalPaiements));
             OnPropertyChanged(nameof(TotalValeur));
             OnPropertyChanged(nameof(RestantAPayer));
-			_messenger.Send(new EntityTotalPaidUpdatedMessage(_vehiculeId, TotalValeur));
+            _messenger.Send(new EntityTotalPaidUpdatedMessage(_vehiculeId, TotalValeur));
         }
 
         private bool CanAddItem() => NewPaiement.Montant > 0;

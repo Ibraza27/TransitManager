@@ -9,6 +9,5 @@ namespace TransitManager.Core.DTOs
         // --- AJOUTS ---
         public StatutColis Statut { get; set; }
         public decimal SommePayee { get; set; }
-        public string? InventaireJson { get; set; }
     }
 }

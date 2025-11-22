@@ -33,21 +33,25 @@ namespace TransitManager.Infrastructure.Services
             _clientService = clientService;
         }
 
-        public async Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == colisId);
-            if (colis != null)
-            {
-                var validStatuses = new[] { StatutPaiement.Paye, StatutPaiement.Valide };
-                var totalPaye = await context.Paiements
-                    .Where(p => p.ColisId == colisId && p.Actif && validStatuses.Contains(p.Statut))
-                    .SumAsync(p => p.Montant);
-                colis.SommePayee = totalPaye;
-                await context.SaveChangesAsync();
-                await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
-            }
-        }
+
+		public async Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			var colis = await context.Colis.FindAsync(colisId);
+			if (colis != null)
+			{
+				// Calculer la somme des paiements VALIDES ou PAYÉS
+				var totalPaye = await context.Paiements
+					.Where(p => p.ColisId == colisId && p.Actif && 
+							   (p.Statut == StatutPaiement.Paye || p.Statut == StatutPaiement.Valide))
+					.SumAsync(p => p.Montant);
+
+				colis.SommePayee = totalPaye;
+				
+				// Sauvegarder la nouvelle somme dans la table Colis
+				await context.SaveChangesAsync();
+			}
+		}
 
         public async Task<Colis> CreateAsync(CreateColisDto colisDto)
         {
@@ -163,19 +167,31 @@ namespace TransitManager.Infrastructure.Services
             }
         }
 
-        public async Task UpdateInventaireAsync(UpdateInventaireDto dto)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == dto.ColisId);
-            if (colis != null)
-            {
-                colis.InventaireJson = dto.InventaireJson;
-                colis.NombrePieces = dto.TotalPieces;
-                colis.ValeurDeclaree = dto.TotalValeurDeclaree;
-                await context.SaveChangesAsync();
-                await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
-            }
-        }
+		public async Task UpdateInventaireAsync(UpdateInventaireDto dto)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == dto.ColisId);
+			
+			if (colis != null)
+			{
+				// 1. Mise à jour des données
+				colis.InventaireJson = dto.InventaireJson;
+				
+				// On s'assure d'utiliser les valeurs envoyées par le client qui a fait le calcul
+				// (Ou on pourrait désérialiser le JSON ici pour recalculer côté serveur pour plus de sécurité)
+				colis.NombrePieces = dto.TotalPieces;
+				colis.ValeurDeclaree = dto.TotalValeurDeclaree;
+				
+				// 2. Marquer l'entité comme modifiée
+				context.Colis.Update(colis);
+				
+				// 3. Sauvegarder
+				await context.SaveChangesAsync();
+				
+				// 4. Mettre à jour les stats du client parent (facultatif mais conseillé)
+				await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
+			}
+		}
 
         public async Task<bool> AssignToConteneurAsync(Guid colisId, Guid conteneurId)
         {

@@ -341,4 +341,10 @@
         // On active la navigation vers la page d'édition avec l'ID
         Navigation.NavigateTo($"/colis/edit/{id}");
     }
+	
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadParcels();
+    }
+	
 }

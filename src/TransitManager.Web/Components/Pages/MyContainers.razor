@@ -1,0 +1,223 @@
+@page "/my-containers"
+@using TransitManager.Core.Entities
+@using TransitManager.Core.Enums
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+
+<PageTitle>Conteneurs - Hippocampe</PageTitle>
+
+<div class="container-fluid mt-4">
+    
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-primary fw-bold"><i class="bi bi-box-seam-fill me-2"></i>Conteneurs</h2>
+            <p class="text-muted mb-0">Suivi des dossiers d'expédition.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <AuthorizeView Roles="Administrateur">
+                <Authorized>
+                    <button class="btn btn-success" @onclick="CreateContainer">
+                        <i class="bi bi-plus-lg me-2"></i>Nouveau Conteneur
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+            <button class="btn btn-outline-primary" @onclick="LoadContainers">
+                <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body bg-light">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-muted">RECHERCHE</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" 
+                               placeholder="N° Dossier, Plomb, Compagnie, Destination..." 
+                               @bind="SearchTerm" @bind:event="oninput" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">STATUT</label>
+                    <select class="form-select" @bind="SelectedStatus">
+                        <option value="">Tous les statuts</option>
+                        @foreach (var s in Enum.GetValues<StatutConteneur>())
+                        {
+                            <option value="@s">@s</option>
+                        }
+                    </select>
+                </div>
+                 <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-secondary w-100" @onclick="ResetFilters">
+                        <i class="bi bi-x-lg me-2"></i> Effacer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="min-width: 1400px;">
+                <thead class="bg-light text-secondary">
+                    <tr>
+                        <th class="ps-4">N° Dossier</th>
+                        <th>Statut</th>
+                        <th>Destination</th>
+                        <th>Plomb</th>
+                        <th>Compagnie</th>
+                        <th>Transitaire</th>
+                        <th class="text-center">Réception</th>
+                        <th class="text-center">Chargement</th>
+                        <th class="text-center">Départ</th>
+                        <th class="text-center">Arrivée</th>
+                        <th class="text-center">Clôture</th>
+                        <th>Commentaire</th>
+                        <th class="text-end pe-4" style="min-width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (FilteredContainers.Any())
+                    {
+                        @foreach (var c in FilteredContainers)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary font-monospace">@c.NumeroDossier</td>
+                                <td>
+                                    <span class="badge rounded-pill @GetStatusBadgeClass(c.Statut)">@c.Statut</span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">@c.Destination</div>
+                                    <small class="text-muted">@c.PaysDestination</small>
+                                </td>
+                                <td class="font-monospace small">@(c.NumeroPlomb ?? "-")</td>
+                                <td>@(c.NomCompagnie ?? "-")</td>
+                                <td>@(c.NomTransitaire ?? "-")</td>
+                                
+                                <!-- Dates -->
+                                <td class="text-center small">@(c.DateReception?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                <td class="text-center small">@(c.DateChargement?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                <td class="text-center small">@(c.DateDepart?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                <td class="text-center small">@(c.DateArriveeDestination?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                <td class="text-center small">@(c.DateCloture?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                
+                                <td class="text-truncate" style="max-width: 150px;" title="@c.Commentaires">
+                                    <small class="text-muted">@c.Commentaires</small>
+                                </td>
+
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <!-- Bouton Modifier/Voir (Accessible à tous, la vue détail gérera le ReadOnly) -->
+                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewContainer(c.Id)" title="Détails">
+                                            ✏️
+                                        </button>
+
+                                        <!-- Bouton Supprimer (Admin seulement) -->
+                                        <AuthorizeView Roles="Administrateur">
+                                            <Authorized>
+                                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteContainer(c)" title="Supprimer">
+                                                    🗑️
+                                                </button>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="13" class="text-center py-5 text-muted">Aucun conteneur trouvé.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IEnumerable<Conteneur> _allContainers = new List<Conteneur>();
+    private string SearchTerm { get; set; } = "";
+    private StatutConteneur? SelectedStatus { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await LoadContainers();
+    }
+
+    private async Task LoadContainers()
+    {
+        var result = await ApiService.GetMyConteneursAsync();
+        if (result != null)
+        {
+            _allContainers = result;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<Conteneur> FilteredContainers
+    {
+        get
+        {
+            var q = _allContainers;
+
+            if (!string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                var term = SearchTerm.ToLower();
+                q = q.Where(c => 
+                    c.NumeroDossier.ToLower().Contains(term) ||
+                    (c.NumeroPlomb?.ToLower().Contains(term) ?? false) ||
+                    (c.NomCompagnie?.ToLower().Contains(term) ?? false) ||
+                    c.Destination.ToLower().Contains(term) ||
+                    (c.NomTransitaire?.ToLower().Contains(term) ?? false)
+                );
+            }
+
+            if (SelectedStatus.HasValue)
+            {
+                q = q.Where(c => c.Statut == SelectedStatus.Value);
+            }
+
+            return q.OrderByDescending(c => c.DateCreation);
+        }
+    }
+
+    private void ResetFilters()
+    {
+        SearchTerm = "";
+        SelectedStatus = null;
+    }
+
+    private void CreateContainer() => Navigation.NavigateTo("/conteneur/create");
+    private void ViewContainer(Guid id) => Navigation.NavigateTo($"/conteneur/detail/{id}");
+
+    private async Task DeleteContainer(Conteneur c)
+    {
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"Supprimer le conteneur {c.NumeroDossier} ?");
+        if (confirm)
+        {
+            // TODO: Ajouter DeleteConteneurAsync dans ApiService
+             await ApiService.DeleteConteneurAsync(c.Id); 
+             await LoadContainers();
+        }
+    }
+
+    private string GetStatusBadgeClass(StatutConteneur s) => s switch
+    {
+        StatutConteneur.Reçu => "bg-info text-dark",
+        StatutConteneur.EnPreparation => "bg-warning text-dark",
+        StatutConteneur.EnTransit => "bg-primary",
+        StatutConteneur.Arrive => "bg-info",
+        StatutConteneur.Livre => "bg-success",
+        StatutConteneur.Cloture => "bg-secondary",
+        StatutConteneur.Probleme => "bg-danger",
+        _ => "bg-light text-dark border"
+    };
+}

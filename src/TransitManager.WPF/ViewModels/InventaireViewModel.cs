@@ -6,17 +6,17 @@ using TransitManager.Core.Entities;
 using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Text.Json; 
-using System.Text.Json.Serialization;
+using System.Text.Json.Serialization; // Indispensable
 
 namespace TransitManager.WPF.ViewModels
 {
     public class InventaireViewModel : ObservableObject
     {
-        // Configuration identique au Web pour éviter les conflits
+        // --- CONFIGURATION STRICTE (Identique au Web/Mobile) ---
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true,        // Lit PascalCase ET camelCase
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // Écrit TOUJOURS en camelCase
+            PropertyNameCaseInsensitive = true,        // Lit n'importe quel format
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // Écrit en camelCase (Standard Web)
             WriteIndented = false
         };
 
@@ -46,8 +46,7 @@ namespace TransitManager.WPF.ViewModels
             LoadItems(inventaireJson);
         }
 
-
-        // MÉTHODE IMPORTANTE : Récupérer le JSON propre
+        // --- MÉTHODE PUBLIQUE POUR RÉCUPÉRER LE JSON FORMATÉ ---
         public string GetJson()
         {
             return JsonSerializer.Serialize(Items, _jsonOptions);
@@ -55,12 +54,13 @@ namespace TransitManager.WPF.ViewModels
 
         private void LoadItems(string? json)
         {
+            foreach(var item in Items) item.PropertyChanged -= OnItemPropertyChanged;
             Items.Clear();
+
             if (!string.IsNullOrEmpty(json) && json != "[]" && json != "null")
             {
                 try
                 {
-                    // Utilise les options pour lire
                     var items = JsonSerializer.Deserialize<List<InventaireItem>>(json, _jsonOptions);
                     if (items != null)
                     {
@@ -75,15 +75,9 @@ namespace TransitManager.WPF.ViewModels
         private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             if (e.OldItems != null)
-            {
-                foreach (InventaireItem item in e.OldItems)
-                    item.PropertyChanged -= OnItemPropertyChanged;
-            }
+                foreach (InventaireItem item in e.OldItems) item.PropertyChanged -= OnItemPropertyChanged;
             if (e.NewItems != null)
-            {
-                foreach (InventaireItem item in e.NewItems)
-                    item.PropertyChanged += OnItemPropertyChanged;
-            }
+                foreach (InventaireItem item in e.NewItems) item.PropertyChanged += OnItemPropertyChanged;
             UpdateTotals();
         }
 
@@ -101,10 +95,7 @@ namespace TransitManager.WPF.ViewModels
             OnPropertyChanged(nameof(TotalValeur));
         }
 
-        private bool CanAddItem()
-        {
-            return !string.IsNullOrWhiteSpace(NewItem.Designation) && NewItem.Quantite > 0;
-        }
+        private bool CanAddItem() => !string.IsNullOrWhiteSpace(NewItem.Designation) && NewItem.Quantite > 0;
 
         private void AddItem()
         {
@@ -115,10 +106,7 @@ namespace TransitManager.WPF.ViewModels
 
         private void RemoveItem(InventaireItem? item)
         {
-            if (item != null)
-            {
-                Items.Remove(item);
-            }
+            if (item != null) Items.Remove(item);
         }
     }
 }

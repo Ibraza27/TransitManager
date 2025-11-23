@@ -271,5 +271,194 @@ namespace TransitManager.Web.Services
             }
         }
 		
+        public async Task<bool> UpdateInventaireAsync(UpdateInventaireDto dto)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync("api/colis/inventaire", dto);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[ApiService] Erreur UpdateInventaireAsync: {response.StatusCode} - {error}");
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Exception UpdateInventaireAsync: {ex.Message}");
+                return false;
+            }
+        }
+		
+
+		public async Task<bool> DeleteColisAsync(Guid id)
+		{
+			try
+			{
+				var response = await _httpClient.DeleteAsync($"api/colis/{id}");
+				return response.IsSuccessStatusCode;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] Erreur DeleteColisAsync: {ex.Message}");
+				return false;
+			}
+		}
+
+		public async Task<bool> UpdatePaiementAsync(Guid id, Paiement paiement)
+		{
+			try
+			{
+				// On utilise PutAsJsonAsync
+				var response = await _httpClient.PutAsJsonAsync($"api/paiements/{id}", paiement);
+				return response.IsSuccessStatusCode;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] Erreur UpdatePaiementAsync: {ex.Message}");
+				return false;
+			}
+		}
+		
+		
+		public async Task<IEnumerable<VehiculeListItemDto>?> GetVehiculesAsync()
+		{
+			try
+			{
+				// On utilise _jsonOptions pour gérer la sérialisation correctement
+				return await _httpClient.GetFromJsonAsync<IEnumerable<VehiculeListItemDto>>("api/vehicules", _jsonOptions);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] Erreur GetVehiculesAsync: {ex.Message}");
+				return null;
+			}
+		}
+		
+		public async Task<Vehicule> GetVehiculeByIdAsync(Guid id) 
+		{
+			return await _httpClient.GetFromJsonAsync<Vehicule>($"api/vehicules/{id}", _jsonOptions);
+		}
+		
+		public async Task<Client> GetClientByIdAsync(Guid id)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<Client>($"api/clients/{id}", _jsonOptions);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Erreur GetClientByIdAsync: {ex.Message}");
+                throw;
+            }
+        }
+
+		public async Task<bool> UpdateVehiculeAsync(Guid id, Vehicule vehicule)
+		{
+			try
+			{
+				var response = await _httpClient.PutAsJsonAsync($"api/vehicules/{id}", vehicule, _jsonOptions);
+				
+				if (!response.IsSuccessStatusCode)
+				{
+					// --- AJOUT : Lire et afficher l'erreur ---
+					var errorContent = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"[ApiService] ❌ Erreur 400 UpdateVehiculeAsync : {errorContent}");
+					// -----------------------------------------
+					return false;
+				}
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] Erreur UpdateVehiculeAsync: {ex.Message}");
+				return false;
+			}
+		}
+
+		public async Task<bool> CreateVehiculeAsync(Vehicule vehicule)
+		{
+			try
+			{
+				var response = await _httpClient.PostAsJsonAsync("api/vehicules", vehicule, _jsonOptions);
+				
+				if (!response.IsSuccessStatusCode)
+				{
+					// --- AJOUT : Lire et afficher l'erreur ---
+					var errorContent = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"[ApiService] ❌ Erreur 400 CreateVehiculeAsync : {errorContent}");
+					// -----------------------------------------
+					return false;
+				}
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] Erreur CreateVehiculeAsync: {ex.Message}");
+				return false;
+			}
+		}
+
+        public async Task<IEnumerable<Paiement>?> GetPaiementsForVehiculeAsync(Guid vehiculeId)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<IEnumerable<Paiement>>($"api/paiements/vehicule/{vehiculeId}", _jsonOptions);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Erreur GetPaiementsForVehiculeAsync: {ex.Message}");
+                return null;
+            }
+        }
+		
+		public async Task<bool> DeleteVehiculeAsync(Guid id)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/vehicules/{id}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[ApiService] Erreur DeleteVehiculeAsync: {response.StatusCode} - {error}");
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Erreur DeleteVehiculeAsync: {ex.Message}");
+                return false;
+            }
+        }
+		
+		public async Task<IEnumerable<Conteneur>?> GetMyConteneursAsync()
+		{
+			try
+			{
+				return await _httpClient.GetFromJsonAsync<IEnumerable<Conteneur>>("api/conteneurs/mine", _jsonOptions);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] Erreur GetMyConteneursAsync: {ex.Message}");
+				return null;
+			}
+		}
+		
+		public async Task<bool> DeleteConteneurAsync(Guid id)
+		{
+			try
+			{
+				var response = await _httpClient.DeleteAsync($"api/conteneurs/{id}");
+				return response.IsSuccessStatusCode;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Erreur DeleteConteneurAsync: {ex.Message}");
+				return false;
+			}
+		}
+		
     }
 }

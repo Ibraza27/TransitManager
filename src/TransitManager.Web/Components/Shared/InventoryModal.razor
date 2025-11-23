@@ -1,6 +1,5 @@
 @using System.Text.Json
 @using TransitManager.Core.Entities
-
 @if (IsVisible)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
@@ -40,17 +39,16 @@
                                         <input type="date" class="form-control form-control-sm" @bind="_newItem.Date" />
                                     </div>
                                     <div class="col-md-1">
-                                        <button class="btn btn-sm btn-success w-100" @onclick="AddItem" 
+                                        <button class="btn btn-sm btn-success w-100 fw-bold" @onclick="AddItem"
                                                 disabled="@string.IsNullOrWhiteSpace(_newItem.Designation)"
-                                                title="Ajouter / Mettre à jour">
-                                            <i class="bi bi-check-lg"></i>
+                                                title="Ajouter">
+                                            ➕ Ajouter
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     }
-
                     <!-- Tableau -->
                     <div class="table-responsive">
                         <table class="table table-sm table-hover table-bordered mb-0 align-middle">
@@ -73,16 +71,16 @@
                                         <td class="text-center fw-bold">@item.Quantite</td>
                                         <td class="text-end">@item.Valeur.ToString("C2")</td>
                                         <td class="text-end text-primary">@((item.Valeur * item.Quantite).ToString("C2"))</td> <!-- Calcul simple si valeur est unitaire, sinon juste valeur -->
-                                        
+
                                         @if (!IsReadOnly)
                                         {
                                             <td class="text-center">
-                                                <div class="btn-group btn-group-sm">
-                                                    <button class="btn btn-outline-primary border-0" @onclick="() => EditItem(item)" title="Modifier">
-                                                        <i class="bi bi-pencil"></i>
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    <button class="btn btn-outline-primary btn-sm border-0" @onclick="() => EditItem(item)" title="Modifier">
+                                                        ✏️
                                                     </button>
-                                                    <button class="btn btn-outline-danger border-0" @onclick="() => RemoveItem(item)" title="Supprimer">
-                                                        <i class="bi bi-trash"></i>
+                                                    <button class="btn btn-outline-danger btn-sm border-0" @onclick="() => RemoveItem(item)" title="Supprimer">
+                                                        🗑️
                                                     </button>
                                                 </div>
                                             </td>
@@ -119,27 +117,23 @@
         </div>
     </div>
 }
-
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public bool IsReadOnly { get; set; }
     [Parameter] public string? JsonData { get; set; }
     [Parameter] public EventCallback<string> OnSave { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
-
     private List<InventaireItem> _items = new();
     private InventaireItem _newItem = new() { Date = DateTime.Now, Quantite = 1 };
-
     protected override void OnParametersSet()
     {
         if (IsVisible)
         {
             // CORRECTION MAJEURE : JsonSerializerOptions pour éviter d'effacer les données existantes
-            var options = new JsonSerializerOptions 
-            { 
-                PropertyNameCaseInsensitive = true 
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
             };
-
             if (!string.IsNullOrEmpty(JsonData) && JsonData != "[]" && JsonData != "null")
             {
                 try
@@ -147,58 +141,53 @@
                     // On recharge la liste à chaque ouverture pour être sûr d'avoir la version à jour
                     _items = JsonSerializer.Deserialize<List<InventaireItem>>(JsonData, options) ?? new List<InventaireItem>();
                 }
-                catch 
-                { 
-                    _items = new List<InventaireItem>(); 
+                catch
+                {
+                    _items = new List<InventaireItem>();
                 }
             }
             else if (!_items.Any()) // Si pas de JSON, on initialise vide seulement si pas déjà rempli
             {
                 _items = new List<InventaireItem>();
             }
-            
+
             // Reset form
             _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
         }
     }
-
     private void AddItem()
     {
         // On ajoute une copie pour éviter les références liées au formulaire
-        _items.Add(new InventaireItem 
-        { 
-            Designation = _newItem.Designation, 
-            Quantite = _newItem.Quantite, 
-            Valeur = _newItem.Valeur, 
-            Date = _newItem.Date 
+        _items.Add(new InventaireItem
+        {
+            Designation = _newItem.Designation,
+            Quantite = _newItem.Quantite,
+            Valeur = _newItem.Valeur,
+            Date = _newItem.Date
         });
-        
+
         // Reset formulaire
         _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
     }
-
     private void EditItem(InventaireItem item)
     {
         // Pour modifier, on remet les valeurs dans le formulaire et on supprime l'ancienne ligne
         // L'utilisateur devra cliquer sur "Ajouter" (coche verte) pour valider la modif
-        _newItem = new InventaireItem 
-        { 
-            Designation = item.Designation, 
-            Quantite = item.Quantite, 
-            Valeur = item.Valeur, 
-            Date = item.Date 
+        _newItem = new InventaireItem
+        {
+            Designation = item.Designation,
+            Quantite = item.Quantite,
+            Valeur = item.Valeur,
+            Date = item.Date
         };
-        
+
         _items.Remove(item);
     }
-
     private void RemoveItem(InventaireItem item) => _items.Remove(item);
-
     private async Task Save()
     {
         var json = JsonSerializer.Serialize(_items);
         await OnSave.InvokeAsync(json);
     }
-
     private async Task Cancel() => await OnClose.InvokeAsync();
 }

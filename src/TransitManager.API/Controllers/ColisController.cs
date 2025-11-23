@@ -38,39 +38,44 @@ namespace TransitManager.API.Controllers
             }
         }
 
-        // --- GET: api/colis ---
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<ColisListItemDto>>> GetColis()
-        {
-            try
-            {
-                var colisList = await _colisService.GetAllAsync(); // Cette méthode charge déjà les barcodes
-                
-                var colisDtos = colisList.Select(c => new ColisListItemDto
-                {
-                    Id = c.Id,
-                    NumeroReference = c.NumeroReference,
-                    Designation = c.Designation,
-                    Statut = c.Statut,
-                    ClientNomComplet = c.Client?.NomComplet ?? "N/A",
+		// GET: api/colis
+		[HttpGet]
+		public async Task<ActionResult<IEnumerable<ColisListItemDto>>> GetColis()
+		{
+			try
+			{
+				var colisList = await _colisService.GetAllAsync();
+				
+				var colisDtos = colisList.Select(c => new ColisListItemDto
+				{
+					Id = c.Id,
+					NumeroReference = c.NumeroReference,
+					Designation = c.Designation,
+					Statut = c.Statut,
+					ClientNomComplet = c.Client?.NomComplet ?? "N/A",
 					ClientTelephonePrincipal = c.Client?.TelephonePrincipal,
-                    ConteneurNumeroDossier = c.Conteneur?.NumeroDossier,
-                    AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)),
-
-                    // --- DÉBUT DE LA MODIFICATION ---
-                    DestinationFinale = c.DestinationFinale,
-                    DateArrivee = c.DateArrivee
-                    // --- FIN DE LA MODIFICATION ---
-                });
-                
-                return Ok(colisDtos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur lors de la récupération de la liste des colis.");
-                return StatusCode(500, "Une erreur interne est survenue.");
-            }
-        }
+					ConteneurNumeroDossier = c.Conteneur?.NumeroDossier,
+					AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)),
+					DestinationFinale = c.DestinationFinale,
+					DateArrivee = c.DateArrivee,
+					
+					// --- AJOUTS CRUCIAUX ---
+					NombrePieces = c.NombrePieces,
+					PrixTotal = c.PrixTotal,
+					SommePayee = c.SommePayee
+					// -----------------------
+				});
+				
+				return Ok(colisDtos);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Erreur lors de la récupération de la liste des colis.");
+				return StatusCode(500, "Une erreur interne est survenue.");
+			}
+		}
+				
+		
 
         // --- AJOUT : GET api/colis/{id} ---
         [HttpGet("{id}")]

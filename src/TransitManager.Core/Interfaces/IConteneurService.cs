@@ -30,5 +30,6 @@ namespace TransitManager.Core.Interfaces
 		Task<IEnumerable<string>> GetAllDestinationsAsync();
 		Task<IEnumerable<Conteneur>> GetOpenConteneursAsync();
 		Task RecalculateStatusAsync(Guid conteneurId);
+		Task<IEnumerable<Conteneur>> GetByClientIdAsync(Guid clientId);
     }
 }

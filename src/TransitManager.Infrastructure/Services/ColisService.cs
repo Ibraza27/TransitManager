@@ -48,8 +48,8 @@ namespace TransitManager.Infrastructure.Services
 
 				colis.SommePayee = totalPaye;
 				
-				// Sauvegarder la nouvelle somme dans la table Colis
-				await context.SaveChangesAsync();
+				// CRUCIAL : On doit sauvegarder ici
+				await context.SaveChangesAsync(); 
 			}
 		}
 
@@ -107,11 +107,13 @@ namespace TransitManager.Infrastructure.Services
                 colisInDb.ClientId = colisDto.ClientId;
                 colisInDb.Designation = colisDto.Designation;
                 colisInDb.DestinationFinale = colisDto.DestinationFinale;
-                colisInDb.NombrePieces = colisDto.NombrePieces;
-                colisInDb.Volume = colisDto.Volume;
-                colisInDb.ValeurDeclaree = colisDto.ValeurDeclaree;
+				if (string.IsNullOrEmpty(colisInDb.InventaireJson) || colisInDb.InventaireJson == "[]")
+				{
+					 colisInDb.NombrePieces = colisDto.NombrePieces;
+					 colisInDb.Volume = colisDto.Volume;
+					 colisInDb.ValeurDeclaree = colisDto.ValeurDeclaree;
+				}
                 colisInDb.PrixTotal = colisDto.PrixTotal;
-                colisInDb.SommePayee = colisDto.SommePayee;
                 colisInDb.Destinataire = colisDto.Destinataire;
                 colisInDb.TelephoneDestinataire = colisDto.TelephoneDestinataire;
                 colisInDb.LivraisonADomicile = colisDto.LivraisonADomicile;
@@ -123,7 +125,6 @@ namespace TransitManager.Infrastructure.Services
                 colisInDb.TypeEnvoi = colisDto.TypeEnvoi;
                 colisInDb.ConteneurId = colisDto.ConteneurId;
                 colisInDb.Statut = colisDto.Statut;
-                colisInDb.InventaireJson = colisDto.InventaireJson;
 
                 context.Update(colisInDb);
 

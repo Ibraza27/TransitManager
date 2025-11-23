@@ -1,18 +1,31 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">TransitManager</a>
+        <a class="navbar-brand" href="">TRANSIT MANAGER</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
     </div>
 </div>
+
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    
+    <!-- SECTION LOGO ET MARQUE (Style WPF) -->
+    <div class="text-center py-4 mb-2" style="background-color: rgba(0,0,0,0.2);">
+        <img src="images/logo.jpg" alt="Logo" 
+             class="img-fluid rounded mb-2 shadow-sm" 
+             style="max-height: 100px; border: 2px solid white;" />
+        
+        <h5 class="text-white fw-bold mb-0" style="letter-spacing: 1px;">HIPPOCAMPE</h5>
+        <small class="text-white-50 text-uppercase" style="font-size: 0.7rem;">Import-Export</small>
+    </div>
+
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill" aria-hidden="true"></span> Accueil
             </NavLink>
         </div>
+
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
@@ -20,18 +33,26 @@
                         <span class="bi bi-person-circle" aria-hidden="true"></span> Mon Profil
                     </NavLink>
                 </div>
-            </Authorized>
-        </AuthorizeView>	
-		<AuthorizeView>
-            <Authorized>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="my-parcels">
                         <span class="bi bi-box-seam-fill" aria-hidden="true"></span> Mes Colis
                     </NavLink>
                 </div>
-                <!-- (Le lien profil est ici) -->
+                
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="my-vehicles">
+                        <span class="bi bi-car-front-fill" aria-hidden="true"></span> Mes Véhicules
+                    </NavLink>
+                </div>				
+				<div class="nav-item px-3">
+					<NavLink class="nav-link" href="my-containers">
+						<span class="bi bi-box-fill" aria-hidden="true"></span> Conteneurs
+					</NavLink>
+				</div>								
             </Authorized>
-        </AuthorizeView>			
+        </AuthorizeView>
+        
         <AuthorizeView Roles="Administrateur">
             <Authorized>
                 <div class="nav-item px-3">
@@ -43,9 +64,11 @@
         </AuthorizeView>
     </nav>
 </div>
+
 @code {
     private bool collapseNavMenu = true;
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;

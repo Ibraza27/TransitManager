@@ -40,51 +40,87 @@ namespace TransitManager.Infrastructure.Services
             return vehicule;
         }
 
-        public async Task<Vehicule> UpdateAsync(Vehicule vehicule)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var vehiculeInDb = await context.Vehicules.FindAsync(vehicule.Id);
-            if (vehiculeInDb == null)
-            {
-                throw new InvalidOperationException("Le véhicule que vous essayez de modifier n'existe plus.");
-            }
-            var originalConteneurId = vehiculeInDb.ConteneurId;
-            if (vehicule.Statut == StatutVehicule.Retourne)
-            {
-                vehicule.ConteneurId = null;
-            }
-            context.Entry(vehiculeInDb).CurrentValues.SetValues(vehicule);
-            vehiculeInDb.ClientId = vehicule.ClientId;
-            vehiculeInDb.ConteneurId = vehicule.ConteneurId;
-            context.Entry(vehiculeInDb).Property("RowVersion").OriginalValue = vehicule.RowVersion;
-            try
-            {
-                await context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                var entry = ex.Entries.Single();
-                var databaseValues = await entry.GetDatabaseValuesAsync();
-                if (databaseValues == null)
-                {
-                    throw new ConcurrencyException("Ce véhicule a été supprimé par un autre utilisateur.");
-                }
-                else
-                {
-                    throw new ConcurrencyException("Ce véhicule a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
-                }
-            }
-            await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehiculeInDb.ClientId);
-            if (originalConteneurId.HasValue)
-            {
-                await _conteneurService.RecalculateStatusAsync(originalConteneurId.Value);
-            }
-            if (vehiculeInDb.ConteneurId.HasValue && vehiculeInDb.ConteneurId != originalConteneurId)
-            {
-                await _conteneurService.RecalculateStatusAsync(vehiculeInDb.ConteneurId.Value);
-            }
-            return vehiculeInDb;
-        }
+		public async Task<Vehicule> UpdateAsync(Vehicule vehicule)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			var vehiculeInDb = await context.Vehicules.FindAsync(vehicule.Id);
+
+			if (vehiculeInDb == null)
+			{
+				throw new InvalidOperationException("Le véhicule que vous essayez de modifier n'existe plus.");
+			}
+
+			var originalConteneurId = vehiculeInDb.ConteneurId;
+
+			// Mappage des propriétés modifiables par l'utilisateur
+			vehiculeInDb.Immatriculation = vehicule.Immatriculation;
+			vehiculeInDb.Marque = vehicule.Marque;
+			vehiculeInDb.Modele = vehicule.Modele;
+			vehiculeInDb.Annee = vehicule.Annee;
+			vehiculeInDb.Kilometrage = vehicule.Kilometrage;
+			vehiculeInDb.DestinationFinale = vehicule.DestinationFinale;
+			vehiculeInDb.Destinataire = vehicule.Destinataire;
+			vehiculeInDb.TelephoneDestinataire = vehicule.TelephoneDestinataire;
+			vehiculeInDb.Type = vehicule.Type;
+			vehiculeInDb.Commentaires = vehicule.Commentaires;
+			vehiculeInDb.Statut = vehicule.Statut;
+			vehiculeInDb.ConteneurId = vehicule.ConteneurId;
+
+			// Protection des données critiques
+			if (!string.IsNullOrEmpty(vehicule.EtatDesLieux))
+			{
+				vehiculeInDb.EtatDesLieux = vehicule.EtatDesLieux;
+			}
+			if (!string.IsNullOrEmpty(vehicule.EtatDesLieuxRayures))
+			{
+				vehiculeInDb.EtatDesLieuxRayures = vehicule.EtatDesLieuxRayures;
+			}
+
+			// Mise à jour des données financières seulement si elles sont non nulles ou non vides
+			if (vehicule.PrixTotal > 0)
+			{
+				vehiculeInDb.PrixTotal = vehicule.PrixTotal;
+			}
+			if (vehicule.ValeurDeclaree > 0)
+			{
+				vehiculeInDb.ValeurDeclaree = vehicule.ValeurDeclaree;
+			}
+
+			// Gestion de RowVersion pour la concurrency
+			context.Entry(vehiculeInDb).Property("RowVersion").OriginalValue = vehicule.RowVersion;
+
+			try
+			{
+				await context.SaveChangesAsync();
+			}
+			catch (DbUpdateConcurrencyException ex)
+			{
+				var entry = ex.Entries.Single();
+				var databaseValues = await entry.GetDatabaseValuesAsync();
+				if (databaseValues == null)
+				{
+					throw new ConcurrencyException("Ce véhicule a été supprimé par un autre utilisateur.");
+				}
+				else
+				{
+					throw new ConcurrencyException("Ce véhicule a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
+				}
+			}
+
+			// Appels aux services externes
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehiculeInDb.ClientId);
+			if (originalConteneurId.HasValue)
+			{
+				await _conteneurService.RecalculateStatusAsync(originalConteneurId.Value);
+			}
+			if (vehiculeInDb.ConteneurId.HasValue && vehiculeInDb.ConteneurId != originalConteneurId)
+			{
+				await _conteneurService.RecalculateStatusAsync(vehiculeInDb.ConteneurId.Value);
+			}
+
+			return vehiculeInDb;
+		}
+
 
         public async Task<bool> AssignToConteneurAsync(Guid vehiculeId, Guid conteneurId)
         {

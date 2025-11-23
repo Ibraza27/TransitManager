@@ -128,5 +128,49 @@ namespace TransitManager.API.Controllers
                 return StatusCode(500, "Une erreur interne est survenue.");
             }
         }
+		
+		// GET: api/conteneurs/mine
+		[HttpGet("mine")]
+		public async Task<ActionResult<IEnumerable<Conteneur>>> GetMyConteneurs()
+		{
+			try
+			{
+				var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+				if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId)) 
+					return Unauthorized();
+
+				var roleClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Role);
+				bool isAdmin = roleClaim != null && roleClaim.Value == "Administrateur";
+
+				if (isAdmin)
+				{
+					// Admin : Tout voir
+					return Ok(await _conteneurService.GetAllAsync());
+				}
+				else
+				{
+					// Client : Voir seulement les siens
+					// On récupère d'abord l'ID du client lié au user
+					// Note: Idéalement injecter IUserService, mais on peut le faire via le contexte si nécessaire
+					// Ici on suppose que le service Conteneur ne gère pas les users.
+					// Utilisons une méthode simple : User -> ClientId via User Service ou Claims si ajouté.
+					
+					// Si vous avez ajouté le Claim "client_id" lors du login (ce qu'on a fait précédemment) :
+					var clientIdClaim = User.FindFirst("client_id");
+					if (clientIdClaim != null && Guid.TryParse(clientIdClaim.Value, out var clientId))
+					{
+						return Ok(await _conteneurService.GetByClientIdAsync(clientId));
+					}
+					
+					return Ok(new List<Conteneur>()); // Pas de client lié = pas de conteneur
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Erreur GetMyConteneurs");
+				return StatusCode(500, "Erreur interne");
+			}
+		}
+		
     }
 }

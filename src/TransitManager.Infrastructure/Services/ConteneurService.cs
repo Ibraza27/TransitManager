@@ -291,5 +291,25 @@ namespace TransitManager.Infrastructure.Services
         public Task<bool> CanAddColisAsync(Guid conteneurId, Guid colisId) => throw new NotImplementedException();
 
         public Task<decimal> CalculateProfitabilityAsync(Guid conteneurId) => throw new NotImplementedException();
+		
+		public async Task<IEnumerable<Conteneur>> GetByClientIdAsync(Guid clientId)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			// On récupère les conteneurs où :
+			// - Soit il y a un colis appartenant au client
+			// - Soit il y a un véhicule appartenant au client
+			return await context.Conteneurs
+				.Include(c => c.Colis)
+				.Include(c => c.Vehicules)
+				.Where(c => c.Actif && (
+					c.Colis.Any(col => col.ClientId == clientId && col.Actif) || 
+					c.Vehicules.Any(v => v.ClientId == clientId && v.Actif)
+				))
+				.OrderByDescending(c => c.DateCreation)
+				.AsNoTracking()
+				.ToListAsync();
+		}
+		
     }
 }

@@ -414,36 +414,52 @@
 
     // Gestion Modals
     private void ShowInventory() => _showInventory = true;
-	private void SaveInventory(string json)
-    {
-        _colis.InventaireJson = json;
-        _showInventory = false;
+	private async Task SaveInventory(string json)
+	{
+		_colis.InventaireJson = json;
+		_showInventory = false;
 
-        // --- AJOUT : Calcul automatique des totaux ---
-        if (!string.IsNullOrEmpty(json))
-        {
-            try
-            {
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var items = JsonSerializer.Deserialize<List<InventaireItem>>(json, options);
+		if (!string.IsNullOrEmpty(json))
+		{
+			try
+			{
+				// Important : Options camelCase ici aussi
+				var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+				var items = JsonSerializer.Deserialize<List<InventaireItem>>(json, options);
 
-                if (items != null && items.Any())
-                {
-                    // Mise à jour des champs du colis
-                    _colis.NombrePieces = items.Sum(i => i.Quantite);
-                    
-                    // On suppose que la "Valeur" dans l'inventaire est la valeur totale de la ligne
-                    // Si votre logique métier est "Valeur Unitaire", faites : Sum(i => i.Quantite * i.Valeur)
-                    // Ici on fait une somme simple des valeurs déclarées par ligne
-                    _colis.ValeurDeclaree = items.Sum(i => i.Valeur);
-                }
-            }
-            catch 
-            { 
-                // Ignorer si erreur de calcul, on garde les anciennes valeurs
-            }
-        }
-    }
+				if (items != null && items.Any())
+				{
+					_colis.NombrePieces = items.Sum(i => i.Quantite);
+					// CORRECTION DU CALCUL (Total = Somme(Valeur * Quantité) si Valeur est unitaire)
+					// Si Valeur est déjà le total de la ligne, laissez Sum(Valeur)
+					_colis.ValeurDeclaree = items.Sum(i => i.Valeur); 
+				}
+				
+                var inventaireDto = new UpdateInventaireDto
+				{
+					ColisId = _colis.Id,
+					InventaireJson = _colis.InventaireJson,
+					TotalPieces = _colis.NombrePieces,
+					TotalValeurDeclaree = _colis.ValeurDeclaree
+				};
+				
+				// C'est cet appel qui va réellement sauvegarder l'inventaire maintenant
+                await ApiService.UpdateInventaireAsync(inventaireDto);
+				
+			}
+			catch { }
+		}
+
+		// SAUVEGARDE EN BASE
+		var dto = new UpdateInventaireDto 
+		{ 
+			ColisId = _colis.Id, 
+			InventaireJson = _colis.InventaireJson,
+			TotalPieces = _colis.NombrePieces,
+			TotalValeurDeclaree = _colis.ValeurDeclaree
+		};
+		await ApiService.UpdateInventaireAsync(dto);
+	}
 
     private void ShowPayments() => _showPayments = true;
     private void UpdatePaidAmount(decimal totalPaid)

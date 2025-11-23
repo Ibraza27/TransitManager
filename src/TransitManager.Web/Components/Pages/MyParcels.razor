@@ -4,9 +4,7 @@
 @inject IApiService ApiService
 @inject NavigationManager Navigation
 @attribute [Authorize]
-
 <PageTitle>Mes Colis - Hippocampe Import-Export</PageTitle>
-
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -23,7 +21,6 @@
             </button>
         </div>
     </div>
-
     @if (_isLoading)
     {
         <div class="text-center py-5">
@@ -57,16 +54,18 @@
                             }
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-bold text-muted">CONTENEUR</label>
-                        <select class="form-select" @bind="SelectedContainer">
-                            <option value="">Tous les conteneurs</option>
-                            @foreach (var container in _containers)
-                            {
-                                <option value="@container">@container</option>
-                            }
-                        </select>
-                    </div>
+					<div class="col-md-3">
+						<label class="form-label small fw-bold text-muted">CONTENEUR</label>
+						<input list="conteneursListColis" class="form-control" 
+							   placeholder="Taper pour chercher..." 
+							   @bind="SelectedContainerSearch" @bind:event="oninput"/>
+						<datalist id="conteneursListColis">
+							@foreach (var container in _containers)
+							{
+								<option value="@container" />
+							}
+						</datalist>
+					</div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button class="btn btn-secondary w-100" @onclick="ResetFilters">
                             <i class="bi bi-x-lg me-1"></i> Effacer
@@ -75,7 +74,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Tableau -->
         <div class="card shadow-sm border-0">
             <div class="table-responsive">
@@ -94,7 +92,7 @@
                             <th scope="col" class="text-end">Restant</th>
                             <th scope="col" class="text-center">Statut</th>
                             <!-- COLONNE ACTIONS -->
-                            <th scope="col" class="text-end pe-4">Actions</th>
+                            <th scope="col" class="text-end pe-4" style="min-width: 120px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -159,11 +157,20 @@
                                         }
                                     </td>
                                     <!-- BOUTON ÉDITER -->
-                                    <td class="text-end pe-4">
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditParcel(colis.Id)" title="Modifier">
-                                            <i class="bi bi-pencil-fill"></i>
-                                        </button>
-                                    </td>
+									<td class="text-end pe-4">
+										<div class="d-flex justify-content-end gap-2">
+											<button class="btn btn-outline-primary btn-sm" @onclick="() => EditParcel(colis.Id)" title="Modifier">
+												✏️
+											</button>
+											<AuthorizeView Roles="Administrateur">
+												<Authorized>
+													<button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteParcel(colis)" title="Supprimer">
+														🗑️
+													</button>
+												</Authorized>
+											</AuthorizeView>
+										</div>
+									</td>
                                 </tr>
                             }
                         }
@@ -196,7 +203,6 @@
         </div>
     }
 </div>
-
 <style>
     /* Style personnalisé pour les lignes en retard */
     .row-retard {
@@ -210,44 +216,38 @@
         background-color: #ffe0e3 !important;
     }
 </style>
-
 @code {
     private IEnumerable<ColisListItemDto> _allParcels = new List<ColisListItemDto>();
     private bool _isLoading = true;
     private CultureInfo _culture = CultureInfo.GetCultureInfo("fr-FR");
     private List<string> _containers = new();
-
     private string _searchTerm = "";
-    public string SearchTerm 
-    { 
-        get => _searchTerm; 
+    public string SearchTerm
+    {
+        get => _searchTerm;
         set { _searchTerm = value; StateHasChanged(); }
     }
-
     private StatutColis? _selectedStatus;
     public StatutColis? SelectedStatus
     {
         get => _selectedStatus;
         set { _selectedStatus = value; StateHasChanged(); }
     }
-
     private string _selectedContainer = "";
     public string SelectedContainer
     {
         get => _selectedContainer;
         set { _selectedContainer = value; StateHasChanged(); }
     }
-
     private IEnumerable<ColisListItemDto> FilteredParcels
     {
         get
         {
             var query = _allParcels;
-
             if (!string.IsNullOrWhiteSpace(SearchTerm))
             {
                 var lowerTerm = SearchTerm.ToLower();
-                query = query.Where(c => 
+                query = query.Where(c =>
                     (c.AllBarcodes?.ToLower().Contains(lowerTerm) ?? false) ||
                     (c.Designation?.ToLower().Contains(lowerTerm) ?? false) ||
                     (c.DestinationFinale?.ToLower().Contains(lowerTerm) ?? false) ||
@@ -256,26 +256,22 @@
                     (c.ClientNomComplet?.ToLower().Contains(lowerTerm) ?? false)
                 );
             }
-
             if (SelectedStatus.HasValue)
             {
                 query = query.Where(c => c.Statut == SelectedStatus.Value);
             }
+			if (!string.IsNullOrWhiteSpace(SelectedContainerSearch))
+			{
+				query = query.Where(c => c.ConteneurNumeroDossier == SelectedContainerSearch);
+			}
 
-            if (!string.IsNullOrEmpty(SelectedContainer))
-            {
-                query = query.Where(c => c.ConteneurNumeroDossier == SelectedContainer);
-            }
-
-            return query.OrderByDescending(c => c.DateArrivee);
-        }
-    }
-
+			return query.OrderByDescending(c => c.DateArrivee);
+		}
+	}
     protected override async Task OnInitializedAsync()
     {
         await LoadParcels();
     }
-
     private async Task LoadParcels()
     {
         _isLoading = true;
@@ -283,7 +279,7 @@
         if (result != null)
         {
             _allParcels = result;
-            
+
             _containers = _allParcels
                 .Where(c => !string.IsNullOrEmpty(c.ConteneurNumeroDossier))
                 .Select(c => c.ConteneurNumeroDossier!)
@@ -293,26 +289,26 @@
         }
         _isLoading = false;
     }
+	private string SelectedContainerSearch { get; set; } = "";
 
-    private void ResetFilters()
-    {
-        SearchTerm = "";
-        SelectedStatus = null;
-        SelectedContainer = "";
-    }
-
+	// Modifiez ResetFilters
+	private void ResetFilters()
+	{
+		SearchTerm = "";
+		SelectedStatus = null;
+		SelectedContainerSearch = ""; // Reset la nouvelle propriété
+	}
+	
     // Méthode pour déterminer si un colis est en retard (Logique métier)
     private bool IsColisEnRetard(ColisListItemDto colis)
     {
         return colis.Statut == StatutColis.EnAttente && (DateTime.UtcNow - colis.DateArrivee).TotalDays > 5;
     }
-
     // Méthode pour la classe CSS de la ligne
     private string GetRowClass(ColisListItemDto colis)
     {
         return IsColisEnRetard(colis) ? "row-retard" : "";
     }
-
     private string GetStatusBadgeClass(StatutColis status)
     {
         return status switch
@@ -328,23 +324,54 @@
             _ => "bg-secondary"
         };
     }
-
     // --- Méthodes pour les boutons d'action ---
     private void CreateNewParcel()
     {
         // On active la navigation vers la page de création
-        Navigation.NavigateTo("/colis/create"); 
+        Navigation.NavigateTo("/colis/create");
     }
-
     private void EditParcel(Guid id)
     {
         // On active la navigation vers la page d'édition avec l'ID
         Navigation.NavigateTo($"/colis/edit/{id}");
     }
 	
+	[Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+	
+    private async Task DeleteParcel(ColisListItemDto colis)
+    {
+        if (colis == null) return;
+        // Confirmation JavaScript standard (rapide et efficace)
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"Êtes-vous sûr de vouloir supprimer le colis {colis.NumeroReference} ?");
+
+        if (confirm)
+        {
+            var success = await ApiService.DeleteColisAsync(colis.Id);
+            if (success)
+            {
+                await LoadParcels(); // Recharger la liste
+            }
+            else
+            {
+                // Optionnel : Afficher une erreur (via Toast ou Alert JS)
+                await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la suppression.");
+            }
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Premier chargement
+            await LoadParcels();
+            StateHasChanged();
+        }
+    }
+    // Cette méthode est appelée quand les paramètres changent, mais aussi quand on navigue
     protected override async Task OnParametersSetAsync()
     {
+        // On force le rechargement pour être sûr d'avoir les dernières données de la BDD
+        // (y compris les totaux mis à jour par le backend)
         await LoadParcels();
     }
-	
 }

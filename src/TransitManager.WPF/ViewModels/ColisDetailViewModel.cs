@@ -305,11 +305,9 @@ namespace TransitManager.WPF.ViewModels
 
 		public void Receive(EntityTotalPaidUpdatedMessage message)
 		{
-			// Ici, Colis est un objet unique, pas une liste.
-			// On vérifie simplement si le message concerne CE colis.
+			// CORRECTION : Colis est un objet unique ici, pas une liste !
 			if (Colis != null && Colis.Id == message.EntityId)
 			{
-				// On met à jour la propriété directement
 				Colis.SommePayee = message.NewTotalPaid;
 			}
 		}
@@ -331,19 +329,14 @@ namespace TransitManager.WPF.ViewModels
 
 			if (paiementWindow.ShowDialog() == true)
 			{
-				// 1. Mettre à jour le montant affiché immédiatement
+				// On met à jour visuellement
 				Colis.SommePayee = paiementViewModel.TotalValeur;
-
-				// 2. On force la notification pour 'HasPaiements' pour dégriser les champs si nécessaire
-				// Même si la liste .Paiements n'est pas rechargée, on sait qu'il y en a si le total > 0
 				OnPropertyChanged(nameof(HasPaiements));
 				
-				// 3. On signale que le colis a changé pour activer le bouton "Enregistrer"
-				// (Ceci est géré par le setter de SommePayee si vous avez mis SetProperty, sinon :)
-				SaveCommand.NotifyCanExecuteChanged();
+				// Plus besoin de logique complexe ici, le PaiementService a déjà mis à jour la BDD
+				// et ColisService.UpdateAsync n'écrasera plus la valeur.
 			}
 			
-			_messenger.Send(new EntityTotalPaidUpdatedMessage(Colis.Id, Colis.SommePayee));
 		}
 
 		private async Task CheckPaiementModification()
@@ -581,13 +574,11 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
+
 		private async Task OpenInventaire()
 		{
 			if (Colis == null) return;
-			
-			// On charge avec le JSON existant
 			var inventaireViewModel = new InventaireViewModel(Colis.InventaireJson);
-			
 			var inventaireWindow = new Views.Inventaire.InventaireView(inventaireViewModel)
 			{
 				Owner = System.Windows.Application.Current.MainWindow
@@ -595,34 +586,22 @@ namespace TransitManager.WPF.ViewModels
 
 			if (inventaireWindow.ShowDialog() == true)
 			{
-				// 1. Récupérer le JSON au format camelCase
-				var jsonClean = inventaireViewModel.GetJson();
+				// CORRECTION : Utiliser GetJson()
+				Colis.InventaireJson = inventaireViewModel.GetJson();
 				
-				// 2. Mettre à jour l'objet local
-				Colis.InventaireJson = jsonClean;
 				Colis.NombrePieces = inventaireViewModel.TotalQuantite;
 				Colis.ValeurDeclaree = inventaireViewModel.TotalValeur;
-				OnPropertyChanged(nameof(HasInventaire));
 
-				// 3. Sauvegarder IMMÉDIATEMENT en base via le DTO spécial
-				// Cela évite d'attendre le "Enregistrer" global et corrige la synchro
-				var updateDto = new UpdateInventaireDto
+				var dto = new UpdateInventaireDto
 				{
 					ColisId = Colis.Id,
-					InventaireJson = jsonClean,
+					InventaireJson = Colis.InventaireJson,
 					TotalPieces = Colis.NombrePieces,
 					TotalValeurDeclaree = Colis.ValeurDeclaree
 				};
 
-				try 
-				{
-					await _colisService.UpdateInventaireAsync(updateDto);
-					// Pas de message de succès intrusif ici, c'est une sous-fenêtre
-				}
-				catch (Exception ex)
-				{
-					await _dialogService.ShowErrorAsync("Erreur", "Impossible de sauvegarder l'inventaire : " + ex.Message);
-				}
+				await _colisService.UpdateInventaireAsync(dto);
+				OnPropertyChanged(nameof(HasInventaire));
 			}
 		}
 

@@ -8,23 +8,29 @@
         <NavMenu />
     </div>
 
-    <main>
-        <div class="top-row px-4">
+	<main>
+        <div class="top-row px-4 d-flex justify-content-between align-items-center">
+            
+            <!-- AJOUT DU TITRE ENTREPRISE -->
+            <div class="d-flex align-items-center">
+                <h3 class="mb-0 fw-bold text-primary" style="letter-spacing: 1px;">HIPPOCAMPE IMPORT-EXPORT</h3>
+            </div>
+
+            <!-- Section Utilisateur (existante, mais alignée à droite) -->
             <AuthorizeView>
                 <Authorized Context="AuthContext">
                     <div class="d-flex align-items-center">
-                        <span class="me-2">👋 Bonjour, @AuthContext.User.Identity?.Name!</span>
-                        
-                        @* === DÉBUT MODIFICATION LOGOUT === *@
-                        <form action="/account/logout" method="post">
+                        <span class="me-3 fw-medium">👋 Bonjour, @AuthContext.User.Identity?.Name!</span>
+                        <form action="/account/logout" method="post" class="d-inline">
                             <AntiforgeryToken />
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">🚪 Déconnexion</button>
+                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                                🚪 Déconnexion
+                            </button>
                         </form>
-
                     </div>
                 </Authorized>
                 <NotAuthorized>
-                    <a href="/login" class="btn btn-primary btn-sm">🔑 Connexion</a>
+                    <a href="/login" class="btn btn-primary btn-sm rounded-pill px-3">🔑 Connexion</a>
                 </NotAuthorized>
             </AuthorizeView>
         </div>

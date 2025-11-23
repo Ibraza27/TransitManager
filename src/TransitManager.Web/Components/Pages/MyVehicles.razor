@@ -1,0 +1,291 @@
+@page "/my-vehicles"
+@using TransitManager.Core.Enums
+@using System.Globalization
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+
+<PageTitle>Mes Véhicules - Hippocampe</PageTitle>
+
+<div class="container-fluid mt-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-primary fw-bold"><i class="bi bi-car-front-fill me-2"></i>Mes Véhicules</h2>
+            <p class="text-muted mb-0">Gestion du parc automobile et suivi des expéditions.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success" @onclick="CreateNewVehicle">
+                <i class="bi bi-plus-lg me-2"></i>Nouveau Véhicule
+            </button>
+            <button class="btn btn-outline-primary" @onclick="LoadVehicles">
+                <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body bg-light">
+            <div class="row g-3">
+                <!-- Recherche globale -->
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">RECHERCHE</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" 
+                               placeholder="Immat, Client, Marque, Modèle..." 
+                               @bind="SearchTerm" @bind:event="oninput" />
+                    </div>
+                </div>
+
+                <!-- Filtre Statut -->
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">STATUT</label>
+                    <select class="form-select" @bind="SelectedStatus">
+                        <option value="">Tous</option>
+                        @foreach (var s in Enum.GetValues<StatutVehicule>())
+                        {
+                            <option value="@s">@s</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Filtre Conteneur (Recherche dynamique) -->
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">CONTENEUR</label>
+                    <input list="conteneursList" class="form-control" 
+                           placeholder="Taper pour chercher..." 
+                           @bind="SelectedContainerSearch" @bind:event="oninput"/>
+                    <datalist id="conteneursList">
+                        @foreach (var c in _containers)
+                        {
+                            <option value="@c" />
+                        }
+                    </datalist>
+                </div>
+                 <div class="col-md-1 d-flex align-items-end">
+					<button class="btn btn-secondary w-100" @onclick="ResetFilters">
+						<i class="bi bi-x-lg me-2"></i> Effacer
+					</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary">
+                    <tr>
+                        <th class="ps-4">Immatriculation</th>
+                        <th>Client</th>
+                        <th>Véhicule</th>
+                        <th>Conteneur</th>
+                        
+                        <!-- NOUVELLE COLONNE -->
+                        <th>Commentaire</th> 
+                        
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Payé</th>
+                        <th class="text-end">Restant</th>
+                        <th class="text-center">Statut</th>
+                        <th class="text-end pe-4" style="min-width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (FilteredVehicles.Any())
+                    {
+                        @foreach (var v in FilteredVehicles)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold font-monospace text-primary">@v.Immatriculation</td>
+                                <td>
+                                    <div class="fw-bold">@v.ClientNomComplet</div>
+                                    <small class="text-muted">@v.ClientTelephonePrincipal</small>
+                                </td>
+                                <td>
+                                    <div>@v.Marque @v.Modele</div>
+                                    <small class="text-muted">Année @v.Annee</small>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(v.ConteneurNumeroDossier))
+                                    {
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="bi bi-box me-1"></i> @v.ConteneurNumeroDossier
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted fst-italic small">Non assigné</span>
+                                    }
+                                </td>
+
+                                <!-- NOUVELLE COLONNE : Commentaire (tronqué si trop long) -->
+                                <td style="max-width: 150px;" class="text-truncate" title="@v.Commentaires">
+                                    <small class="text-muted">@v.Commentaires</small>
+                                </td>
+
+                                <!-- Finances -->
+                                <td class="text-end fw-bold">@v.PrixTotal.ToString("C0")</td>
+                                <td class="text-end text-success">@v.SommePayee.ToString("C0")</td>
+                                <td class="text-end">
+                                    @if(v.RestantAPayer > 0)
+                                    {
+                                        <span class="text-danger fw-bold">@v.RestantAPayer.ToString("C0")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-success"><i class="bi bi-check-all"></i> Soldé</span>
+                                    }
+                                </td>
+                                
+                                <td class="text-center">
+                                    <span class="badge rounded-pill @GetStatusBadgeClass(v.Statut)">@v.Statut</span>
+                                </td>
+                                
+                                <!-- ACTIONS AVEC ÉMOJIS -->
+                                <td class="text-end pe-4">
+                                    <!-- Utilisation de d-flex et gap-2 pour l'espacement propre -->
+                                    <div class="d-flex justify-content-end gap-2">
+                                        
+                                        <button class="btn btn-outline-primary btn-sm" 
+                                                @onclick="() => EditVehicle(v.Id)" 
+                                                title="Modifier">
+                                            ✏️ <!-- Émoji Crayon -->
+                                        </button>
+                                        
+                                        <AuthorizeView Roles="Administrateur">
+                                            <Authorized>
+                                                <button class="btn btn-outline-danger btn-sm" 
+                                                        @onclick="() => DeleteVehicle(v)" 
+                                                        title="Supprimer">
+                                                    🗑️ <!-- Émoji Poubelle -->
+                                                </button>
+                                            </Authorized>
+                                        </AuthorizeView>
+
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                         <tr><td colspan="10" class="text-center py-5 text-muted">Aucun véhicule trouvé.</td></tr>
+                    }
+                </tbody>				
+				@if (FilteredVehicles.Any())
+				{
+					<tfoot class="bg-light fw-bold border-top">
+						<tr>
+							<!-- Fusionne les 5 premières colonnes (Immat, Client, Véhicule, Conteneur, Commentaire) -->
+							<td colspan="5" class="text-end text-secondary text-uppercase pe-3 align-middle">Totaux :</td>
+							
+							<!-- Les 3 colonnes financières -->
+							<td class="text-end align-middle">@FilteredVehicles.Sum(v => v.PrixTotal).ToString("C0")</td>
+							<td class="text-end text-success align-middle">@FilteredVehicles.Sum(v => v.SommePayee).ToString("C0")</td>
+							<td class="text-end text-danger align-middle">@FilteredVehicles.Sum(v => v.RestantAPayer).ToString("C0")</td>
+							
+							<!-- Fusionne les 2 dernières colonnes (Statut, Actions) -->
+							<td colspan="2"></td>
+						</tr>
+					</tfoot>
+				}								
+            </table>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private IEnumerable<VehiculeListItemDto> _allVehicles = new List<VehiculeListItemDto>();
+    private List<string> _containers = new();
+    private string SearchTerm { get; set; } = "";
+    private StatutVehicule? SelectedStatus { get; set; }
+    private string SelectedContainerSearch { get; set; } = "";
+
+    // Force le rechargement au retour sur la page
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await LoadVehicles();
+    }
+
+    private async Task LoadVehicles()
+    {
+        var result = await ApiService.GetVehiculesAsync();
+        if (result != null)
+        {
+            _allVehicles = result;
+            // Met à jour la liste pour l'autocomplete
+            _containers = _allVehicles.Select(v => v.ConteneurNumeroDossier).Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList()!;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<VehiculeListItemDto> FilteredVehicles
+    {
+        get
+        {
+            var q = _allVehicles;
+            if (!string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                var term = SearchTerm.ToLower();
+                q = q.Where(v => 
+                    v.Immatriculation.ToLower().Contains(term) ||
+                    v.Marque.ToLower().Contains(term) ||
+                    v.Modele.ToLower().Contains(term) ||
+                    (v.ClientNomComplet?.ToLower().Contains(term) ?? false) ||
+                    (v.ClientTelephonePrincipal?.Contains(term) ?? false)
+                );
+            }
+            if (SelectedStatus.HasValue) q = q.Where(v => v.Statut == SelectedStatus.Value);
+            if (!string.IsNullOrWhiteSpace(SelectedContainerSearch)) q = q.Where(v => v.ConteneurNumeroDossier == SelectedContainerSearch);
+            return q;
+        }
+    }
+
+    private void ResetFilters()
+    {
+        SearchTerm = "";
+        SelectedStatus = null;
+        SelectedContainerSearch = "";
+    }
+
+    private void CreateNewVehicle() => Navigation.NavigateTo("/vehicule/create");
+    private void EditVehicle(Guid id) => Navigation.NavigateTo($"/vehicule/edit/{id}");
+    
+	private async Task DeleteVehicle(VehiculeListItemDto v)
+    {
+        // Demande de confirmation
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"Êtes-vous sûr de vouloir supprimer le véhicule {v.Immatriculation} ?\nCette action est irréversible.");
+        
+        if (confirm)
+        {
+            // Appel au service
+            var success = await ApiService.DeleteVehiculeAsync(v.Id);
+            
+            if (success)
+            {
+                // Recharger la liste pour voir la disparition du véhicule et la mise à jour des totaux
+                await LoadVehicles();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Impossible de supprimer le véhicule. Vérifiez qu'il n'est pas verrouillé ou lié à d'autres données critiques.");
+            }
+        }
+    }
+
+    private string GetStatusBadgeClass(StatutVehicule s) => s switch
+    {
+        StatutVehicule.EnAttente => "bg-warning text-dark",
+        StatutVehicule.Livre => "bg-success",
+        StatutVehicule.Probleme => "bg-danger",
+        StatutVehicule.EnTransit => "bg-primary",
+        StatutVehicule.Arrive => "bg-info text-dark",
+        _ => "bg-secondary"
+    };
+}

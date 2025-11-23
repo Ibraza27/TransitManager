@@ -1,0 +1,121 @@
+@using System.Text.Json
+@using TransitManager.Core.Entities
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.8);">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-car-front me-2"></i>État des Lieux</h5>
+                    <button type="button" class="btn-close" @onclick="Close"></button>
+                </div>
+                <div class="modal-body text-center bg-dark">
+                    
+                    <div style="position: relative; display: inline-block; max-width: 100%;">
+                        <!-- Image de fond (Plan) -->
+                        <img src="@GetImageSource()" style="max-width: 100%; max-height: 70vh; display: block;" />
+
+                        <!-- Calque SVG pour les Rayures (Strokes) -->
+                        <!-- ViewBox 0 0 1 1 permet d'utiliser des coordonnées relatives -->
+                        <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;" 
+                             viewBox="0 0 1 1" preserveAspectRatio="none">
+                            @foreach (var stroke in _strokes)
+                            {
+                                <polyline points="@GetSvgPoints(stroke)" 
+                                          fill="none" 
+                                          stroke="red" 
+                                          stroke-width="0.005" 
+                                          stroke-linecap="round" 
+                                          stroke-linejoin="round" />
+                            }
+                        </svg>
+
+                        <!-- Points d'impact (Dots) -->
+                        @foreach (var point in _damagePoints)
+                        {
+                            <div style="position: absolute; 
+                                        left: @(point.X * 100)%; 
+                                        top: @(point.Y * 100)%; 
+                                        width: 15px; height: 15px; 
+                                        background-color: rgba(255, 0, 0, 0.6); 
+                                        border: 2px solid red; 
+                                        border-radius: 50%; 
+                                        transform: translate(-50%, -50%);
+                                        pointer-events: none;">
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="text-white mt-2 small">
+                        <span class="badge bg-danger rounded-circle me-1" style="width:10px;height:10px;display:inline-block;"></span> Impact
+                        <span class="text-danger fw-bold ms-3">―</span> Rayure
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public Core.Enums.TypeVehicule Type { get; set; }
+    [Parameter] public string? JsonPoints { get; set; }
+    [Parameter] public string? JsonStrokes { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<SerializablePoint> _damagePoints = new();
+    private List<List<SerializablePoint>> _strokes = new();
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            try
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+                if (!string.IsNullOrEmpty(JsonPoints))
+                    _damagePoints = JsonSerializer.Deserialize<List<SerializablePoint>>(JsonPoints, options) ?? new();
+                else
+                    _damagePoints = new();
+
+                if (!string.IsNullOrEmpty(JsonStrokes))
+                    _strokes = JsonSerializer.Deserialize<List<List<SerializablePoint>>>(JsonStrokes, options) ?? new();
+                else
+                    _strokes = new();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erreur parsing inspection: {ex.Message}");
+            }
+        }
+    }
+
+	private string GetImageSource()
+    {
+        string image = Type switch
+        {
+            Core.Enums.TypeVehicule.Moto => "moto_plan.png",
+            Core.Enums.TypeVehicule.Camion => "camion_plan.png",
+            Core.Enums.TypeVehicule.Quad => "quad_plan.png", // Ajout du Quad si présent
+            Core.Enums.TypeVehicule.Van => "van_plan.png",   // Ajout du Van si présent
+            _ => "vehicule_plan.png"
+        };
+        
+        // CORRECTION : Ajout du sous-dossier "plans"
+        return $"images/plans/{image}"; 
+    }
+
+    private string GetSvgPoints(List<SerializablePoint> points)
+    {
+        // Convertit la liste de points en string "x1,y1 x2,y2 ..." pour SVG
+        return string.Join(" ", points.Select(p => $"{p.X.ToString(System.Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)}"));
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync();
+}

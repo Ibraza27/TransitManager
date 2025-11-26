@@ -2,20 +2,32 @@ using Microsoft.AspNetCore.Mvc;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.API.Controllers
 {
 	[Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class ConteneursController : ControllerBase
+	public class ConteneursController : ControllerBase
     {
         private readonly IConteneurService _conteneurService;
+        private readonly IColisService _colisService;
+        private readonly IVehiculeService _vehiculeService;
+        private readonly IExportService _exportService; // <--- 1. AJOUTER CE CHAMP
         private readonly ILogger<ConteneursController> _logger;
 
-        public ConteneursController(IConteneurService conteneurService, ILogger<ConteneursController> logger)
+        public ConteneursController(
+            IConteneurService conteneurService, 
+            IColisService colisService,
+            IVehiculeService vehiculeService,
+            IExportService exportService, // <--- 2. AJOUTER CE PARAMÈTRE
+            ILogger<ConteneursController> logger)
         {
             _conteneurService = conteneurService;
+            _colisService = colisService;
+            _vehiculeService = vehiculeService;
+            _exportService = exportService; // <--- 3. ASSIGNER LE CHAMP
             _logger = logger;
         }
 
@@ -171,6 +183,163 @@ namespace TransitManager.API.Controllers
 				return StatusCode(500, "Erreur interne");
 			}
 		}
+		
+		// GET: api/conteneurs/{id}/detail
+        [HttpGet("{id}/detail")]
+        public async Task<ActionResult<ConteneurDetailDto>> GetConteneurDetail(Guid id)
+        {
+            var conteneur = await _conteneurService.GetByIdAsync(id);
+            if (conteneur == null) return NotFound();
+
+            // Mapping manuel vers le DTO (ou AutoMapper si configuré)
+            var dto = new ConteneurDetailDto
+            {
+                Id = conteneur.Id,
+                NumeroDossier = conteneur.NumeroDossier,
+                NumeroPlomb = conteneur.NumeroPlomb,
+                NomCompagnie = conteneur.NomCompagnie,
+                NomTransitaire = conteneur.NomTransitaire,
+                Destination = conteneur.Destination,
+                PaysDestination = conteneur.PaysDestination,
+                Statut = conteneur.Statut,
+                Commentaires = conteneur.Commentaires,
+                DateReception = conteneur.DateReception,
+                DateChargement = conteneur.DateChargement,
+                DateDepart = conteneur.DateDepart,
+                DateArriveeDestination = conteneur.DateArriveeDestination,
+                DateDedouanement = conteneur.DateDedouanement,
+                DateCloture = conteneur.DateCloture,
+            };
+
+            // Remplissage des listes et calculs
+            foreach (var c in conteneur.Colis)
+            {
+                dto.Colis.Add(new ColisListItemDto
+                {
+                    Id = c.Id,
+                    NumeroReference = c.NumeroReference,
+                    Designation = c.Designation,
+                    Statut = c.Statut,
+                    ClientNomComplet = c.Client?.NomComplet ?? "N/A",
+                    ClientTelephonePrincipal = c.Client?.TelephonePrincipal,
+                    ConteneurNumeroDossier = conteneur.NumeroDossier,
+                    AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)),
+                    DestinationFinale = c.DestinationFinale,
+                    DateArrivee = c.DateArrivee,
+                    NombrePieces = c.NombrePieces,
+                    PrixTotal = c.PrixTotal,
+                    SommePayee = c.SommePayee
+                });
+            }
+
+            foreach (var v in conteneur.Vehicules)
+            {
+                dto.Vehicules.Add(new VehiculeListItemDto
+                {
+                    Id = v.Id,
+                    Immatriculation = v.Immatriculation,
+                    Marque = v.Marque,
+                    Modele = v.Modele,
+                    Annee = v.Annee,
+                    Statut = v.Statut,
+                    ClientNomComplet = v.Client?.NomComplet ?? "N/A",
+                    ClientTelephonePrincipal = v.Client?.TelephonePrincipal,
+                    ConteneurNumeroDossier = conteneur.NumeroDossier,
+                    Commentaires = v.Commentaires,
+                    DateCreation = v.DateCreation,
+                    DestinationFinale = v.DestinationFinale,
+                    PrixTotal = v.PrixTotal,
+                    SommePayee = v.SommePayee
+                });
+            }
+
+            // Calculs Globaux
+            dto.PrixTotalGlobal = dto.Colis.Sum(c => c.PrixTotal) + dto.Vehicules.Sum(v => v.PrixTotal);
+            dto.TotalPayeGlobal = dto.Colis.Sum(c => c.SommePayee) + dto.Vehicules.Sum(v => v.SommePayee);
+
+            // Calculs par Client
+            var clients = conteneur.Colis.Select(c => c.Client)
+                .Union(conteneur.Vehicules.Select(v => v.Client))
+                .Where(c => c != null)
+                .DistinctBy(c => c!.Id);
+
+            foreach (var client in clients)
+            {
+                var colisClient = dto.Colis.Where(c => c.ClientNomComplet == client!.NomComplet).ToList();
+                var vehiculesClient = dto.Vehicules.Where(v => v.ClientNomComplet == client!.NomComplet).ToList();
+
+                dto.StatsParClient.Add(new ClientConteneurStatDto
+                {
+                    ClientId = client!.Id,
+                    NomClient = client.NomComplet,
+					Telephone = client.TelephonePrincipal,
+                    NombreColis = colisClient.Count,
+                    NombreVehicules = vehiculesClient.Count,
+                    TotalPrix = colisClient.Sum(x => x.PrixTotal) + vehiculesClient.Sum(x => x.PrixTotal),
+                    TotalPaye = colisClient.Sum(x => x.SommePayee) + vehiculesClient.Sum(x => x.SommePayee)
+                });
+            }
+
+            return Ok(dto);
+        }
+
+        // POST: api/conteneurs/{id}/colis/assign
+		[HttpPost("{id}/colis/assign")]
+		public async Task<IActionResult> AssignColis(Guid id, [FromBody] List<Guid> colisIds)
+		{
+			foreach (var colisId in colisIds)
+			{
+				await _colisService.AssignToConteneurAsync(colisId, id);
+			}
+			return Ok();
+		}
+
+		[HttpPost("{id}/colis/unassign")]
+		public async Task<IActionResult> UnassignColis(Guid id, [FromBody] List<Guid> colisIds)
+		{
+			foreach (var colisId in colisIds)
+			{
+				await _colisService.RemoveFromConteneurAsync(colisId);
+			}
+			return Ok();
+		}
+
+		[HttpPost("{id}/vehicules/assign")]
+		public async Task<IActionResult> AssignVehicules(Guid id, [FromBody] List<Guid> vehiculeIds)
+		{
+			foreach (var vId in vehiculeIds)
+			{
+				await _vehiculeService.AssignToConteneurAsync(vId, id);
+			}
+			return Ok();
+		}
+
+		[HttpPost("{id}/vehicules/unassign")]
+		public async Task<IActionResult> UnassignVehicules(Guid id, [FromBody] List<Guid> vehiculeIds)
+		{
+			foreach (var vId in vehiculeIds)
+			{
+				await _vehiculeService.RemoveFromConteneurAsync(vId);
+			}
+			return Ok();
+		}
+		
+		// GET: api/conteneurs/{id}/export/pdf?includeFinancials=true
+        [HttpGet("{id}/export/pdf")] 
+        public async Task<IActionResult> ExportPdf(Guid id, [FromQuery] bool includeFinancials = false)
+        {
+            // On charge le conteneur complet avec ses enfants
+            // Attention : GetByIdAsync du service doit bien faire les .Include() (c'est le cas dans votre infra actuelle)
+            var conteneur = await _conteneurService.GetByIdAsync(id);
+            
+            if (conteneur == null) return NotFound();
+            
+            // On injecte IExportService dans le contrôleur si ce n'est pas déjà fait
+            // (Je suppose qu'il faudra l'ajouter au constructeur si manquant)
+            var pdfData = await _exportService.GenerateContainerPdfAsync(conteneur, includeFinancials);
+            
+            return File(pdfData, "application/pdf", $"Dossier_{conteneur.NumeroDossier}.pdf");
+        }
 		
     }
 }

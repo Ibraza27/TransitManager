@@ -236,5 +236,29 @@ namespace TransitManager.Infrastructure.Services
                 await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
             }
         }
+		
+		public async Task<IEnumerable<Vehicule>> GetByUserIdAsync(Guid userId)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			// 1. Trouver l'utilisateur pour avoir son ClientId
+			var user = await context.Utilisateurs.FindAsync(userId);
+			
+			// Si l'utilisateur n'est pas lié à un client, il ne voit rien
+			if (user == null || !user.ClientId.HasValue)
+			{
+				return Enumerable.Empty<Vehicule>();
+			}
+
+			// 2. Retourner les véhicules de ce client
+			return await context.Vehicules
+				.Include(v => v.Client)
+				.Include(v => v.Conteneur)
+				.Where(v => v.ClientId == user.ClientId.Value && v.Actif)
+				.OrderByDescending(v => v.DateCreation)
+				.AsNoTracking()
+				.ToListAsync();
+		}
+		
     }
 }

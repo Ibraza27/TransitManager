@@ -94,8 +94,12 @@ namespace TransitManager.API.Controllers
 
 			if (!authResult.Success || authResult.User == null)
 			{
-				Console.WriteLine("🛂 [API - LoginWithCookie] ❌ Échec de l'authentification via le service.");
-				return Unauthorized(new { message = authResult.ErrorMessage ?? "Email ou mot de passe incorrect." });
+				Console.WriteLine("🛂 [API - LoginWithCookie] ❌ Échec de l'authentification.");
+                // MODIFICATION : On renvoie l'objet complet pour avoir LockoutEnd
+				return Unauthorized(new { 
+                    message = authResult.ErrorMessage ?? "Email ou mot de passe incorrect.",
+                    lockoutEnd = authResult.LockoutEnd 
+                });
 			}
 
 			Console.WriteLine("🛂 [API - LoginWithCookie] ✅ Authentification réussie. Création des claims...");
@@ -174,5 +178,23 @@ namespace TransitManager.API.Controllers
             }
         }
         // === FIN DE L'AJOUT ===
+		
+		[HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterClientRequestDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest("Données invalides.");
+
+            var result = await _authService.RegisterClientAsync(request);
+            
+            if (result.Success)
+            {
+                return Ok(new { Message = "Compte créé avec succès. Vous pouvez vous connecter." });
+            }
+            else
+            {
+                return BadRequest(new { Message = result.ErrorMessage });
+            }
+        }
+		
     }
 }

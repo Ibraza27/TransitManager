@@ -1,0 +1,14 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:TransitManager.WPF.Converters">
+
+    <!-- Déclarations globales des convertisseurs -->
+    <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+    <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <converters:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter" />
+    <converters:InvertedBooleanConverter x:Key="InvertedBooleanConverter" />
+    <converters:ToUpperConverter x:Key="ToUpperConverter" />
+	<converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+	<converters:MultiBooleanToVisibilityConverter x:Key="MultiBooleanToVisibilityConverter" />
+
+</ResourceDictionary>

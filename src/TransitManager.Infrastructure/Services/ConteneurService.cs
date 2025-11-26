@@ -49,15 +49,24 @@ namespace TransitManager.Infrastructure.Services
                 .ToListAsync();
         }
 
-        public async Task<Conteneur> CreateAsync(Conteneur conteneur)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            conteneur.Statut = CalculateStatusFromDates(conteneur);
-            context.Conteneurs.Add(conteneur);
-            await context.SaveChangesAsync();
-            await _notificationService.NotifyAsync("Nouveau conteneur", $"Le conteneur {conteneur.NumeroDossier} pour {conteneur.Destination} a été créé.");
-            return conteneur;
-        }
+		public async Task<Conteneur> CreateAsync(Conteneur conteneur)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			// === DÉBUT DE LA CORRECTION ===
+			// On s'assure qu'on crée le conteneur "vide".
+			// Les colis/véhicules seront ajoutés après sa création.
+			conteneur.Colis = new List<Colis>();
+			conteneur.Vehicules = new List<Vehicule>();
+			// ==============================
+
+			conteneur.Statut = CalculateStatusFromDates(conteneur);
+			context.Conteneurs.Add(conteneur);
+			await context.SaveChangesAsync();
+			
+			await _notificationService.NotifyAsync("Nouveau conteneur", $"Le conteneur {conteneur.NumeroDossier} pour {conteneur.Destination} a été créé.");
+			return conteneur;
+		}
 
         public async Task RecalculateStatusAsync(Guid conteneurId)
         {
@@ -70,25 +79,40 @@ namespace TransitManager.Infrastructure.Services
             await UpdateAndSaveConteneurStatus(conteneur, context);
         }
 
-        public async Task<Conteneur> UpdateAsync(Conteneur conteneurFromUI)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var conteneurInDb = await context.Conteneurs
-                .Include(c => c.Colis)
-                .Include(c => c.Vehicules)
-                .FirstOrDefaultAsync(c => c.Id == conteneurFromUI.Id);
-            if (conteneurInDb == null) throw new Exception("Conteneur non trouvé.");
-            var oldStatus = conteneurInDb.Statut;
-            context.Entry(conteneurInDb).CurrentValues.SetValues(conteneurFromUI);
-            context.Entry(conteneurInDb).Property("RowVersion").OriginalValue = conteneurFromUI.RowVersion;
-            await UpdateAndSaveConteneurStatus(conteneurInDb, context, oldStatus);
-            if (conteneurInDb.NumeroPlomb != conteneurFromUI.NumeroPlomb)
-            {
-                await UpdatePlombOnChildren(conteneurInDb.Id, conteneurInDb.NumeroPlomb, context);
-            }
-            return conteneurInDb;
-        }
+		public async Task<Conteneur> UpdateAsync(Conteneur conteneurFromUI)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			var conteneurInDb = await context.Conteneurs
+				.Include(c => c.Colis)
+				.Include(c => c.Vehicules)
+				.FirstOrDefaultAsync(c => c.Id == conteneurFromUI.Id);
+				
+			if (conteneurInDb == null) throw new Exception("Conteneur non trouvé.");
 
+			// === DÉBUT DE LA CORRECTION ===
+			// On vide les listes de navigation de l'objet entrant pour éviter qu'EF Core 
+			// n'essaie de suivre les Colis/Véhicules/Clients et ne provoque l'erreur de "Tracking".
+			// La gestion des enfants (Ajout/Retrait) se fait via les méthodes Assign/Remove, pas ici.
+			conteneurFromUI.Colis = new List<Colis>();
+			conteneurFromUI.Vehicules = new List<Vehicule>();
+			// ==============================
+
+			var oldStatus = conteneurInDb.Statut;
+			
+			// Copie des valeurs scalaires (Numéro, Dates, etc.)
+			context.Entry(conteneurInDb).CurrentValues.SetValues(conteneurFromUI);
+			context.Entry(conteneurInDb).Property("RowVersion").OriginalValue = conteneurFromUI.RowVersion;
+			
+			await UpdateAndSaveConteneurStatus(conteneurInDb, context, oldStatus);
+			
+			if (conteneurInDb.NumeroPlomb != conteneurFromUI.NumeroPlomb)
+			{
+				await UpdatePlombOnChildren(conteneurInDb.Id, conteneurInDb.NumeroPlomb, context);
+			}
+			
+			return conteneurInDb;
+		}
         private async Task UpdateAndSaveConteneurStatus(Conteneur conteneur, TransitContext context, StatutConteneur? oldStatus = null)
         {
             var problemColis = conteneur.Colis.Any(c => c.Statut == StatutColis.Probleme || c.Statut == StatutColis.Perdu);

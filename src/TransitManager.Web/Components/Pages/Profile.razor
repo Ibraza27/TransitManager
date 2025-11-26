@@ -130,24 +130,56 @@
                         <div class="card-body bg-light">
                             <p class="small text-muted mb-3">Laissez ces champs vides si vous ne souhaitez pas changer votre mot de passe.</p>
                             
+                            <!-- Ancien mot de passe -->
                             <div class="mb-3">
                                 <label class="form-label">Ancien mot de passe</label>
-                                <InputText type="password" @bind-Value="_profile.AncienMotDePasse" class="form-control" />
+                                <div class="input-group">
+                                    <input type="@(_showOldPassword ? "text" : "password")" 
+                                           class="form-control" 
+                                           @bind-value="_profile.AncienMotDePasse" />
+                                    <button class="btn btn-outline-secondary" type="button" 
+                                            @onclick="() => _showOldPassword = !_showOldPassword"
+                                            title="@(_showOldPassword ? "Masquer" : "Afficher")">
+                                        @(_showOldPassword ? "🙈" : "👁️")
+                                    </button>
+                                </div>
+                                <!-- Note: On utilise ValidationMessage pour garder l'affichage des erreurs -->
+                                <ValidationMessage For="@(() => _profile.AncienMotDePasse)" />
                             </div>
                             
+                            <!-- Nouveau mot de passe -->
                             <div class="mb-3">
                                 <label class="form-label">Nouveau mot de passe</label>
-                                <InputText type="password" @bind-Value="_profile.NouveauMotDePasse" class="form-control" />
+                                <div class="input-group">
+                                    <input type="@(_showNewPassword ? "text" : "password")" 
+                                           class="form-control" 
+                                           @bind-value="_profile.NouveauMotDePasse" />
+                                    <button class="btn btn-outline-secondary" type="button" 
+                                            @onclick="() => _showNewPassword = !_showNewPassword"
+                                            title="@(_showNewPassword ? "Masquer" : "Afficher")">
+                                        @(_showNewPassword ? "🙈" : "👁️")
+                                    </button>
+                                </div>
                                 <ValidationMessage For="@(() => _profile.NouveauMotDePasse)" />
                             </div>
                             
+                            <!-- Confirmation -->
                             <div class="mb-3">
                                 <label class="form-label">Confirmer nouveau mot de passe</label>
-                                <InputText type="password" @bind-Value="_profile.ConfirmerMotDePasse" class="form-control" />
+                                <div class="input-group">
+                                    <input type="@(_showConfirmPassword ? "text" : "password")" 
+                                           class="form-control" 
+                                           @bind-value="_profile.ConfirmerMotDePasse" />
+                                    <button class="btn btn-outline-secondary" type="button" 
+                                            @onclick="() => _showConfirmPassword = !_showConfirmPassword"
+                                            title="@(_showConfirmPassword ? "Masquer" : "Afficher")">
+                                        @(_showConfirmPassword ? "🙈" : "👁️")
+                                    </button>
+                                </div>
                                 <ValidationMessage For="@(() => _profile.ConfirmerMotDePasse)" />
                             </div>
                         </div>
-                    </div>
+                    </div> <!-- Cette balise fermante manquait -->
 
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary btn-lg shadow-sm" disabled="@_isSaving">
@@ -171,6 +203,9 @@
 
 @code {
     private UserProfileDto _profile = new();
+    private bool _showOldPassword = false;
+    private bool _showNewPassword = false;
+    private bool _showConfirmPassword = false;
     private bool _isLoading = true;
     private bool _isSaving = false;
     private bool _loadError = false;

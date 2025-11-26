@@ -11,47 +11,53 @@
     <HeadOutlet @rendermode="RenderMode.InteractiveServer" />
 </head>
 <body>
-    <!-- COMPLÈTEMENT SANS PRÉ-RENDU - Chargement initial vide -->
+    <!-- Chargement initial -->
     <div id="app-loading">
         <div class="loading-container">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Chargement de l'application...</span>
             </div>
             <p class="mt-2">🚀 Initialisation de TransitManager...</p>
-            <div class="debug-info">
-                <small class="text-muted">
-                    App.razor: Chargement initial sans pré-rendu
-                </small>
-            </div>
         </div>
     </div>
 
-    <!-- L'application Blazor sera injectée ici après initialisation -->
+    <!-- L'application Blazor -->
     <div id="blazor-app" style="display: none;">
         <Routes @rendermode="RenderMode.InteractiveServer" />
     </div>
 
     <script src="_framework/blazor.server.js"></script>
     
+    <!-- === DÉBUT AJOUT : SCRIPT DE TÉLÉCHARGEMENT === -->
     <script>
+        // Fonction standard Microsoft pour télécharger un flux de données
+        window.downloadFileFromStream = async (fileName, contentStreamReference) => {
+            const arrayBuffer = await contentStreamReference.arrayBuffer();
+            const blob = new Blob([arrayBuffer]);
+            const url = URL.createObjectURL(blob);
+            
+            const anchorElement = document.createElement('a');
+            anchorElement.href = url;
+            anchorElement.download = fileName ?? '';
+            anchorElement.click();
+            anchorElement.remove();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+    <!-- === FIN AJOUT === -->
+
+    <script>
+        // Votre script existant pour le loading
         console.log("🔄 [Script] Démarrage de l'initialisation Blazor...");
-        
         window.showBlazorApp = function() {
-            console.log("🎯 [Script] Affichage de l'application Blazor");
             try {
                 document.getElementById('app-loading').style.display = 'none';
                 document.getElementById('blazor-app').style.display = 'block';
-                console.log("✅ [Script] Application affichée avec succès");
             } catch (error) {
                 console.error("❌ [Script] Erreur lors de l'affichage:", error);
             }
         };
-
-        // Afficher l'app après un délai de sécurité
-        setTimeout(function() {
-            console.log("⏰ [Script] Timer de sécurité déclenché");
-            window.showBlazorApp();
-        }, 3000);
+        setTimeout(function() { window.showBlazorApp(); }, 3000);
     </script>
 </body>
 </html>

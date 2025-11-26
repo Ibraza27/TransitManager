@@ -1,5 +1,6 @@
 using TransitManager.Core.DTOs;
 using TransitManager.Core.Entities;
+using static TransitManager.Web.Services.ApiService;
 
 namespace TransitManager.Web.Services
 {
@@ -39,6 +40,36 @@ namespace TransitManager.Web.Services
 		Task<bool> DeleteVehiculeAsync(Guid id);
 		Task<IEnumerable<Conteneur>?> GetMyConteneursAsync();
 		Task<bool> DeleteConteneurAsync(Guid id);
+		
+		Task<bool> AssignColisToConteneurAsync(Guid colisId, Guid conteneurId);
+		Task<bool> RemoveColisFromConteneurAsync(Guid colisId);
+		Task<bool> AssignVehiculeToConteneurAsync(Guid vehiculeId, Guid conteneurId);
+		Task<bool> RemoveVehiculeFromConteneurAsync(Guid vehiculeId);
+		
+		Task<ConteneurDetailDto?> GetConteneurDetailAsync(Guid id);
+		Task<bool> AssignColisToConteneurListAsync(Guid conteneurId, List<Guid> colisIds);
+		Task<bool> UnassignColisFromConteneurListAsync(Guid conteneurId, List<Guid> colisIds);
+		Task<bool> AssignVehiculesToConteneurListAsync(Guid conteneurId, List<Guid> vehiculeIds);
+		Task<bool> UnassignVehiculesFromConteneurListAsync(Guid conteneurId, List<Guid> vehiculeIds);
+		
+		Task<Conteneur?> CreateConteneurAsync(Conteneur conteneur);
+		Task<bool> UpdateConteneurAsync(Guid id, Conteneur conteneur);
+		
+		Task<bool> UpdateClientAsync(Guid id, Client client);
+		Task<bool> DeleteClientAsync(Guid id);
+		Task<Client?> CreateClientAsync(Client client);
+		
+		Task<IEnumerable<Utilisateur>?> GetUsersAsync();
+		Task<Utilisateur?> GetUserByIdAsync(Guid id);
+		Task<bool> CreateUserAsync(Utilisateur user, string password);
+		Task<bool> UpdateUserAsync(Guid id, Utilisateur user);
+		Task<bool> DeleteUserAsync(Guid id);
+		Task<string?> ResetPasswordAsync(Guid userId);
+		Task<bool> UnlockUserAccountAsync(Guid id);
+		Task<bool> ChangeUserPasswordAsync(Guid id, string newPassword);
+		Task<PortalAccessResult> CreateOrResetPortalAccessAsync(Guid clientId);
+		Task<bool> RegisterClientAsync(RegisterClientRequestDto request);
+		Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials);
 		
     }
 }

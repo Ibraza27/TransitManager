@@ -1,0 +1,150 @@
+@using TransitManager.Core.Enums
+@inject IApiService ApiService
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-car-front me-2"></i>Ajouter des Véhicules au Conteneur</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" placeholder="Rechercher (Immat, Marque, Client...)" 
+                                       @bind="SearchTerm" @bind:event="oninput" />
+                            </div>
+                        </div>
+                         <div class="col-md-4">
+                             <!-- CORRECTION : Ajout de l'icône et du texte -->
+                             <button class="btn btn-outline-secondary w-100" @onclick="LoadData">
+                                 <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+                             </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px;" class="text-center">
+                                        <input class="form-check-input" type="checkbox" @onchange="ToggleAll" />
+                                    </th>
+                                    <th>Immatriculation</th>
+                                    <th>Véhicule</th>
+                                    <th>Client</th>
+                                    <!-- CORRECTION : Ajout des colonnes financières -->
+                                    <th class="text-end">Prix Total</th>
+                                    <th class="text-end">Payé</th>
+                                    <th class="text-end">Restant</th>
+                                    <th class="text-center">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (FilteredItems.Any())
+                                {
+                                    @foreach (var item in FilteredItems)
+                                    {
+                                        <tr @onclick="() => item.IsSelected = !item.IsSelected" style="cursor: pointer;">
+                                            <td class="text-center" @onclick:stopPropagation="true">
+                                                <input class="form-check-input" type="checkbox" @bind="item.IsSelected" />
+                                            </td>
+                                            <td class="fw-bold font-monospace text-success">@item.Data.Immatriculation</td>
+                                            <td>@item.Data.Marque @item.Data.Modele <small class="text-muted">(@item.Data.Annee)</small></td>
+                                            <td>
+                                                <div class="fw-bold">@item.Data.ClientNomComplet</div>
+                                                <small class="text-muted">@item.Data.ClientTelephonePrincipal</small>
+                                            </td>
+                                            
+                                            <!-- CORRECTION : Affichage des données financières -->
+                                            <td class="text-end">@item.Data.PrixTotal.ToString("C0")</td>
+                                            <td class="text-end text-success">@item.Data.SommePayee.ToString("C0")</td>
+                                            <td class="text-end text-danger">@item.Data.RestantAPayer.ToString("C0")</td>
+                                            
+                                            <td class="text-center"><span class="badge bg-secondary">@item.Data.Statut</span></td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <!-- Ajustement du colspan pour couvrir les nouvelles colonnes (8 colonnes total) -->
+                                        <td colspan="8" class="text-center py-4 text-muted">
+                                            Aucun véhicule disponible (non affecté) trouvé.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <div class="me-auto fw-bold text-success">
+                        @FilteredItems.Count(x => x.IsSelected) véhicule(s) sélectionné(s)
+                    </div>
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Annuler</button>
+                    <button type="button" class="btn btn-success" @onclick="Confirm" disabled="@(!FilteredItems.Any(x => x.IsSelected))">
+                        Ajouter la sélection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<List<Guid>> OnSelectionConfirmed { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string SearchTerm { get; set; } = "";
+    private List<SelectableItem<VehiculeListItemDto>> _items = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && !_items.Any()) await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var all = await ApiService.GetVehiculesAsync();
+        if (all != null)
+        {
+            // Filtre : pas de conteneur affecté
+            _items = all.Where(v => string.IsNullOrEmpty(v.ConteneurNumeroDossier) && v.Statut != StatutVehicule.Livre)
+                        .Select(v => new SelectableItem<VehiculeListItemDto> { Data = v })
+                        .ToList();
+        }
+    }
+
+    private IEnumerable<SelectableItem<VehiculeListItemDto>> FilteredItems =>
+        string.IsNullOrWhiteSpace(SearchTerm) 
+        ? _items 
+        : _items.Where(x => x.Data.Immatriculation.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) || 
+                            x.Data.ClientNomComplet.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                            x.Data.Marque.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase));
+
+    private void ToggleAll(ChangeEventArgs e)
+    {
+        bool val = (bool)(e.Value ?? false);
+        foreach(var item in FilteredItems) item.IsSelected = val;
+    }
+
+    private async Task Confirm()
+    {
+        var ids = _items.Where(x => x.IsSelected).Select(x => x.Data.Id).ToList();
+        if (ids.Any())
+        {
+            await OnSelectionConfirmed.InvokeAsync(ids);
+            await Close();
+        }
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync();
+    public class SelectableItem<T> { public T Data { get; set; } = default!; public bool IsSelected { get; set; } }
+}

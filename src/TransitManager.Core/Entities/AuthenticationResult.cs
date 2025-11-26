@@ -1,3 +1,5 @@
+using System;
+
 namespace TransitManager.Core.Entities
 {
     public class AuthenticationResult
@@ -6,5 +8,8 @@ namespace TransitManager.Core.Entities
         public string? ErrorMessage { get; set; }
         public Utilisateur? User { get; set; }
         public bool RequiresPasswordChange { get; set; }
+        
+        // --- AJOUT ---
+        public DateTime? LockoutEnd { get; set; }
     }
 }

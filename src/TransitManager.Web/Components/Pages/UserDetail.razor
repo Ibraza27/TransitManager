@@ -1,0 +1,428 @@
+@page "/users/edit/{Id:guid}"
+@page "/users/create"
+@using TransitManager.Core.Entities
+@using TransitManager.Core.Enums
+@using System.ComponentModel.DataAnnotations
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Administrateur")]
+
+<PageTitle>@(IsNew ? "Nouvel Utilisateur" : "Détails Utilisateur")</PageTitle>
+
+<div class="container mt-4 mb-5">
+    
+    <!-- EN-TÊTE -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary">
+                <i class="bi @(IsNew ? "bi-person-plus-fill" : "bi-person-lines-fill") me-2"></i>
+                @(IsNew ? "Nouvel Utilisateur" : $"Utilisateur : {_user.NomUtilisateur}")
+            </h2>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" @onclick="LoadData">
+                <i class="bi bi-arrow-clockwise"></i> Actualiser
+            </button>
+            <button class="btn btn-primary" @onclick="SaveUser">
+                <i class="bi bi-save me-2"></i> Enregistrer
+            </button>
+            <a href="/users" class="btn btn-outline-secondary">Retour</a>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    }
+    else
+    {
+        <div class="row g-4">
+            
+            <!-- COLONNE GAUCHE : INFOS -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-light fw-bold text-primary">Informations du Compte</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nom d'utilisateur <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control fw-bold" @bind="_user.NomUtilisateur" disabled="@(!IsNew)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Rôle <span class="text-danger">*</span></label>
+                                <select class="form-select" @bind="UserRole">
+                                    @foreach (var r in Enum.GetValues<RoleUtilisateur>())
+                                    {
+                                        <option value="@r">@r</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <!-- SECTION LIAISON CLIENT -->
+                            @if (_user.Role == RoleUtilisateur.Client)
+                            {
+                                <div class="col-12 mt-3">
+                                    <div class="card bg-info bg-opacity-10 border-info">
+                                        <div class="card-body">
+                                            <label class="form-label fw-bold text-info">
+                                                <i class="bi bi-link-45deg me-1"></i>Lier à un Client
+                                            </label>
+											<div class="input-group">
+												<span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+												
+												<!-- 
+													Changement ici : 
+													1. On lie la valeur à la propriété "ClientSearchText" (voir code C# plus bas).
+													2. @bind:event="oninput" déclenche le setter à chaque frappe.
+													3. La boucle se fait sur "_filteredClients" et non plus sur tous les clients.
+												-->
+												<input list="clientsDataList" 
+													   class="form-control" 
+													   placeholder="Tapez Nom, Prénom ou Téléphone..." 
+													   @bind="ClientSearchText" 
+													   @bind:event="oninput"
+													   @onchange="OnClientSelected" />
+													   
+												<datalist id="clientsDataList">
+													@foreach (var c in _filteredClients)
+													{
+														<!-- La valeur est ce qui s'affiche et ce qui est recherché -->
+														<option value="@c.NomComplet (@c.TelephonePrincipal)"></option>
+													}
+												</datalist>
+											</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="col-12"><hr class="text-muted"/></div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Prénom</label>
+                                <input type="text" class="form-control" @bind="_user.Prenom" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nom</label>
+                                <input type="text" class="form-control" @bind="_user.Nom" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" @bind="_user.Email" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Téléphone</label>
+                                <input type="tel" class="form-control" @bind="_user.Telephone" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLONNE DROITE : SÉCURITÉ -->
+            <div class="col-lg-4">
+                
+                <!-- Carte Sécurité -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-light fw-bold text-danger">
+                        <i class="bi bi-shield-lock me-2"></i>Sécurité
+                    </div>
+                    <div class="card-body">
+                        
+                        <!-- Changement Manuel -->
+                        <div class="mb-3">
+                            <label class="form-label">Définir mot de passe @(IsNew ? "*" : "")</label>
+							<div class="input-group">
+								<input type="@(_showPassword ? "text" : "password")" 
+									   class="form-control" 
+									   placeholder="Saisir nouveau mot de passe" 
+									   @bind="_newPassword" />
+									   
+								<!-- REMPLACEMENT PAR DES ÉMOJIS -->
+								<button class="btn btn-outline-secondary" type="button" 
+										@onclick="() => _showPassword = !_showPassword"
+										title="@(_showPassword ? "Masquer" : "Afficher")">
+									@(_showPassword ? "🙈" : "👁️")
+								</button>
+							</div>
+                        </div>
+
+                        @if (!IsNew)
+                        {
+                            <!-- Génération Aléatoire -->
+                            <div class="d-grid gap-2 mb-3">
+                                <button class="btn btn-warning text-dark fw-bold" @onclick="GenerateRandomPassword">
+                                    ⚡ Réinitialiser (Aléatoire)
+                                </button>
+                            </div>
+
+                            <!-- Affichage mot de passe généré -->
+                            @if (!string.IsNullOrEmpty(_generatedPassword))
+                            {
+                                <div class="alert alert-success p-2">
+                                    <small class="d-block text-muted mb-1">Mot de passe temporaire :</small>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control form-control-sm bg-white" value="@_generatedPassword" readonly />
+                                        <button class="btn btn-outline-success btn-sm" @onclick="CopyPassword" title="Copier">
+                                            📋
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <!-- Carte Statut / Verrouillage -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-light fw-bold">État du Compte</div>
+                    <div class="card-body">
+                        
+                        <!-- Message si verrouillé -->
+                        @if (_user.EstVerrouille)
+                        {
+                            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <div>
+                                    <strong>COMPTE VERROUILLÉ</strong><br/>
+                                    <small>Jusqu'à : @_user.DateVerrouillage?.ToLocalTime().ToString("HH:mm")</small>
+                                </div>
+                            </div>
+                            <button class="btn btn-danger w-100 mb-3" @onclick="UnlockAccount">
+                                🔓 DÉVERROUILLER MAINTENANT
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="alert alert-success py-2 px-3 mb-3">
+                                <i class="bi bi-check-circle-fill me-2"></i> Compte accessible
+                            </div>
+                        }
+
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" role="switch" id="activeSwitch" @bind="_user.Actif">
+                            <label class="form-check-label" for="activeSwitch">Compte Actif</label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="changePassSwitch" @bind="_user.DoitChangerMotDePasse">
+                            <label class="form-check-label small" for="changePassSwitch">Forcer changement MDP</label>
+                        </div>
+                        
+                        <hr/>
+                        <small class="text-muted d-block">Dernière connexion : @(_user.DerniereConnexion?.ToString("dd/MM/yyyy HH:mm") ?? "Jamais")</small>
+                        <small class="text-muted d-block">Échecs successifs : @_user.TentativesConnexionEchouees</small>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private Utilisateur _user = new() { Actif = true };
+    private List<Client> _clients = new();
+    private bool _isLoading = true;
+    private bool IsNew => Id == null;
+    
+    private string _clientSearchTerm = "";
+    private bool _showPassword = false;
+    private string _newPassword = "";
+    private string? _generatedPassword;
+	
+    private List<Client> _allClients = new(); // Contient TOUS les clients (source)
+    private List<Client> _filteredClients = new(); // Contient les clients AFFICHÉS (résultat recherche)
+    
+    // On remplace l'ancien champ _clientSearchTerm par cette propriété intelligente
+    private string _clientSearchText = "";
+    public string ClientSearchText
+    {
+        get => _clientSearchText;
+        set
+        {
+            if (_clientSearchText != value)
+            {
+                _clientSearchText = value;
+                FilterClients(); // Filtre à chaque frappe
+            }
+        }
+    }	
+
+    // Gestion du changement de rôle
+    private RoleUtilisateur UserRole
+    {
+        get => _user.Role;
+        set
+        {
+            _user.Role = value;
+            if (value != RoleUtilisateur.Client)
+            {
+                _user.ClientId = null;
+                _clientSearchTerm = "";
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var clientsResult = await ApiService.GetClientsAsync();
+        if (clientsResult != null) 
+        {
+            _allClients = clientsResult.ToList();
+            _filteredClients = _allClients.Take(10).ToList(); // On en montre 10 par défaut au début
+        }
+
+        if (!IsNew)
+        {
+            _user = await ApiService.GetUserByIdAsync(Id.Value) ?? new();
+            
+            if (_user.ClientId.HasValue)
+            {
+                var linkedClient = _allClients.FirstOrDefault(c => c.Id == _user.ClientId);
+                if (linkedClient != null)
+                {
+                    // On remplit le champ sans déclencher le filtre
+                    _clientSearchText = $"{linkedClient.NomComplet} ({linkedClient.TelephonePrincipal})";
+                }
+            }
+        }
+        else
+        {
+            _user = new Utilisateur { Actif = true, Role = RoleUtilisateur.Operateur };
+        }
+
+        _isLoading = false;
+    }
+
+    private void FilterClients()
+    {
+        if (string.IsNullOrWhiteSpace(ClientSearchText))
+        {
+            _filteredClients = _allClients.Take(10).ToList();
+        }
+        else
+        {
+            var term = ClientSearchText.ToLower();
+            _filteredClients = _allClients
+                .Where(c => 
+                    c.Nom.ToLower().Contains(term) || 
+                    c.Prenom.ToLower().Contains(term) || 
+                    c.TelephonePrincipal.Contains(term) ||
+                    c.NomComplet.ToLower().Contains(term))
+                .Take(10) // On limite les résultats pour ne pas lagger
+                .ToList();
+        }
+    }
+
+    private void OnClientSelected(ChangeEventArgs e)
+    {
+        var selectedValue = e.Value?.ToString();
+        if (string.IsNullOrEmpty(selectedValue)) return;
+
+        // On cherche une correspondance exacte avec le format affiché
+        var client = _allClients.FirstOrDefault(c => $"{c.NomComplet} ({c.TelephonePrincipal})" == selectedValue);
+
+        if (client != null)
+        {
+            _user.ClientId = client.Id;
+            _user.Nom = client.Nom;
+            _user.Prenom = client.Prenom;
+            _user.Email = client.Email ?? _user.Email;
+            _user.Telephone = client.TelephonePrincipal;
+            
+            if (string.IsNullOrEmpty(_user.NomUtilisateur))
+            {
+                _user.NomUtilisateur = $"{client.Prenom.FirstOrDefault()}{client.Nom}".ToLower().Replace(" ", "");
+            }
+        }
+    }
+
+    private async Task SaveUser()
+    {
+        if (string.IsNullOrWhiteSpace(_user.NomUtilisateur) || string.IsNullOrWhiteSpace(_user.Email))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Champs obligatoires manquants.");
+            return;
+        }
+
+        bool success = false;
+        try 
+        {
+            if (IsNew)
+            {
+                if (string.IsNullOrWhiteSpace(_newPassword))
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Un mot de passe est requis pour la création.");
+                    return;
+                }
+                success = await ApiService.CreateUserAsync(_user, _newPassword);
+            }
+            else
+            {
+                // 1. Mise à jour des infos
+                success = await ApiService.UpdateUserAsync(_user.Id, _user);
+                
+                // 2. Changement de mot de passe manuel si saisi
+                if (success && !string.IsNullOrWhiteSpace(_newPassword))
+                {
+                    var passSuccess = await ApiService.ChangeUserPasswordAsync(_user.Id, _newPassword);
+                    if (!passSuccess) await JSRuntime.InvokeVoidAsync("alert", "Infos sauvegardées mais erreur lors du changement de mot de passe.");
+                }
+            }
+
+            if (success) Navigation.NavigateTo("/users");
+            else await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la sauvegarde.");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
+        }
+    }
+
+    private async Task GenerateRandomPassword()
+    {
+        var tempPass = await ApiService.ResetPasswordAsync(_user.Id);
+        if (tempPass != null)
+        {
+            _generatedPassword = tempPass;
+            _user.DoitChangerMotDePasse = true; 
+            StateHasChanged(); // Force le rafraîchissement pour afficher le mot de passe
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la réinitialisation.");
+        }
+    }
+
+    private async Task UnlockAccount()
+    {
+        var success = await ApiService.UnlockUserAccountAsync(_user.Id);
+        if (success)
+        {
+            await LoadData(); // Recharger pour mettre à jour le statut visuel
+            await JSRuntime.InvokeVoidAsync("alert", "Compte déverrouillé avec succès.");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Erreur lors du déverrouillage.");
+        }
+    }
+
+    private async Task CopyPassword()
+    {
+        if (!string.IsNullOrEmpty(_generatedPassword))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _generatedPassword);
+            // Petit toast ou alerte discret
+        }
+    }
+}

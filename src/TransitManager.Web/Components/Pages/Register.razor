@@ -1,0 +1,174 @@
+@page "/register"
+@using System.ComponentModel.DataAnnotations
+@using TransitManager.Core.DTOs
+@layout TransitManager.Web.Components.Layout.EmptyLayout 
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+
+<PageTitle>Inscription - Hippocampe</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-3">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <img src="images/logo.jpg" alt="Logo" height="60" class="mb-3 rounded" />
+                        <h3 class="fw-bold text-primary">Créer mon compte</h3>
+                        <p class="text-muted">Rejoignez Hippocampe Import-Export</p>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-circle me-2"></i>@_errorMessage
+                        </div>
+                    }
+
+                    <EditForm Model="@_registerModel" OnValidSubmit="HandleRegistration">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="row g-3">
+                            <!-- Identité -->
+                            <div class="col-md-6">
+                                <label class="form-label">Prénom *</label>
+                                <InputText @bind-Value="_registerModel.Prenom" class="form-control" />
+                                <ValidationMessage For="@(() => _registerModel.Prenom)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nom *</label>
+                                <InputText @bind-Value="_registerModel.Nom" class="form-control" />
+                                <ValidationMessage For="@(() => _registerModel.Nom)" />
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label">Email (Identifiant) *</label>
+                                <InputText @bind-Value="_registerModel.Email" class="form-control" type="email" />
+                                <ValidationMessage For="@(() => _registerModel.Email)" />
+                            </div>
+
+                            <!-- Mots de passe avec option Voir/Cacher -->
+							<div class="col-md-6">
+								<label class="form-label">Mot de passe *</label>
+								<div class="input-group">
+									<input type="@(_showPassword ? "text" : "password")" 
+										   class="form-control" 
+										   @bind="_registerModel.Password" />
+										   
+									<!-- MODIFICATION ICI -->
+									<button class="btn btn-outline-secondary" type="button" 
+											@onclick="() => _showPassword = !_showPassword"
+											title="@(_showPassword ? "Masquer" : "Afficher")">
+										@(_showPassword ? "🙈" : "👁️")
+									</button>
+									<!-- FIN MODIFICATION -->
+									
+								</div>
+								<ValidationMessage For="@(() => _registerModel.Password)" />
+							</div>
+
+							<div class="col-md-6">
+								<label class="form-label">Confirmation *</label>
+								<div class="input-group">
+									<input type="@(_showConfirmPassword ? "text" : "password")" 
+										   class="form-control" 
+										   @bind="_registerModel.ConfirmPassword" />
+										   
+									<!-- MODIFICATION ICI -->
+									<button class="btn btn-outline-secondary" type="button" 
+											@onclick="() => _showConfirmPassword = !_showConfirmPassword"
+											title="@(_showConfirmPassword ? "Masquer" : "Afficher")">
+										@(_showConfirmPassword ? "🙈" : "👁️")
+									</button>
+									<!-- FIN MODIFICATION -->
+
+								</div>
+								<ValidationMessage For="@(() => _registerModel.ConfirmPassword)" />
+							</div>
+
+                            <div class="col-12">
+                                <hr class="text-muted" />
+                                <h6 class="text-muted">Coordonnées</h6>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Téléphone *</label>
+                                <InputText @bind-Value="_registerModel.Telephone" class="form-control" />
+                                <ValidationMessage For="@(() => _registerModel.Telephone)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Adresse</label>
+                                <InputText @bind-Value="_registerModel.Adresse" class="form-control" />
+                            </div>
+                            
+                            <!-- Ajout du Code Postal -->
+                            <div class="col-md-4">
+                                <label class="form-label">Code Postal</label>
+                                <InputText @bind-Value="_registerModel.CodePostal" class="form-control" />
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">Ville</label>
+                                <InputText @bind-Value="_registerModel.Ville" class="form-control" />
+                            </div>
+                             <div class="col-md-4">
+                                <label class="form-label">Pays</label>
+                                <InputText @bind-Value="_registerModel.Pays" class="form-control" />
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg" disabled="@_isBusy">
+                                @if (_isBusy) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                                S'inscrire
+                            </button>
+                            <a href="login" class="btn btn-outline-secondary">J'ai déjà un compte</a>
+                        </div>
+                    </EditForm>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterClientRequestDto _registerModel = new() { Pays = "France" };
+    private string? _errorMessage;
+    private bool _isBusy = false;
+    
+    // Variables pour gérer l'affichage des mots de passe
+    private bool _showPassword = false;
+    private bool _showConfirmPassword = false;
+
+    private async Task HandleRegistration()
+    {
+        _isBusy = true;
+        _errorMessage = null;
+
+        try
+        {
+            var success = await ApiService.RegisterClientAsync(_registerModel);
+            if (success)
+            {
+                // Redirection vers le login avec un message de succès
+                Navigation.NavigateTo("/login?registered=true", true);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Erreur lors de l'inscription : " + ExtractErrorMessage(ex.Message);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private string ExtractErrorMessage(string raw)
+    {
+        if (raw.Contains("Email est déjà utilisé")) return "Cet email est déjà associé à un compte. Veuillez vous connecter ou contacter le support.";
+        return raw.Replace("{", "").Replace("}", "").Replace("\"", "");
+    }
+}

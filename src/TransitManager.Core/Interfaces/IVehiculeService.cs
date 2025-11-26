@@ -17,5 +17,6 @@ namespace TransitManager.Core.Interfaces
 		Task<bool> RemoveFromConteneurAsync(Guid vehiculeId);
 		Task<bool> AssignToConteneurAsync(Guid vehiculeId, Guid conteneurId);
 		Task RecalculateAndUpdateVehiculeStatisticsAsync(Guid vehiculeId);
+		Task<IEnumerable<Vehicule>> GetByUserIdAsync(Guid userId);
     }
 }

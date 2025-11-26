@@ -1,0 +1,118 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Couleurs principales -->
+    <Color x:Key="PrimaryColor">#1976D2</Color>
+    <Color x:Key="PrimaryLightColor">#63A4FF</Color>
+    <Color x:Key="PrimaryDarkColor">#004BA0</Color>
+    
+    <Color x:Key="SecondaryColor">#00897B</Color>
+    <Color x:Key="SecondaryLightColor">#4EBAAA</Color>
+    <Color x:Key="SecondaryDarkColor">#005B4F</Color>
+    
+    <!-- Couleurs d'état -->
+    <Color x:Key="SuccessColor">#4CAF50</Color>
+    <Color x:Key="WarningColor">#FF9800</Color>
+    <Color x:Key="ErrorColor">#F44336</Color>
+    <Color x:Key="InfoColor">#2196F3</Color>
+    
+    <!-- Couleurs neutres -->
+    <Color x:Key="BackgroundColor">#FAFAFA</Color>
+    <Color x:Key="SurfaceColor">#FFFFFF</Color>
+    <Color x:Key="OnSurfaceColor">#212121</Color>
+    <Color x:Key="DividerColor">#E0E0E0</Color>
+    
+    <!-- Couleurs de texte -->
+    <Color x:Key="TextPrimaryColor">#212121</Color>
+    <Color x:Key="TextSecondaryColor">#757575</Color>
+    <Color x:Key="TextDisabledColor">#BDBDBD</Color>
+    
+    <!-- Brushes correspondants -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="PrimaryLightBrush" Color="{StaticResource PrimaryLightColor}"/>
+    <SolidColorBrush x:Key="PrimaryDarkBrush" Color="{StaticResource PrimaryDarkColor}"/>
+    
+    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SecondaryColor}"/>
+    <SolidColorBrush x:Key="SecondaryLightBrush" Color="{StaticResource SecondaryLightColor}"/>
+    <SolidColorBrush x:Key="SecondaryDarkBrush" Color="{StaticResource SecondaryDarkColor}"/>
+    
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}"/>
+    
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}"/>
+    <SolidColorBrush x:Key="OnSurfaceBrush" Color="{StaticResource OnSurfaceColor}"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource DividerColor}"/>
+    
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabledColor}"/>
+    
+    <!-- Dégradés -->
+    <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource PrimaryColor}" Offset="0"/>
+        <GradientStop Color="{StaticResource PrimaryDarkColor}" Offset="1"/>
+    </LinearGradientBrush>
+    
+    <LinearGradientBrush x:Key="SecondaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource SecondaryColor}" Offset="0"/>
+        <GradientStop Color="{StaticResource SecondaryDarkColor}" Offset="1"/>
+    </LinearGradientBrush>
+    
+    <!-- Couleurs spécifiques à l'application -->
+    <!-- Statuts des colis -->
+    <Color x:Key="StatusEnAttenteColor">#FF9800</Color>
+    <Color x:Key="StatusAffecteColor">#2196F3</Color>
+    <Color x:Key="StatusEnTransitColor">#03A9F4</Color>
+    <Color x:Key="StatusArriveColor">#8BC34A</Color>
+    <Color x:Key="StatusLivreColor">#4CAF50</Color>
+    <Color x:Key="StatusProblemeColor">#F44336</Color>
+    <Color x:Key="StatusPerduColor">#9E9E9E</Color>
+    <Color x:Key="StatusRetourneColor">#795548</Color>
+    
+    <SolidColorBrush x:Key="StatusEnAttenteBrush" Color="{StaticResource StatusEnAttenteColor}"/>
+    <SolidColorBrush x:Key="StatusAffecteBrush" Color="{StaticResource StatusAffecteColor}"/>
+    <SolidColorBrush x:Key="StatusEnTransitBrush" Color="{StaticResource StatusEnTransitColor}"/>
+    <SolidColorBrush x:Key="StatusArriveBrush" Color="{StaticResource StatusArriveColor}"/>
+    <SolidColorBrush x:Key="StatusLivreBrush" Color="{StaticResource StatusLivreColor}"/>
+    <SolidColorBrush x:Key="StatusProblemeBrush" Color="{StaticResource StatusProblemeColor}"/>
+    <SolidColorBrush x:Key="StatusPerduBrush" Color="{StaticResource StatusPerduColor}"/>
+    <SolidColorBrush x:Key="StatusRetourneBrush" Color="{StaticResource StatusRetourneColor}"/>
+    
+    <!-- Statuts des conteneurs -->
+    <Color x:Key="ConteneurOuvertColor">#4CAF50</Color>
+    <Color x:Key="ConteneurEnPreparationColor">#FFC107</Color>
+    <Color x:Key="ConteneurEnTransitColor">#2196F3</Color>
+    <Color x:Key="ConteneurArriveColor">#00BCD4</Color>
+    <Color x:Key="ConteneurEnDedouanementColor">#FF9800</Color>
+    <Color x:Key="ConteneurLivreColor">#8BC34A</Color>
+    <Color x:Key="ConteneurClotureColor">#9E9E9E</Color>
+    <Color x:Key="ConteneurAnnuleColor">#F44336</Color>
+    
+    <SolidColorBrush x:Key="ConteneurOuvertBrush" Color="{StaticResource ConteneurOuvertColor}"/>
+    <SolidColorBrush x:Key="ConteneurEnPreparationBrush" Color="{StaticResource ConteneurEnPreparationColor}"/>
+    <SolidColorBrush x:Key="ConteneurEnTransitBrush" Color="{StaticResource ConteneurEnTransitColor}"/>
+    <SolidColorBrush x:Key="ConteneurArriveBrush" Color="{StaticResource ConteneurArriveColor}"/>
+    <SolidColorBrush x:Key="ConteneurEnDedouanementBrush" Color="{StaticResource ConteneurEnDedouanementColor}"/>
+    <SolidColorBrush x:Key="ConteneurLivreBrush" Color="{StaticResource ConteneurLivreColor}"/>
+    <SolidColorBrush x:Key="ConteneurClotureBrush" Color="{StaticResource ConteneurClotureColor}"/>
+    <SolidColorBrush x:Key="ConteneurAnnuleBrush" Color="{StaticResource ConteneurAnnuleColor}"/>
+    
+    <!-- Statuts des paiements -->
+    <Color x:Key="PaiementEnAttenteColor">#FFC107</Color>
+    <Color x:Key="PaiementValideColor">#2196F3</Color>
+    <Color x:Key="PaiementPayeColor">#4CAF50</Color>
+    <Color x:Key="PaiementAnnuleColor">#9E9E9E</Color>
+    <Color x:Key="PaiementRembourseColor">#9C27B0</Color>
+    <Color x:Key="PaiementEchoueColor">#F44336</Color>
+    
+    <SolidColorBrush x:Key="PaiementEnAttenteBrush" Color="{StaticResource PaiementEnAttenteColor}"/>
+    <SolidColorBrush x:Key="PaiementValideBrush" Color="{StaticResource PaiementValideColor}"/>
+    <SolidColorBrush x:Key="PaiementPayeBrush" Color="{StaticResource PaiementPayeColor}"/>
+    <SolidColorBrush x:Key="PaiementAnnuleBrush" Color="{StaticResource PaiementAnnuleColor}"/>
+    <SolidColorBrush x:Key="PaiementRembourseBrush" Color="{StaticResource PaiementRembourseColor}"/>
+    <SolidColorBrush x:Key="PaiementEchoueBrush" Color="{StaticResource PaiementEchoueColor}"/>
+
+</ResourceDictionary>

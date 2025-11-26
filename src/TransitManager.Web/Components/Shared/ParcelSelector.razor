@@ -1,0 +1,158 @@
+@using TransitManager.Core.Enums
+@inject IApiService ApiService
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-box-seam me-2"></i>Ajouter des Colis au Conteneur</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    
+                    <!-- Filtres -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" placeholder="Rechercher (Client, Réf, Destination...)" 
+                                       @bind="SearchTerm" @bind:event="oninput" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                             <button class="btn btn-outline-secondary w-100" @onclick="LoadData">
+                                 <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Tableau -->
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px;" class="text-center">
+                                        <input class="form-check-input" type="checkbox" @onchange="ToggleAll" />
+                                    </th>
+                                    <th>Référence</th>
+                                    <th>Client</th>
+                                    <th>Désignation</th>
+                                    <th>Destination</th>
+                                    <th class="text-end">Prix Total</th>
+									<th class="text-end">Payé</th>
+									<th class="text-end">Restant</th>
+                                    <th class="text-center">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (FilteredItems.Any())
+                                {
+                                    @foreach (var item in FilteredItems)
+                                    {
+                                        <tr @onclick="() => item.IsSelected = !item.IsSelected" style="cursor: pointer;">
+                                            <td class="text-center" @onclick:stopPropagation="true">
+                                                <input class="form-check-input" type="checkbox" @bind="item.IsSelected" />
+                                            </td>
+                                            <td class="font-monospace text-primary fw-bold">@item.Data.NumeroReference</td>
+											<td>
+												<div class="fw-bold">@item.Data.ClientNomComplet</div>
+												<small class="text-muted">@item.Data.ClientTelephonePrincipal</small>
+											</td>
+                                            <td>@item.Data.Designation</td>
+                                            <td>@item.Data.DestinationFinale</td>
+                                            <td class="text-end">@item.Data.PrixTotal.ToString("C0")</td>
+											<td class="text-end text-success">@item.Data.SommePayee.ToString("C0")</td>
+											<td class="text-end text-danger">@item.Data.RestantAPayer.ToString("C0")</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">@item.Data.Statut</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            Aucun colis disponible (non affecté) trouvé.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <div class="me-auto fw-bold text-primary">
+                        @FilteredItems.Count(x => x.IsSelected) colis sélectionné(s)
+                    </div>
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Annuler</button>
+                    <button type="button" class="btn btn-primary" @onclick="Confirm" disabled="@(!FilteredItems.Any(x => x.IsSelected))">
+                        Ajouter la sélection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<List<Guid>> OnSelectionConfirmed { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string SearchTerm { get; set; } = "";
+    private List<SelectableItem<ColisListItemDto>> _items = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible)
+        {
+            SearchTerm = "";
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        var all = await ApiService.GetMyColisAsync();
+        if (all != null)
+        {
+            // On filtre : seulement les colis qui n'ont PAS de conteneur (null ou vide)
+            // et qui ne sont pas déjà livrés/perdus si nécessaire.
+            _items = all.Where(c => string.IsNullOrEmpty(c.ConteneurNumeroDossier) && 
+                                    c.Statut != StatutColis.Livre && 
+                                    c.Statut != StatutColis.Perdu)
+                        .Select(c => new SelectableItem<ColisListItemDto> { Data = c })
+                        .ToList();
+        }
+    }
+
+    private IEnumerable<SelectableItem<ColisListItemDto>> FilteredItems =>
+        string.IsNullOrWhiteSpace(SearchTerm) 
+        ? _items 
+        : _items.Where(x => x.Data.ClientNomComplet.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) || 
+                            x.Data.NumeroReference.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                            x.Data.DestinationFinale.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase));
+
+    private void ToggleAll(ChangeEventArgs e)
+    {
+        bool val = (bool)(e.Value ?? false);
+        foreach(var item in FilteredItems) item.IsSelected = val;
+    }
+
+    private async Task Confirm()
+    {
+        var ids = _items.Where(x => x.IsSelected).Select(x => x.Data.Id).ToList();
+        if (ids.Any())
+        {
+            await OnSelectionConfirmed.InvokeAsync(ids);
+            await Close();
+        }
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync();
+
+    public class SelectableItem<T> { public T Data { get; set; } = default!; public bool IsSelected { get; set; } }
+}

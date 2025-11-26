@@ -93,6 +93,7 @@ namespace TransitManager.API.Controllers
 		{
 			try
 			{
+				// 1. Qui est connecté ?
 				var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
 				if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId)) return Unauthorized();
 
@@ -103,26 +104,23 @@ namespace TransitManager.API.Controllers
 
 				if (isAdmin)
 				{
+					// Admin : Tout voir
 					vehicules = await _vehiculeService.GetAllAsync();
 				}
 				else
 				{
-					// Note : Assurez-vous d'avoir implémenté GetByUserIdAsync dans VehiculeService 
-					// (similaire à ColisService), sinon on filtre manuellement ici via le client
-					// Pour simplifier ici, on suppose que le service le gère ou on passe par le client.
-					// Si GetByUserIdAsync n'existe pas, il faut l'ajouter dans IVehiculeService.
-					// Pour l'instant, simulons le filtre admin vs tout le monde si la méthode manque :
-					vehicules = await _vehiculeService.GetAllAsync();
-					// TODO: Filtrer pour le client si non admin (nécessite GetByUserIdAsync)
+					// Client : Voir seulement ses véhicules (NOUVELLE MÉTHODE)
+					vehicules = await _vehiculeService.GetByUserIdAsync(userId);
 				}
 
+				// 2. Mapping vers DTO
 				var dtos = vehicules.Select(v => new VehiculeListItemDto
 				{
 					Id = v.Id,
 					Immatriculation = v.Immatriculation,
 					Marque = v.Marque,
 					Modele = v.Modele,
-					Annee = v.Annee, // <-- MAPPING AJOUTÉ
+					Annee = v.Annee,
 					Statut = v.Statut,
 					ClientNomComplet = v.Client?.NomComplet ?? "N/A",
 					ClientTelephonePrincipal = v.Client?.TelephonePrincipal,
@@ -130,8 +128,6 @@ namespace TransitManager.API.Controllers
 					Commentaires = v.Commentaires,
 					DateCreation = v.DateCreation,
 					DestinationFinale = v.DestinationFinale,
-					
-					// <-- MAPPING FINANCIER AJOUTÉ
 					PrixTotal = v.PrixTotal,
 					SommePayee = v.SommePayee
 				});

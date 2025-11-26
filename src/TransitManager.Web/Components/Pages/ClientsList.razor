@@ -1,141 +1,324 @@
 @page "/clients"
+@using System.Globalization
+@using TransitManager.Core.Entities
 @attribute [Authorize(Roles = "Administrateur")]
 @inject IApiService ApiService
-@implements IDisposable
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
-<PageTitle>Clients - TransitManager</PageTitle>
+<PageTitle>Gestion Clients - Hippocampe</PageTitle>
 
-<h3>Liste des Clients</h3>
-
-@* === DÉBUT DE LA MODIFICATION === *@
-
-@if (_isLoading)
-{
-    <div class="text-center p-5">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-            <span class="visually-hidden">Chargement...</span>
+<div class="container-fluid mt-4">
+    
+    <!-- EN-TÊTE -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-primary fw-bold"><i class="bi bi-people-fill me-2"></i>Clients</h2>
+            <p class="text-muted mb-0">Gestion du portefeuille client.</p>
         </div>
-        <p class="mt-3 text-muted">Chargement de la liste des clients...</p>
-    </div>
-}
-else if (_loadError)
-{
-    <div class="alert alert-danger">
-        <h4>❌ Erreur de chargement</h4>
-        <p>Impossible de charger la liste des clients. Veuillez vérifier la connexion à l'API.</p>
-        <button class="btn btn-secondary" @onclick="LoadClientsData" disabled="@_isLoading">
-            Réessayer
-        </button>
-    </div>
-}
-else if (_clients == null || !_clients.Any())
-{
-    <div class="alert alert-info">
-        <h4>📭 Aucun client</h4>
-        <p>Aucun client n'a été trouvé.</p>
-    </div>
-}
-else
-{
-    <div class="alert alert-success">
-        <p>✅ @_clients.Count() client(s) trouvé(s).</p>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success" @onclick="CreateClient">
+                <i class="bi bi-person-plus-fill me-2"></i>Nouveau Client
+            </button>
+            <button class="btn btn-outline-primary" @onclick="LoadClients">
+                <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+            </button>
+        </div>
     </div>
 
-    <table class="table table-striped table-hover">
-        <thead class="table-dark">
-            <tr>
-                <th>Code Client</th>
-                <th>Nom Complet</th>
-                <th>Téléphone</th>
-                <th>Email</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var client in _clients)
-            {
-                <tr>
-                    <td>@client.CodeClient</td>
-                    <td>@client.NomComplet</td>
-                    <td>@client.TelephonePrincipal</td>
-                    <td>@client.Email</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+    <!-- FILTRES -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body bg-light">
+            <div class="row g-3">
+                <!-- Recherche -->
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">RECHERCHE</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" 
+                               placeholder="Nom, Code, Tél, Email..." 
+                               @bind="SearchTerm" @bind:event="oninput" />
+                    </div>
+                </div>
 
-@* === FIN DE LA MODIFICATION === *@
+                <!-- Filtre Statut -->
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">STATUT</label>
+                    <select class="form-select" @bind="SelectedStatus">
+                        <option value="Tous">Tous</option>
+                        <option value="Actifs">Actifs</option>
+                        <option value="Inactifs">Inactifs</option>
+                        <option value="Fidèles">Clients Fidèles</option>
+                        <option value="Impayés">Avec Impayés</option>
+                    </select>
+                </div>
+
+                <!-- Filtre Ville (Éditable) -->
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">VILLE</label>
+                    <input list="citiesList" class="form-control" 
+                           placeholder="Toutes les villes..." 
+                           @bind="SelectedCitySearch" @bind:event="oninput"/>
+                    <datalist id="citiesList">
+                        @foreach (var city in _cities)
+                        {
+                            <option value="@city" />
+                        }
+                    </datalist>
+                </div>
+
+                <!-- Bouton Effacer -->
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-secondary w-100" @onclick="ResetFilters">
+                        <i class="bi bi-x-lg me-2"></i> Effacer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLEAU -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary">
+                    <tr>
+                        <th class="ps-4">Code</th>
+                        <th>Client</th>
+                        <th>Téléphone</th>
+                        <th>Ville</th>
+                        <th class="text-center">Fidèle</th>
+                        <th class="text-center">Envois</th>
+                        <th class="text-end">Impayés</th>
+                        <th>Commentaire</th>
+                        <th class="text-end pe-4" style="min-width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (FilteredClients.Any())
+                    {
+                        @foreach (var c in FilteredClients)
+                        {
+                            <tr class="@(!c.Actif ? "table-secondary opacity-75" : "")">
+                                <td class="ps-4 font-monospace text-primary fw-bold">@c.CodeClient</td>
+                                
+                                <td>
+                                    <div class="fw-bold">@c.NomComplet</div>
+                                    <small class="text-muted">@c.Email</small>
+                                </td>
+                                
+                                <td>@c.TelephonePrincipal</td>
+                                
+                                <td>@c.Ville</td>
+                                
+                                <!-- Fidélité -->
+                                <td class="text-center">
+                                    @if (c.EstClientFidele)
+                                    {
+                                        <span class="badge bg-warning text-dark">⭐ OUI</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">-</span>
+                                    }
+                                </td>
+                                
+                                <!-- Envois (Basé sur NombreConteneursUniques ou TotalEnvois selon votre modèle) -->
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border">@c.NombreConteneursUniques</span>
+                                </td>
+                                
+                                <!-- Impayés -->
+                                <td class="text-end">
+                                    @if (c.Impayes > 0)
+                                    {
+                                        <span class="text-danger fw-bold">@c.Impayes.ToString("C0")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-success small">0 €</span>
+                                    }
+                                </td>
+                                
+                                <!-- Commentaire (Tronqué) -->
+                                <td class="text-truncate" style="max-width: 150px;" title="@c.Commentaires">
+                                    <small class="text-muted">@c.Commentaires</small>
+                                </td>
+
+                                <!-- Actions -->
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => EditClient(c.Id)" title="Modifier / Détails">
+                                            ✏️
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteClient(c)" title="Supprimer">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="9" class="text-center py-5 text-muted">Aucun client trouvé.</td></tr>
+                    }
+                </tbody>
+                <!-- Totaux -->
+                @if (FilteredClients.Any())
+                {
+                    <tfoot class="bg-light fw-bold border-top">
+                        <tr>
+                            <td colspan="6" class="text-end text-secondary text-uppercase pe-3">Total Impayés :</td>
+                            <td class="text-end text-danger">@FilteredClients.Sum(c => c.Impayes).ToString("C0")</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+
+    <!-- Indicateur de chargement -->
+    @if (_isLoading)
+    {
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
+             style="background: rgba(255,255,255,0.7); z-index: 9999;">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+
+</div>
 
 @code {
-    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
-    
-    private IEnumerable<Client>? _clients;
-    private bool _isLoading = true; // On commence en mode chargement
-    private bool _loadError = false; // Nouveau flag pour gérer les erreurs
-    private bool _isAuthenticated = false;
+    private IEnumerable<Client> _allClients = new List<Client>();
+    private List<string> _cities = new();
+    private bool _isLoading = true;
 
-    protected override async Task OnInitializedAsync()
+    // Filtres
+    private string SearchTerm { get; set; } = "";
+    private string SelectedStatus { get; set; } = "Tous";
+    private string SelectedCitySearch { get; set; } = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        Console.WriteLine("🚀 [ClientsList] === OnInitializedAsync ===");
-        AuthStateProvider.AuthenticationStateChanged += HandleAuthenticationStateChanged;
-        
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        if (authState.User.Identity?.IsAuthenticated == true)
-        {
-            _isAuthenticated = true;
-            await LoadClientsData();
-        }
-        else
-        {
-            _isLoading = false; // On n'est pas authentifié, donc on arrête de charger
-        }
+        if (firstRender) await LoadClients();
     }
 
-    private async void HandleAuthenticationStateChanged(Task<AuthenticationState> task)
+    private async Task LoadClients()
     {
-        var authState = await task;
-        _isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task LoadClientsData()
-    {
-        Console.WriteLine("🚀 [ClientsList] 📦 === DÉBUT LoadClientsData ===");
         _isLoading = true;
-        _loadError = false;
-        await InvokeAsync(StateHasChanged);
+        StateHasChanged();
 
-        try
+        try 
         {
-            if (!_isAuthenticated)
+            // On récupère tous les clients
+            var result = await ApiService.GetClientsAsync();
+            if (result != null)
             {
-                Console.WriteLine("🚀 [ClientsList] 📦 ⏳ Chargement annulé - utilisateur non authentifié");
-                _loadError = true;
-                return;
+                _allClients = result;
+                // Met à jour la liste des villes pour l'autocomplete
+                _cities = _allClients
+                    .Select(c => c.Ville)
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                    .Distinct()
+                    .OrderBy(v => v)
+                    .ToList()!;
             }
-
-            _clients = await ApiService.GetClientsAsync();
-            if (_clients == null)
-            {
-                _loadError = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"🚀 [ClientsList] 📦 💥 Erreur lors du chargement: {ex.Message}");
-            _loadError = true;
-            _clients = null;
         }
         finally
         {
             _isLoading = false;
-            await InvokeAsync(StateHasChanged);
-            Console.WriteLine("🚀 [ClientsList] 📦 === FIN LoadClientsData ===");
+            StateHasChanged();
         }
     }
 
-    public void Dispose()
+    private IEnumerable<Client> FilteredClients
     {
-        AuthStateProvider.AuthenticationStateChanged -= HandleAuthenticationStateChanged;
+        get
+        {
+            var q = _allClients;
+
+            // 1. Recherche Texte
+            if (!string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                var term = SearchTerm.ToLower();
+                q = q.Where(c => 
+                    c.NomComplet.ToLower().Contains(term) ||
+                    c.CodeClient.ToLower().Contains(term) ||
+                    c.TelephonePrincipal.Contains(term) ||
+                    (c.Email?.ToLower().Contains(term) ?? false) ||
+                    (c.Ville?.ToLower().Contains(term) ?? false)
+                );
+            }
+
+            // 2. Filtre Ville
+            if (!string.IsNullOrWhiteSpace(SelectedCitySearch))
+            {
+
+                q = q.Where(c => c.Ville != null && c.Ville.Contains(SelectedCitySearch, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // 3. Filtre Statut
+            switch (SelectedStatus)
+            {
+                case "Actifs":
+                    q = q.Where(c => c.Actif);
+                    break;
+                case "Inactifs":
+                    q = q.Where(c => !c.Actif);
+                    break;
+                case "Fidèles":
+                    q = q.Where(c => c.EstClientFidele);
+                    break;
+                case "Impayés":
+                    q = q.Where(c => c.Impayes > 0);
+                    break;
+            }
+
+            return q.OrderBy(c => c.Nom).ThenBy(c => c.Prenom);
+        }
+    }
+
+    private void ResetFilters()
+    {
+        SearchTerm = "";
+        SelectedStatus = "Tous";
+        SelectedCitySearch = "";
+    }
+
+	private void CreateClient()
+    {
+        Navigation.NavigateTo("/client/create");
+    }
+
+    private void EditClient(Guid id)
+    {
+        Navigation.NavigateTo($"/client/edit/{id}");
+    }
+
+    private async Task DeleteClient(Client client)
+    {
+        // Vérification de sécurité
+        if (client.Impayes > 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Impossible de supprimer {client.NomComplet} car il a des impayés ({client.Impayes:C0}).");
+            return;
+        }
+
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"Êtes-vous sûr de vouloir supprimer le client {client.NomComplet} ?\nCette action est irréversible.");
+        
+        if (confirm)
+        {
+            var success = await ApiService.DeleteClientAsync(client.Id);
+            if (success)
+            {
+                await LoadClients(); // Recharger la liste pour voir la suppression
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la suppression. Vérifiez que le client n'a pas de colis ou véhicules actifs.");
+            }
+        }
     }
 }

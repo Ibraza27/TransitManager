@@ -1,0 +1,338 @@
+@page "/client/create"
+@page "/client/edit/{Id:guid}"
+@using TransitManager.Core.Entities
+@using TransitManager.Web.Services 
+@using static TransitManager.Web.Services.ApiService
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Administrateur")]
+
+<PageTitle>@(IsNew ? "Nouveau Client" : $"Client - {_client.NomComplet}")</PageTitle>
+
+<div class="container mt-4 mb-5">
+    
+    <!-- EN-TÊTE -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary">
+                <i class="bi bi-person-badge-fill me-2"></i>
+                @(IsNew ? "Nouveau Client" : $"Fiche Client : {_client.CodeClient}")
+            </h2>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" @onclick="SaveClient">
+                <i class="bi bi-save me-2"></i> Enregistrer
+            </button>
+            <a href="/clients" class="btn btn-outline-secondary">Retour</a>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    }
+    else
+    {
+        @if (!IsNew)
+        {
+            <!-- STATISTIQUES FINANCIÈRES -->
+            <div class="row mb-4 g-3">
+                <div class="col-md-3">
+                    <div class="card border-danger shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <h3 class="text-danger mb-0">@CalculateImpayesColis().ToString("C0")</h3>
+                            <small class="text-uppercase fw-bold text-muted">Impayés Colis</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-danger shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <h3 class="text-danger mb-0">@CalculateImpayesVehicules().ToString("C0")</h3>
+                            <small class="text-uppercase fw-bold text-muted">Impayés Véhicules</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <h3 class="mb-0">@_client.Impayes.ToString("C0")</h3>
+                            <small class="text-uppercase fw-bold text-white-50">TOTAL IMPAYÉS</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <h3 class="mb-0">@_client.NombreConteneursUniques</h3>
+                            <small class="text-uppercase fw-bold text-white-50">TOTAL ENVOIS</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="row g-4">
+            <!-- COLONNE GAUCHE : FORMULAIRE -->
+            <div class="col-lg-8">
+                <!-- Identité -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-light fw-bold text-primary">Informations Personnelles</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nom *</label>
+                                <input type="text" class="form-control" @bind="_client.Nom" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Prénom *</label>
+                                <input type="text" class="form-control" @bind="_client.Prenom" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Téléphone Principal *</label>
+                                <input type="text" class="form-control" @bind="_client.TelephonePrincipal" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Téléphone Secondaire</label>
+                                <input type="text" class="form-control" @bind="_client.TelephoneSecondaire" />
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" @bind="_client.Email" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Adresse -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-light fw-bold text-primary">Adresse</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Adresse</label>
+                                <input type="text" class="form-control" @bind="_client.AdressePrincipale" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Code Postal</label>
+                                <input type="text" class="form-control" @bind="_client.CodePostal" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Ville</label>
+                                <input type="text" class="form-control" @bind="_client.Ville" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Pays</label>
+                                <input type="text" class="form-control" @bind="_client.Pays" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLONNE DROITE : PORTAIL & STATUT -->
+            <div class="col-lg-4">
+                
+                <!-- ACCÈS PORTAIL -->
+                @if (!IsNew)
+                {
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header bg-light fw-bold text-primary">
+                            <i class="bi bi-globe me-2"></i>Accès Portail Client
+                        </div>
+                        <div class="card-body text-center">
+                            @if (_client.UserAccount != null)
+                            {
+                                <div class="alert alert-success py-2">
+                                    <i class="bi bi-check-circle-fill me-2"></i> Accès Actif
+                                </div>
+                                <p class="mb-1"><strong>Utilisateur :</strong> @_client.UserAccount.NomUtilisateur</p>
+                                <p class="text-muted small mb-3">Dernière connexion : @(_client.UserAccount.DerniereConnexion?.ToString("dd/MM/yyyy") ?? "Jamais")</p>
+                                
+                                <button class="btn btn-outline-warning w-100 mb-2" @onclick="ResetPortalPassword">
+                                    <i class="bi bi-key me-2"></i>Réinitialiser Mot de Passe
+                                </button>
+                                <!-- Redirection vers la gestion utilisateur complète -->
+                                <a href="/users/edit/@_client.UserAccount.Id" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-gear me-2"></i>Gérer le Compte
+                                </a>
+                            }
+                            else
+                            {
+                                <div class="alert alert-secondary py-2">
+                                    Pas d'accès portail
+                                </div>
+                                <p class="small text-muted">Créez un compte pour permettre au client de suivre ses colis en ligne.</p>
+                                <button class="btn btn-primary w-100" @onclick="CreatePortalAccess">
+                                    <i class="bi bi-person-plus me-2"></i>Créer Accès Portail
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Statut & Notes -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-light fw-bold">Administration</div>
+                    <div class="card-body">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="activeSwitch" @bind="_client.Actif">
+                            <label class="form-check-label" for="activeSwitch">Client Actif</label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="fideleCheck" @bind="_client.EstClientFidele">
+                            <label class="form-check-label text-warning fw-bold" for="fideleCheck">⭐ Client Fidèle</label>
+                        </div>
+                        <label class="form-label">Commentaires</label>
+                        <textarea class="form-control" rows="4" @bind="_client.Commentaires"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- MODAL RÉSULTAT PORTAIL -->
+@if (_showPortalResult)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Accès Portail Créé/Mis à jour</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => _showPortalResult = false"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="lead">Veuillez transmettre ces identifiants au client :</p>
+                    
+                    <div class="bg-light p-3 rounded border mb-3">
+                        <div class="mb-2">
+                            <strong>Identifiant :</strong> <span class="text-primary">@_portalResult.Username</span>
+                        </div>
+                        <div>
+                            <strong>Mot de passe :</strong> 
+                            <code class="fs-5 text-dark user-select-all">@_portalResult.TemporaryPassword</code>
+                            <button class="btn btn-sm btn-link" @onclick="CopyPassword" title="Copier">📋</button>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning small">
+                        Ce mot de passe est temporaire. Le client devra le changer à la première connexion.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="() => _showPortalResult = false">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private Client _client = new();
+    private bool _isLoading = true;
+    private bool IsNew => Id == null;
+
+    // Gestion Portail
+    private bool _showPortalResult = false;
+    private PortalAccessResult _portalResult = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!IsNew)
+        {
+            try 
+            {
+                _client = await ApiService.GetClientByIdAsync(Id.Value);
+            }
+            catch
+            {
+                Navigation.NavigateTo("/clients");
+            }
+        }
+        _isLoading = false;
+    }
+
+    private decimal CalculateImpayesColis()
+    {
+        // Calcule la somme des restants à payer pour les colis actifs
+        return _client.Colis?.Where(c => c.Actif).Sum(c => c.RestantAPayer) ?? 0;
+    }
+
+    private decimal CalculateImpayesVehicules()
+    {
+        return _client.Vehicules?.Where(v => v.Actif).Sum(v => v.RestantAPayer) ?? 0;
+    }
+
+    private async Task SaveClient()
+    {
+        if (string.IsNullOrWhiteSpace(_client.Nom) || string.IsNullOrWhiteSpace(_client.TelephonePrincipal))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Nom et Téléphone requis.");
+            return;
+        }
+
+        bool success = false;
+        if (IsNew)
+        {
+            var created = await ApiService.CreateClientAsync(_client);
+            if (created != null) 
+            {
+                Navigation.NavigateTo($"/client/edit/{created.Id}");
+            }
+        }
+        else
+        {
+            success = await ApiService.UpdateClientAsync(_client.Id, _client);
+            if (success) Navigation.NavigateTo("/clients");
+        }
+    }
+
+    private async Task CreatePortalAccess()
+    {
+        if (string.IsNullOrEmpty(_client.Email))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Veuillez ajouter une adresse email au client avant de créer un accès.");
+            return;
+        }
+
+        var result = await ApiService.CreateOrResetPortalAccessAsync(_client.Id);
+        if (!string.IsNullOrEmpty(result.TemporaryPassword))
+        {
+            _portalResult = result;
+            _showPortalResult = true;
+            
+            // Recharger pour afficher l'état "Accès Actif"
+            await OnInitializedAsync();
+        }
+        else
+        {
+             await JSRuntime.InvokeVoidAsync("alert", "Erreur : " + result.Message);
+        }
+    }
+
+    private async Task ResetPortalPassword()
+    {
+        if (_client.UserAccount == null) return;
+        
+        var newPass = await ApiService.ResetPasswordAsync(_client.UserAccount.Id);
+        if (newPass != null)
+        {
+            _portalResult = new PortalAccessResult 
+            { 
+                Username = _client.UserAccount.NomUtilisateur, 
+                TemporaryPassword = newPass 
+            };
+            _showPortalResult = true;
+        }
+    }
+
+    private async Task CopyPassword()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _portalResult.TemporaryPassword);
+    }
+}

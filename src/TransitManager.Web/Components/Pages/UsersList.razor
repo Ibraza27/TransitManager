@@ -1,0 +1,197 @@
+@page "/users"
+@using TransitManager.Core.Entities
+@using TransitManager.Core.Enums
+@attribute [Authorize(Roles = "Administrateur")]
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Utilisateurs - Hippocampe</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-primary fw-bold"><i class="bi bi-people-fill me-2"></i>Utilisateurs</h2>
+            <p class="text-muted mb-0">Gestion des accès et des comptes.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success" @onclick="CreateUser">
+                <i class="bi bi-person-plus-fill me-2"></i>Nouvel Utilisateur
+            </button>
+            <button class="btn btn-outline-primary" @onclick="LoadUsers">
+                <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+            </button>
+        </div>
+    </div>
+
+    <!-- FILTRES -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body bg-light">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" 
+                               placeholder="Nom, Prénom, Email, Username..." 
+                               @bind="SearchTerm" @bind:event="oninput" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" @bind="SelectedRole">
+                        <option value="">Tous les rôles</option>
+                        @foreach (var role in Enum.GetValues<RoleUtilisateur>())
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-secondary w-100" @onclick="ResetFilters">
+                        <i class="bi bi-x-lg me-2"></i> Effacer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLEAU -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary">
+                    <tr>
+                        <th class="ps-4">Utilisateur</th>
+                        <th>Nom Complet</th>
+                        <th>Email</th>
+                        <th>Téléphone</th>
+                        <th>Rôle</th>
+                        <th class="text-center">Statut</th>
+                        <th class="text-center">Dernière Connexion</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (FilteredUsers.Any())
+                    {
+                        @foreach (var u in FilteredUsers)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary">@u.NomUtilisateur</td>
+                                <td>@u.NomComplet</td>
+                                <td>@u.Email</td>
+                                <td>@u.Telephone</td>
+                                <td>
+                                    <span class="badge @GetRoleBadgeClass(u.Role)">@u.Role</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (u.Actif)
+                                    {
+                                        <span class="badge bg-success">Actif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactif</span>
+                                    }
+                                </td>
+                                <td class="text-center small text-muted">
+                                    @(u.DerniereConnexion?.ToString("dd/MM/yyyy HH:mm") ?? "-")
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => EditUser(u.Id)" title="Modifier">
+                                            ✏️
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteUser(u)" title="Désactiver/Supprimer">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="8" class="text-center py-5 text-muted">Aucun utilisateur trouvé.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IEnumerable<Utilisateur> _allUsers = new List<Utilisateur>();
+    private string SearchTerm { get; set; } = "";
+    private RoleUtilisateur? SelectedRole { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        var result = await ApiService.GetUsersAsync();
+        if (result != null)
+        {
+            _allUsers = result;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<Utilisateur> FilteredUsers
+    {
+        get
+        {
+            var q = _allUsers;
+            if (!string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                var term = SearchTerm.ToLower();
+                q = q.Where(u => 
+                    u.NomUtilisateur.ToLower().Contains(term) ||
+                    u.NomComplet.ToLower().Contains(term) ||
+                    u.Email.ToLower().Contains(term) ||
+                    (u.Telephone?.Contains(term) ?? false)
+                );
+            }
+            if (SelectedRole.HasValue)
+            {
+                q = q.Where(u => u.Role == SelectedRole.Value);
+            }
+            return q.OrderBy(u => u.Nom);
+        }
+    }
+
+    private void ResetFilters()
+    {
+        SearchTerm = "";
+        SelectedRole = null;
+    }
+
+    private void CreateUser() => Navigation.NavigateTo("/users/create"); // Page à créer plus tard
+    private void EditUser(Guid id) => Navigation.NavigateTo($"/users/edit/{id}"); // Page à créer plus tard
+
+    private async Task DeleteUser(Utilisateur u)
+    {
+        if (u.NomUtilisateur == "admin") 
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Impossible de supprimer le super-admin.");
+            return;
+        }
+
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"Voulez-vous vraiment désactiver/supprimer {u.NomUtilisateur} ?");
+        if (confirm)
+        {
+            await ApiService.DeleteUserAsync(u.Id);
+            await LoadUsers();
+        }
+    }
+
+    private string GetRoleBadgeClass(RoleUtilisateur role) => role switch
+    {
+        RoleUtilisateur.Administrateur => "bg-danger",
+        RoleUtilisateur.Gestionnaire => "bg-warning text-dark",
+        RoleUtilisateur.Client => "bg-info text-dark",
+        _ => "bg-secondary"
+    };
+}

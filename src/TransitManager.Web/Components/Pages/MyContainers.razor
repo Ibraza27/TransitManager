@@ -113,11 +113,16 @@
                                 </td>
 
                                 <td class="text-end pe-4">
-                                    <div class="d-flex justify-content-end gap-2">
-                                        <!-- Bouton Modifier/Voir (Accessible à tous, la vue détail gérera le ReadOnly) -->
-                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewContainer(c.Id)" title="Détails">
-                                            ✏️
-                                        </button>
+									<div class="d-flex justify-content-end gap-2">
+										
+										<!-- AJOUT : Restriction Admin pour le bouton Modifier -->
+										<AuthorizeView Roles="Administrateur">
+											<Authorized>
+												<button class="btn btn-outline-primary btn-sm" @onclick="() => ViewContainer(c.Id)" title="Détails / Modifier">
+													✏️
+												</button>
+											</Authorized>
+										</AuthorizeView>
 
                                         <!-- Bouton Supprimer (Admin seulement) -->
                                         <AuthorizeView Roles="Administrateur">

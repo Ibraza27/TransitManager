@@ -18,5 +18,6 @@ namespace TransitManager.Core.Interfaces
         // === AJOUTER CES DEUX MÉTHODES ===
         Task<(Utilisateur? User, string? TemporaryPassword)> CreateOrResetPortalAccessAsync(Guid clientId);
         Task SynchronizeClientDataAsync(Client client);
+		Task<AuthenticationResult> RegisterClientAsync(RegisterClientRequestDto request);
     }
 }

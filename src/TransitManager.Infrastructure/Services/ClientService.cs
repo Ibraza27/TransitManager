@@ -138,6 +138,12 @@ namespace TransitManager.Infrastructure.Services
             {
                 throw new InvalidOperationException("Le client que vous essayez de modifier n'a pas été trouvé.");
             }
+			
+			clientFromUI.Colis = null;       // On ignore les listes enfants venant de l'UI
+			clientFromUI.Vehicules = null;
+			clientFromUI.Paiements = null;
+			clientFromUI.UserAccount = null;
+			
             context.Entry(clientInDb).CurrentValues.SetValues(clientFromUI);
             context.Entry(clientInDb).Property("RowVersion").OriginalValue = clientFromUI.RowVersion;
             await UpdateClientStatisticsAsync(clientInDb, context);

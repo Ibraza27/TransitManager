@@ -25,31 +25,15 @@ namespace TransitManager.Web.Services
             };
         }
 
-        private async Task PrepareAuthenticatedRequestAsync()
-        {
-            Console.WriteLine("[ApiService] PrepareAuthenticatedRequestAsync n'est plus nécessaire, le cookie est géré par CookieHandler.");
-            return;
-        }
-
         public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto loginRequest)
         {
             try
             {
-                Console.WriteLine($"[ApiService] Envoi login: {loginRequest.Email}");
                 var response = await _httpClient.PostAsJsonAsync("api/auth/login-with-cookie", loginRequest);
-                Console.WriteLine($"[ApiService] Réponse de l'API: {response.StatusCode}");
                 if (response.IsSuccessStatusCode && response.Content != null)
                 {
-                    var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>(_jsonOptions);
-                    Console.WriteLine($"[ApiService] Succès: {result?.Success}, Token: {!string.IsNullOrEmpty(result?.Token)}");
-                    return result;
+                    return await response.Content.ReadFromJsonAsync<LoginResponseDto>(_jsonOptions);
                 }
-                else
-                {
-                    var errorContent = response.Content != null ? await response.Content.ReadAsStringAsync() : "Contenu d'erreur non disponible";
-                    Console.WriteLine($"[ApiService] Erreur HTTP {response.StatusCode}: {errorContent}");
-                }
-
                 return new LoginResponseDto { Success = false, Message = $"Erreur (Code: {response.StatusCode})." };
             }
             catch (Exception ex)
@@ -59,104 +43,48 @@ namespace TransitManager.Web.Services
             }
         }
 
+        public async Task LogoutAsync()
+        {
+            try { await _httpClient.PostAsync("api/auth/logout", null); }
+            catch { }
+        }
+
         public async Task<IEnumerable<Client>?> GetClientsAsync()
         {
             try
             {
-                Console.WriteLine("[ApiService] GetClientsAsync - Envoi requête GET à api/clients (avec cookie via handler)");
-                var response = await _httpClient.GetAsync("api/clients");
-                Console.WriteLine($"[ApiService] GetClientsAsync - Réponse: {response.StatusCode}");
-                if (response.IsSuccessStatusCode && response.Content != null)
-                {
-                    var clients = await response.Content.ReadFromJsonAsync<IEnumerable<Client>>(_jsonOptions);
-                    Console.WriteLine($"[ApiService] GetClientsAsync - Succès: {clients?.Count() ?? 0} clients");
-                    return clients;
-                }
-                else
-                {
-                    var errorContent = response.Content != null ? await response.Content.ReadAsStringAsync() : "Contenu d'erreur non disponible";
-                    Console.WriteLine($"[ApiService] GetClientsAsync - Erreur {response.StatusCode}: {errorContent}");
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        Console.WriteLine("[ApiService] GetClientsAsync - Erreur 401, token peut-être expiré");
-                    }
-                    return null;
-                }
+                return await _httpClient.GetFromJsonAsync<IEnumerable<Client>>("api/clients", _jsonOptions);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] GetClientsAsync - Exception: {ex.Message}");
-                Console.WriteLine($"[ApiService] GetClientsAsync - StackTrace: {ex.StackTrace}");
-                return null;
-            }
+            catch { return null; }
         }
 
-        public async Task LogoutAsync()
+        public async Task<UserProfileDto?> GetUserProfileAsync()
         {
             try
             {
-                Console.WriteLine("[ApiService] Envoi de la requête de déconnexion...");
-                await _httpClient.PostAsync("api/auth/logout", null);
-                Console.WriteLine("[ApiService] Requête de déconnexion terminée.");
+                return await _httpClient.GetFromJsonAsync<UserProfileDto>("api/profile");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur lors de la déconnexion : {ex.Message}");
-            }
+            catch { return null; }
         }
-		
-		// Ajouter ces deux méthodes dans la classe ApiService
 
-		public async Task<UserProfileDto?> GetUserProfileAsync()
-		{
-			try
-			{
-				// Le CookieHandler s'occupe d'envoyer l'auth
-				return await _httpClient.GetFromJsonAsync<UserProfileDto>("api/profile");
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[ApiService] Erreur GetUserProfile: {ex.Message}");
-				return null;
-			}
-		}
+        public async Task<bool> UpdateUserProfileAsync(UserProfileDto profile)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync("api/profile", profile);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
 
-		public async Task<bool> UpdateUserProfileAsync(UserProfileDto profile)
-		{
-			try
-			{
-				var response = await _httpClient.PutAsJsonAsync("api/profile", profile);
-				if (!response.IsSuccessStatusCode)
-				{
-					var error = await response.Content.ReadAsStringAsync();
-					Console.WriteLine($"[ApiService] Erreur UpdateUserProfile: {error}");
-					return false;
-				}
-				return true;
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[ApiService] Exception UpdateUserProfile: {ex.Message}");
-				return false;
-			}
-		}
-		
-
-		public async Task<IEnumerable<ColisListItemDto>?> GetMyColisAsync()
-		{
-			try
-			{
-				// CORRECTION : Ajout de _jsonOptions comme deuxième paramètre
-				// Cela permet de comprendre le format "$id / $values" envoyé par l'API
-				return await _httpClient.GetFromJsonAsync<IEnumerable<ColisListItemDto>>("api/colis/mine", _jsonOptions);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[ApiService] Erreur GetMyColis: {ex.Message}");
-				return null;
-			}
-		}
-		
+        public async Task<IEnumerable<ColisListItemDto>?> GetMyColisAsync()
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<IEnumerable<ColisListItemDto>>("api/colis/mine", _jsonOptions);
+            }
+            catch { return null; }
+        }
 
         public async Task<Colis?> GetColisByIdAsync(Guid id)
         {
@@ -164,11 +92,7 @@ namespace TransitManager.Web.Services
             {
                 return await _httpClient.GetFromJsonAsync<Colis>($"api/colis/{id}", _jsonOptions);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur GetColisByIdAsync: {ex.Message}");
-                return null;
-            }
+            catch { return null; }
         }
 
         public async Task<bool> CreateColisAsync(CreateColisDto dto)
@@ -178,11 +102,7 @@ namespace TransitManager.Web.Services
                 var response = await _httpClient.PostAsJsonAsync("api/colis", dto);
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur CreateColisAsync: {ex.Message}");
-                return false;
-            }
+            catch { return false; }
         }
 
         public async Task<bool> UpdateColisAsync(Guid id, UpdateColisDto dto)
@@ -192,11 +112,7 @@ namespace TransitManager.Web.Services
                 var response = await _httpClient.PutAsJsonAsync($"api/colis/{id}", dto);
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur UpdateColisAsync: {ex.Message}");
-                return false;
-            }
+            catch { return false; }
         }
 
         public async Task<string?> GenerateBarcodeAsync()
@@ -205,25 +121,16 @@ namespace TransitManager.Web.Services
             {
                 return await _httpClient.GetStringAsync("api/utilities/generate-barcode");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur GenerateBarcodeAsync: {ex.Message}");
-                return null;
-            }
+            catch { return null; }
         }
 
         public async Task<IEnumerable<Conteneur>?> GetConteneursAsync()
         {
             try
             {
-                // Pour les listes simples, on peut utiliser l'option par défaut ou _jsonOptions selon l'API
                 return await _httpClient.GetFromJsonAsync<IEnumerable<Conteneur>>("api/conteneurs", _jsonOptions);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur GetConteneursAsync: {ex.Message}");
-                return null;
-            }
+            catch { return null; }
         }
 
         public async Task<IEnumerable<Paiement>?> GetPaiementsForColisAsync(Guid colisId)
@@ -232,11 +139,7 @@ namespace TransitManager.Web.Services
             {
                 return await _httpClient.GetFromJsonAsync<IEnumerable<Paiement>>($"api/paiements/colis/{colisId}", _jsonOptions);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur GetPaiementsForColisAsync: {ex.Message}");
-                return null;
-            }
+            catch { return null; }
         }
 
         public async Task<Paiement?> CreatePaiementAsync(Paiement paiement)
@@ -250,11 +153,7 @@ namespace TransitManager.Web.Services
                 }
                 return null;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur CreatePaiementAsync: {ex.Message}");
-                return null;
-            }
+            catch { return null; }
         }
 
         public async Task<bool> DeletePaiementAsync(Guid id)
@@ -264,141 +163,77 @@ namespace TransitManager.Web.Services
                 var response = await _httpClient.DeleteAsync($"api/paiements/{id}");
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur DeletePaiementAsync: {ex.Message}");
-                return false;
-            }
+            catch { return false; }
         }
-		
+
         public async Task<bool> UpdateInventaireAsync(UpdateInventaireDto dto)
         {
             try
             {
                 var response = await _httpClient.PutAsJsonAsync("api/colis/inventaire", dto);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"[ApiService] Erreur UpdateInventaireAsync: {response.StatusCode} - {error}");
-                    return false;
-                }
-                return true;
+                return response.IsSuccessStatusCode;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Exception UpdateInventaireAsync: {ex.Message}");
-                return false;
-            }
+            catch { return false; }
         }
-		
 
-		public async Task<bool> DeleteColisAsync(Guid id)
-		{
-			try
-			{
-				var response = await _httpClient.DeleteAsync($"api/colis/{id}");
-				return response.IsSuccessStatusCode;
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[ApiService] Erreur DeleteColisAsync: {ex.Message}");
-				return false;
-			}
-		}
-
-		public async Task<bool> UpdatePaiementAsync(Guid id, Paiement paiement)
-		{
-			try
-			{
-				// On utilise PutAsJsonAsync
-				var response = await _httpClient.PutAsJsonAsync($"api/paiements/{id}", paiement);
-				return response.IsSuccessStatusCode;
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[ApiService] Erreur UpdatePaiementAsync: {ex.Message}");
-				return false;
-			}
-		}
-		
-		
-		public async Task<IEnumerable<VehiculeListItemDto>?> GetVehiculesAsync()
-		{
-			try
-			{
-				// On utilise _jsonOptions pour gérer la sérialisation correctement
-				return await _httpClient.GetFromJsonAsync<IEnumerable<VehiculeListItemDto>>("api/vehicules", _jsonOptions);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[ApiService] Erreur GetVehiculesAsync: {ex.Message}");
-				return null;
-			}
-		}
-		
-		public async Task<Vehicule> GetVehiculeByIdAsync(Guid id) 
-		{
-			return await _httpClient.GetFromJsonAsync<Vehicule>($"api/vehicules/{id}", _jsonOptions);
-		}
-		
-		public async Task<Client> GetClientByIdAsync(Guid id)
+        public async Task<bool> DeleteColisAsync(Guid id)
         {
             try
             {
-                return await _httpClient.GetFromJsonAsync<Client>($"api/clients/{id}", _jsonOptions);
+                var response = await _httpClient.DeleteAsync($"api/colis/{id}");
+                return response.IsSuccessStatusCode;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur GetClientByIdAsync: {ex.Message}");
-                throw;
-            }
+            catch { return false; }
         }
 
-		public async Task<bool> UpdateVehiculeAsync(Guid id, Vehicule vehicule)
-		{
-			try
-			{
-				var response = await _httpClient.PutAsJsonAsync($"api/vehicules/{id}", vehicule, _jsonOptions);
-				
-				if (!response.IsSuccessStatusCode)
-				{
-					// --- AJOUT : Lire et afficher l'erreur ---
-					var errorContent = await response.Content.ReadAsStringAsync();
-					Console.WriteLine($"[ApiService] ❌ Erreur 400 UpdateVehiculeAsync : {errorContent}");
-					// -----------------------------------------
-					return false;
-				}
-				return true;
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[ApiService] Erreur UpdateVehiculeAsync: {ex.Message}");
-				return false;
-			}
-		}
+        public async Task<bool> UpdatePaiementAsync(Guid id, Paiement paiement)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync($"api/paiements/{id}", paiement);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
 
-		public async Task<bool> CreateVehiculeAsync(Vehicule vehicule)
-		{
-			try
-			{
-				var response = await _httpClient.PostAsJsonAsync("api/vehicules", vehicule, _jsonOptions);
-				
-				if (!response.IsSuccessStatusCode)
-				{
-					// --- AJOUT : Lire et afficher l'erreur ---
-					var errorContent = await response.Content.ReadAsStringAsync();
-					Console.WriteLine($"[ApiService] ❌ Erreur 400 CreateVehiculeAsync : {errorContent}");
-					// -----------------------------------------
-					return false;
-				}
-				return true;
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"[ApiService] Erreur CreateVehiculeAsync: {ex.Message}");
-				return false;
-			}
-		}
+        public async Task<IEnumerable<VehiculeListItemDto>?> GetVehiculesAsync()
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<IEnumerable<VehiculeListItemDto>>("api/vehicules/mine", _jsonOptions);
+            }
+            catch { return null; }
+        }
+
+        public async Task<Vehicule> GetVehiculeByIdAsync(Guid id)
+        {
+            return await _httpClient.GetFromJsonAsync<Vehicule>($"api/vehicules/{id}", _jsonOptions);
+        }
+
+        public async Task<Client> GetClientByIdAsync(Guid id)
+        {
+            return await _httpClient.GetFromJsonAsync<Client>($"api/clients/{id}", _jsonOptions);
+        }
+
+        public async Task<bool> CreateVehiculeAsync(Vehicule vehicule)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/vehicules", vehicule, _jsonOptions);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> UpdateVehiculeAsync(Guid id, Vehicule vehicule)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync($"api/vehicules/{id}", vehicule, _jsonOptions);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
 
         public async Task<IEnumerable<Paiement>?> GetPaiementsForVehiculeAsync(Guid vehiculeId)
         {
@@ -406,57 +241,401 @@ namespace TransitManager.Web.Services
             {
                 return await _httpClient.GetFromJsonAsync<IEnumerable<Paiement>>($"api/paiements/vehicule/{vehiculeId}", _jsonOptions);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ApiService] Erreur GetPaiementsForVehiculeAsync: {ex.Message}");
-                return null;
-            }
+            catch { return null; }
         }
-		
-		public async Task<bool> DeleteVehiculeAsync(Guid id)
+
+        public async Task<bool> DeleteVehiculeAsync(Guid id)
         {
             try
             {
                 var response = await _httpClient.DeleteAsync($"api/vehicules/{id}");
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"[ApiService] Erreur DeleteVehiculeAsync: {response.StatusCode} - {error}");
-                    return false;
-                }
-                return true;
+                return response.IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch { return false; }
+        }
+
+        public async Task<IEnumerable<Conteneur>?> GetMyConteneursAsync()
+        {
+            try
             {
-                Console.WriteLine($"[ApiService] Erreur DeleteVehiculeAsync: {ex.Message}");
-                return false;
+                return await _httpClient.GetFromJsonAsync<IEnumerable<Conteneur>>("api/conteneurs/mine", _jsonOptions);
             }
+            catch { return null; }
+        }
+
+        public async Task<bool> DeleteConteneurAsync(Guid id)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/conteneurs/{id}");
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> AssignColisToConteneurAsync(Guid colisId, Guid conteneurId)
+        {
+            var colis = await GetColisByIdAsync(colisId);
+            if (colis == null) return false;
+
+            var dto = new UpdateColisDto
+            {
+                Id = colis.Id,
+                ClientId = colis.ClientId,
+                Designation = colis.Designation,
+                DestinationFinale = colis.DestinationFinale,
+                Barcodes = colis.Barcodes.Select(b => b.Value).ToList(),
+                NombrePieces = colis.NombrePieces,
+                Volume = colis.Volume,
+                ValeurDeclaree = colis.ValeurDeclaree,
+                PrixTotal = colis.PrixTotal,
+                SommePayee = colis.SommePayee,
+                Destinataire = colis.Destinataire,
+                TelephoneDestinataire = colis.TelephoneDestinataire,
+                LivraisonADomicile = colis.LivraisonADomicile,
+                AdresseLivraison = colis.AdresseLivraison,
+                EstFragile = colis.EstFragile,
+                ManipulationSpeciale = colis.ManipulationSpeciale,
+                InstructionsSpeciales = colis.InstructionsSpeciales,
+                Type = colis.Type,
+                TypeEnvoi = colis.TypeEnvoi,
+                InventaireJson = colis.InventaireJson,
+                ConteneurId = conteneurId,
+                Statut = Core.Enums.StatutColis.Affecte
+            };
+
+            return await UpdateColisAsync(colisId, dto);
+        }
+
+        public async Task<bool> RemoveColisFromConteneurAsync(Guid colisId)
+        {
+            var colis = await GetColisByIdAsync(colisId);
+            if (colis == null) return false;
+
+            var dto = new UpdateColisDto
+            {
+                Id = colis.Id,
+                ClientId = colis.ClientId,
+                Designation = colis.Designation,
+                DestinationFinale = colis.DestinationFinale,
+                Barcodes = colis.Barcodes.Select(b => b.Value).ToList(),
+                NombrePieces = colis.NombrePieces,
+                Volume = colis.Volume,
+                ValeurDeclaree = colis.ValeurDeclaree,
+                PrixTotal = colis.PrixTotal,
+                SommePayee = colis.SommePayee,
+                Destinataire = colis.Destinataire,
+                TelephoneDestinataire = colis.TelephoneDestinataire,
+                LivraisonADomicile = colis.LivraisonADomicile,
+                AdresseLivraison = colis.AdresseLivraison,
+                EstFragile = colis.EstFragile,
+                ManipulationSpeciale = colis.ManipulationSpeciale,
+                InstructionsSpeciales = colis.InstructionsSpeciales,
+                Type = colis.Type,
+                TypeEnvoi = colis.TypeEnvoi,
+                InventaireJson = colis.InventaireJson,
+                ConteneurId = null,
+                Statut = Core.Enums.StatutColis.EnAttente
+            };
+
+            return await UpdateColisAsync(colisId, dto);
+        }
+
+        public async Task<bool> AssignVehiculeToConteneurAsync(Guid vehiculeId, Guid conteneurId)
+        {
+            var vehicule = await GetVehiculeByIdAsync(vehiculeId);
+            if (vehicule == null) return false;
+
+            vehicule.ConteneurId = conteneurId;
+            vehicule.Statut = Core.Enums.StatutVehicule.Affecte;
+            vehicule.Client = null;
+            vehicule.Conteneur = null;
+            vehicule.Paiements = null;
+
+            return await UpdateVehiculeAsync(vehiculeId, vehicule);
+        }
+
+        public async Task<bool> RemoveVehiculeFromConteneurAsync(Guid vehiculeId)
+        {
+            var vehicule = await GetVehiculeByIdAsync(vehiculeId);
+            if (vehicule == null) return false;
+
+            vehicule.ConteneurId = null;
+            vehicule.Statut = Core.Enums.StatutVehicule.EnAttente;
+            vehicule.Client = null;
+            vehicule.Conteneur = null;
+            vehicule.Paiements = null;
+
+            return await UpdateVehiculeAsync(vehiculeId, vehicule);
+        }
+
+        public async Task<ConteneurDetailDto?> GetConteneurDetailAsync(Guid id)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<ConteneurDetailDto>($"api/conteneurs/{id}/detail", _jsonOptions);
+            }
+            catch { return null; }
+        }
+
+        public async Task<bool> AssignColisToConteneurListAsync(Guid conteneurId, List<Guid> colisIds)
+        {
+            var response = await _httpClient.PostAsJsonAsync($"api/conteneurs/{conteneurId}/colis/assign", colisIds);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> UnassignColisFromConteneurListAsync(Guid conteneurId, List<Guid> colisIds)
+        {
+            var response = await _httpClient.PostAsJsonAsync($"api/conteneurs/{conteneurId}/colis/unassign", colisIds);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> AssignVehiculesToConteneurListAsync(Guid conteneurId, List<Guid> vehiculeIds)
+        {
+            var response = await _httpClient.PostAsJsonAsync($"api/conteneurs/{conteneurId}/vehicules/assign", vehiculeIds);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> UnassignVehiculesFromConteneurListAsync(Guid conteneurId, List<Guid> vehiculeIds)
+        {
+            var response = await _httpClient.PostAsJsonAsync($"api/conteneurs/{conteneurId}/vehicules/unassign", vehiculeIds);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<Conteneur?> CreateConteneurAsync(Conteneur conteneur)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/conteneurs", conteneur, _jsonOptions);
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<Conteneur>(_jsonOptions);
+                }
+                return null;
+            }
+            catch { return null; }
+        }
+
+        public async Task<bool> UpdateConteneurAsync(Guid id, Conteneur conteneur)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync($"api/conteneurs/{id}", conteneur, _jsonOptions);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
         }
 		
-		public async Task<IEnumerable<Conteneur>?> GetMyConteneursAsync()
+		public async Task<Client?> CreateClientAsync(Client client)
 		{
 			try
 			{
-				return await _httpClient.GetFromJsonAsync<IEnumerable<Conteneur>>("api/conteneurs/mine", _jsonOptions);
+				var response = await _httpClient.PostAsJsonAsync("api/clients", client, _jsonOptions);
+				if (response.IsSuccessStatusCode)
+				{
+					return await response.Content.ReadFromJsonAsync<Client>(_jsonOptions);
+				}
+				else
+				{
+					var error = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"[ApiService] Erreur CreateClientAsync: {response.StatusCode} - {error}");
+					return null;
+				}
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"[ApiService] Erreur GetMyConteneursAsync: {ex.Message}");
+				Console.WriteLine($"[ApiService] Exception CreateClientAsync: {ex.Message}");
 				return null;
 			}
 		}
-		
-		public async Task<bool> DeleteConteneurAsync(Guid id)
+
+		public async Task<bool> UpdateClientAsync(Guid id, Client client)
 		{
 			try
 			{
-				var response = await _httpClient.DeleteAsync($"api/conteneurs/{id}");
+				var response = await _httpClient.PutAsJsonAsync($"api/clients/{id}", client, _jsonOptions);
+				if (!response.IsSuccessStatusCode)
+				{
+					var error = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"[ApiService] Erreur UpdateClientAsync: {response.StatusCode} - {error}");
+					return false;
+				}
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] Exception UpdateClientAsync: {ex.Message}");
+				return false;
+			}
+		}
+
+		public async Task<bool> DeleteClientAsync(Guid id)
+		{
+			try
+			{
+				var response = await _httpClient.DeleteAsync($"api/clients/{id}");
 				return response.IsSuccessStatusCode;
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Erreur DeleteConteneurAsync: {ex.Message}");
+				Console.WriteLine($"[ApiService] Erreur DeleteClientAsync: {ex.Message}");
 				return false;
+			}
+		}
+		
+		public async Task<IEnumerable<Utilisateur>?> GetUsersAsync()
+		{
+			try { return await _httpClient.GetFromJsonAsync<IEnumerable<Utilisateur>>("api/users", _jsonOptions); }
+			catch { return null; }
+		}
+
+		public async Task<Utilisateur?> GetUserByIdAsync(Guid id)
+		{
+			try { return await _httpClient.GetFromJsonAsync<Utilisateur>($"api/users/{id}", _jsonOptions); }
+			catch { return null; }
+		}
+
+		public async Task<bool> CreateUserAsync(Utilisateur user, string password)
+		{
+			try
+			{
+				// On doit envelopper l'utilisateur et le mot de passe comme attendu par l'API
+				var request = new { User = user, Password = password };
+				var response = await _httpClient.PostAsJsonAsync("api/users", request, _jsonOptions);
+				return response.IsSuccessStatusCode;
+			}
+			catch { return false; }
+		}
+
+		public async Task<bool> UpdateUserAsync(Guid id, Utilisateur user)
+		{
+			try
+			{
+				var response = await _httpClient.PutAsJsonAsync($"api/users/{id}", user, _jsonOptions);
+				return response.IsSuccessStatusCode;
+			}
+			catch { return false; }
+		}
+
+		public async Task<bool> DeleteUserAsync(Guid id)
+		{
+			try
+			{
+				var response = await _httpClient.DeleteAsync($"api/users/{id}");
+				return response.IsSuccessStatusCode;
+			}
+			catch { return false; }
+		}
+		
+		public async Task<string?> ResetPasswordAsync(Guid userId)
+		{
+			try
+			{
+				// CORRECTION : On utilise bien userId
+				var response = await _httpClient.PostAsync($"api/users/{userId}/reset-password", null);
+				
+				if (response.IsSuccessStatusCode)
+				{
+					// On récupère le mot de passe en clair (probablement entouré de guillemets car c'est du JSON string)
+					var raw = await response.Content.ReadAsStringAsync();
+					return raw.Trim('"'); // On enlève les guillemets éventuels du JSON
+				}
+				return null;
+			}
+			catch { return null; }
+		}
+
+		public async Task<bool> UnlockUserAccountAsync(Guid id)
+		{
+			try
+			{
+				var response = await _httpClient.PostAsync($"api/users/{id}/unlock", null);
+				return response.IsSuccessStatusCode;
+			}
+			catch { return false; }
+		}
+
+		public async Task<bool> ChangeUserPasswordAsync(Guid id, string newPassword)
+		{
+			try
+			{
+				var request = new { NewPassword = newPassword };
+				var response = await _httpClient.PostAsJsonAsync($"api/users/{id}/change-password", request, _jsonOptions);
+				return response.IsSuccessStatusCode;
+			}
+			catch { return false; }
+		}		
+		
+		// Classe pour le résultat (à mettre dans le namespace ou à part)
+		public class PortalAccessResult
+		{
+			public string Message { get; set; } = "";
+			public Guid UserId { get; set; }
+			public string Username { get; set; } = "";
+			public string TemporaryPassword { get; set; } = "";
+		}
+
+		// Dans la classe ApiService
+		public async Task<PortalAccessResult> CreateOrResetPortalAccessAsync(Guid clientId)
+		{
+			try
+			{
+				var response = await _httpClient.PostAsJsonAsync("api/users/create-portal-access", new { ClientId = clientId });
+				if (response.IsSuccessStatusCode)
+				{
+					return await response.Content.ReadFromJsonAsync<PortalAccessResult>(_jsonOptions) ?? new();
+				}
+				// Gérer l'erreur si besoin
+				return new PortalAccessResult { Message = "Erreur API" };
+			}
+			catch (Exception ex) { return new PortalAccessResult { Message = ex.Message }; }
+		}
+		
+		public async Task<bool> RegisterClientAsync(RegisterClientRequestDto request)
+		{
+			try
+			{
+				var response = await _httpClient.PostAsJsonAsync("api/auth/register", request);
+				if (!response.IsSuccessStatusCode)
+				{
+					var error = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"Register Error: {error}");
+					// Idéalement, on devrait remonter le message d'erreur à la vue
+					throw new Exception(error); // On lance une exception pour que la vue l'attrape
+				}
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex.Message);
+				throw;
+			}
+		}
+		
+		public async Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials)
+		{
+			try
+			{
+				var url = $"api/conteneurs/{id}/export/pdf?includeFinancials={includeFinancials}";
+				Console.WriteLine($"[ApiService] Tentative de téléchargement PDF : {url}");
+
+				var response = await _httpClient.GetAsync(url);
+				
+				if (!response.IsSuccessStatusCode)
+				{
+					var error = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"[ApiService] ❌ Erreur API ({response.StatusCode}) : {error}");
+					return Array.Empty<byte>();
+				}
+
+				var bytes = await response.Content.ReadAsByteArrayAsync();
+				Console.WriteLine($"[ApiService] ✅ PDF reçu : {bytes.Length} octets");
+				return bytes;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[ApiService] 💥 Exception : {ex.Message}");
+				return Array.Empty<byte>();
 			}
 		}
 		

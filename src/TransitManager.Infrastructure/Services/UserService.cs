@@ -59,18 +59,25 @@ namespace TransitManager.Infrastructure.Services
                 
             user.MotDePasseHash = BCryptNet.HashPassword(password);
             
-            // Si on lie un client, on synchronise les données
-            if (user.ClientId.HasValue)
-            {
-                var client = await context.Clients.FindAsync(user.ClientId.Value);
-                if (client != null)
-                {
-                    user.Nom = client.Nom;
-                    user.Prenom = client.Prenom;
-                    user.Email = client.Email ?? user.Email;
-                    user.Telephone = client.TelephonePrincipal;
-                }
-            }
+			// Si on lie un client, on synchronise les données
+			if (user.ClientId.HasValue)
+			{
+				var client = await context.Clients.FindAsync(user.ClientId.Value); // Ici, EF charge le Client (Instance A)
+				if (client != null)
+				{
+					user.Nom = client.Nom;
+					user.Prenom = client.Prenom;
+					user.Email = client.Email ?? user.Email;
+					user.Telephone = client.TelephonePrincipal;
+				}
+			}
+			
+			// --- CORRECTION CRUCIALE ---
+			// On s'assure que la propriété de navigation est nulle pour éviter 
+			// qu'EF n'essaie d'attacher l'objet Client venant de l'UI (Instance B)
+			// alors qu'il connait déjà Instance A.
+			user.Client = null; 
+			// ---------------------------
             
             await context.Utilisateurs.AddAsync(user);
             await context.SaveChangesAsync();
@@ -95,6 +102,8 @@ namespace TransitManager.Infrastructure.Services
 			{
 				throw new DbUpdateConcurrencyException("Les données ont été modifiées par un autre utilisateur.");
 			}
+			
+			userFromUI.Client = null; // On casse la référence objet, on garde juste l'ID
 
 			// 3. Copier les valeurs modifiées de l'UI vers l'entité suivie par le DbContext
 			context.Entry(userInDb).CurrentValues.SetValues(userFromUI);
@@ -172,5 +181,30 @@ namespace TransitManager.Infrastructure.Services
             while (0 < length--) { sb.Append(validChars[rand.Next(validChars.Length)]); }
             return sb.ToString();
         }
+		
+		public async Task<bool> UnlockAccountAsync(Guid id)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			var user = await context.Utilisateurs.FindAsync(id);
+			if (user == null) return false;
+
+			user.DateVerrouillage = null;
+			user.TentativesConnexionEchouees = 0;
+			await context.SaveChangesAsync();
+			return true;
+		}
+
+		public async Task<bool> ChangePasswordManualAsync(Guid id, string newPassword)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			var user = await context.Utilisateurs.FindAsync(id);
+			if (user == null) return false;
+
+			user.MotDePasseHash = BCryptNet.HashPassword(newPassword);
+			// Optionnel : On peut décider si le changement manuel force une reconnexion ou non
+			// user.DoitChangerMotDePasse = false; 
+			await context.SaveChangesAsync();
+			return true;
+		}
     }
 }

@@ -55,6 +55,7 @@ builder.Services.AddTransient<IExportService, ExportService>();
 builder.Services.AddTransient<IBackupService, BackupService>();
 builder.Services.AddTransient<IPrintingService, PrintingService>();
 builder.Services.AddTransient<IJwtService, JwtService>();
+builder.Services.AddTransient<IUserService, UserService>(); 
 builder.Services.AddSingleton<INotificationHubService, NotificationHubService>();
 builder.Services.AddTransient(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddTransient<IClientRepository, ClientRepository>();

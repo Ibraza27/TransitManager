@@ -8,6 +8,7 @@ using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
 using BCryptNet = BCrypt.Net.BCrypt;
 using TransitManager.Core.Enums;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -47,11 +48,19 @@ namespace TransitManager.Infrastructure.Services
                     return new AuthenticationResult { Success = false, ErrorMessage = "Identifiant ou mot de passe incorrect (Utilisateur Inconnu)." };
                 }
                 Console.WriteLine($"[4] SUCCÈS : Utilisateur trouvé. ID : {user.Id}, Nom : {user.NomComplet}");
+
                 if (user.EstVerrouille)
                 {
                     Console.WriteLine("[5] ÉCHEC : Le compte est verrouillé.");
-                    return new AuthenticationResult { Success = false, ErrorMessage = "Votre compte est temporairement verrouillé." };
+                    // MODIFICATION ICI : On renvoie la date de fin
+                    return new AuthenticationResult 
+                    { 
+                        Success = false, 
+                        ErrorMessage = "Votre compte est temporairement verrouillé.",
+                        LockoutEnd = user.DateVerrouillage 
+                    };
                 }
+
                 Console.WriteLine("[5] Compte non verrouillé. Vérification du mot de passe...");
                 bool isPasswordValid = BCryptNet.Verify(password, user.MotDePasseHash);
                 if (!isPasswordValid)
@@ -250,5 +259,70 @@ namespace TransitManager.Infrastructure.Services
             }
             return sb.ToString();
         }
+		
+		public async Task<AuthenticationResult> RegisterClientAsync(RegisterClientRequestDto request)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            
+            // 1. Vérification unicité Email
+            var emailExists = await context.Utilisateurs.AnyAsync(u => u.Email.ToLower() == request.Email.ToLower());
+            if (emailExists)
+            {
+                return new AuthenticationResult { Success = false, ErrorMessage = "Cet email est déjà utilisé. Veuillez contacter le support si vous avez oublié vos accès." };
+            }
+
+            // 2. Transaction Atomique
+            using var transaction = await context.Database.BeginTransactionAsync();
+            try
+            {
+                // A. Création du Client
+                var client = new Client
+                {
+                    Nom = request.Nom,
+                    Prenom = request.Prenom,
+                    Email = request.Email,
+                    TelephonePrincipal = request.Telephone,
+                    TelephoneSecondaire = request.TelephoneSecondaire,
+                    AdressePrincipale = request.Adresse,
+                    CodePostal = request.CodePostal,
+                    Ville = request.Ville,
+                    Pays = request.Pays ?? "France",
+                    Actif = true,
+                    DateInscription = DateTime.UtcNow
+                };
+                
+                context.Clients.Add(client);
+                await context.SaveChangesAsync(); // Pour générer l'ID du client
+
+                // B. Création de l'Utilisateur lié
+                var user = new Utilisateur
+                {
+                    NomUtilisateur = request.Email, // On utilise l'email comme login
+                    Email = request.Email,
+                    Nom = request.Nom,
+                    Prenom = request.Prenom,
+                    Telephone = request.Telephone,
+                    MotDePasseHash = BCryptNet.HashPassword(request.Password),
+                    Role = RoleUtilisateur.Client,
+                    ClientId = client.Id, // Liaison automatique
+                    Actif = true,
+                    DateCreation = DateTime.UtcNow
+                };
+
+                context.Utilisateurs.Add(user);
+                await context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return new AuthenticationResult { Success = true, User = user };
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                Console.WriteLine($"ERREUR INSCRIPTION: {ex.Message}");
+                return new AuthenticationResult { Success = false, ErrorMessage = "Une erreur technique est survenue lors de l'inscription." };
+            }
+        }
+		
     }
 }

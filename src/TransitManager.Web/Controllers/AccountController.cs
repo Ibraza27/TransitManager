@@ -64,8 +64,27 @@ namespace TransitManager.Web.Controllers
                 else
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"🛂 [AccountController] ❌ Échec de la connexion API : {errorContent}");
-                    return Redirect("/login?error=auth_failed");
+                    Console.WriteLine($"🛂 [AccountController] ❌ Échec : {errorContent}");
+                    
+                    string redirectUrl = "/login?error=auth_failed";
+
+                    // Tentative de lecture du JSON pour voir s'il y a un lockout
+                    try 
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(errorContent);
+                        if (doc.RootElement.TryGetProperty("lockoutEnd", out var lockElem) && lockElem.GetString() != null)
+                        {
+                            var lockoutTime = lockElem.GetString();
+                            redirectUrl = $"/login?error=locked&until={System.Net.WebUtility.UrlEncode(lockoutTime)}";
+                        }
+                        else if(doc.RootElement.TryGetProperty("message", out var msgElem))
+                        {
+                             // On pourrait passer le message custom, mais auth_failed suffit souvent
+                        }
+                    }
+                    catch {}
+
+                    return Redirect(redirectUrl);
                 }
             }
             catch (Exception ex)

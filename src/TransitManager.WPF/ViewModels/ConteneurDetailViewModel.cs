@@ -37,7 +37,7 @@ namespace TransitManager.WPF.ViewModels
 		private readonly IServiceProvider _serviceProvider;
 		private readonly IExportService _exportService; 
 
-
+		private bool _isCreationMode;
         private Conteneur? _conteneur;
         public Conteneur? Conteneur
         {
@@ -470,15 +470,20 @@ namespace TransitManager.WPF.ViewModels
             return StatutConteneur.Reçu;
         }
 
+        // Initialisation pour un NOUVEAU conteneur
         public async Task InitializeAsync(string newMarker)
         {
             if (newMarker == "new")
             {
                 Title = "Nouveau Dossier Conteneur";
                 Conteneur = new Conteneur { DateReception = DateTime.UtcNow };
+                
+                // C'est une création
+                _isCreationMode = true; 
             }
         }
 
+        // Initialisation pour un conteneur EXISTANT
         public async Task InitializeAsync(Guid conteneurId)
         {
             Title = "Détails du Dossier Conteneur";
@@ -489,6 +494,9 @@ namespace TransitManager.WPF.ViewModels
                 {
                     RefreshAggregatedData();
                 }
+                
+                // C'est une modification
+                _isCreationMode = false; 
             });
         }
         
@@ -527,51 +535,54 @@ namespace TransitManager.WPF.ViewModels
             RecalculateAndNotifyTotals();
 		}
 
-		private async Task SaveAsync()
-		{
-			if (Conteneur == null) return;
-			if (!CanSave()) 
-			{
-				await _dialogService.ShowWarningAsync("Validation", "Veuillez remplir tous les champs obligatoires (*).");
-				return;
-			}
+        private async Task SaveAsync()
+        {
+            if (Conteneur == null) return;
+            if (!CanSave()) 
+            {
+                await _dialogService.ShowWarningAsync("Validation", "Veuillez remplir tous les champs obligatoires (*).");
+                return;
+            }
 
-			await ExecuteBusyActionAsync(async () =>
-			{
-				try
+            await ExecuteBusyActionAsync(async () =>
+            {
+                try
+                {
+                    // --- CORRECTION : Utiliser le drapeau explicite ---
+                    if (_isCreationMode)
+                    {
+                        await _conteneurService.CreateAsync(Conteneur);
+                        
+                        // IMPORTANT : Une fois créé, on passe en mode modification
+                        // pour éviter une erreur si l'utilisateur reclique sur "Enregistrer" sans fermer la fenêtre.
+                        _isCreationMode = false; 
+                    }
+                    else
+                    {
+                        await _conteneurService.UpdateAsync(Conteneur);
+                    }
+                    
+                    await _dialogService.ShowInformationAsync("Succès", "Le dossier a été enregistré.");
+                    _messenger.Send(new ConteneurUpdatedMessage(true));
+                    _navigationService.GoBack();
+                }
+                catch (ConcurrencyException cex)
 				{
-					bool isNew = string.IsNullOrEmpty(Conteneur.CreePar);
-					if (isNew)
-					{
-						await _conteneurService.CreateAsync(Conteneur);
-					}
-					else
-					{
-						await _conteneurService.UpdateAsync(Conteneur);
-					}
-					await _dialogService.ShowInformationAsync("Succès", "Le dossier a été enregistré.");
-					_messenger.Send(new ConteneurUpdatedMessage(true));
-					_navigationService.GoBack();
-				}
-				
-				catch (ConcurrencyException cex)
-				{
-					var refresh = await _dialogService.ShowConfirmationAsync(
-						"Conflit de Données",
-						$"{cex.Message}\n\nVoulez-vous rafraîchir les données pour voir les dernières modifications ? (Vos changements actuels seront perdus)");
+                    var refresh = await _dialogService.ShowConfirmationAsync(
+                        "Conflit de Données",
+                        $"{cex.Message}\n\nVoulez-vous rafraîchir les données... ?");
 
-					if (refresh && Conteneur != null)
-					{
-						await InitializeAsync(Conteneur.Id); // Recharge les données
-					}
-				}
-				
-				catch (Exception ex)
-				{
-					await _dialogService.ShowErrorAsync("Erreur d'enregistrement", $"{ex.Message}\n\nDétails: {ex.InnerException?.Message}");
-				}
-			});
-		}
+                    if (refresh && Conteneur != null)
+                    {
+                        await InitializeAsync(Conteneur.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await _dialogService.ShowErrorAsync("Erreur d'enregistrement", $"{ex.Message}\n\nDétails: {ex.InnerException?.Message}");
+                }
+            });
+        }
         
         private async Task AddColisAsync(Colis? colis)
         {

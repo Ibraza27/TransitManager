@@ -885,6 +885,260 @@ namespace TransitManager.Infrastructure.Services
 					});
 			}
 		}
+		
+
+		public async Task<byte[]> GenerateContainerPdfAsync(Conteneur conteneur, bool includeFinancials)
+		{
+			return await Task.Run(() =>
+			{
+				var document = PdfDocument.Create(container =>
+				{
+					container.Page(page =>
+					{
+						page.Size(PageSizes.A4);
+						page.Margin(1.5f, Unit.Centimetre);
+						page.PageColor(Colors.White);
+						page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
+
+						page.Header().Element(ComposeHeader);
+						page.Content().Element(ComposeContent);
+						page.Footer().Element(ComposeFooter);
+					});
+				});
+
+				return document.GeneratePdf();
+
+				void ComposeHeader(IContainer container)
+				{
+					container.Row(row =>
+					{
+						row.RelativeItem().Column(column =>
+						{
+							// --- DÉBUT CORRECTION : Sécuriser l'image ---
+							// On essaie de charger l'image, si ça plante, on l'ignore pour ne pas bloquer le PDF
+							try 
+							{
+								// On suppose que le logo est copié dans le dossier de l'exécutable API
+								// ou on utilise un chemin absolu temporaire pour tester
+								// Idéalement : Path.Combine(AppContext.BaseDirectory, "Resources", "Images", "logo.jpg")
+								// Pour l'instant, on va commenter l'image si elle pose problème ou mettre un try/catch vide
+								
+								// Si vous n'avez pas configuré la copie du logo dans le bin de l'API, cela plantera.
+								column.Item().Image("logo.jpg").FitHeight(); 
+							}
+							catch 
+							{
+								// Si image pas trouvée, on ne fait rien (pas d'image)
+							}
+							// ---------------------------------------------
+
+							column.Item().Text("HIPPOCAMPE").ExtraBold().FontSize(24).FontColor(Colors.Blue.Darken2);
+							column.Item().Text("IMPORT-EXPORT").Bold().FontSize(14).FontColor(Colors.Orange.Medium);
+							column.Item().PaddingTop(5).Text("7 Rue Pascal, 33370 Tresses").FontSize(9);
+							column.Item().Text("Tél: 06 99 56 93 58 / 09 81 72 45 40").FontSize(9);
+							column.Item().Text("Email: bordeaux@h-import-export.com").FontSize(9);
+						});
+
+						// Infos Dossier à droite
+						row.ConstantItem(200).AlignRight().Column(column =>
+						{
+							column.Item().Text("DOSSIER DE TRANSIT").FontSize(16).SemiBold().FontColor(Colors.Grey.Darken2);
+							column.Item().Text(conteneur.NumeroDossier).FontSize(18).Bold();
+							
+							column.Item().PaddingTop(10).Text(text =>
+							{
+								text.Span("Date: ").SemiBold();
+								text.Span(DateTime.Now.ToString("dd/MM/yyyy"));
+							});
+							
+							if (includeFinancials)
+							{
+								column.Item().Background(Colors.Red.Lighten4).Padding(5)
+									.Text("DOCUMENT CONFIDENTIEL\n(Inclus données financières)").FontSize(8).FontColor(Colors.Red.Darken2).AlignCenter();
+							}
+						});
+					});
+				}
+
+				void ComposeContent(IContainer container)
+				{
+					container.PaddingVertical(20).Column(column =>
+					{
+						column.Spacing(15);
+
+						// 1. Détails du Conteneur (Cadre gris)
+						column.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Row(row =>
+						{
+							row.RelativeItem().Column(c =>
+							{
+								c.Item().Text("INFORMATIONS GÉNÉRALES").FontSize(10).SemiBold().Underline();
+								c.Item().Text($"Destination: {conteneur.Destination}, {conteneur.PaysDestination}");
+								c.Item().Text($"Compagnie: {conteneur.NomCompagnie ?? "-"}");
+								c.Item().Text($"Transitaire: {conteneur.NomTransitaire ?? "-"}");
+								c.Item().Text($"N° Plomb: {conteneur.NumeroPlomb ?? "-"}");
+							});
+
+							row.RelativeItem().Column(c =>
+							{
+								c.Item().Text("LOGISTIQUE").FontSize(10).SemiBold().Underline();
+								c.Item().Text($"Statut: {conteneur.Statut}");
+								c.Item().Text($"Chargement: {conteneur.DateChargement:dd/MM/yyyy}");
+								c.Item().Text($"Départ: {conteneur.DateDepart:dd/MM/yyyy}");
+								c.Item().Text($"Arrivée Prévue: {conteneur.DateArriveeDestination:dd/MM/yyyy}");
+							});
+						});
+						
+						if (!string.IsNullOrWhiteSpace(conteneur.Commentaires))
+						{
+							column.Item().Text($"Notes: {conteneur.Commentaires}").Italic().FontSize(9);
+						}
+
+						// 2. Liste des Colis
+						if (conteneur.Colis.Any())
+						{
+							column.Item().PaddingTop(10).Text($"LISTE DES COLIS ({conteneur.Colis.Count})").FontSize(14).Bold().FontColor(Colors.Blue.Darken2);
+							column.Item().Table(table =>
+							{
+								// Définition des colonnes
+								table.ColumnsDefinition(columns =>
+								{
+									columns.ConstantColumn(80); // Réf
+									columns.RelativeColumn(2);  // Client
+									columns.RelativeColumn(2);  // Désignation
+									columns.RelativeColumn(1);  // Dest.
+									
+									if (includeFinancials)
+									{
+										columns.ConstantColumn(70); // Prix
+										columns.ConstantColumn(70); // Payé
+										columns.ConstantColumn(70); // Reste
+									}
+								});
+
+								// En-tête
+								table.Header(header =>
+								{
+									header.Cell().Element(HeaderStyle).Text("Référence");
+									header.Cell().Element(HeaderStyle).Text("Client");
+									header.Cell().Element(HeaderStyle).Text("Désignation");
+									header.Cell().Element(HeaderStyle).Text("Ville Dest.");
+									
+									if (includeFinancials)
+									{
+										header.Cell().Element(HeaderStyle).AlignRight().Text("Prix");
+										header.Cell().Element(HeaderStyle).AlignRight().Text("Payé");
+										header.Cell().Element(HeaderStyle).AlignRight().Text("Reste");
+									}
+								});
+
+								// Lignes
+								foreach (var item in conteneur.Colis)
+								{
+									table.Cell().Element(CellStyle).Text(item.NumeroReference).SemiBold();
+									table.Cell().Element(CellStyle).Text(item.Client?.NomComplet ?? "N/A");
+									table.Cell().Element(CellStyle).Text(item.Designation);
+									table.Cell().Element(CellStyle).Text(item.DestinationFinale);
+									
+									if (includeFinancials)
+									{
+										table.Cell().Element(CellStyle).AlignRight().Text($"{item.PrixTotal:N0} €");
+										table.Cell().Element(CellStyle).AlignRight().Text($"{item.SommePayee:N0} €");
+										table.Cell().Element(CellStyle).AlignRight().Text($"{item.RestantAPayer:N0} €").FontColor(item.RestantAPayer > 0 ? Colors.Red.Medium : Colors.Black);
+									}
+								}
+							});
+						}
+
+						// 3. Liste des Véhicules (Similaire)
+						if (conteneur.Vehicules.Any())
+						{
+							column.Item().PageBreak(); // Nouvelle page pour les véhicules si besoin
+							column.Item().PaddingTop(10).Text($"LISTE DES VÉHICULES ({conteneur.Vehicules.Count})").FontSize(14).Bold().FontColor(Colors.Green.Darken2);
+							column.Item().Table(table =>
+							{
+								table.ColumnsDefinition(columns =>
+								{
+									columns.ConstantColumn(90); // Immat
+									columns.RelativeColumn(2);  // Client
+									columns.RelativeColumn(3);  // Modèle
+									
+									if (includeFinancials)
+									{
+										columns.ConstantColumn(70);
+										columns.ConstantColumn(70);
+										columns.ConstantColumn(70);
+									}
+								});
+
+								table.Header(header =>
+								{
+									header.Cell().Element(HeaderStyle).Text("Immatriculation");
+									header.Cell().Element(HeaderStyle).Text("Client");
+									header.Cell().Element(HeaderStyle).Text("Véhicule");
+									
+									if (includeFinancials)
+									{
+										header.Cell().Element(HeaderStyle).AlignRight().Text("Prix");
+										header.Cell().Element(HeaderStyle).AlignRight().Text("Payé");
+										header.Cell().Element(HeaderStyle).AlignRight().Text("Reste");
+									}
+								});
+
+								foreach (var item in conteneur.Vehicules)
+								{
+									table.Cell().Element(CellStyle).Text(item.Immatriculation).SemiBold();
+									table.Cell().Element(CellStyle).Text(item.Client?.NomComplet ?? "N/A");
+									table.Cell().Element(CellStyle).Text($"{item.Marque} {item.Modele} ({item.Annee})");
+									
+									if (includeFinancials)
+									{
+										table.Cell().Element(CellStyle).AlignRight().Text($"{item.PrixTotal:N0} €");
+										table.Cell().Element(CellStyle).AlignRight().Text($"{item.SommePayee:N0} €");
+										table.Cell().Element(CellStyle).AlignRight().Text($"{item.RestantAPayer:N0} €").FontColor(item.RestantAPayer > 0 ? Colors.Red.Medium : Colors.Black);
+									}
+								}
+							});
+						}
+						
+						// Totaux Généraux (si demandé)
+						if (includeFinancials)
+						{
+							var totalPrix = conteneur.Colis.Sum(c => c.PrixTotal) + conteneur.Vehicules.Sum(v => v.PrixTotal);
+							var totalReste = conteneur.Colis.Sum(c => c.RestantAPayer) + conteneur.Vehicules.Sum(v => v.RestantAPayer);
+
+							column.Item().PaddingTop(20).AlignRight().Border(1).BorderColor(Colors.Black).Padding(10).Column(c => 
+							{
+								c.Item().Text($"TOTAL DOSSIER: {totalPrix:C}").FontSize(12).Bold();
+								c.Item().Text($"RESTE À RECOUVRER: {totalReste:C}").FontSize(12).Bold().FontColor(Colors.Red.Medium);
+							});
+						}
+					});
+				}
+
+				void ComposeFooter(IContainer container)
+				{
+					container.Column(c =>
+					{
+						c.Item().BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingTop(5).Row(row =>
+						{
+							row.RelativeItem().Text("HIPPOCAMPE IMPORT-EXPORT - SIRET: XXXXXXXXXXXXX").FontSize(8).FontColor(Colors.Grey.Medium);
+							row.RelativeItem().AlignRight().Text(x =>
+							{
+								x.Span("Page ");
+								x.CurrentPageNumber();
+								x.Span(" / ");
+								x.TotalPages();
+							});
+						});
+					});
+				}
+
+				// Styles
+				static IContainer HeaderStyle(IContainer container) => container.BorderBottom(1).BorderColor(Colors.Black).PaddingVertical(5).Background(Colors.Grey.Lighten3);
+				static IContainer CellStyle(IContainer container) => container.BorderBottom(1).BorderColor(Colors.Grey.Lighten3).PaddingVertical(5);
+			});
+		}		
+		
 
     }
 

@@ -22,29 +22,44 @@
                 @(IsNew ? "Nouveau Dossier" : $"Dossier {_dto.NumeroDossier}")
             </h2>
         </div>
-		<div class="d-flex gap-2">
-            <!-- MENU EXPORT -->
-            <div class="dropdown">
-                <button class="btn btn-outline-danger dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-file-earmark-pdf me-2"></i>Exporter PDF
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <li>
-                        <button class="dropdown-item" @onclick="() => ExportPdf(false)">
-                            📄 Manifeste Simple (Sans prix)
-                        </button>
-                    </li>
-                    <li>
-                        <button class="dropdown-item" @onclick="() => ExportPdf(true)">
-                            💰 Rapport Complet (Avec prix)
-                        </button>
-                    </li>
-                </ul>
-            </div>
+		<div class="d-flex gap-2 position-relative">
+			
+			<!-- MENU D'EXPORTATION 100% BLAZOR -->
+			<div class="dropdown">
+				<!-- Le bouton appelle une méthode C# pour basculer l'état -->
+				<button class="btn btn-outline-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
+					<i class="bi bi-file-earmark-pdf me-2"></i>Exporter PDF
+				</button>
 
-            <button class="btn btn-outline-primary" @onclick="LoadData" title="Recharger les données">
-                <i class="bi bi-arrow-clockwise"></i>
-            </button>
+				<!-- Le menu s'affiche si _isExportMenuOpen est true via CSS dynamique -->
+				<ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" 
+					style="right: auto; left: 0; margin-top: 5px;">
+					<li>
+						<button class="dropdown-item" @onclick="() => ExportPdf(false)">
+							📄 Manifeste Simple (Sans prix)
+						</button>
+					</li>
+					<li>
+						<button class="dropdown-item" @onclick="() => ExportPdf(true)">
+							💰 Rapport Complet (Avec prix)
+						</button>
+					</li>
+				</ul>
+				
+				<!-- (Optionnel) Un calque transparent pour fermer le menu si on clique ailleurs -->
+				@if (_isExportMenuOpen)
+				{
+					<div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" 
+						 @onclick="ToggleExportMenu"></div>
+				}
+			</div>
+
+			<button class="btn btn-outline-primary" @onclick="LoadData">
+				<i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+			</button>
+			
+			
+			
             <button class="btn btn-primary" @onclick="SaveContainer">
                 <i class="bi bi-save me-2"></i> Enregistrer
             </button>
@@ -490,23 +505,68 @@
         }
     }
 	
-	private async Task ExportPdf(bool includeFinancials)
+
+    private bool _isExportMenuOpen = false;
+
+    // 2. Méthode pour ouvrir/fermer
+    private void ToggleExportMenu()
     {
-        var pdfData = await ApiService.ExportConteneurPdfAsync(_conteneur.Id, includeFinancials);
-        
-        if (pdfData.Length > 0)
-        {
-            // Astuce pour télécharger le fichier en JS depuis Blazor
-            var fileName = $"Dossier_{_conteneur.NumeroDossier}_{(includeFinancials ? "Complet" : "Manifeste")}.pdf";
-            using var stream = new MemoryStream(pdfData);
-            using var streamRef = new DotNetStreamReference(stream);
-            
-            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
-        }
-        else
-        {
-            await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la génération du PDF.");
-        }
+        _isExportMenuOpen = !_isExportMenuOpen;
     }
+
+    // 3. Ta méthode ExportPdf modifiée pour fermer le menu au début
+    private async Task ExportPdf(bool includeFinancials)
+    {
+        // On ferme le menu immédiatement
+        _isExportMenuOpen = false;
+        
+        Console.WriteLine("Step 1: [WEB VIEW] Clic sur le bouton Exporter (Menu Blazor).");
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+			Console.WriteLine($"Step 2: [WEB VIEW] Appel du service ApiService.ExportConteneurPdfAsync pour ID: {_conteneur.Id}");
+			
+			var pdfData = await ApiService.ExportConteneurPdfAsync(_conteneur.Id, includeFinancials);
+			
+			Console.WriteLine($"Step 7: [WEB VIEW] Retour du service. Données reçues : {(pdfData != null ? pdfData.Length + " octets" : "NULL")}");
+
+			if (pdfData != null && pdfData.Length > 0)
+			{
+				// Nettoyage du nom
+				var safeDossier = _conteneur.NumeroDossier?
+					.Replace("/", "-")
+					.Replace("\\", "-") 
+					.Replace(":", "-") ?? "Inconnu";
+				
+				var fileName = $"Dossier_{safeDossier}_{(includeFinancials ? "Complet" : "Manifeste")}.pdf";
+				Console.WriteLine($"Step 8: [WEB VIEW] Nom du fichier généré : {fileName}");
+
+				using var stream = new MemoryStream(pdfData);
+				using var streamRef = new DotNetStreamReference(stream);
+				
+				Console.WriteLine("Step 9: [WEB VIEW] Appel JavaScript 'downloadFileFromStream'...");
+				await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+				Console.WriteLine("Step 10: [WEB VIEW] Appel JavaScript terminé.");
+			}
+			else
+			{
+				Console.WriteLine("Step 7b: [WEB VIEW] ERREUR : Le tableau d'octets reçu est vide ou null.");
+				await JSRuntime.InvokeVoidAsync("alert", "Erreur : Le fichier reçu est vide.");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Step ERROR [WEB VIEW]: Exception attrapée dans la vue : {ex.Message}");
+			Console.WriteLine($"StackTrace : {ex.StackTrace}");
+			await JSRuntime.InvokeVoidAsync("alert", $"Exception Vue : {ex.Message}");
+		}
+		finally
+		{
+			_isLoading = false;
+			StateHasChanged();
+		}
+	}
 	
 }

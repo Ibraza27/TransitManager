@@ -8,6 +8,7 @@
 @inject IApiService ApiService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
 @using TransitManager.Web.Components.Shared
 
 <PageTitle>@(IsNew ? "Nouveau Colis" : "Détail Colis") - Hippocampe</PageTitle>
@@ -26,8 +27,34 @@
                 <span class="text-muted ms-2 small">Ref: @_colis.NumeroReference</span>
             }
         </div>
-        <div class="d-flex gap-2">
-             <!-- Boutons d'actions transverses -->
+		<div class="d-flex gap-2 position-relative">
+            
+             <!-- MENU EXPORT (Nouveau) -->
+            <div class="dropdown">
+                <button class="btn btn-outline-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>PDF
+                </button>
+                <ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" 
+                    style="right: auto; left: 0; margin-top: 5px;">
+                    <li>
+                        <button class="dropdown-item" @onclick="() => ExportPdf(false)">
+                            📄 Fiche Colis (Sans prix)
+                        </button>
+                    </li>
+                    <li>
+                        <button class="dropdown-item" @onclick="() => ExportPdf(true)">
+                            💰 Facture / Reçu (Avec prix)
+                        </button>
+                    </li>
+                </ul>
+                @if (_isExportMenuOpen)
+                {
+                    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" 
+                         @onclick="ToggleExportMenu"></div>
+                }
+            </div>
+
+             <!-- Boutons existants -->
             <button class="btn btn-outline-secondary" @onclick="ShowInventory">
                 <i class="bi bi-clipboard-list me-2"></i>Inventaire
             </button>
@@ -327,13 +354,29 @@
         {
             // Mode Édition
             var dto = await ApiService.GetColisByIdAsync(Id.Value);
-            if (dto != null) _colis = dto;
-            
-            // Check si user a le droit de voir ce colis (sécurité front)
-            // Note: l'API doit aussi sécuriser cela.
-            
-            _clientNameDisplay = _colis.Client?.NomComplet ?? "Inconnu";
-            _firstBarcode = _colis.Barcodes.FirstOrDefault()?.Value ?? "";
+            if (dto != null) 
+            {
+                _colis = dto;
+                _clientNameDisplay = _colis.Client?.NomComplet ?? "Inconnu";
+                _firstBarcode = _colis.Barcodes.FirstOrDefault()?.Value ?? "";
+
+                // --- CORRECTION : Vérification automatique de la case à cocher ---
+                if (_colis.Client != null)
+                {
+                    // On compare le nom et le téléphone (nettoyés des espaces pour être sûr)
+                    var destNom = _colis.Destinataire?.Trim().ToLower() ?? "";
+                    var clientNom = _colis.Client.NomComplet.Trim().ToLower();
+                    var destTel = _colis.TelephoneDestinataire?.Trim() ?? "";
+                    var clientTel = _colis.Client.TelephonePrincipal?.Trim() ?? "";
+
+                    // Si les infos correspondent, on coche la case
+                    if (destNom == clientNom && destTel == clientTel)
+                    {
+                        _sameAsClient = true;
+                    }
+                }
+                // ----------------------------------------------------------------
+            }
         }
         else
         {
@@ -554,5 +597,46 @@
 			_ => "bg-secondary"
 		};
 	}
+	
+	// Variables pour le menu
+    private bool _isExportMenuOpen = false;
+
+    private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
+
+    private async Task ExportPdf(bool includeFinancials)
+    {
+        _isExportMenuOpen = false; // Fermer le menu
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var pdfData = await ApiService.ExportColisPdfAsync(_colis.Id, includeFinancials);
+
+            if (pdfData != null && pdfData.Length > 0)
+            {
+                var safeRef = _colis.NumeroReference.Replace("/", "-");
+                var fileName = $"Colis_{safeRef}_{(includeFinancials ? "Complet" : "Simple")}.pdf";
+
+                using var stream = new MemoryStream(pdfData);
+                using var streamRef = new DotNetStreamReference(stream);
+
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Erreur: Fichier vide reçu.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
 	
 }

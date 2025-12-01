@@ -21,13 +21,13 @@ namespace TransitManager.API.Controllers
             IConteneurService conteneurService, 
             IColisService colisService,
             IVehiculeService vehiculeService,
-            IExportService exportService, // <--- 2. AJOUTER CE PARAMÈTRE
+            IExportService exportService,
             ILogger<ConteneursController> logger)
         {
             _conteneurService = conteneurService;
             _colisService = colisService;
             _vehiculeService = vehiculeService;
-            _exportService = exportService; // <--- 3. ASSIGNER LE CHAMP
+            _exportService = exportService;
             _logger = logger;
         }
 
@@ -325,21 +325,39 @@ namespace TransitManager.API.Controllers
 		}
 		
 		// GET: api/conteneurs/{id}/export/pdf?includeFinancials=true
-        [HttpGet("{id}/export/pdf")] 
-        public async Task<IActionResult> ExportPdf(Guid id, [FromQuery] bool includeFinancials = false)
-        {
-            // On charge le conteneur complet avec ses enfants
-            // Attention : GetByIdAsync du service doit bien faire les .Include() (c'est le cas dans votre infra actuelle)
-            var conteneur = await _conteneurService.GetByIdAsync(id);
-            
-            if (conteneur == null) return NotFound();
-            
-            // On injecte IExportService dans le contrôleur si ce n'est pas déjà fait
-            // (Je suppose qu'il faudra l'ajouter au constructeur si manquant)
-            var pdfData = await _exportService.GenerateContainerPdfAsync(conteneur, includeFinancials);
-            
-            return File(pdfData, "application/pdf", $"Dossier_{conteneur.NumeroDossier}.pdf");
-        }
+		[HttpGet("{id}/export/pdf")] 
+		public async Task<IActionResult> ExportPdf(Guid id, [FromQuery] bool includeFinancials = false)
+		{
+			Console.WriteLine($"Step 4: [API CONTROLLER] Requête reçue pour ID: {id}");
+
+			try 
+			{
+				// Vérification préalable
+				var conteneur = await _conteneurService.GetByIdAsync(id);
+				if (conteneur == null) 
+				{
+					Console.WriteLine("Step 4b: [API CONTROLLER] Conteneur introuvable en BDD.");
+					return NotFound("Conteneur introuvable");
+				}
+
+				Console.WriteLine($"Step 4c: [API CONTROLLER] Conteneur trouvé : {conteneur.NumeroDossier}. Appel du service Export...");
+
+				// Appel du service
+				var pdfData = await _exportService.GenerateContainerPdfAsync(conteneur, includeFinancials);
+
+				Console.WriteLine($"Step 5: [API CONTROLLER] PDF généré. Taille : {pdfData.Length}");
+				
+				// Nettoyage du nom pour le header HTTP
+				var safeName = conteneur.NumeroDossier.Replace(" ", "_").Replace("/", "-");
+				return File(pdfData, "application/pdf", $"Dossier_{safeName}.pdf");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Step ERROR [API CONTROLLER]: {ex.Message}");
+				Console.WriteLine(ex.StackTrace);
+				return StatusCode(500, $"Erreur interne API : {ex.Message}");
+			}
+		}
 		
     }
 }

@@ -70,6 +70,7 @@ namespace TransitManager.Web.Services
 		Task<PortalAccessResult> CreateOrResetPortalAccessAsync(Guid clientId);
 		Task<bool> RegisterClientAsync(RegisterClientRequestDto request);
 		Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials);
+		Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials);
 		
     }
 }

@@ -26,11 +26,10 @@
         <Routes @rendermode="RenderMode.InteractiveServer" />
     </div>
 
-    <script src="_framework/blazor.server.js"></script>
+	<script src="_framework/blazor.server.js"></script>
     
-    <!-- === DÉBUT AJOUT : SCRIPT DE TÉLÉCHARGEMENT === -->
+    <!-- Le script doit être ici -->
     <script>
-        // Fonction standard Microsoft pour télécharger un flux de données
         window.downloadFileFromStream = async (fileName, contentStreamReference) => {
             const arrayBuffer = await contentStreamReference.arrayBuffer();
             const blob = new Blob([arrayBuffer]);

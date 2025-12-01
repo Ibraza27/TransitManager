@@ -13,7 +13,7 @@
                     @if (IsReadOnly)
                     {
                         <div class="alert alert-info small py-2">
-                            <i class="bi bi-lock me-2"></i>Mode lecture seule (Modification non autorisée).
+                            <i class="bi bi-lock me-2"></i>Mode lecture seule.
                         </div>
                     }
                     else
@@ -28,12 +28,16 @@
                                     </div>
                                     <div class="col-md-2">
                                         <label class="small text-muted fw-bold">Quantité</label>
+                                        <!-- Ajout de min="1" pour éviter la division par zéro -->
                                         <input type="number" class="form-control form-control-sm" @bind="_newItem.Quantite" min="1" />
                                     </div>
+                                    
+                                    <!-- MODIFICATION : Saisie du TOTAL -->
                                     <div class="col-md-2">
-                                        <label class="small text-muted fw-bold">Valeur (€)</label>
+                                        <label class="small text-muted fw-bold">Valeur Totale (€)</label>
                                         <input type="number" class="form-control form-control-sm" @bind="_newItem.Valeur" min="0" step="0.01" />
                                     </div>
+
                                     <div class="col-md-3">
                                         <label class="small text-muted fw-bold">Date</label>
                                         <input type="date" class="form-control form-control-sm" @bind="_newItem.Date" />
@@ -42,13 +46,23 @@
                                         <button class="btn btn-sm btn-success w-100 fw-bold" @onclick="AddItem"
                                                 disabled="@string.IsNullOrWhiteSpace(_newItem.Designation)"
                                                 title="Ajouter">
-                                            ➕ Ajouter
+                                            ➕
                                         </button>
                                     </div>
                                 </div>
+                                <!-- Affichage du prix unitaire calculé en temps réel pour info -->
+                                @if(_newItem.Quantite > 0)
+                                {
+                                    <div class="text-end mt-1">
+                                        <small class="text-muted fst-italic">
+                                            Soit un prix unitaire de : <strong>@((_newItem.Valeur / _newItem.Quantite).ToString("C2"))</strong>
+                                        </small>
+                                    </div>
+                                }
                             </div>
                         </div>
                     }
+                    
                     <!-- Tableau -->
                     <div class="table-responsive">
                         <table class="table table-sm table-hover table-bordered mb-0 align-middle">
@@ -57,8 +71,8 @@
                                     <th>Date</th>
                                     <th>Désignation</th>
                                     <th class="text-center">Qté</th>
-                                    <th class="text-end">Valeur U.</th>
-                                    <th class="text-end">Total</th>
+                                    <th class="text-end">Total Ligne</th> <!-- Anciennement Valeur U -->
+                                    <th class="text-end text-muted">Prix Unitaire</th> <!-- Anciennement Total -->
                                     @if (!IsReadOnly) { <th style="width: 80px;" class="text-center">Actions</th> }
                                 </tr>
                             </thead>
@@ -69,8 +83,14 @@
                                         <td>@item.Date.ToString("dd/MM/yyyy")</td>
                                         <td>@item.Designation</td>
                                         <td class="text-center fw-bold">@item.Quantite</td>
-                                        <td class="text-end">@item.Valeur.ToString("C2")</td>
-                                        <td class="text-end text-primary">@((item.Valeur * item.Quantite).ToString("C2"))</td> <!-- Calcul simple si valeur est unitaire, sinon juste valeur -->
+                                        
+                                        <!-- Valeur Totale (Stockée dans item.Valeur) -->
+                                        <td class="text-end fw-bold text-primary">@item.Valeur.ToString("C2")</td>
+                                        
+                                        <!-- Prix Unitaire Calculé (Total / Qté) -->
+                                        <td class="text-end text-muted small">
+                                            @(item.Quantite > 0 ? (item.Valeur / item.Quantite).ToString("C2") : "-")
+                                        </td>
 
                                         @if (!IsReadOnly)
                                         {
@@ -95,9 +115,18 @@
                             <tfoot class="fw-bold bg-light">
                                 <tr>
                                     <td colspan="2" class="text-end">TOTAUX :</td>
+                                    
+                                    <!-- Total Quantité -->
                                     <td class="text-center">@_items.Sum(i => i.Quantite)</td>
-                                    <td></td>
+                                    
+                                    <!-- Total Valeur (Somme des totaux) -->
                                     <td class="text-end text-primary">@_items.Sum(i => i.Valeur).ToString("C2")</td>
+                                    
+                                    <!-- Somme des Prix Unitaires (Demandé) -->
+                                    <td class="text-end text-muted small">
+                                        @(_items.Sum(i => i.Quantite > 0 ? (i.Valeur / i.Quantite) : 0).ToString("C2"))
+                                    </td>
+                                    
                                     @if (!IsReadOnly) { <td></td> }
                                 </tr>
                             </tfoot>
@@ -117,28 +146,27 @@
         </div>
     </div>
 }
+
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public bool IsReadOnly { get; set; }
     [Parameter] public string? JsonData { get; set; }
     [Parameter] public EventCallback<string> OnSave { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+
     private List<InventaireItem> _items = new();
     private InventaireItem _newItem = new() { Date = DateTime.Now, Quantite = 1 };
+
     protected override void OnParametersSet()
     {
         if (IsVisible)
         {
-            // CORRECTION MAJEURE : JsonSerializerOptions pour éviter d'effacer les données existantes
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            
             if (!string.IsNullOrEmpty(JsonData) && JsonData != "[]" && JsonData != "null")
             {
                 try
                 {
-                    // On recharge la liste à chaque ouverture pour être sûr d'avoir la version à jour
                     _items = JsonSerializer.Deserialize<List<InventaireItem>>(JsonData, options) ?? new List<InventaireItem>();
                 }
                 catch
@@ -146,33 +174,31 @@
                     _items = new List<InventaireItem>();
                 }
             }
-            else if (!_items.Any()) // Si pas de JSON, on initialise vide seulement si pas déjà rempli
+            else if (!_items.Any())
             {
                 _items = new List<InventaireItem>();
             }
 
-            // Reset form
             _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
         }
     }
+
     private void AddItem()
     {
-        // On ajoute une copie pour éviter les références liées au formulaire
+        // On ajoute l'item (Valeur = Total saisi par l'utilisateur)
         _items.Add(new InventaireItem
         {
             Designation = _newItem.Designation,
             Quantite = _newItem.Quantite,
-            Valeur = _newItem.Valeur,
+            Valeur = _newItem.Valeur, 
             Date = _newItem.Date
         });
 
-        // Reset formulaire
         _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
     }
+
     private void EditItem(InventaireItem item)
     {
-        // Pour modifier, on remet les valeurs dans le formulaire et on supprime l'ancienne ligne
-        // L'utilisateur devra cliquer sur "Ajouter" (coche verte) pour valider la modif
         _newItem = new InventaireItem
         {
             Designation = item.Designation,
@@ -180,14 +206,16 @@
             Valeur = item.Valeur,
             Date = item.Date
         };
-
         _items.Remove(item);
     }
+
     private void RemoveItem(InventaireItem item) => _items.Remove(item);
+
     private async Task Save()
     {
         var json = JsonSerializer.Serialize(_items);
         await OnSave.InvokeAsync(json);
     }
+
     private async Task Cancel() => await OnClose.InvokeAsync();
 }

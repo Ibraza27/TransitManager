@@ -13,12 +13,40 @@ namespace TransitManager.API.Controllers
     {
         private readonly IColisService _colisService;
         private readonly ILogger<ColisController> _logger;
+		private readonly IExportService _exportService;
 
-        public ColisController(IColisService colisService, ILogger<ColisController> logger)
-        {
-            _colisService = colisService;
-            _logger = logger;
-        }
+		// Modifiez le constructeur
+		public ColisController(
+			IColisService colisService, 
+			IExportService exportService, // <-- AJOUT
+			ILogger<ColisController> logger)
+		{
+			_colisService = colisService;
+			_exportService = exportService; // <-- AJOUT
+			_logger = logger;
+		}
+
+		// Ajoutez cette nouvelle méthode
+		// GET: api/colis/{id}/export/pdf?includeFinancials=true
+		[HttpGet("{id}/export/pdf")]
+		public async Task<IActionResult> ExportPdf(Guid id, [FromQuery] bool includeFinancials = false)
+		{
+			try
+			{
+				var colis = await _colisService.GetByIdAsync(id);
+				if (colis == null) return NotFound("Colis introuvable");
+
+				var pdfData = await _exportService.GenerateColisPdfAsync(colis, includeFinancials);
+				
+				var safeName = colis.NumeroReference.Replace("/", "-");
+				return File(pdfData, "application/pdf", $"Colis_{safeName}.pdf");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Erreur export colis");
+				return StatusCode(500, "Erreur lors de la génération du PDF");
+			}
+		}
 		
         // PUT: api/colis/inventaire
         [HttpPut("inventaire")]

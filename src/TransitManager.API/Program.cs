@@ -14,8 +14,10 @@ using Microsoft.AspNetCore.Authorization;
 using TransitManager.API.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using QuestPDF.Infrastructure;
 using System.IO;
 var builder = WebApplication.CreateBuilder(args);
+QuestPDF.Settings.License = LicenseType.Community;
 // --- LOG AU DÉMARRAGE ---
 Console.WriteLine("[API] Démarrage de la configuration des services...");
 // === DÉBUT DE L'AJOUT STRATÉGIQUE ===

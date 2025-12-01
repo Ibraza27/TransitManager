@@ -97,6 +97,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Resources\logo.jpg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Resources\logo.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" />
     <PackageReference Include="Swashbuckle.AspNetCore" />

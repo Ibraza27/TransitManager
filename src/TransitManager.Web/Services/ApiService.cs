@@ -611,30 +611,46 @@ namespace TransitManager.Web.Services
 				throw;
 			}
 		}
-		
+
 		public async Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials)
 		{
+			var url = $"api/conteneurs/{id}/export/pdf?includeFinancials={includeFinancials}";
+			Console.WriteLine($"Step 3: [WEB SERVICE] Préparation de la requête GET vers : {url}");
+
 			try
 			{
-				var url = $"api/conteneurs/{id}/export/pdf?includeFinancials={includeFinancials}";
-				Console.WriteLine($"[ApiService] Tentative de téléchargement PDF : {url}");
-
 				var response = await _httpClient.GetAsync(url);
-				
+				Console.WriteLine($"Step 6: [WEB SERVICE] Réponse reçue. Status Code : {response.StatusCode}");
+
 				if (!response.IsSuccessStatusCode)
 				{
-					var error = await response.Content.ReadAsStringAsync();
-					Console.WriteLine($"[ApiService] ❌ Erreur API ({response.StatusCode}) : {error}");
+					var errorContent = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"Step 6b: [WEB SERVICE] ERREUR API : {errorContent}");
 					return Array.Empty<byte>();
 				}
 
 				var bytes = await response.Content.ReadAsByteArrayAsync();
-				Console.WriteLine($"[ApiService] ✅ PDF reçu : {bytes.Length} octets");
+				Console.WriteLine($"Step 6c: [WEB SERVICE] Succès. Taille téléchargée : {bytes.Length}");
 				return bytes;
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"[ApiService] 💥 Exception : {ex.Message}");
+				Console.WriteLine($"Step ERROR [WEB SERVICE]: Exception HTTP : {ex.Message}");
+				return Array.Empty<byte>();
+			}
+		}
+		
+		public async Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials)
+		{
+			var url = $"api/colis/{id}/export/pdf?includeFinancials={includeFinancials}";
+			try
+			{
+				var response = await _httpClient.GetAsync(url);
+				if (!response.IsSuccessStatusCode) return Array.Empty<byte>();
+				return await response.Content.ReadAsByteArrayAsync();
+			}
+			catch
+			{
 				return Array.Empty<byte>();
 			}
 		}

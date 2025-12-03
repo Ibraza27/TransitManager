@@ -1,4 +1,3 @@
-
 @inherits LayoutComponentBase
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
@@ -8,34 +7,50 @@
         <NavMenu />
     </div>
 
-	<main>
-        <div class="top-row px-4 d-flex justify-content-between align-items-center">
+    <main>
+        <div class="top-row px-3 px-md-4 d-flex justify-content-between align-items-center">
             
-            <!-- AJOUT DU TITRE ENTREPRISE -->
-            <div class="d-flex align-items-center">
-                <h3 class="mb-0 fw-bold text-primary" style="letter-spacing: 1px;">HIPPOCAMPE IMPORT-EXPORT</h3>
+            <!-- TITRE ENTREPRISE RESPONSIVE -->
+            <div class="d-flex align-items-center overflow-hidden">
+                <!-- Version Mobile (Petit écran) : Titre court -->
+                <h5 class="d-block d-md-none mb-0 fw-bold text-primary text-truncate">
+                    HIPPOCAMPE IMPORT-EXPORT
+                </h5>
+                <!-- Version PC (Écran moyen+) : Titre complet -->
+                <h3 class="d-none d-md-block mb-0 fw-bold text-primary" style="letter-spacing: 1px;">
+                    HIPPOCAMPE IMPORT-EXPORT
+                </h3>
             </div>
 
-            <!-- Section Utilisateur (existante, mais alignée à droite) -->
-            <AuthorizeView>
-                <Authorized Context="AuthContext">
-                    <div class="d-flex align-items-center">
-                        <span class="me-3 fw-medium">👋 Bonjour, @AuthContext.User.Identity?.Name!</span>
-                        <form action="/account/logout" method="post" class="d-inline">
-                            <AntiforgeryToken />
-                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">
-                                🚪 Déconnexion
-                            </button>
-                        </form>
-                    </div>
-                </Authorized>
-                <NotAuthorized>
-                    <a href="/login" class="btn btn-primary btn-sm rounded-pill px-3">🔑 Connexion</a>
-                </NotAuthorized>
-            </AuthorizeView>
+            <!-- SECTION UTILISATEUR RESPONSIVE -->
+			<AuthorizeView>
+				<Authorized Context="AuthContext">
+					<div class="d-flex align-items-center gap-2">
+						<!-- Texte "Bonjour" caché sur mobile (d-none d-md-inline) -->
+						<span class="d-none d-md-inline fw-medium text-secondary">
+							👋 @AuthContext.User.Identity?.Name
+						</span>
+						
+						<form action="/account/logout" method="post" class="d-inline">
+							<AntiforgeryToken />
+							<!-- Bouton Mobile : Avec émoji -->
+							<button type="submit" class="btn btn-outline-danger btn-sm d-md-none" title="Déconnexion">
+								🚪
+							</button>
+							<!-- Bouton PC : Texte complet -->
+							<button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 d-none d-md-inline-block">
+								🚪 Déconnexion
+							</button>
+						</form>
+					</div>
+				</Authorized>
+				<NotAuthorized>
+					<a href="/login" class="btn btn-primary btn-sm rounded-pill px-3">Connexion</a>
+				</NotAuthorized>
+			</AuthorizeView>
         </div>
 
-        <article class="content px-4">
+        <article class="content px-3 px-md-4">
             @Body
         </article>
     </main>
@@ -46,17 +61,8 @@
 
     private async Task Logout()
     {
-        Console.WriteLine("🏗️ [MainLayout] 🚪 Tentative de déconnexion...");
-        
-        // === DÉBUT DE LA MODIFICATION ===
-        // 1. Appeler l'API pour supprimer le cookie
         await ApiService.LogoutAsync();
-
-        // 2. Nettoyer l'état côté client (localStorage et état Blazor)
         await AuthStateProvider.MarkUserAsLoggedOut();
-        
-        // 3. Rediriger
         NavigationManager.NavigateTo("/login", forceLoad: true);
-        // === FIN DE LA MODIFICATION ===
     }
 }

@@ -16,31 +16,33 @@ namespace TransitManager.Web.Auth
             _httpContextAccessor = httpContextAccessor;
         }
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var httpContext = _httpContextAccessor.HttpContext;
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			var httpContext = _httpContextAccessor.HttpContext;
+			
+			// Nom du cookie défini dans l'API et le Web
+			var cookieName = "TransitManager.AuthCookie";
+			
+			// On essaie de récupérer le cookie
+			var cookieValue = httpContext?.Request.Cookies[cookieName];
 
-            // Tentative de récupération du cookie d'authentification actuel
-            var cookie = httpContext?.Request.Cookies[".AspNetCore.Cookies"];
-            
-            // NOTE : Le nom du cookie par défaut est ".AspNetCore.Cookies".
-            // Nous utilisons celui-ci car c'est le projet Web qui le gère.
-            // Notre nom "TransitManager.AuthCookie" était pour l'API.
-            var cookieName = "TransitManager.AuthCookie";
-            cookie = httpContext?.Request.Cookies[cookieName];
+			// Si pas trouvé, on essaie le cookie par défaut AspNetCore (cas de fallback)
+			if (string.IsNullOrEmpty(cookieValue))
+			{
+				cookieValue = httpContext?.Request.Cookies[".AspNetCore.Cookies"];
+			}
 
-            if (cookie != null)
-            {
-                // Ajouter le cookie à l'en-tête de la requête sortante vers l'API
-                request.Headers.Add("Cookie", $"{cookieName}={cookie}");
-                Console.WriteLine($"🍪 [CookieHandler] Cookie '{cookieName}' ajouté à la requête sortante vers l'API.");
-            }
-            else
-            {
-                Console.WriteLine($"🍪 [CookieHandler] ⚠️ Aucun cookie '{cookieName}' trouvé à transférer.");
-            }
+			if (!string.IsNullOrEmpty(cookieValue))
+			{
+				// Ajouter le cookie à l'en-tête de la requête sortante vers l'API
+				request.Headers.Add("Cookie", $"{cookieName}={cookieValue}");
+			}
+			
+			// OPTIONNEL MAIS RECOMMANDÉ : Ajouter aussi la clé secrète interne comme passe-partout
+			// Cela permet de visualiser les images même si le cookie saute, car l'API accepte l'auth hybride
+			// (Il faudrait injecter IConfiguration pour récupérer la clé, mais le cookie devrait suffire ici)
 
-            return await base.SendAsync(request, cancellationToken);
-        }
+			return await base.SendAsync(request, cancellationToken);
+		}
     }
 }

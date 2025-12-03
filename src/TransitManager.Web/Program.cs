@@ -61,21 +61,52 @@ if (string.IsNullOrEmpty(apiBaseUrl))
 {
     throw new InvalidOperationException("ApiBaseUrl is not configured in appsettings.json");
 }
-// 2. Configurer le HttpClient pour le AccountController ("API")
+// 2. Configurer le HttpClient pour le AccountController ET le DocumentProxyController ("API")
 builder.Services.AddHttpClient("API", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
+})
+.AddHttpMessageHandler<CookieHandler>() // <--- C'EST LA LIGNE MANQUANTE QUI CORRIGE LE 401
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
 });
 // 3. Configurer le HttpClient pour ApiService en lui ajoutant notre handler
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
      client.BaseAddress = new Uri(apiBaseUrl);
 })
-.AddHttpMessageHandler<CookieHandler>(); // <-- C'EST LA LIGNE MAGIQUE
+.AddHttpMessageHandler<CookieHandler>()
+// AJOUT : On ignore les erreurs de certificat SSL ici aussi
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+});
 // === FIN DE LA MODIFICATION HTTPCLIENT ===
 builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 var app = builder.Build();
 // --- PIPELINE ---
+
+app.Use(async (context, next) =>
+{
+    // Récupérer l'IP du visiteur
+    var remoteIp = context.Connection.RemoteIpAddress?.ToString();
+    
+    // Récupérer la liste blanche depuis appsettings.json
+    var allowedIps = builder.Configuration.GetSection("AllowedTailscaleIPs").Get<string[]>();
+
+    // Si la liste existe et que l'IP n'est pas dedans (et que ce n'est pas localhost ipv6 ::1)
+    if (allowedIps != null && remoteIp != null && remoteIp != "::1" && remoteIp != "127.0.0.1" && !allowedIps.Contains(remoteIp))
+    {
+        Console.WriteLine($"[SECURITÉ] Accès refusé pour l'IP : {remoteIp}");
+        context.Response.StatusCode = 403; // Forbidden
+        await context.Response.WriteAsync($"Accès refusé. Votre IP ({remoteIp}) n'est pas autorisée.");
+        return;
+    }
+    
+    await next();
+});
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);

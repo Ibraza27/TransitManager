@@ -1,0 +1,253 @@
+@using TransitManager.Core.Entities
+@using TransitManager.Core.Enums
+@inject IApiService ApiService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 text-primary"><i class="bi bi-folder2-open me-2"></i>Documents (@_filteredDocuments.Count())</h5>
+        <button class="btn btn-sm btn-outline-primary" @onclick="LoadDocuments" title="Actualiser">
+            🔄 <!-- Émoji Actualiser -->
+        </button>
+    </div>
+    
+    <div class="card-body">
+        <!-- Zone d'Upload -->
+        <div class="mb-4 p-3 bg-light rounded border border-dashed">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Type de document</label>
+                    <select class="form-select form-select-sm" @bind="_selectedType">
+                        @foreach (var t in Enum.GetValues<TypeDocument>())
+                        {
+                            <option value="@t">@t</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-7">
+                    <label class="form-label small fw-bold">Sélectionner un fichier</label>
+                    <!-- Liste d'extensions étendue -->
+                    <InputFile OnChange="OnInputFileChange" class="form-control form-control-sm" 
+                               accept=".pdf,.doc,.docx,.txt,.rtf,.odf,.odt,.html,.htm,.aac,.mp3,.wav,.wma,.ogg,.jpg,.jpeg,.png,.gif,.tif,.tiff,.mp4,.avi,.mov,.wmv,.mpeg,.mpg,.zip,.rar,.7z,.xls,.xlsx,.ppt,.pptx" />
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-success btn-sm w-100" @onclick="UploadFile" disabled="@(_selectedFile == null || _isUploading)">
+                        @if (_isUploading) { <span class="spinner-border spinner-border-sm"></span> }
+                        else { <span>📤 Ajouter</span> }
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="row g-2 mb-3">
+            <div class="col-md-8">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Rechercher dans les noms..." 
+                           @bind="_searchTerm" @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select form-select-sm" @bind="_filterType">
+                    <option value="">Tous les types</option>
+                    @foreach (var t in Enum.GetValues<TypeDocument>())
+                    {
+                        <option value="@t">@t</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <!-- Liste des documents -->
+        @if (_isLoading)
+        {
+            <div class="text-center text-muted py-4">
+                <span class="spinner-border spinner-border-sm me-2"></span>Chargement...
+            </div>
+        }
+        else if (!_documents.Any())
+        {
+            <div class="text-center text-muted py-4 bg-light rounded">
+                <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+                Aucun document pour le moment.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Nom du fichier</th>
+                            <th>Taille</th>
+                            <th>Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var doc in _filteredDocuments)
+                        {
+                            <tr>
+                                <td><span class="badge bg-secondary fw-normal">@doc.Type</span></td>
+                                <td>
+                                    <i class="bi @GetIconClass(doc.Extension) me-2"></i>
+                                    <span class="fw-medium" title="@doc.NomFichierOriginal">@doc.Nom</span>
+                                </td>
+                                <td class="small text-muted">@doc.TailleFormatee</td>
+                                <td class="small text-muted">@doc.DateCreation.ToString("dd/MM/yy HH:mm")</td>
+                                <td class="text-end">
+                                    <!-- Bouton Visualiser (Oeil) -->
+                                    <a href="@GetPreviewUrl(doc.Id)" target="_blank" class="btn btn-sm btn-link text-dark text-decoration-none" title="Visualiser">
+                                        👁️
+                                    </a>
+                                    
+                                    <!-- Bouton Télécharger (Flèche bas) -->
+                                    <button class="btn btn-sm btn-link text-primary text-decoration-none" @onclick="() => DownloadFile(doc)" title="Télécharger">
+                                        ⬇️
+                                    </button>
+                                    
+                                    <!-- Bouton Supprimer (Poubelle) -->
+                                    <button class="btn btn-sm btn-link text-danger text-decoration-none" @onclick="() => DeleteFile(doc)" title="Supprimer">
+                                        🗑️
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid EntityId { get; set; }
+    [Parameter] public string EntityType { get; set; } = "Vehicule";
+
+    private List<Document> _documents = new();
+    private bool _isLoading = false;
+    private bool _isUploading = false;
+    private IBrowserFile? _selectedFile;
+    private TypeDocument _selectedType = TypeDocument.Autre;
+    
+    // Filtres
+    private string _searchTerm = "";
+    private TypeDocument? _filterType = null;
+
+    // Propriété calculée pour le filtrage
+    private IEnumerable<Document> _filteredDocuments
+    {
+        get
+        {
+            var query = _documents.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                query = query.Where(d => d.Nom.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) || 
+                                         d.NomFichierOriginal.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (_filterType.HasValue)
+            {
+                query = query.Where(d => d.Type == _filterType.Value);
+            }
+
+            return query;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (EntityId != Guid.Empty) await LoadDocuments();
+    }
+
+    private async Task LoadDocuments()
+    {
+        _isLoading = true;
+        _documents = (await ApiService.GetDocumentsByEntityAsync(EntityType, EntityId)).ToList();
+        _isLoading = false;
+    }
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+    }
+
+    private async Task UploadFile()
+    {
+        if (_selectedFile == null) return;
+        _isUploading = true;
+
+        Guid? clientId = EntityType == "Client" ? EntityId : null;
+        Guid? vehiculeId = EntityType == "Vehicule" ? EntityId : null;
+        Guid? colisId = EntityType == "Colis" ? EntityId : null;
+        Guid? conteneurId = EntityType == "Conteneur" ? EntityId : null;
+
+        var doc = await ApiService.UploadDocumentAsync(_selectedFile, _selectedType, clientId, vehiculeId, colisId, conteneurId);
+        
+        if (doc != null)
+        {
+            _selectedFile = null; 
+            await LoadDocuments();
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de l'upload. Vérifiez la taille du fichier.");
+        }
+        _isUploading = false;
+    }
+
+    private string GetPreviewUrl(Guid id)
+    {
+        // On construit l'URL vers notre nouvel endpoint API
+        // Note: Assurez-vous que ApiService.HttpClient a la bonne BaseAddress
+        // Ici on suppose une URL relative, le navigateur résoudra avec l'URL de l'API si c'est le même domaine, 
+        // sinon il faut l'URL complète de l'API.
+        // Pour Blazor Server, on passe souvent par un contrôleur du projet Web ou on pointe vers l'API externe.
+        
+        // Solution robuste : Pointez vers votre contrôleur API directement
+        // Remplacez "https://localhost:7243" par votre variable de config si possible, sinon URL relative si proxy
+        return $"api/documents/{id}/preview";
+    }
+
+    private async Task DownloadFile(Document doc)
+    {
+        var data = await ApiService.DownloadDocumentAsync(doc.Id);
+        if (data.Length > 0)
+        {
+            using var stream = new MemoryStream(data);
+            using var streamRef = new DotNetStreamReference(stream);
+            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", doc.NomFichierOriginal, streamRef);
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Impossible de télécharger le fichier.");
+        }
+    }
+
+    private async Task DeleteFile(Document doc)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Voulez-vous vraiment supprimer '{doc.Nom}' ?"))
+        {
+            if (await ApiService.DeleteDocumentAsync(doc.Id))
+            {
+                _documents.Remove(doc);
+            }
+        }
+    }
+
+    private string GetIconClass(string ext) => ext.ToLower() switch
+    {
+        ".pdf" => "bi-file-earmark-pdf text-danger",
+        ".jpg" or ".jpeg" or ".png" or ".gif" => "bi-file-earmark-image text-primary",
+        ".doc" or ".docx" => "bi-file-earmark-word text-primary",
+        ".xls" or ".xlsx" => "bi-file-earmark-excel text-success",
+        ".zip" or ".rar" => "bi-file-earmark-zip text-warning",
+        ".mp3" or ".wav" => "bi-file-earmark-music text-info",
+        ".mp4" or ".avi" => "bi-file-earmark-play text-danger",
+        _ => "bi-file-earmark text-secondary"
+    };
+}

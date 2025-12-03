@@ -7,11 +7,12 @@
 @inject IApiService ApiService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
 
 <PageTitle>@(IsNew ? "Nouveau Véhicule" : "Détail Véhicule") - Hippocampe</PageTitle>
 
 <div class="container mt-4 mb-5">
-    <!-- En-tête avec boutons -->
+    <!-- En-tête -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-primary">
@@ -25,25 +26,9 @@
             }
         </div>
         <div class="d-flex gap-2">
-            <!-- Bouton Inspection -->
-            <button class="btn btn-outline-info" @onclick="() => _showInspection = true">
-                <i class="bi bi-eye me-2"></i> État des Lieux
-            </button>
-            
-            <!-- Bouton Paiements (Uniquement si véhicule existe) -->
-            @if (!IsNew)
-            {
-                <button class="btn btn-outline-success" @onclick="() => _showPayments = true">
-                    <i class="bi bi-cash-coin me-2"></i> Paiements
-                </button>
-            }
-
-            <!-- Bouton Enregistrer -->
-            <button class="btn btn-primary" @onclick="SaveVehicle" disabled="@(!CanEditGlobal)">
+             <button class="btn btn-primary" @onclick="SaveVehicle" disabled="@(!CanEditGlobal)">
                 <i class="bi bi-save me-2"></i> Enregistrer
             </button>
-            
-            <!-- Bouton Retour -->
             <a href="/my-vehicles" class="btn btn-outline-dark">Retour</a>
         </div>
     </div>
@@ -54,182 +39,213 @@
     }
     else
     {
-        <div class="row g-4">
-            <!-- COLONNE GAUCHE : INFOS PRINCIPALES -->
-            <div class="col-lg-8">
-                
-                <!-- Carte Propriétaire -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-person-badge me-2"></i>Propriétaire</h5></div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Client Propriétaire</label>
-                            @if (IsAdmin)
-                            {
-                                 <!-- Recherche Client Admin -->
-                                 <select class="form-select" value="@_vehicule.ClientId" @onchange="OnClientChanged">
-                                     <option value="">-- Sélectionner un client --</option>
-                                     @foreach (var client in _clients)
-                                     {
-                                         <option value="@client.Id">@client.NomComplet (@client.TelephonePrincipal)</option>
-                                     }
-                                 </select>
-                            }
-                            else
-                            {
-                                <input type="text" class="form-control" value="@_clientNameDisplay" disabled />
-                            }
+        <!-- TABS NAVIGATION -->
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <button class="nav-link @(_activeTab == "infos" ? "active fw-bold" : "")" @onclick='() => _activeTab = "infos"'>
+                    Informations & Finances
+                </button>
+            </li>
+             @if (!IsNew)
+             {
+                <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "documents" ? "active fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
+                        Documents & Photos
+                    </button>
+                </li>
+             }
+        </ul>
+
+        <div class="tab-content">
+            
+            <!-- ONGLET INFOS (Contenu existant réorganisé) -->
+            <div class="tab-pane fade @(_activeTab == "infos" ? "show active" : "")">
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <!-- Propriétaire & Destinataire -->
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white"><h5 class="mb-0 text-primary">Propriétaire & Destinataire</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Client Propriétaire</label>
+                                        @if (IsAdmin)
+                                        {
+                                             <select class="form-select" value="@_vehicule.ClientId" @onchange="OnClientChanged">
+                                                 <option value="">-- Sélectionner --</option>
+                                                 @foreach (var client in _clients) { <option value="@client.Id">@client.NomComplet</option> }
+                                             </select>
+                                        }
+                                        else { <input type="text" class="form-control" value="@_clientNameDisplay" disabled /> }
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="sameRecipient" @bind="_sameAsClient" @onclick="ToggleSameAsClient" disabled="@(!CanEditFields)">
+                                            <label class="form-check-label" for="sameRecipient">Destinataire identique au propriétaire</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nom Destinataire</label>
+                                        <input type="text" class="form-control" @bind="_vehicule.Destinataire" disabled="@(_sameAsClient || !CanEditFields)" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Tél Destinataire</label>
+                                        <input type="text" class="form-control" @bind="_vehicule.TelephoneDestinataire" disabled="@(_sameAsClient || !CanEditFields)" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Infos Véhicule -->
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white"><h5 class="mb-0 text-primary">Véhicule</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Immatriculation *</label>
+                                        <input type="text" class="form-control fw-bold" @bind="_vehicule.Immatriculation" disabled="@(!CanEditFields)" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Marque *</label>
+                                        <input type="text" class="form-control" @bind="_vehicule.Marque" disabled="@(!CanEditFields)" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Modèle *</label>
+                                        <input type="text" class="form-control" @bind="_vehicule.Modele" disabled="@(!CanEditFields)" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Année</label>
+                                        <input type="number" class="form-control" @bind="_vehicule.Annee" disabled="@(!CanEditFields)" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Kilométrage</label>
+                                        <input type="number" class="form-control" @bind="_vehicule.Kilometrage" disabled="@(!CanEditFields)" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Type</label>
+                                        <select class="form-select" @bind="_vehicule.Type" disabled="@(!CanEditFields)">
+                                            @foreach(var t in Enum.GetValues<TypeVehicule>()) {<option value="@t">@t</option>}
+                                        </select>
+                                    </div>
+                                     <div class="col-md-3">
+                                        <label class="form-label">Destination *</label>
+                                        <input type="text" class="form-control" @bind="_vehicule.DestinationFinale" disabled="@(!CanEditFields)" />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Commentaires</label>
+                                        <textarea class="form-control" rows="2" @bind="_vehicule.Commentaires" disabled="@(!CanEditFields)"></textarea>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Carte Véhicule -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-car-front me-2"></i>Informations Véhicule</h5></div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Immatriculation <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" @bind="_vehicule.Immatriculation" disabled="@(!CanEditFields)" />
+                    <div class="col-lg-4">
+                        <!-- État des lieux (Bouton d'accès rapide) -->
+                        <div class="card shadow-sm border-info mb-4">
+                            <div class="card-body text-center">
+                                <h5 class="text-info mb-3"><i class="bi bi-clipboard-check me-2"></i>État des Lieux</h5>
+                                @if(!string.IsNullOrEmpty(_vehicule.SignatureClient))
+                                {
+                                    <div class="alert alert-success py-2 small mb-2"><i class="bi bi-check-circle me-1"></i> Signé le @_vehicule.DateEtatDesLieux?.ToShortDateString()</div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-warning py-2 small mb-2">Non signé</div>
+                                }
+                                <button class="btn btn-info text-white w-100" @onclick="() => _showInspection = true">
+                                    Ouvrir l'inspection
+                                </button>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Marque <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" @bind="_vehicule.Marque" disabled="@(!CanEditFields)" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Modèle <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" @bind="_vehicule.Modele" disabled="@(!CanEditFields)" />
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Année</label>
-                                <input type="number" class="form-control" @bind="_vehicule.Annee" disabled="@(!CanEditFields)" />
-                            </div>
-                             <div class="col-md-3">
-                                <label class="form-label">Kilométrage</label>
-                                <input type="number" class="form-control" @bind="_vehicule.Kilometrage" disabled="@(!CanEditFields)" />
-                            </div>
-                             <div class="col-md-6">
-                                <label class="form-label">Type</label>
-                                <select class="form-select" @bind="_vehicule.Type" disabled="@(!CanEditFields)">
-                                    @foreach(var t in Enum.GetValues<TypeVehicule>()) {<option value="@t">@t</option>}
+                        </div>
+
+                        <!-- Administration -->
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-light">Administration</div>
+                            <div class="card-body">
+                                <label class="form-label small fw-bold">STATUT</label>
+                                <select class="form-select mb-3" @bind="_vehicule.Statut" disabled="@(!IsAdmin)">
+                                     @foreach (var s in Enum.GetValues<StatutVehicule>()) { <option value="@s">@s</option> }
                                 </select>
-                            </div>
-                             <div class="col-md-6">
-                                <label class="form-label">Destination Finale <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" @bind="_vehicule.DestinationFinale" disabled="@(!CanEditFields)" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Carte Destinataire -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-geo-alt me-2"></i>Destinataire</h5></div>
-                    <div class="card-body">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="sameRecipient" 
-                                   @bind="_sameAsClient" @onclick="ToggleSameAsClient" disabled="@(!CanEditFields)">
-                            <label class="form-check-label" for="sameRecipient">Destinataire identique au propriétaire</label>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Nom Destinataire</label>
-                                <input type="text" class="form-control" @bind="_vehicule.Destinataire" disabled="@(_sameAsClient || !CanEditFields)" />
-                            </div>
-                             <div class="col-md-6">
-                                <label class="form-label">Téléphone Destinataire</label>
-                                <input type="text" class="form-control" @bind="_vehicule.TelephoneDestinataire" disabled="@(_sameAsClient || !CanEditFields)" />
+                                
+                                <label class="form-label small fw-bold">CONTENEUR</label>
+                                @if (IsAdmin)
+                                {
+                                     <select class="form-select" @bind="_vehicule.ConteneurId">
+                                         <option value="">-- Non assigné --</option>
+                                         @foreach(var c in _containers) { <option value="@c.Id">@c.NumeroDossier</option> }
+                                     </select>
+                                }
+                                else
+                                {
+                                     <input type="text" class="form-control" value="@(_containers.FirstOrDefault(c => c.Id == _vehicule.ConteneurId)?.NumeroDossier ?? "Non assigné")" disabled />
+                                }
                             </div>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- Carte Commentaires -->
-                 <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-chat-text me-2"></i>Commentaires</h5></div>
-                    <div class="card-body">
-                        <textarea class="form-control" rows="3" @bind="_vehicule.Commentaires" disabled="@(!CanEditFields)"></textarea>
-                    </div>
-                </div>
 
-            </div>
-
-            <!-- COLONNE DROITE : ADMIN & FINANCES -->
-            <div class="col-lg-4">
-                <!-- Statut & Conteneur (Admin Only ou ReadOnly) -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-secondary">Administration</h5></div>
-                    <div class="card-body bg-light">
-                        <label class="form-label small fw-bold">STATUT</label>
-                        <select class="form-select mb-3" @bind="_vehicule.Statut" disabled="@(!IsAdmin)">
-                             @foreach (var s in Enum.GetValues<StatutVehicule>()) { <option value="@s">@s</option> }
-                        </select>
-                        
-                        <!-- Conteneur (Admin Only) -->
-                        <label class="form-label small fw-bold">CONTENEUR</label>
-                        @if (IsAdmin)
-                        {
-                             <select class="form-select" @bind="_vehicule.ConteneurId">
-                                 <option value="">-- Non assigné --</option>
-                                 @foreach(var c in _containers) { <option value="@c.Id">@c.NumeroDossier</option> }
-                             </select>
-                        }
-                        else
-                        {
-                             <input type="text" class="form-control" value="@(_containers.FirstOrDefault(c => c.Id == _vehicule.ConteneurId)?.NumeroDossier ?? "Non assigné")" disabled />
-                        }
-                    </div>
-                </div>
-
-                <!-- Finances -->
-                <div class="card shadow-sm border-0 border-top border-3 border-success">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-success"><i class="bi bi-currency-euro me-2"></i>Finances</h5></div>
-                    <div class="card-body">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Valeur Déclarée (€)</label>
-                            <input type="number" class="form-control" @bind="_vehicule.ValeurDeclaree" disabled="@(!CanEditFields)" />
+                        <!-- Finances -->
+                        <div class="card shadow-sm border-success">
+                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">Finances</span>
+                                @if(!IsNew) {
+                                    <button class="btn btn-sm btn-light text-success" @onclick="() => _showPayments = true">Gérer</button>
+                                }
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Valeur Déclarée (€)</label>
+                                    <input type="number" class="form-control" @bind="_vehicule.ValeurDeclaree" disabled="@(!CanEditFields)" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-primary">PRIX TOTAL (€)</label>
+                                    <input type="number" class="form-control fw-bold text-primary" @bind="_vehicule.PrixTotal" disabled="@(!IsAdmin)" />
+                                </div>
+                                <div class="d-flex justify-content-between small mb-2">
+                                     <span>Payé :</span>
+                                     <span class="text-success fw-bold">@_vehicule.SommePayee.ToString("C2")</span>
+                                 </div>
+                                 <div class="d-flex justify-content-between fw-bold fs-5">
+                                     <span>Reste :</span>
+                                     <span class="text-danger">@_vehicule.RestantAPayer.ToString("C2")</span>
+                                 </div>
+                            </div>
                         </div>
-
-                        <hr class="text-muted" />
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-primary">PRIX TOTAL (€)</label>
-                            <input type="number" class="form-control form-control-lg fw-bold text-primary" @bind="_vehicule.PrixTotal" disabled="@(!IsAdmin)" />
-                        </div>
-                        
-                         <div class="d-flex justify-content-between small mb-2">
-                             <span>Payé :</span>
-                             <span class="text-success fw-bold">@_vehicule.SommePayee.ToString("C2")</span>
-                         </div>
-                         <div class="d-flex justify-content-between fw-bold fs-5">
-                             <span>Reste :</span>
-                             <span class="text-danger">@_vehicule.RestantAPayer.ToString("C2")</span>
-                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- ONGLET DOCUMENTS -->
+            @if (!IsNew)
+            {
+                <div class="tab-pane fade @(_activeTab == "documents" ? "show active" : "")">
+                    <DocumentManager EntityId="@_vehicule.Id" EntityType="Vehicule" />
+                </div>
+            }
+
         </div>
     }
 
-    <!-- MODALS -->
+    <!-- MODALES -->
     <VehicleInspectionModal IsVisible="_showInspection" 
-                            Type="@(_vehicule?.Type ?? TypeVehicule.Voiture)"
-                            JsonPoints="@_vehicule?.EtatDesLieux"
-                            JsonStrokes="@_vehicule?.EtatDesLieuxRayures"
+                            Type="@_vehicule.Type"
+                            JsonPoints="@_vehicule.EtatDesLieux"
+                            JsonStrokes="@_vehicule.EtatDesLieuxRayures"
+                            JsonAccessoires="@_vehicule.AccessoiresJson"
+                            SignatureAgent="@_vehicule.SignatureAgent"
+                            SignatureClient="@_vehicule.SignatureClient"
+                            Lieu="@_vehicule.LieuEtatDesLieux"
+                            DateSignature="@_vehicule.DateEtatDesLieux"
+                            OnSave="SaveInspection"
                             OnClose="() => _showInspection = false" />
 
-    <!-- Correction : On passe VehiculeId -->
     <PaymentModal IsVisible="_showPayments"
                   IsAdmin="@IsAdmin"
                   ColisId="@Guid.Empty" 
-                  VehiculeId="@_vehicule?.Id"
-                  ClientId="@(_vehicule?.ClientId ?? Guid.Empty)"
-                  TotalAmount="@(_vehicule?.PrixTotal ?? 0)"
+                  VehiculeId="@_vehicule.Id"
+                  ClientId="@_vehicule.ClientId"
+                  TotalAmount="@_vehicule.PrixTotal"
                   OnPaymentsChanged="UpdatePaidAmount"
                   OnClose="() => _showPayments = false" />
-
 </div>
 
 @code {
@@ -238,104 +254,74 @@
     private Vehicule _vehicule = new() { Statut = StatutVehicule.EnAttente };
     private bool _isLoading = true;
     private bool IsNew => Id == null;
-    
-    // Contexte Utilisateur
     private bool IsAdmin = false;
     
-    // UI State
+    private string _activeTab = "infos";
     private string _clientNameDisplay = "";
     private bool _sameAsClient = false;
     private bool _showInspection = false;
     private bool _showPayments = false;
     
-    // Listes
     private List<Client> _clients = new();
     private List<Conteneur> _containers = new();
 
-    // Permissions : Client peut éditer seulement si "En Attente"
     private bool CanEditGlobal => IsAdmin || (IsNew || _vehicule.Statut == StatutVehicule.EnAttente);
-    private bool CanEditFields => IsAdmin || (CanEditGlobal); 
+    private bool CanEditFields => IsAdmin || (CanEditGlobal);
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        IsAdmin = user.IsInRole("Administrateur");
+        IsAdmin = authState.User.IsInRole("Administrateur");
 
-        // Charger les listes nécessaires
         if (IsAdmin)
         {
-            var clients = await ApiService.GetClientsAsync();
-            if (clients != null) _clients = clients.OrderBy(c => c.Nom).ToList();
+            var c = await ApiService.GetClientsAsync();
+            if (c != null) _clients = c.OrderBy(x => x.Nom).ToList();
             
-            var conteneurs = await ApiService.GetConteneursAsync();
-            if (conteneurs != null) _containers = conteneurs.ToList();
+            var ct = await ApiService.GetConteneursAsync();
+            if (ct != null) _containers = ct.ToList();
         }
 
         if (!IsNew)
         {
-            // --- MODE ÉDITION ---
-            _vehicule = await ApiService.GetVehiculeByIdAsync(Id.Value);
-            if (_vehicule != null)
+            _vehicule = await ApiService.GetVehiculeByIdAsync(Id.Value) ?? new();
+            if (!IsAdmin)
             {
-                // Récupérer le nom du client pour l'affichage
-                if (!IsAdmin)
-                {
-                    var client = await ApiService.GetClientByIdAsync(_vehicule.ClientId);
-                    _clientNameDisplay = client?.NomComplet ?? "Client";
-                }
-                else
-                {
-                    // Pour l'admin, la liste _clients est chargée, le select se mettra à jour
-                }
-                
-                // Check si destinataire est identique
-                if (!string.IsNullOrEmpty(_vehicule.Destinataire))
-                {
-                     // Si on a un nom de client affiché, on compare
-                     string clientNom = IsAdmin ? _clients.FirstOrDefault(c => c.Id == _vehicule.ClientId)?.NomComplet : _clientNameDisplay;
-                     
-                     if (clientNom == _vehicule.Destinataire)
-                     {
-                         _sameAsClient = true;
-                     }
-                }
+                 var client = await ApiService.GetClientByIdAsync(_vehicule.ClientId);
+                 _clientNameDisplay = client?.NomComplet ?? "Client";
+            }
+             
+            // Check same client
+            if (_vehicule.Destinataire == (IsAdmin ? _clients.FirstOrDefault(c=>c.Id == _vehicule.ClientId)?.NomComplet : _clientNameDisplay))
+            {
+                _sameAsClient = true;
             }
         }
         else
         {
-            // --- MODE CRÉATION ---
-            _vehicule = new Vehicule { Statut = StatutVehicule.EnAttente };
-            
             if (!IsAdmin)
             {
-                // Client : Auto-assignation
                 var profile = await ApiService.GetUserProfileAsync();
                 if (profile != null)
                 {
                     _vehicule.ClientId = profile.ClientId;
                     _clientNameDisplay = $"{profile.Nom} {profile.Prenom}";
                     _sameAsClient = true;
-                    ToggleSameAsClient(); // Pré-remplir
+                    ToggleSameAsClient();
                 }
             }
         }
-        
         _isLoading = false;
-		StateHasChanged();
     }
-    
-    private async void OnClientChanged(ChangeEventArgs e)
+
+    private void OnClientChanged(ChangeEventArgs e)
     {
-        if (Guid.TryParse(e.Value?.ToString(), out Guid clientId))
+        if (Guid.TryParse(e.Value?.ToString(), out Guid cid))
         {
-            _vehicule.ClientId = clientId;
-            var client = _clients.FirstOrDefault(c => c.Id == clientId);
-            if (client != null)
-            {
-                _clientNameDisplay = client.NomComplet;
-                if (_sameAsClient) ToggleSameAsClient(); // Rafraîchir le destinataire
-            }
+            _vehicule.ClientId = cid;
+            var c = _clients.FirstOrDefault(cl => cl.Id == cid);
+            if(c != null) _clientNameDisplay = c.NomComplet;
+            if (_sameAsClient) ToggleSameAsClient();
         }
     }
 
@@ -343,57 +329,46 @@
     {
         if (_sameAsClient)
         {
-            // Si Admin, on prend le client sélectionné dans la liste
-            if (IsAdmin)
-            {
-                var client = _clients.FirstOrDefault(c => c.Id == _vehicule.ClientId);
-                if (client != null)
-                {
-                    _vehicule.Destinataire = client.NomComplet;
-                    _vehicule.TelephoneDestinataire = client.TelephonePrincipal;
-                }
-            }
-            else
-            {
-                // Si Client, on a déjà le nom affiché
-                 _vehicule.Destinataire = _clientNameDisplay;
-                 // Si on avait chargé le profil complet, on pourrait mettre le téléphone aussi
-            }
-        }
-    }
-    
-    private async Task UpdatePaidAmount(decimal totalPaid)
-    {
-        _vehicule.SommePayee = totalPaid;
-        // Sauvegarder immédiatement pour la cohérence (Important !)
-        if (!IsNew)
-        {
-            await ApiService.UpdateVehiculeAsync(_vehicule.Id, _vehicule);
+            var name = IsAdmin ? _clients.FirstOrDefault(c => c.Id == _vehicule.ClientId)?.NomComplet : _clientNameDisplay;
+            _vehicule.Destinataire = name;
+            // Note: Pour le téléphone, il faudrait charger l'objet client complet si pas admin
         }
     }
 
-
-	[Inject] private IJSRuntime JSRuntime { get; set; } = default!; // Ajoutez ceci en haut si manquant
-
-	private async Task SaveVehicle()
+    private async Task UpdatePaidAmount(decimal total)
     {
-        // Validation basique
-        if (string.IsNullOrWhiteSpace(_vehicule.Immatriculation) || 
-            string.IsNullOrWhiteSpace(_vehicule.Marque) || 
-            string.IsNullOrWhiteSpace(_vehicule.Modele)) 
+        _vehicule.SommePayee = total;
+        if (!IsNew) await ApiService.UpdateVehiculeAsync(_vehicule.Id, _vehicule);
+    }
+
+    // Callback de la modale d'inspection
+    private void SaveInspection(VehicleInspectionModal.InspectionResult result)
+    {
+        _vehicule.AccessoiresJson = result.AccessoiresJson;
+        _vehicule.SignatureAgent = result.SignatureAgent;
+        _vehicule.SignatureClient = result.SignatureClient;
+        _vehicule.LieuEtatDesLieux = result.Lieu;
+        _vehicule.DateEtatDesLieux = result.Date;
+        
+        _showInspection = false;
+        // On ne sauvegarde pas en base tout de suite, l'utilisateur doit cliquer sur "Enregistrer"
+        // Ou on pourrait faire un autosave ici si préféré.
+    }
+
+    private async Task SaveVehicle()
+    {
+        if (string.IsNullOrWhiteSpace(_vehicule.Immatriculation) || string.IsNullOrWhiteSpace(_vehicule.Marque))
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Veuillez remplir les champs obligatoires (Immatriculation, Marque, Modèle).");
+            await JSRuntime.InvokeVoidAsync("alert", "Immatriculation et Marque requises.");
             return;
         }
 
-        // --- CRÉATION D'UN OBJET PROPRE POUR L'ENVOI ---
-        // Cela évite les problèmes de cycle JSON et de validation sur les objets liés (Client, Conteneur...)
-        var vehiculeToSend = new Vehicule
+        // Clean object for API (remove circular refs)
+        var toSend = new Vehicule 
         {
             Id = _vehicule.Id,
             ClientId = _vehicule.ClientId,
             ConteneurId = _vehicule.ConteneurId,
-            
             Immatriculation = _vehicule.Immatriculation,
             Marque = _vehicule.Marque,
             Modele = _vehicule.Modele,
@@ -401,48 +376,39 @@
             Kilometrage = _vehicule.Kilometrage,
             Type = _vehicule.Type,
             Statut = _vehicule.Statut,
-            
             DestinationFinale = _vehicule.DestinationFinale,
             Destinataire = _vehicule.Destinataire,
             TelephoneDestinataire = _vehicule.TelephoneDestinataire,
-            
             Commentaires = _vehicule.Commentaires,
             ValeurDeclaree = _vehicule.ValeurDeclaree,
             PrixTotal = _vehicule.PrixTotal,
+            SommePayee = _vehicule.SommePayee,
             
-            // On préserve les données techniques
+            // Données Inspection
             EtatDesLieux = _vehicule.EtatDesLieux,
             EtatDesLieuxRayures = _vehicule.EtatDesLieuxRayures,
-            
-            // IMPORTANT : On ne met PAS les objets de navigation
-            Client = null,
-            Conteneur = null,
-            Paiements = new List<Paiement>()
+            AccessoiresJson = _vehicule.AccessoiresJson,
+            SignatureAgent = _vehicule.SignatureAgent,
+            SignatureClient = _vehicule.SignatureClient,
+            LieuEtatDesLieux = _vehicule.LieuEtatDesLieux,
+            DateEtatDesLieux = _vehicule.DateEtatDesLieux
         };
 
-        bool success = false;
+        bool success;
         if (IsNew)
         {
-            // Pour une création, on s'assure que l'ID est vide ou nouveau
-            vehiculeToSend.Id = Guid.Empty; 
-            success = await ApiService.CreateVehiculeAsync(vehiculeToSend);
+            toSend.Id = Guid.Empty;
+            success = await ApiService.CreateVehiculeAsync(toSend);
         }
         else
         {
-            success = await ApiService.UpdateVehiculeAsync(vehiculeToSend.Id, vehiculeToSend);
+            success = await ApiService.UpdateVehiculeAsync(toSend.Id, toSend);
         }
-        
-        if (success)
-        {
-            Navigation.NavigateTo("/my-vehicles");
-        }
-        else
-        {
-            // Si ça échoue, regardez la console du navigateur (F12) pour voir le message d'erreur précis
-            await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la sauvegarde. Consultez la console (F12) pour le détail.");
-        }
+
+        if (success) Navigation.NavigateTo("/my-vehicles");
+        else await JSRuntime.InvokeVoidAsync("alert", "Erreur sauvegarde");
     }
-    
+
     private string GetStatusBadgeClass(StatutVehicule s) => s switch
     {
         StatutVehicule.EnAttente => "bg-warning text-dark",

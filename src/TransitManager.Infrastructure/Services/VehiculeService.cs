@@ -52,7 +52,7 @@ namespace TransitManager.Infrastructure.Services
 
 			var originalConteneurId = vehiculeInDb.ConteneurId;
 
-			// Mappage des propriétés modifiables par l'utilisateur
+			// --- MAPPAGE EXISTANT ---
 			vehiculeInDb.Immatriculation = vehicule.Immatriculation;
 			vehiculeInDb.Marque = vehicule.Marque;
 			vehiculeInDb.Modele = vehicule.Modele;
@@ -65,28 +65,26 @@ namespace TransitManager.Infrastructure.Services
 			vehiculeInDb.Commentaires = vehicule.Commentaires;
 			vehiculeInDb.Statut = vehicule.Statut;
 			vehiculeInDb.ConteneurId = vehicule.ConteneurId;
+			
+			// Protection des données financières (si nécessaire)
+			if (vehicule.PrixTotal > 0) vehiculeInDb.PrixTotal = vehicule.PrixTotal;
+			if (vehicule.ValeurDeclaree > 0) vehiculeInDb.ValeurDeclaree = vehicule.ValeurDeclaree;
+			// On garde la SommePayee à jour si elle est envoyée
+			vehiculeInDb.SommePayee = vehicule.SommePayee;
 
-			// Protection des données critiques
-			if (!string.IsNullOrEmpty(vehicule.EtatDesLieux))
-			{
-				vehiculeInDb.EtatDesLieux = vehicule.EtatDesLieux;
-			}
-			if (!string.IsNullOrEmpty(vehicule.EtatDesLieuxRayures))
-			{
-				vehiculeInDb.EtatDesLieuxRayures = vehicule.EtatDesLieuxRayures;
-			}
+			// --- CORRECTION : MAPPAGE DES NOUVEAUX CHAMPS (État des lieux & Signatures) ---
+			// Si ces champs ne sont pas mis à jour ici, ils ne seront jamais sauvegardés !
+			vehiculeInDb.EtatDesLieux = vehicule.EtatDesLieux;
+			vehiculeInDb.EtatDesLieuxRayures = vehicule.EtatDesLieuxRayures;
+			
+			// Nouveaux champs ajoutés lors de la migration précédente
+			vehiculeInDb.AccessoiresJson = vehicule.AccessoiresJson;
+			vehiculeInDb.SignatureAgent = vehicule.SignatureAgent;
+			vehiculeInDb.SignatureClient = vehicule.SignatureClient;
+			vehiculeInDb.LieuEtatDesLieux = vehicule.LieuEtatDesLieux;
+			vehiculeInDb.DateEtatDesLieux = vehicule.DateEtatDesLieux;
+			// -----------------------------------------------------------------------------
 
-			// Mise à jour des données financières seulement si elles sont non nulles ou non vides
-			if (vehicule.PrixTotal > 0)
-			{
-				vehiculeInDb.PrixTotal = vehicule.PrixTotal;
-			}
-			if (vehicule.ValeurDeclaree > 0)
-			{
-				vehiculeInDb.ValeurDeclaree = vehicule.ValeurDeclaree;
-			}
-
-			// Gestion de RowVersion pour la concurrency
 			context.Entry(vehiculeInDb).Property("RowVersion").OriginalValue = vehicule.RowVersion;
 
 			try

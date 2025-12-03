@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Components.Forms;
 using TransitManager.Core.DTOs;
 using TransitManager.Core.Entities;
+using TransitManager.Core.Enums;
 using static TransitManager.Web.Services.ApiService;
 
 namespace TransitManager.Web.Services
@@ -71,6 +73,12 @@ namespace TransitManager.Web.Services
 		Task<bool> RegisterClientAsync(RegisterClientRequestDto request);
 		Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials);
 		Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials);
-		
+
+		// Ajoutez ces signatures dans l'interface IApiService
+		Task<IEnumerable<Document>> GetDocumentsByEntityAsync(string entityType, Guid entityId);
+		Task<Document?> UploadDocumentAsync(IBrowserFile file, TypeDocument type, Guid? clientId, Guid? vehiculeId, Guid? colisId, Guid? conteneurId);
+		Task<byte[]> DownloadDocumentAsync(Guid id); // Retourne les bytes pour le téléchargement JS
+		Task<bool> DeleteDocumentAsync(Guid id);
+				
     }
 }

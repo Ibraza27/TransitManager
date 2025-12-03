@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic; // Ajouté pour ICollection
 using System.ComponentModel.DataAnnotations;
 using TransitManager.Core.Enums;
 
@@ -21,11 +22,17 @@ namespace TransitManager.Core.Entities
         private decimal _prixTotal;
         private decimal _sommePayee;
         
-        // --- NOUVEAUX CHAMPS ---
         private StatutVehicule _statut;
         private Guid? _conteneurId;
         private string? _numeroPlomb;
         
+        // --- NOUVEAUX CHAMPS ÉTAT DES LIEUX ---
+        private string? _lieuEtatDesLieux;
+        private DateTime? _dateEtatDesLieux;
+        private string? _signatureAgent; // Base64
+        private string? _signatureClient; // Base64
+        private string? _accessoiresJson; // JSON des équipements
+
         public Guid ClientId { get => _clientId; set => SetProperty(ref _clientId, value); }
 
         [Required]
@@ -75,16 +82,31 @@ namespace TransitManager.Core.Entities
         public string? EtatDesLieux { get; set; }
         public string? EtatDesLieuxRayures { get; set; }
 
-        // --- NOUVELLES PROPRIÉTÉS ---
         public StatutVehicule Statut { get => _statut; set => SetProperty(ref _statut, value); }
         public Guid? ConteneurId { get => _conteneurId; set => SetProperty(ref _conteneurId, value); }
+        
         [StringLength(50)]
         public string? NumeroPlomb { get => _numeroPlomb; set => SetProperty(ref _numeroPlomb, value); }
         
+        // --- PROPRIÉTÉS DE SIGNATURE ET ÉQUIPEMENTS ---
+        [StringLength(100)]
+        public string? LieuEtatDesLieux { get => _lieuEtatDesLieux; set => SetProperty(ref _lieuEtatDesLieux, value); }
+        
+        public DateTime? DateEtatDesLieux { get => _dateEtatDesLieux; set => SetProperty(ref _dateEtatDesLieux, value); }
+        
+        // Stockage Base64 des signatures (peut être lourd, TEXT en BDD)
+        public string? SignatureAgent { get => _signatureAgent; set => SetProperty(ref _signatureAgent, value); }
+        public string? SignatureClient { get => _signatureClient; set => SetProperty(ref _signatureClient, value); }
+        
+        public string? AccessoiresJson { get => _accessoiresJson; set => SetProperty(ref _accessoiresJson, value); }
+
         // --- RELATIONS DE NAVIGATION ---
         public virtual Client? Client { get; set; }
         public virtual Conteneur? Conteneur { get; set; }
-		public virtual ICollection<Paiement> Paiements { get; set; } = new List<Paiement>();
+        public virtual ICollection<Paiement> Paiements { get; set; } = new List<Paiement>();
+        
+        // Nouvelle relation pour les documents
+        public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
         
         public Vehicule()
         {

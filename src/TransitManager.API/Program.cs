@@ -56,6 +56,7 @@ builder.Services.AddTransient<IBarcodeService, BarcodeService>();
 builder.Services.AddTransient<IExportService, ExportService>();
 builder.Services.AddTransient<IBackupService, BackupService>();
 builder.Services.AddTransient<IPrintingService, PrintingService>();
+builder.Services.AddTransient<IDocumentService, DocumentService>();
 builder.Services.AddTransient<IJwtService, JwtService>();
 builder.Services.AddTransient<IUserService, UserService>(); 
 builder.Services.AddSingleton<INotificationHubService, NotificationHubService>();

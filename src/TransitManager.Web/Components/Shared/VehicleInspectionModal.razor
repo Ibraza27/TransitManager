@@ -3,119 +3,332 @@
 
 @if (IsVisible)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.8);">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.8);" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-car-front me-2"></i>État des Lieux</h5>
-                    <button type="button" class="btn-close" @onclick="Close"></button>
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-car-front me-2"></i>État des Lieux & Validation</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
                 </div>
-                <div class="modal-body text-center bg-dark">
-                    
-                    <div style="position: relative; display: inline-block; max-width: 100%;">
-                        <!-- Image de fond (Plan) -->
-                        <img src="@GetImageSource()" style="max-width: 100%; max-height: 70vh; display: block;" />
 
-                        <!-- Calque SVG pour les Rayures (Strokes) -->
-                        <!-- ViewBox 0 0 1 1 permet d'utiliser des coordonnées relatives -->
-                        <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;" 
-                             viewBox="0 0 1 1" preserveAspectRatio="none">
-                            @foreach (var stroke in _strokes)
-                            {
-                                <polyline points="@GetSvgPoints(stroke)" 
-                                          fill="none" 
-                                          stroke="red" 
-                                          stroke-width="0.005" 
-                                          stroke-linecap="round" 
-                                          stroke-linejoin="round" />
-                            }
-                        </svg>
+                <div class="modal-body p-0">
+                    <!-- Navigation par Onglets -->
+                    <ul class="nav nav-tabs nav-fill bg-light" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link @(_activeTab == "schema" ? "active fw-bold" : "")" @onclick='() => _activeTab = "schema"'>
+                                <i class="bi bi-pencil-square me-2"></i>Schéma
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link @(_activeTab == "accessoires" ? "active fw-bold" : "")" @onclick='() => _activeTab = "accessoires"'>
+                                <i class="bi bi-tools me-2"></i>Équipements
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link @(_activeTab == "signature" ? "active fw-bold" : "")" @onclick='() => ChangeTabToSignature()'>
+                                <i class="bi bi-pen me-2"></i>Signatures
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content p-3">
 
-                        <!-- Points d'impact (Dots) -->
-                        @foreach (var point in _damagePoints)
-                        {
-                            <div style="position: absolute; 
-                                        left: @(point.X * 100)%; 
-                                        top: @(point.Y * 100)%; 
-                                        width: 15px; height: 15px; 
-                                        background-color: rgba(255, 0, 0, 0.6); 
-                                        border: 2px solid red; 
-                                        border-radius: 50%; 
-                                        transform: translate(-50%, -50%);
-                                        pointer-events: none;">
+                        <!-- ONGLET 1 : SCHÉMA (Existant) -->
+                        <div class="tab-pane fade @(_activeTab == "schema" ? "show active" : "")" style="@(IsReadOnly ? "pointer-events: none;" : "")">
+                            <div class="text-center bg-dark p-3 rounded">
+                                <div style="position: relative; display: inline-block; max-width: 100%;">
+                                    <img src="@GetImageSource()" style="max-width: 100%; max-height: 60vh; display: block;" />
+
+                                    <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;" viewBox="0 0 1 1" preserveAspectRatio="none">
+                                        @foreach (var stroke in _strokes)
+                                        {
+                                            <polyline points="@GetSvgPoints(stroke)" fill="none" stroke="red" stroke-width="0.005" stroke-linecap="round" stroke-linejoin="round" />
+                                        }
+                                    </svg>
+                                    @foreach (var point in _damagePoints)
+                                    {
+                                        <div style="position: absolute; left: @(point.X * 100)%; top: @(point.Y * 100)%; width: 15px; height: 15px; background-color: rgba(255, 0, 0, 0.6); border: 2px solid red; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;"></div>
+                                    }
+                                </div>
+                                <div class="text-white mt-2 small">
+                                    <span class="badge bg-danger rounded-circle me-1" style="width:10px;height:10px;display:inline-block;"></span> Impact
+                                    <span class="text-danger fw-bold ms-3">―</span> Rayure
+                                    <span class="text-muted ms-3 fst-italic">(Note: L'édition du schéma se fait sur Mobile/WPF pour plus de précision)</span>
+                                </div>
                             </div>
-                        }
+                        </div>
+                        <!-- ONGLET 2 : ACCESSOIRES -->
+                        <div class="tab-pane fade @(_activeTab == "accessoires" ? "show active" : "")">
+                            <div class="row g-4 p-2">
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header fw-bold">Inventaire Accessoires</div>
+                                        <div class="card-body">
+                                            <div class="form-check form-switch mb-3">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.CarteGrise" disabled="@IsReadOnly">
+                                                <label class="form-check-label">Carte Grise Originale</label>
+                                            </div>
+                                            <div class="form-check form-switch mb-3">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.Antenne" disabled="@IsReadOnly">
+                                                <label class="form-check-label">Antenne</label>
+                                            </div>
+                                            <div class="form-check form-switch mb-3">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.Radio" disabled="@IsReadOnly">
+                                                <label class="form-check-label">Radio / Façade</label>
+                                            </div>
+                                            <div class="form-check form-switch mb-3">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.RoueSecours" disabled="@IsReadOnly">
+                                                <label class="form-check-label">Roue de secours / Galette</label>
+                                            </div>
+                                            <div class="form-check form-switch mb-3">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.Cric" disabled="@IsReadOnly">
+                                                <label class="form-check-label">Cric / Manivelle</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header fw-bold">Quantités & État</div>
+                                        <div class="card-body">
+                                            <div class="mb-3 row align-items-center">
+                                                <label class="col-sm-6 col-form-label">Nombre de Clés</label>
+                                                <div class="col-sm-6">
+                                                    <input type="number" class="form-control" @bind="_accessoires.NombreClefs" min="0" max="10" disabled="@IsReadOnly">
+                                                </div>
+                                            </div>
+                                            <div class="mb-3 row align-items-center">
+                                                <label class="col-sm-6 col-form-label">Enjoliveurs (0-4)</label>
+                                                <div class="col-sm-6">
+                                                    <input type="number" class="form-control" @bind="_accessoires.NombreEnjoliveurs" min="0" max="4" disabled="@IsReadOnly">
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Autres Observations</label>
+                                                <textarea class="form-control" rows="3" @bind="_accessoires.AutresObservations" placeholder="Rayures, impacts non visibles sur schéma..." disabled="@IsReadOnly"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- ONGLET 3 : SIGNATURES -->
+                        <div class="tab-pane fade @(_activeTab == "signature" ? "show active" : "")">
+                            <div class="row g-3 p-2">
+                                <!-- Lieu et Date -->
+                                <div class="col-12 mb-3">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Fait à</span>
+                                        <input type="text" class="form-control" @bind="_lieu" placeholder="Ville..." disabled="@IsReadOnly">
+                                        <span class="input-group-text">Le</span>
+                                        <input type="date" class="form-control" @bind="_dateSignature" disabled="@IsReadOnly">
+                                    </div>
+                                </div>
+                                <!-- Signature Agent -->
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-light fw-bold text-center">Signature Agent (Transit)</div>
+                                        <div class="card-body p-0 position-relative" style="height: 200px; background-color: #fff;">
+                                            @if (!string.IsNullOrEmpty(_signatureAgentBase64))
+                                            {
+                                                <img src="@_signatureAgentBase64" style="width:100%; height:100%; object-fit:contain;" />
+                                                @if(!IsReadOnly) {
+                                                    <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" @onclick='() => ClearSignature("agent")'>Re-signer</button>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if(IsReadOnly)
+                                                {
+                                                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">Non signé</div>
+                                                }
+                                                else
+                                                {
+                                                    <canvas id="sig-canvas-agent" style="width:100%; height:100%; cursor:crosshair;"></canvas>
+                                                    <div class="position-absolute bottom-0 end-0 m-2">
+                                                        <button class="btn btn-sm btn-light border" @onclick='() => ClearCanvas("sig-canvas-agent")'>Effacer</button>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Signature Client -->
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-light fw-bold text-center">Signature Client / Livreur</div>
+                                        <div class="card-body p-0 position-relative" style="height: 200px; background-color: #fff;">
+                                            @if (!string.IsNullOrEmpty(_signatureClientBase64))
+                                            {
+                                                <img src="@_signatureClientBase64" style="width:100%; height:100%; object-fit:contain;" />
+                                                @if(!IsReadOnly) {
+                                                    <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" @onclick='() => ClearSignature("client")'>Re-signer</button>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if(IsReadOnly)
+                                                {
+                                                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">Non signé</div>
+                                                }
+                                                else
+                                                {
+                                                    <canvas id="sig-canvas-client" style="width:100%; height:100%; cursor:crosshair;"></canvas>
+                                                    <div class="position-absolute bottom-0 end-0 m-2">
+                                                        <button class="btn btn-sm btn-light border" @onclick='() => ClearCanvas("sig-canvas-client")'>Effacer</button>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="text-white mt-2 small">
-                        <span class="badge bg-danger rounded-circle me-1" style="width:10px;height:10px;display:inline-block;"></span> Impact
-                        <span class="text-danger fw-bold ms-3">―</span> Rayure
-                    </div>
-
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" @onclick="Close">Fermer</button>
+                    @if (!IsReadOnly)
+                    {
+                        <button type="button" class="btn btn-success fw-bold" @onclick="SaveAndClose">
+                            <i class="bi bi-check-lg me-2"></i>Valider l'État des Lieux
+                        </button>
+                    }
                 </div>
             </div>
         </div>
     </div>
 }
-
+@inject IJSRuntime JSRuntime
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public Core.Enums.TypeVehicule Type { get; set; }
+    [Parameter] public bool IsReadOnly { get; set; } = false; // Nouveau paramètre
+
+    // Données entrantes
     [Parameter] public string? JsonPoints { get; set; }
     [Parameter] public string? JsonStrokes { get; set; }
-    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public string? JsonAccessoires { get; set; }
+    [Parameter] public string? SignatureAgent { get; set; }
+    [Parameter] public string? SignatureClient { get; set; }
+    [Parameter] public string? Lieu { get; set; }
+    [Parameter] public DateTime? DateSignature { get; set; }
 
+    // Callbacks de sortie
+    [Parameter] public EventCallback<InspectionResult> OnSave { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    // Classe interne pour le résultat
+    public class InspectionResult
+    {
+        public string AccessoiresJson { get; set; } = "";
+        public string SignatureAgent { get; set; } = "";
+        public string SignatureClient { get; set; } = "";
+        public string Lieu { get; set; } = "";
+        public DateTime? Date { get; set; }
+    }
+    // Modèle Accessoires Local
+    public class VehiculeAccessoires
+    {
+        public int NombreClefs { get; set; } = 1;
+        public bool Antenne { get; set; }
+        public bool Radio { get; set; }
+        public int NombreEnjoliveurs { get; set; }
+        public bool RoueSecours { get; set; }
+        public bool Cric { get; set; }
+        public bool CarteGrise { get; set; }
+        public string? AutresObservations { get; set; }
+    }
+    private string _activeTab = "schema";
     private List<SerializablePoint> _damagePoints = new();
     private List<List<SerializablePoint>> _strokes = new();
+    private VehiculeAccessoires _accessoires = new();
 
+    // États locaux signatures
+    private string? _signatureAgentBase64;
+    private string? _signatureClientBase64;
+    private string? _lieu;
+    private DateTime _dateSignature;
     protected override void OnParametersSet()
     {
         if (IsVisible)
         {
-            try
-            {
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-                if (!string.IsNullOrEmpty(JsonPoints))
-                    _damagePoints = JsonSerializer.Deserialize<List<SerializablePoint>>(JsonPoints, options) ?? new();
-                else
-                    _damagePoints = new();
-
-                if (!string.IsNullOrEmpty(JsonStrokes))
-                    _strokes = JsonSerializer.Deserialize<List<List<SerializablePoint>>>(JsonStrokes, options) ?? new();
-                else
-                    _strokes = new();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Erreur parsing inspection: {ex.Message}");
-            }
+            // Init Schéma
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            try {
+                _damagePoints = !string.IsNullOrEmpty(JsonPoints) ? JsonSerializer.Deserialize<List<SerializablePoint>>(JsonPoints, options) ?? new() : new();
+                _strokes = !string.IsNullOrEmpty(JsonStrokes) ? JsonSerializer.Deserialize<List<List<SerializablePoint>>>(JsonStrokes, options) ?? new() : new();
+            } catch { }
+            // Init Accessoires
+            try {
+                _accessoires = !string.IsNullOrEmpty(JsonAccessoires) ? JsonSerializer.Deserialize<VehiculeAccessoires>(JsonAccessoires, options) ?? new() : new();
+            } catch { _accessoires = new(); }
+            // Init Signatures
+            _signatureAgentBase64 = SignatureAgent;
+            _signatureClientBase64 = SignatureClient;
+            _lieu = string.IsNullOrEmpty(Lieu) ? "Tresses" : Lieu; // Valeur par défaut
+            _dateSignature = DateSignature ?? DateTime.Now;
         }
     }
-
-	private string GetImageSource()
+    private async Task ChangeTabToSignature()
     {
-        string image = Type switch
-        {
-            Core.Enums.TypeVehicule.Moto => "moto_plan.png",
-            Core.Enums.TypeVehicule.Camion => "camion_plan.png",
-            Core.Enums.TypeVehicule.Quad => "quad_plan.png", // Ajout du Quad si présent
-            Core.Enums.TypeVehicule.Van => "van_plan.png",   // Ajout du Van si présent
-            _ => "vehicule_plan.png"
-        };
-        
-        // CORRECTION : Ajout du sous-dossier "plans"
-        return $"images/plans/{image}"; 
-    }
+        _activeTab = "signature";
+        // Petit délai pour que le DOM soit rendu avant d'init les canvas
+        await Task.Delay(100);
 
+        if (string.IsNullOrEmpty(_signatureAgentBase64)) await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-agent");
+        if (string.IsNullOrEmpty(_signatureClientBase64)) await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-client");
+    }
+    private async Task ClearCanvas(string canvasId)
+    {
+        await JSRuntime.InvokeVoidAsync("signaturePad.clear", canvasId);
+    }
+    private async Task ClearSignature(string type)
+    {
+        if (type == "agent")
+        {
+            _signatureAgentBase64 = null;
+            await Task.Delay(50);
+            await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-agent");
+        }
+        else
+        {
+            _signatureClientBase64 = null;
+            await Task.Delay(50);
+            await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-client");
+        }
+    }
+    private async Task SaveAndClose()
+    {
+        // Récupérer les dessins des canvas s'ils ne sont pas déjà figés en images
+        if (string.IsNullOrEmpty(_signatureAgentBase64) && _activeTab == "signature")
+            _signatureAgentBase64 = await JSRuntime.InvokeAsync<string>("signaturePad.getImage", "sig-canvas-agent");
+
+        if (string.IsNullOrEmpty(_signatureClientBase64) && _activeTab == "signature")
+            _signatureClientBase64 = await JSRuntime.InvokeAsync<string>("signaturePad.getImage", "sig-canvas-client");
+        // Nettoyer les canvas vides (retournent parfois une image transparente de 6octets)
+        if (_signatureAgentBase64 != null && _signatureAgentBase64.Length < 500) _signatureAgentBase64 = null;
+        if (_signatureClientBase64 != null && _signatureClientBase64.Length < 500) _signatureClientBase64 = null;
+        var result = new InspectionResult
+        {
+            AccessoiresJson = JsonSerializer.Serialize(_accessoires),
+            SignatureAgent = _signatureAgentBase64 ?? "",
+            SignatureClient = _signatureClientBase64 ?? "",
+            Lieu = _lieu ?? "",
+            Date = _dateSignature
+        };
+        await OnSave.InvokeAsync(result);
+    }
+    private async Task Close() => await OnClose.InvokeAsync();
+    // Helpers Image
+    private string GetImageSource() => Type switch
+    {
+        Core.Enums.TypeVehicule.Moto => "images/plans/moto_plan.png",
+        Core.Enums.TypeVehicule.Camion => "images/plans/camion_plan.png",
+        Core.Enums.TypeVehicule.Quad => "images/plans/quad_plan.png",
+        Core.Enums.TypeVehicule.Van => "images/plans/van_plan.png",
+        _ => "images/plans/vehicule_plan.png"
+    };
     private string GetSvgPoints(List<SerializablePoint> points)
     {
-        // Convertit la liste de points en string "x1,y1 x2,y2 ..." pour SVG
         return string.Join(" ", points.Select(p => $"{p.X.ToString(System.Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)}"));
     }
-
-    private async Task Close() => await OnClose.InvokeAsync();
 }

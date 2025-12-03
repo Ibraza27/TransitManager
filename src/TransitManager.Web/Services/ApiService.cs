@@ -7,6 +7,8 @@ using TransitManager.Core.Entities;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
+using TransitManager.Core.Enums;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace TransitManager.Web.Services
 {
@@ -653,6 +655,75 @@ namespace TransitManager.Web.Services
 			{
 				return Array.Empty<byte>();
 			}
+		}
+		
+		// Ajoutez ces méthodes dans la classe ApiService
+
+		public async Task<IEnumerable<Document>> GetDocumentsByEntityAsync(string entityType, Guid entityId)
+		{
+			try
+			{
+				return await _httpClient.GetFromJsonAsync<IEnumerable<Document>>($"api/documents/entity/{entityType}/{entityId}", _jsonOptions) 
+					   ?? Enumerable.Empty<Document>();
+			}
+			catch { return Enumerable.Empty<Document>(); }
+		}
+
+		public async Task<Document?> UploadDocumentAsync(IBrowserFile file, TypeDocument type, Guid? clientId, Guid? vehiculeId, Guid? colisId, Guid? conteneurId)
+		{
+			try
+			{
+				using var content = new MultipartFormDataContent();
+				
+				// Configuration importante pour les gros fichiers (ici max 10 Mo)
+				var fileContent = new StreamContent(file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024));
+				fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+				
+				content.Add(fileContent, "file", file.Name);
+				content.Add(new StringContent(type.ToString()), "typeDocStr");
+				
+				if (clientId.HasValue) content.Add(new StringContent(clientId.Value.ToString()), "clientId");
+				if (vehiculeId.HasValue) content.Add(new StringContent(vehiculeId.Value.ToString()), "vehiculeId");
+				if (colisId.HasValue) content.Add(new StringContent(colisId.Value.ToString()), "colisId");
+				if (conteneurId.HasValue) content.Add(new StringContent(conteneurId.Value.ToString()), "conteneurId");
+
+				var response = await _httpClient.PostAsync("api/documents/upload", content);
+				
+				if (response.IsSuccessStatusCode)
+				{
+					return await response.Content.ReadFromJsonAsync<Document>(_jsonOptions);
+				}
+				return null;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Erreur Upload: {ex.Message}");
+				return null;
+			}
+		}
+
+		public async Task<byte[]> DownloadDocumentAsync(Guid id)
+		{
+			try
+			{
+				var response = await _httpClient.GetAsync($"api/documents/{id}/download");
+				if (response.IsSuccessStatusCode)
+				{
+					return await response.Content.ReadAsByteArrayAsync();
+				}
+				return Array.Empty<byte>();
+			}
+			catch { return Array.Empty<byte>(); }
+		}
+
+		public async Task<bool> DeleteDocumentAsync(Guid id)
+		{
+			try
+			{
+				var response = await _httpClient.DeleteAsync($"api/documents/{id}");
+				return response.IsSuccessStatusCode;
+			}
+			catch { return false; }
 		}
 		
     }

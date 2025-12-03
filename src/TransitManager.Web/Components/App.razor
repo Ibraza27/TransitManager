@@ -58,5 +58,97 @@
         };
         setTimeout(function() { window.showBlazorApp(); }, 3000);
     </script>
+	
+
+    <script>
+        window.signaturePad = {
+            init: function (canvasId) {
+                var canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+
+                var ctx = canvas.getContext('2d');
+                var isDrawing = false;
+                var lastX = 0;
+                var lastY = 0;
+
+                // Ajuster la taille du canvas au conteneur
+                function resizeCanvas() {
+                    var parent = canvas.parentElement;
+                    if (parent) {
+                        canvas.width = parent.clientWidth;
+                        // Hauteur fixe ou relative
+                        if(canvas.height === 0 || canvas.height === 150) canvas.height = 200; 
+                    }
+                }
+                // Appel initial et au redimensionnement
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+
+                // Styles du trait
+                ctx.strokeStyle = "#000000";
+                ctx.lineJoin = "round";
+                ctx.lineCap = "round";
+                ctx.lineWidth = 2;
+
+                function draw(e) {
+                    if (!isDrawing) return;
+                    e.preventDefault(); // Empêcher le scroll sur mobile
+
+                    // Coordonnées (Souris vs Touch)
+                    var clientX = e.clientX;
+                    var clientY = e.clientY;
+                    if (e.touches && e.touches.length > 0) {
+                        clientX = e.touches[0].clientX;
+                        clientY = e.touches[0].clientY;
+                    }
+
+                    var rect = canvas.getBoundingClientRect();
+                    var x = clientX - rect.left;
+                    var y = clientY - rect.top;
+
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                    [lastX, lastY] = [x, y];
+                }
+
+                // Événements Souris
+                canvas.addEventListener('mousedown', (e) => {
+                    isDrawing = true;
+                    var rect = canvas.getBoundingClientRect();
+                    [lastX, lastY] = [e.clientX - rect.left, e.clientY - rect.top];
+                });
+                canvas.addEventListener('mousemove', draw);
+                canvas.addEventListener('mouseup', () => isDrawing = false);
+                canvas.addEventListener('mouseout', () => isDrawing = false);
+
+                // Événements Tactiles (Mobile)
+                canvas.addEventListener('touchstart', (e) => {
+                    isDrawing = true;
+                    var rect = canvas.getBoundingClientRect();
+                    var touch = e.touches[0];
+                    [lastX, lastY] = [touch.clientX - rect.left, touch.clientY - rect.top];
+                }, { passive: false });
+                canvas.addEventListener('touchmove', draw, { passive: false });
+                canvas.addEventListener('touchend', () => isDrawing = false);
+            },
+
+            clear: function (canvasId) {
+                var canvas = document.getElementById(canvasId);
+                if (canvas) {
+                    var ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            },
+
+            getImage: function (canvasId) {
+                var canvas = document.getElementById(canvasId);
+                // Retourne l'image en Base64 (PNG)
+                return canvas ? canvas.toDataURL("image/png") : null;
+            }
+        };
+    </script>
+	
 </body>
 </html>

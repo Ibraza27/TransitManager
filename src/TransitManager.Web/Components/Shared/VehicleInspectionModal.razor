@@ -1,6 +1,6 @@
 @using System.Text.Json
 @using TransitManager.Core.Entities
-
+@inject IJSRuntime JSRuntime
 @if (IsVisible)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.8);" tabindex="-1">
@@ -12,52 +12,83 @@
                 </div>
 
                 <div class="modal-body p-0">
-                    <!-- Navigation par Onglets -->
                     <ul class="nav nav-tabs nav-fill bg-light" role="tablist">
                         <li class="nav-item">
-                            <button class="nav-link @(_activeTab == "schema" ? "active fw-bold" : "")" @onclick='() => _activeTab = "schema"'>
+                            <button class='nav-link @(_activeTab == "schema" ? "active fw-bold" : "")' @onclick='() => ChangeTab("schema")'>
                                 <i class="bi bi-pencil-square me-2"></i>Schéma
                             </button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link @(_activeTab == "accessoires" ? "active fw-bold" : "")" @onclick='() => _activeTab = "accessoires"'>
+                            <button class='nav-link @(_activeTab == "accessoires" ? "active fw-bold" : "")' @onclick='() => ChangeTab("accessoires")'>
                                 <i class="bi bi-tools me-2"></i>Équipements
                             </button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link @(_activeTab == "signature" ? "active fw-bold" : "")" @onclick='() => ChangeTabToSignature()'>
+                            <button class='nav-link @(_activeTab == "signature" ? "active fw-bold" : "")' @onclick='() => ChangeTab("signature")'>
                                 <i class="bi bi-pen me-2"></i>Signatures
                             </button>
                         </li>
                     </ul>
                     <div class="tab-content p-3">
 
-                        <!-- ONGLET 1 : SCHÉMA (Existant) -->
-                        <div class="tab-pane fade @(_activeTab == "schema" ? "show active" : "")" style="@(IsReadOnly ? "pointer-events: none;" : "")">
-                            <div class="text-center bg-dark p-3 rounded">
-                                <div style="position: relative; display: inline-block; max-width: 100%;">
-                                    <img src="@GetImageSource()" style="max-width: 100%; max-height: 60vh; display: block;" />
+                        <!-- ONGLET 1 : SCHÉMA -->
+                        <div class='tab-pane fade @(_activeTab == "schema" ? "show active" : "")'>
 
-                                    <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;" viewBox="0 0 1 1" preserveAspectRatio="none">
-                                        @foreach (var stroke in _strokes)
-                                        {
-                                            <polyline points="@GetSvgPoints(stroke)" fill="none" stroke="red" stroke-width="0.005" stroke-linecap="round" stroke-linejoin="round" />
-                                        }
-                                    </svg>
-                                    @foreach (var point in _damagePoints)
+                            <!-- Barre d'outils -->
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded border">
+
+                                <!-- Outils d'édition (Visible seulement si Admin et Mode Édition activé) -->
+                                @if (_isEditingSchema && !IsReadOnly)
+                                {
+                                    <div class="btn-group">
+                                        <button class='btn btn-outline-primary @(_currentTool == "pen" ? "active" : "")' @onclick='() => SetTool("pen")' title="Crayon">
+                                            ✏️ Dessin
+                                        </button>
+                                        <button class='btn btn-outline-danger @(_currentTool == "eraser" ? "active" : "")' @onclick='() => SetTool("eraser")' title="Gomme">
+                                            🧼 Gomme
+                                        </button>
+                                        <button class='btn btn-outline-secondary @(_currentTool == "hand" ? "active" : "")' @onclick='() => SetTool("hand")' title="Déplacer">
+                                            ✋ Déplacer
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <!-- En mode lecture, on indique qu'on est en mode déplacement -->
+                                    <div class="text-muted small">
+                                        <i class="bi bi-arrows-move me-1"></i> Déplacez et zoomez pour inspecter
+                                    </div>
+                                }
+                                <!-- Boutons Zoom (Toujours visibles) -->
+                                <div class="btn-group mx-2">
+                                    <button class="btn btn-outline-dark" @onclick="ZoomIn">➕ Zoomer</button>
+                                    <button class="btn btn-outline-dark" @onclick="ZoomOut">➖ Zoomer</button>
+                                </div>
+                                <!-- Bouton Action Droite -->
+                                @if (!IsReadOnly)
+                                {
+                                    @if (_isEditingSchema)
                                     {
-                                        <div style="position: absolute; left: @(point.X * 100)%; top: @(point.Y * 100)%; width: 15px; height: 15px; background-color: rgba(255, 0, 0, 0.6); border: 2px solid red; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;"></div>
+                                        <button class="btn btn-success" @onclick="SaveSchemaChanges">
+                                            <i class="bi bi-check-lg"></i> Terminer
+                                        </button>
                                     }
-                                </div>
-                                <div class="text-white mt-2 small">
-                                    <span class="badge bg-danger rounded-circle me-1" style="width:10px;height:10px;display:inline-block;"></span> Impact
-                                    <span class="text-danger fw-bold ms-3">―</span> Rayure
-                                    <span class="text-muted ms-3 fst-italic">(Note: L'édition du schéma se fait sur Mobile/WPF pour plus de précision)</span>
-                                </div>
+                                    else
+                                    {
+                                        <button class="btn btn-primary" @onclick="EnableSchemaEditing">
+                                            <i class="bi bi-pencil me-2"></i>Modifier
+                                        </button>
+                                    }
+                                }
+                            </div>
+                            <!-- CANVAS UNIQUE (Pour lecture et écriture) -->
+                            <div class="text-center bg-dark p-0 rounded position-relative overflow-hidden" style="height: 60vh;">
+                                <canvas id="vehicle-schema-canvas" style="width:100%; height:100%; cursor: grab; touch-action: none;"></canvas>
                             </div>
                         </div>
+
                         <!-- ONGLET 2 : ACCESSOIRES -->
-                        <div class="tab-pane fade @(_activeTab == "accessoires" ? "show active" : "")">
+                        <div class='tab-pane fade @(_activeTab == "accessoires" ? "show active" : "")'>
                             <div class="row g-4 p-2">
                                 <div class="col-md-6">
                                     <div class="card h-100">
@@ -111,10 +142,11 @@
                                 </div>
                             </div>
                         </div>
+
                         <!-- ONGLET 3 : SIGNATURES -->
-                        <div class="tab-pane fade @(_activeTab == "signature" ? "show active" : "")">
+                        <div class='tab-pane fade @(_activeTab == "signature" ? "show active" : "")'>
+
                             <div class="row g-3 p-2">
-                                <!-- Lieu et Date -->
                                 <div class="col-12 mb-3">
                                     <div class="input-group">
                                         <span class="input-group-text">Fait à</span>
@@ -123,7 +155,7 @@
                                         <input type="date" class="form-control" @bind="_dateSignature" disabled="@IsReadOnly">
                                     </div>
                                 </div>
-                                <!-- Signature Agent -->
+                                <!-- Agent -->
                                 <div class="col-md-6">
                                     <div class="card">
                                         <div class="card-header bg-light fw-bold text-center">Signature Agent (Transit)</div>
@@ -135,24 +167,18 @@
                                                     <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" @onclick='() => ClearSignature("agent")'>Re-signer</button>
                                                 }
                                             }
-                                            else
+                                            else if (!IsReadOnly)
                                             {
-                                                if(IsReadOnly)
-                                                {
-                                                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">Non signé</div>
-                                                }
-                                                else
-                                                {
-                                                    <canvas id="sig-canvas-agent" style="width:100%; height:100%; cursor:crosshair;"></canvas>
-                                                    <div class="position-absolute bottom-0 end-0 m-2">
-                                                        <button class="btn btn-sm btn-light border" @onclick='() => ClearCanvas("sig-canvas-agent")'>Effacer</button>
-                                                    </div>
-                                                }
+                                                <canvas id="sig-canvas-agent" style="width:100%; height:100%; cursor:crosshair;"></canvas>
+                                                <div class="position-absolute bottom-0 end-0 m-2">
+                                                    <button class="btn btn-sm btn-light border" @onclick='() => ClearCanvas("sig-canvas-agent")'>Effacer</button>
+                                                </div>
                                             }
+                                            else { <div class="d-flex h-100 align-items-center justify-content-center text-muted">Non signé</div> }
                                         </div>
                                     </div>
                                 </div>
-                                <!-- Signature Client -->
+                                <!-- Client -->
                                 <div class="col-md-6">
                                     <div class="card">
                                         <div class="card-header bg-light fw-bold text-center">Signature Client / Livreur</div>
@@ -164,20 +190,14 @@
                                                     <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" @onclick='() => ClearSignature("client")'>Re-signer</button>
                                                 }
                                             }
-                                            else
+                                            else if (!IsReadOnly)
                                             {
-                                                if(IsReadOnly)
-                                                {
-                                                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">Non signé</div>
-                                                }
-                                                else
-                                                {
-                                                    <canvas id="sig-canvas-client" style="width:100%; height:100%; cursor:crosshair;"></canvas>
-                                                    <div class="position-absolute bottom-0 end-0 m-2">
-                                                        <button class="btn btn-sm btn-light border" @onclick='() => ClearCanvas("sig-canvas-client")'>Effacer</button>
-                                                    </div>
-                                                }
+                                                <canvas id="sig-canvas-client" style="width:100%; height:100%; cursor:crosshair;"></canvas>
+                                                <div class="position-absolute bottom-0 end-0 m-2">
+                                                    <button class="btn btn-sm btn-light border" @onclick='() => ClearCanvas("sig-canvas-client")'>Effacer</button>
+                                                </div>
                                             }
+                                            else { <div class="d-flex h-100 align-items-center justify-content-center text-muted">Non signé</div> }
                                         </div>
                                     </div>
                                 </div>
@@ -198,13 +218,11 @@
         </div>
     </div>
 }
-@inject IJSRuntime JSRuntime
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public Core.Enums.TypeVehicule Type { get; set; }
-    [Parameter] public bool IsReadOnly { get; set; } = false; // Nouveau paramètre
+    [Parameter] public bool IsReadOnly { get; set; } = false;
 
-    // Données entrantes
     [Parameter] public string? JsonPoints { get; set; }
     [Parameter] public string? JsonStrokes { get; set; }
     [Parameter] public string? JsonAccessoires { get; set; }
@@ -213,19 +231,21 @@
     [Parameter] public string? Lieu { get; set; }
     [Parameter] public DateTime? DateSignature { get; set; }
 
-    // Callbacks de sortie
     [Parameter] public EventCallback<InspectionResult> OnSave { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
-    // Classe interne pour le résultat
+
+    // Structures de données
     public class InspectionResult
     {
+        public string EtatDesLieuxPoints { get; set; } = "";
+        public string EtatDesLieuxRayures { get; set; } = "";
         public string AccessoiresJson { get; set; } = "";
         public string SignatureAgent { get; set; } = "";
         public string SignatureClient { get; set; } = "";
         public string Lieu { get; set; } = "";
         public DateTime? Date { get; set; }
     }
-    // Modèle Accessoires Local
+
     public class VehiculeAccessoires
     {
         public int NombreClefs { get; set; } = 1;
@@ -237,78 +257,176 @@
         public bool CarteGrise { get; set; }
         public string? AutresObservations { get; set; }
     }
+
+    // État UI
     private string _activeTab = "schema";
+    private bool _isEditingSchema = false;
+    private string _currentTool = "pen"; // pen, eraser, hand
+
+    // Données
     private List<SerializablePoint> _damagePoints = new();
     private List<List<SerializablePoint>> _strokes = new();
     private VehiculeAccessoires _accessoires = new();
-
-    // États locaux signatures
     private string? _signatureAgentBase64;
     private string? _signatureClientBase64;
     private string? _lieu;
     private DateTime _dateSignature;
+
     protected override void OnParametersSet()
     {
         if (IsVisible)
         {
-            // Init Schéma
+            // Reset UI
+            _activeTab = "schema";
+            _isEditingSchema = false;
+
+            // Chargement Données
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            try {
-                _damagePoints = !string.IsNullOrEmpty(JsonPoints) ? JsonSerializer.Deserialize<List<SerializablePoint>>(JsonPoints, options) ?? new() : new();
-                _strokes = !string.IsNullOrEmpty(JsonStrokes) ? JsonSerializer.Deserialize<List<List<SerializablePoint>>>(JsonStrokes, options) ?? new() : new();
-            } catch { }
-            // Init Accessoires
-            try {
-                _accessoires = !string.IsNullOrEmpty(JsonAccessoires) ? JsonSerializer.Deserialize<VehiculeAccessoires>(JsonAccessoires, options) ?? new() : new();
-            } catch { _accessoires = new(); }
-            // Init Signatures
+            try { _damagePoints = !string.IsNullOrEmpty(JsonPoints) ? JsonSerializer.Deserialize<List<SerializablePoint>>(JsonPoints, options) ?? new() : new(); } catch { _damagePoints = new(); }
+            try { _strokes = !string.IsNullOrEmpty(JsonStrokes) ? JsonSerializer.Deserialize<List<List<SerializablePoint>>>(JsonStrokes, options) ?? new() : new(); } catch { _strokes = new(); }
+            try { _accessoires = !string.IsNullOrEmpty(JsonAccessoires) ? JsonSerializer.Deserialize<VehiculeAccessoires>(JsonAccessoires, options) ?? new() : new(); } catch { _accessoires = new(); }
             _signatureAgentBase64 = SignatureAgent;
             _signatureClientBase64 = SignatureClient;
-            _lieu = string.IsNullOrEmpty(Lieu) ? "Tresses" : Lieu; // Valeur par défaut
+            _lieu = string.IsNullOrEmpty(Lieu) ? "Tresses" : Lieu;
             _dateSignature = DateSignature ?? DateTime.Now;
         }
     }
-    private async Task ChangeTabToSignature()
-    {
-        _activeTab = "signature";
-        // Petit délai pour que le DOM soit rendu avant d'init les canvas
-        await Task.Delay(100);
 
-        if (string.IsNullOrEmpty(_signatureAgentBase64)) await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-agent");
-        if (string.IsNullOrEmpty(_signatureClientBase64)) await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-client");
-    }
-    private async Task ClearCanvas(string canvasId)
+	private bool _isCanvasInitialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await JSRuntime.InvokeVoidAsync("signaturePad.clear", canvasId);
+        if (IsVisible && _activeTab == "schema")
+        {
+            // Si on vient de changer d'onglet ou d'ouvrir la modale, on init.
+            // Mais si on a juste cliqué sur un bouton outil (qui a fait un StateHasChanged), on ne touche à rien !
+            if (!_isCanvasInitialized)
+            {
+                await InitSchemaCanvas();
+                _isCanvasInitialized = true;
+            }
+        }
     }
+
+	private async Task InitSchemaCanvas()
+    {
+        var imgUrl = GetImageSource();
+        var pointsJson = JsonSerializer.Serialize(_damagePoints);
+        var strokesJson = JsonSerializer.Serialize(_strokes);
+
+        // Initialisation
+        await JSRuntime.InvokeVoidAsync("vehicleSchemaEditor.init",
+            "vehicle-schema-canvas", imgUrl, pointsJson, strokesJson, !_isEditingSchema);
+
+        // Si on est en mode édition, on réapplique l'outil courant pour être sûr
+        if (_isEditingSchema)
+        {
+            await SetTool(_currentTool);
+        }
+    }
+
+    private async Task ChangeTab(string tab)
+    {
+        _activeTab = tab;
+        _isCanvasInitialized = false; // On force la réinit quand on change d'onglet
+        StateHasChanged();
+        
+        if (tab == "schema")
+        {
+            await Task.Delay(100);
+            await InitSchemaCanvas();
+            _isCanvasInitialized = true;
+        }
+        else if (tab == "signature")
+        {
+            await Task.Delay(100);
+            if (!IsReadOnly)
+            {
+                if (string.IsNullOrEmpty(_signatureAgentBase64)) await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-agent");
+                if (string.IsNullOrEmpty(_signatureClientBase64)) await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-client");
+            }
+        }
+    }
+
+	private async Task EnableSchemaEditing()
+    {
+        _isEditingSchema = true;
+        _currentTool = "pen"; // Outil par défaut au début de l'édition
+        StateHasChanged();    // Force l'affichage de la toolbar
+        await Task.Delay(50);
+
+        // On réinitialise le canvas en mode édition (readOnly = false)
+        await InitSchemaCanvas();
+        
+        // IMPORTANT : On force l'application de l'outil APRÈS l'init
+        await SetTool(_currentTool); 
+    }
+
+	private async Task SetTool(string tool)
+    {
+        _currentTool = tool;
+        // On appelle juste le JS pour changer le curseur et la logique interne
+        await JSRuntime.InvokeVoidAsync("vehicleSchemaEditor.setTool", tool);
+        
+        // On ne fait PAS de StateHasChanged() ici si possible, 
+        // sauf si nécessaire pour mettre à jour la classe "active" du bouton.
+        // Si on le fait, il faut s'assurer que OnAfterRenderAsync ne réinitialise pas tout.
+    }
+
+    private async Task ZoomIn() => await JSRuntime.InvokeVoidAsync("vehicleSchemaEditor.zoom", 1);
+    private async Task ZoomOut() => await JSRuntime.InvokeVoidAsync("vehicleSchemaEditor.zoom", -1);
+
+    private async Task SaveSchemaChanges()
+    {
+        // Récupérer le JSON du JS
+        var jsonResult = await JSRuntime.InvokeAsync<string>("vehicleSchemaEditor.getData");
+        var data = JsonSerializer.Deserialize<SchemaData>(jsonResult);
+
+        if (data != null)
+        {
+            _damagePoints = JsonSerializer.Deserialize<List<SerializablePoint>>(data.Points) ?? new();
+            _strokes = JsonSerializer.Deserialize<List<List<SerializablePoint>>>(data.Strokes) ?? new();
+        }
+        _isEditingSchema = false;
+    }
+
+    // Classe temporaire pour le parsing
+    class SchemaData
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("points")] public string Points { get; set; } = "";
+        [System.Text.Json.Serialization.JsonPropertyName("strokes")] public string Strokes { get; set; } = "";
+    }
+
+    // --- Gestion Signatures ---
+    private async Task ClearCanvas(string canvasId) => await JSRuntime.InvokeVoidAsync("signaturePad.clear", canvasId);
+
     private async Task ClearSignature(string type)
     {
-        if (type == "agent")
-        {
-            _signatureAgentBase64 = null;
-            await Task.Delay(50);
-            await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-agent");
-        }
-        else
-        {
-            _signatureClientBase64 = null;
-            await Task.Delay(50);
-            await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-client");
-        }
+        if (type == "agent") { _signatureAgentBase64 = null; await Task.Delay(50); await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-agent"); }
+        else { _signatureClientBase64 = null; await Task.Delay(50); await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-client"); }
     }
+
+    // --- Global Save ---
     private async Task SaveAndClose()
     {
-        // Récupérer les dessins des canvas s'ils ne sont pas déjà figés en images
-        if (string.IsNullOrEmpty(_signatureAgentBase64) && _activeTab == "signature")
-            _signatureAgentBase64 = await JSRuntime.InvokeAsync<string>("signaturePad.getImage", "sig-canvas-agent");
+        // Sauvegarde du schéma si encore en édition
+        if (_isEditingSchema) await SaveSchemaChanges();
 
-        if (string.IsNullOrEmpty(_signatureClientBase64) && _activeTab == "signature")
-            _signatureClientBase64 = await JSRuntime.InvokeAsync<string>("signaturePad.getImage", "sig-canvas-client");
-        // Nettoyer les canvas vides (retournent parfois une image transparente de 6octets)
+        // Sauvegarde des signatures
+        if (_activeTab == "signature")
+        {
+             if (string.IsNullOrEmpty(_signatureAgentBase64)) _signatureAgentBase64 = await JSRuntime.InvokeAsync<string>("signaturePad.getImage", "sig-canvas-agent");
+             if (string.IsNullOrEmpty(_signatureClientBase64)) _signatureClientBase64 = await JSRuntime.InvokeAsync<string>("signaturePad.getImage", "sig-canvas-client");
+        }
+
+        // Nettoyage canvas vides
         if (_signatureAgentBase64 != null && _signatureAgentBase64.Length < 500) _signatureAgentBase64 = null;
         if (_signatureClientBase64 != null && _signatureClientBase64.Length < 500) _signatureClientBase64 = null;
+
         var result = new InspectionResult
         {
+            EtatDesLieuxPoints = JsonSerializer.Serialize(_damagePoints),
+            EtatDesLieuxRayures = JsonSerializer.Serialize(_strokes),
             AccessoiresJson = JsonSerializer.Serialize(_accessoires),
             SignatureAgent = _signatureAgentBase64 ?? "",
             SignatureClient = _signatureClientBase64 ?? "",
@@ -317,8 +435,9 @@
         };
         await OnSave.InvokeAsync(result);
     }
+
     private async Task Close() => await OnClose.InvokeAsync();
-    // Helpers Image
+
     private string GetImageSource() => Type switch
     {
         Core.Enums.TypeVehicule.Moto => "images/plans/moto_plan.png",
@@ -327,6 +446,7 @@
         Core.Enums.TypeVehicule.Van => "images/plans/van_plan.png",
         _ => "images/plans/vehicule_plan.png"
     };
+
     private string GetSvgPoints(List<SerializablePoint> points)
     {
         return string.Join(" ", points.Select(p => $"{p.X.ToString(System.Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)}"));

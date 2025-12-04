@@ -344,6 +344,11 @@
     // Callback de la modale d'inspection
     private void SaveInspection(VehicleInspectionModal.InspectionResult result)
     {
+        // Mise à jour des données Schéma
+        _vehicule.EtatDesLieux = result.EtatDesLieuxPoints;
+        _vehicule.EtatDesLieuxRayures = result.EtatDesLieuxRayures;
+
+        // Mise à jour des données Accessoires & Signature
         _vehicule.AccessoiresJson = result.AccessoiresJson;
         _vehicule.SignatureAgent = result.SignatureAgent;
         _vehicule.SignatureClient = result.SignatureClient;
@@ -351,8 +356,6 @@
         _vehicule.DateEtatDesLieux = result.Date;
         
         _showInspection = false;
-        // On ne sauvegarde pas en base tout de suite, l'utilisateur doit cliquer sur "Enregistrer"
-        // Ou on pourrait faire un autosave ici si préféré.
     }
 
     private async Task SaveVehicle()

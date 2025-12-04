@@ -150,5 +150,348 @@
         };
     </script>
 	
+
+
+    <script>
+        window.vehicleSchemaEditor = {
+            canvas: null,
+            ctx: null,
+            img: null,
+            
+            // Données
+            points: [],
+            strokes: [],
+            
+            // Viewport
+            scale: 1,
+            offsetX: 0,
+            offsetY: 0,
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+
+            // Gestion du Pinch-to-Zoom (Tactile)
+            lastTouchDist: 0,
+
+            // Outils
+            currentTool: 'hand', // Par défaut en mode "Main" pour éviter de dessiner par erreur
+            isDrawing: false,
+            currentStroke: [],
+            readOnly: false,
+
+            init: function (canvasId, imageUrl, jsonPoints, jsonStrokes, isReadOnly) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.readOnly = isReadOnly;
+
+                // Reset Viewport
+                this.scale = 1;
+                this.offsetX = 0;
+                this.offsetY = 0;
+
+                // Chargement données
+                try {
+                    this.points = jsonPoints ? JSON.parse(jsonPoints) : [];
+                    this.strokes = jsonStrokes ? JSON.parse(jsonStrokes) : [];
+                } catch (e) { console.error(e); }
+
+                // Chargement Image
+                this.img = new Image();
+                this.img.onload = () => {
+                    this.fitToScreen();
+                };
+                this.img.src = imageUrl;
+
+                // Events (Nettoyage et Ajout)
+                this.cleanupEvents();
+                this.setupEvents();
+                
+                // Outil par défaut
+                this.setTool(isReadOnly ? 'hand' : 'pen');
+            },
+
+            fitToScreen: function() {
+                if(!this.canvas || !this.img) return;
+                var parent = this.canvas.parentElement;
+                this.canvas.width = parent.clientWidth;
+                this.canvas.height = parent.clientHeight || 500;
+
+                var ratio = Math.min(this.canvas.width / this.img.width, this.canvas.height / this.img.height);
+                this.scale = ratio * 0.95; // Marge 5%
+                // Centrer
+                this.offsetX = (this.canvas.width - this.img.width * this.scale) / 2;
+                this.offsetY = (this.canvas.height - this.img.height * this.scale) / 2;
+                this.draw();
+            },
+
+            setTool: function(tool) {
+                this.currentTool = tool;
+                this.canvas.style.cursor = tool === 'hand' ? 'grab' : 'crosshair';
+            },
+
+            // Zoom centré ou zoom manuel
+            zoom: function(delta, centerX, centerY) {
+                var factor = delta > 0 ? 1.1 : 0.9;
+                
+                // Si pas de centre fourni, on zoom au centre du canvas
+                if (centerX === undefined) {
+                    centerX = this.canvas.width / 2;
+                    centerY = this.canvas.height / 2;
+                }
+
+                // Calcul pour zoomer vers le point de la souris/doigts
+                var dx = (centerX - this.offsetX) / this.scale;
+                var dy = (centerY - this.offsetY) / this.scale;
+
+                this.scale *= factor;
+
+                this.offsetX = centerX - dx * this.scale;
+                this.offsetY = centerY - dy * this.scale;
+
+                this.draw();
+            },
+
+            draw: function () {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.save();
+                
+                this.ctx.translate(this.offsetX, this.offsetY);
+                this.ctx.scale(this.scale, this.scale);
+
+                if (this.img) this.ctx.drawImage(this.img, 0, 0);
+
+                // Rayures
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                // L'épaisseur du trait reste visible peu importe le zoom
+                this.ctx.lineWidth = 5 / this.scale; 
+
+                this.strokes.forEach(stroke => this.drawStrokePath(stroke, 'red'));
+                if (this.currentStroke.length > 0) this.drawStrokePath(this.currentStroke, 'red');
+
+                // Points
+                // Le rayon du point reste visible peu importe le zoom
+                var pointRadius = 8 / this.scale; 
+                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
+                this.ctx.strokeStyle = 'red';
+                this.ctx.lineWidth = 2 / this.scale;
+
+                this.points.forEach(p => {
+                    var x = p.X * this.img.width;
+                    var y = p.Y * this.img.height;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, pointRadius, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                    this.ctx.stroke();
+                });
+
+                this.ctx.restore();
+            },
+
+            drawStrokePath: function(points, color) {
+                if (points.length < 2) return;
+                this.ctx.strokeStyle = color;
+                this.ctx.beginPath();
+                this.ctx.moveTo(points[0].X * this.img.width, points[0].Y * this.img.height);
+                for (let i = 1; i < points.length; i++) {
+                    this.ctx.lineTo(points[i].X * this.img.width, points[i].Y * this.img.height);
+                }
+                this.ctx.stroke();
+            },
+
+            cleanupEvents: function() {
+                var el = this.canvas;
+                var elClone = el.cloneNode(true);
+                el.parentNode.replaceChild(elClone, el);
+                this.canvas = elClone;
+                this.ctx = this.canvas.getContext('2d');
+            },
+
+            setupEvents: function() {
+                // --- SOURIS & TOUCH (Unifiés) ---
+                const getPos = (e) => {
+                    var rect = this.canvas.getBoundingClientRect();
+                    var clientX = e.clientX;
+                    var clientY = e.clientY;
+                    if (e.touches && e.touches.length > 0) {
+                        clientX = e.touches[0].clientX;
+                        clientY = e.touches[0].clientY;
+                    }
+                    return { x: clientX - rect.left, y: clientY - rect.top };
+                };
+
+                const toImgCoords = (x, y) => {
+                    var imgX = (x - this.offsetX) / this.scale;
+                    var imgY = (y - this.offsetY) / this.scale;
+                    return { X: imgX / this.img.width, Y: imgY / this.img.height };
+                };
+
+                const start = (e) => {
+                    if (e.touches && e.touches.length === 2) {
+                        // Début du Pinch (2 doigts)
+                        e.preventDefault();
+                        this.isDragging = false;
+                        this.isDrawing = false;
+                        var t1 = e.touches[0];
+                        var t2 = e.touches[1];
+                        this.lastTouchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                        return;
+                    }
+
+                    var pos = getPos(e);
+                    
+                    // Clic droit ou outil Main -> Pan
+                    if (e.button === 2 || this.currentTool === 'hand') {
+                        e.preventDefault(); // Empêcher menu contextuel
+                        this.isDragging = true;
+                        this.startX = pos.x - this.offsetX;
+                        this.startY = pos.y - this.offsetY;
+                        this.canvas.style.cursor = 'grabbing';
+                    } 
+                    else if (this.currentTool === 'pen' && !this.readOnly) {
+                        e.preventDefault(); // Empêcher scroll mobile
+                        this.isDrawing = true;
+                        this.currentStroke = [toImgCoords(pos.x, pos.y)];
+                    } 
+                    else if (this.currentTool === 'eraser' && !this.readOnly) {
+                        e.preventDefault();
+                        this.eraseAt(pos.x, pos.y);
+                    }
+                };
+
+                const move = (e) => {
+                    e.preventDefault();
+
+                    // Gestion Pinch-to-Zoom (2 doigts)
+                    if (e.touches && e.touches.length === 2) {
+                        var t1 = e.touches[0];
+                        var t2 = e.touches[1];
+                        var dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                        
+                        // Centre du pinch
+                        var rect = this.canvas.getBoundingClientRect();
+                        var centerX = ((t1.clientX + t2.clientX) / 2) - rect.left;
+                        var centerY = ((t1.clientY + t2.clientY) / 2) - rect.top;
+
+                        var delta = dist - this.lastTouchDist;
+                        // Sensibilité réduite pour éviter les sauts
+                        if (Math.abs(delta) > 2) {
+                            var factor = delta > 0 ? 1.02 : 0.98; 
+                            this.zoomPinch(factor, centerX, centerY);
+                            this.lastTouchDist = dist;
+                        }
+                        return;
+                    }
+
+                    var pos = getPos(e);
+
+                    if (this.isDragging) {
+                        this.offsetX = pos.x - this.startX;
+                        this.offsetY = pos.y - this.startY;
+                        this.draw();
+                    } else if (this.isDrawing && this.currentTool === 'pen') {
+                        this.currentStroke.push(toImgCoords(pos.x, pos.y));
+                        this.draw();
+                    } else if (this.currentTool === 'eraser' && e.buttons === 1) {
+                        this.eraseAt(pos.x, pos.y);
+                    }
+                };
+
+                const end = (e) => {
+                    e.preventDefault();
+                    if (this.isDragging) {
+                        this.isDragging = false;
+                        this.canvas.style.cursor = this.currentTool === 'hand' ? 'grab' : 'crosshair';
+                    }
+                    if (this.isDrawing && this.currentTool === 'pen') {
+                        var pStart = this.currentStroke[0];
+                        var pEnd = this.currentStroke[this.currentStroke.length - 1];
+                        var dist = Math.sqrt(Math.pow(pEnd.X - pStart.X, 2) + Math.pow(pEnd.Y - pStart.Y, 2));
+                        
+                        if (dist < 0.01) { this.points.push(pStart); } 
+                        else { this.strokes.push(this.currentStroke); }
+                        
+                        this.currentStroke = [];
+                        this.draw();
+                    }
+                    this.isDrawing = false;
+                };
+
+                // Molette de souris (Zoom)
+                const wheel = (e) => {
+                    e.preventDefault();
+                    var pos = getPos(e);
+                    var delta = e.deltaY < 0 ? 1 : -1;
+                    this.zoom(delta, pos.x, pos.y);
+                };
+
+                this.canvas.addEventListener('mousedown', start);
+                this.canvas.addEventListener('mousemove', move);
+                this.canvas.addEventListener('mouseup', end);
+                // Sortie de zone
+                this.canvas.addEventListener('mouseleave', end);
+                
+                // Support Tactile
+                this.canvas.addEventListener('touchstart', start, { passive: false });
+                this.canvas.addEventListener('touchmove', move, { passive: false });
+                this.canvas.addEventListener('touchend', end, { passive: false });
+                
+                // Support Molette
+                this.canvas.addEventListener('wheel', wheel, { passive: false });
+                // Désactiver menu contextuel (clic droit pour pan)
+                this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+            },
+
+            zoomPinch: function(factor, cx, cy) {
+                var dx = (cx - this.offsetX) / this.scale;
+                var dy = (cy - this.offsetY) / this.scale;
+                this.scale *= factor;
+                this.offsetX = cx - dx * this.scale;
+                this.offsetY = cy - dy * this.scale;
+                this.draw();
+            },
+
+            eraseAt: function(screenX, screenY) {
+                var clickPos = { 
+                    X: ((screenX - this.offsetX) / this.scale) / this.img.width, 
+                    Y: ((screenY - this.offsetY) / this.scale) / this.img.height 
+                };
+                // Seuil plus grand quand on est dézoomé pour faciliter la gomme
+                var threshold = (20 / this.scale) / this.img.width; 
+
+                // Effacer points
+                for (let i = this.points.length - 1; i >= 0; i--) {
+                    var p = this.points[i];
+                    var dist = Math.sqrt(Math.pow(p.X - clickPos.X, 2) + Math.pow(p.Y - clickPos.Y, 2));
+                    if (dist < threshold) {
+                        this.points.splice(i, 1);
+                        this.draw();
+                        return;
+                    }
+                }
+                // Effacer rayures
+                for (let i = this.strokes.length - 1; i >= 0; i--) {
+                    var stroke = this.strokes[i];
+                    for (let p of stroke) {
+                         var dist = Math.sqrt(Math.pow(p.X - clickPos.X, 2) + Math.pow(p.Y - clickPos.Y, 2));
+                         if (dist < threshold) {
+                             this.strokes.splice(i, 1);
+                             this.draw();
+                             return;
+                         }
+                    }
+                }
+            },
+            
+            getData: function() {
+                return JSON.stringify({
+                    points: JSON.stringify(this.points),
+                    strokes: JSON.stringify(this.strokes)
+                });
+            }
+        };
+    </script>
+	
 </body>
 </html>

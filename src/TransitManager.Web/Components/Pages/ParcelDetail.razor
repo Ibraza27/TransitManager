@@ -29,7 +29,7 @@
         </div>
 		<div class="d-flex gap-2 position-relative">
             
-             <!-- MENU EXPORT (Nouveau) -->
+             <!-- MENU EXPORT -->
             <div class="dropdown">
                 <button class="btn btn-outline-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
                     <i class="bi bi-file-earmark-pdf me-2"></i>PDF
@@ -54,12 +54,12 @@
                 }
             </div>
 
-             <!-- Boutons existants -->
+             <!-- Boutons actions -->
             <button class="btn btn-outline-secondary" @onclick="ShowInventory">
                 <i class="bi bi-clipboard-list me-2"></i>Inventaire
             </button>
             
-            @if (!IsNew) // Paiement seulement si le colis existe
+            @if (!IsNew)
             {
                 <button class="btn btn-outline-success" @onclick="ShowPayments">
                     <i class="bi bi-cash-coin me-2"></i>Paiements
@@ -79,222 +79,263 @@
     }
     else
     {
-        <div class="row g-4">
-            <!-- COLONNE GAUCHE : INFO GÉNÉRALES -->
-            <div class="col-lg-8">
-                <!-- Carte Client & Infos -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-person-badge me-2"></i>Propriétaire & Infos</h5></div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <!-- Client : Auto-rempli pour client, Recherche pour Admin -->
-                            <div class="col-12">
-                                <label class="form-label fw-bold">Client Propriétaire</label>
-                                @if (IsAdmin)
-                                {
-                                    <!-- Recherche Client Admin -->
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" placeholder="Rechercher un client..." 
-                                               @bind="_clientSearch" @bind:event="oninput" @onkeyup="FilterClients" />
-                                        @if(_filteredClients.Any())
+        <!-- TABS NAVIGATION -->
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <button class="nav-link @(_activeTab == "infos" ? "active fw-bold" : "")" @onclick='() => _activeTab = "infos"'>
+                    Informations & Finances
+                </button>
+            </li>
+             @if (!IsNew)
+             {
+                <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "documents" ? "active fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
+                        Documents & Photos
+                    </button>
+                </li>
+             }
+        </ul>
+
+        <div class="tab-content">
+            
+            <!-- ONGLET 1 : INFOS & FINANCES -->
+            <div class="tab-pane fade @(_activeTab == "infos" ? "show active" : "")">
+                <div class="row g-4">
+                    <!-- COLONNE GAUCHE -->
+                    <div class="col-lg-8">
+                        <!-- Carte Client & Infos -->
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-person-badge me-2"></i>Propriétaire & Infos</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <!-- Client -->
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Client Propriétaire</label>
+                                        @if (IsAdmin)
                                         {
-                                            <div class="dropdown-menu show w-100" style="max-height: 200px; overflow-y: auto;">
-                                                @foreach(var c in _filteredClients)
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" placeholder="Rechercher un client..." 
+                                                       @bind="_clientSearch" @bind:event="oninput" @onkeyup="FilterClients" />
+                                                @if(_filteredClients.Any())
                                                 {
-                                                    <button class="dropdown-item" @onclick="() => SelectClient(c)">
-                                                        @c.NomComplet <small class="text-muted">(@c.TelephonePrincipal)</small>
-                                                    </button>
+                                                    <div class="dropdown-menu show w-100" style="max-height: 200px; overflow-y: auto;">
+                                                        @foreach(var c in _filteredClients)
+                                                        {
+                                                            <button class="dropdown-item" @onclick="() => SelectClient(c)">
+                                                                @c.NomComplet <small class="text-muted">(@c.TelephonePrincipal)</small>
+                                                            </button>
+                                                        }
+                                                    </div>
                                                 }
                                             </div>
+                                            <div class="form-text text-primary mt-1">Actuel : <strong>@_clientNameDisplay</strong></div>
+                                        }
+                                        else
+                                        {
+                                            <input type="text" class="form-control" value="@_clientNameDisplay" disabled />
                                         }
                                     </div>
-                                    <div class="form-text text-primary mt-1">Actuel : <strong>@_clientNameDisplay</strong></div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label">Désignation <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" @bind="_colis.Designation" disabled="@(!CanEditFields)" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Destination Finale <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" @bind="_colis.DestinationFinale" disabled="@(!CanEditFields)" />
+                                    </div>
+
+                                     <div class="col-12">
+                                        <label class="form-label">Code-barres</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control font-monospace" value="@_firstBarcode" readonly />
+                                            @if (IsAdmin || IsNew)
+                                            {
+                                                <button class="btn btn-outline-secondary" @onclick="GenerateBarcode" disabled="@(!string.IsNullOrEmpty(_firstBarcode))">
+                                                    <i class="bi bi-upc-scan me-2"></i>Générer
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Carte Destinataire -->
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-geo-alt me-2"></i>Destinataire</h5></div>
+                            <div class="card-body">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="sameRecipient" 
+                                           @bind="_sameAsClient" @onclick="ToggleSameAsClient" disabled="@(!CanEditFields)">
+                                    <label class="form-check-label" for="sameRecipient">Destinataire identique au propriétaire</label>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nom Destinataire</label>
+                                        <input type="text" class="form-control" @bind="_colis.Destinataire" disabled="@(_sameAsClient || !CanEditFields)" />
+                                    </div>
+                                     <div class="col-md-6">
+                                        <label class="form-label">Téléphone Destinataire</label>
+                                        <input type="text" class="form-control" @bind="_colis.TelephoneDestinataire" disabled="@(_sameAsClient || !CanEditFields)" />
+                                    </div>
+                                </div>
+
+                                <hr />
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="homeDelivery" @bind="_colis.LivraisonADomicile" disabled="@(!CanEditFields)">
+                                    <label class="form-check-label" for="homeDelivery">Livraison à domicile</label>
+                                </div>
+
+                                 <div class="mb-3">
+                                    <label class="form-label">Adresse de Livraison</label>
+                                    <textarea class="form-control" rows="2" @bind="_colis.AdresseLivraison" disabled="@(!_colis.LivraisonADomicile || !CanEditFields)"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Options -->
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-sliders me-2"></i>Options</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Type de Colis</label>
+                                        <select class="form-select" @bind="_colis.Type" disabled="@(!CanEditFields)">
+                                            @foreach (var type in Enum.GetValues<TypeColis>()) { <option value="@type">@type</option> }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Option d'envoi</label>
+                                        <select class="form-select" @bind="_colis.TypeEnvoi" disabled="@(!CanEditFields)">
+                                            @foreach (var type in Enum.GetValues<TypeEnvoi>()) { <option value="@type">@type</option> }
+                                        </select>
+                                    </div>
+                                    <div class="col-12 mt-3">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="fragile" @bind="_colis.EstFragile" disabled="@(!CanEditFields)">
+                                            <label class="form-check-label text-danger fw-bold" for="fragile"><i class="bi bi-exclamation-triangle me-1"></i>Fragile</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" id="special" @bind="_colis.ManipulationSpeciale" disabled="@(!CanEditFields)">
+                                            <label class="form-check-label" for="special">Manipulation Spéciale</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Instructions Spécifiques</label>
+                                        <textarea class="form-control" rows="2" @bind="_colis.InstructionsSpeciales" disabled="@(!CanEditFields)"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COLONNE DROITE : ADMIN & FINANCES -->
+                    <div class="col-lg-4">
+                        <!-- Statut -->
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white py-3"><h5 class="mb-0 text-secondary">Administration</h5></div>
+                            <div class="card-body bg-light">
+                                <label class="form-label small fw-bold">STATUT</label>
+                                <select class="form-select mb-3" @bind="_colis.Statut" disabled="@(!IsAdmin)">
+                                     @foreach (var s in Enum.GetValues<StatutColis>()) { <option value="@s">@s</option> }
+                                </select>
+                                
+                                <label class="form-label small fw-bold">CONTENEUR</label>
+                                @if (IsAdmin)
+                                {
+                                     <select class="form-select" @bind="_colis.ConteneurId">
+                                         <option value="">-- Non assigné --</option>
+                                         @foreach(var c in _containers) { <option value="@c.Id">@c.NumeroDossier</option> }
+                                     </select>
                                 }
                                 else
                                 {
-                                    <input type="text" class="form-control" value="@_clientNameDisplay" disabled />
+                                     <input type="text" class="form-control" value="@(_containers.FirstOrDefault(c => c.Id == _colis.ConteneurId)?.NumeroDossier ?? "Non assigné")" disabled />
                                 }
                             </div>
+                        </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label">Désignation <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" @bind="_colis.Designation" disabled="@(!CanEditFields)" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Destination Finale <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" @bind="_colis.DestinationFinale" disabled="@(!CanEditFields)" />
-                            </div>
-
-                             <div class="col-12">
-                                <label class="form-label">Code-barres</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control font-monospace" value="@_firstBarcode" readonly />
-                                    @if (IsAdmin || IsNew)
-                                    {
-                                        <button class="btn btn-outline-secondary" @onclick="GenerateBarcode" disabled="@(!string.IsNullOrEmpty(_firstBarcode))">
-                                            <i class="bi bi-upc-scan me-2"></i>Générer
-                                        </button>
-                                    }
+                        <!-- Finances -->
+                        <div class="card shadow-sm border-0 border-top border-3 border-success">
+                            <div class="card-header bg-white py-3"><h5 class="mb-0 text-success"><i class="bi bi-currency-euro me-2"></i>Finances</h5></div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre de pièces</label>
+                                    <input type="number" class="form-control" value="@_colis.NombrePieces" disabled />
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Carte Destinataire -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-geo-alt me-2"></i>Destinataire</h5></div>
-                    <div class="card-body">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="sameRecipient" 
-                                   @bind="_sameAsClient" @onclick="ToggleSameAsClient" disabled="@(!CanEditFields)">
-                            <label class="form-check-label" for="sameRecipient">Destinataire identique au propriétaire</label>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Nom Destinataire</label>
-                                <input type="text" class="form-control" @bind="_colis.Destinataire" disabled="@(_sameAsClient || !CanEditFields)" />
-                            </div>
-                             <div class="col-md-6">
-                                <label class="form-label">Téléphone Destinataire</label>
-                                <input type="text" class="form-control" @bind="_colis.TelephoneDestinataire" disabled="@(_sameAsClient || !CanEditFields)" />
-                            </div>
-                        </div>
-
-                        <hr />
-
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="homeDelivery" @bind="_colis.LivraisonADomicile" disabled="@(!CanEditFields)">
-                            <label class="form-check-label" for="homeDelivery">Livraison à domicile</label>
-                        </div>
-
-                         <div class="mb-3">
-                            <label class="form-label">Adresse de Livraison</label>
-                            <textarea class="form-control" rows="2" @bind="_colis.AdresseLivraison" disabled="@(!_colis.LivraisonADomicile || !CanEditFields)"></textarea>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Options & Instructions -->
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-sliders me-2"></i>Options</h5></div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Type de Colis</label>
-                                <select class="form-select" @bind="_colis.Type" disabled="@(!CanEditFields)">
-                                    @foreach (var type in Enum.GetValues<TypeColis>()) { <option value="@type">@type</option> }
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Option d'envoi</label>
-                                <select class="form-select" @bind="_colis.TypeEnvoi" disabled="@(!CanEditFields)">
-                                    @foreach (var type in Enum.GetValues<TypeEnvoi>()) { <option value="@type">@type</option> }
-                                </select>
-                            </div>
-                            <div class="col-12 mt-3">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="fragile" @bind="_colis.EstFragile" disabled="@(!CanEditFields)">
-                                    <label class="form-check-label text-danger fw-bold" for="fragile"><i class="bi bi-exclamation-triangle me-1"></i>Fragile</label>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Valeur Déclarée (€)</label>
+                                    <input type="number" class="form-control" @bind="_colis.ValeurDeclaree" disabled />
+                                    <div class="form-text small">Calculée via l'inventaire</div>
                                 </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="special" @bind="_colis.ManipulationSpeciale" disabled="@(!CanEditFields)">
-                                    <label class="form-check-label" for="special">Manipulation Spéciale</label>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Volume (m³)</label>
+                                    <input type="number" class="form-control" @bind="_colis.Volume" disabled="@(!IsAdmin)" />
                                 </div>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Instructions Spécifiques</label>
-                                <textarea class="form-control" rows="2" @bind="_colis.InstructionsSpeciales" disabled="@(!CanEditFields)"></textarea>
+                                
+                                <hr class="text-muted" />
+                                
+                                @if (IsAdmin)
+                                {
+                                    <!-- Calculateur Rapide (Informatif) -->
+                                     <div class="bg-light p-2 rounded mb-3 border">
+                                        <label class="form-label small fw-bold text-muted">Calculateur de prix</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">Prix/m³</span>
+                                            <!-- On ne lie plus à CalculatePrice, juste un binding simple -->
+                                            <input type="number" class="form-control" @bind="_pricePerM3" @bind:event="oninput" placeholder="0.00" />
+                                        </div>
+                                        <div class="text-end mt-1">
+                                            <small class="text-muted">
+                                                Prix estimé : <strong>@((_colis.Volume * _pricePerM3).ToString("C2"))</strong>
+                                            </small>
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-primary">PRIX TOTAL (€)</label>
+                                    <input type="number" class="form-control form-control-lg fw-bold text-primary" @bind="_colis.PrixTotal" disabled="@(!IsAdmin)" />
+                                </div>
+                                
+                                 <div class="d-flex justify-content-between small mb-2">
+                                     <span>Payé :</span>
+                                     <span class="text-success fw-bold">@_colis.SommePayee.ToString("C2")</span>
+                                 </div>
+                                 <div class="d-flex justify-content-between fw-bold fs-5">
+                                     <span>Reste :</span>
+                                     <span class="text-danger">@_colis.RestantAPayer.ToString("C2")</span>
+                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- COLONNE DROITE : ADMIN & FINANCES -->
-            <div class="col-lg-4">
-                <!-- Statut (Admin Only ou ReadOnly) -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-secondary">Administration</h5></div>
-                    <div class="card-body bg-light">
-                        <label class="form-label small fw-bold">STATUT</label>
-                        <select class="form-select mb-3" @bind="_colis.Statut" disabled="@(!IsAdmin)">
-                             @foreach (var s in Enum.GetValues<StatutColis>()) { <option value="@s">@s</option> }
-                        </select>
-                        
-                        <!-- Conteneur (Admin Only) -->
-                        <label class="form-label small fw-bold">CONTENEUR</label>
-                        @if (IsAdmin)
-                        {
-                             <select class="form-select" @bind="_colis.ConteneurId">
-                                 <option value="">-- Non assigné --</option>
-                                 @foreach(var c in _containers) { <option value="@c.Id">@c.NumeroDossier</option> }
-                             </select>
-                        }
-                        else
-                        {
-                             <input type="text" class="form-control" value="@(_containers.FirstOrDefault(c => c.Id == _colis.ConteneurId)?.NumeroDossier ?? "Non assigné")" disabled />
-                        }
-                    </div>
+            <!-- ONGLET 2 : DOCUMENTS (Nouveau) -->
+            @if (!IsNew)
+            {
+                <div class="tab-pane fade @(_activeTab == "documents" ? "show active" : "")">
+                    <DocumentManager EntityId="@_colis.Id" EntityType="Colis" />
                 </div>
-
-                <!-- Finances & Calculateur -->
-                <div class="card shadow-sm border-0 border-top border-3 border-success">
-                    <div class="card-header bg-white py-3"><h5 class="mb-0 text-success"><i class="bi bi-currency-euro me-2"></i>Finances</h5></div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Nombre de pièces</label>
-                            <input type="number" class="form-control" value="@_colis.NombrePieces" disabled /> <!-- Calculé via Inventaire -->
-                        </div>
-						
-						<div class="mb-3">
-							<label class="form-label">Valeur Déclarée (€)</label>
-							<input type="number" class="form-control" @bind="_colis.ValeurDeclaree" disabled />
-							<div class="form-text small">Calculée via l'inventaire</div>
-						</div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Volume (m³)</label>
-                            <input type="number" class="form-control" @bind="_colis.Volume" disabled="@(!IsAdmin)" />
-                        </div>
-                        
-                        <hr class="text-muted" />
-                        
-                        @if (IsAdmin)
-                        {
-                            <!-- Calculateur Rapide -->
-                             <div class="input-group mb-3">
-                                <span class="input-group-text bg-light">Prix/m³</span>
-                                <input type="number" class="form-control" @bind="_pricePerM3" @bind:after="CalculatePrice" placeholder="0.00" />
-                            </div>
-                        }
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-primary">PRIX TOTAL (€)</label>
-                            <input type="number" class="form-control form-control-lg fw-bold text-primary" @bind="_colis.PrixTotal" disabled="@(!IsAdmin)" />
-                        </div>
-                        
-                         <div class="d-flex justify-content-between small mb-2">
-                             <span>Payé :</span>
-                             <span class="text-success fw-bold">@_colis.SommePayee.ToString("C2")</span>
-                         </div>
-                         <div class="d-flex justify-content-between fw-bold fs-5">
-                             <span>Reste :</span>
-                             <span class="text-danger">@_colis.RestantAPayer.ToString("C2")</span>
-                         </div>
-                    </div>
-                </div>
-            </div>
+            }
         </div>
     }
     
     <!-- MODALS -->
-    <InventoryModal IsVisible="_showInventory" 
-                    IsReadOnly="@(!CanEditFields)"
-                    JsonData="@_colis.InventaireJson" 
-                    OnSave="SaveInventory"
-                    OnClose="() => _showInventory = false" />
+	<InventoryModal IsVisible="_showInventory" 
+					IsReadOnly="@(!CanEditFields)"
+					JsonData="@_colis.InventaireJson"
+					Signature="@_colis.SignatureClientInventaire"
+					Lieu="@_colis.LieuSignatureInventaire"
+					Date="@_colis.DateSignatureInventaire"
+					OnSave="SaveInventory"
+					OnClose="() => _showInventory = false" />
 
     <PaymentModal IsVisible="_showPayments"
                   IsAdmin="@IsAdmin"
@@ -313,6 +354,9 @@
     private bool _isLoading = true;
     private bool IsNew => Id == null;
     
+    // Navigation Tabs
+    private string _activeTab = "infos";
+
     // Contexte Utilisateur
     private bool IsAdmin = false;
     private Guid CurrentUserId;
@@ -331,10 +375,8 @@
     private List<Conteneur> _containers = new();
 
     // Logic Permissions
-    // Admin peut tout faire.
-    // Client peut éditer SI c'est son colis ET statut EnAttente.
     private bool CanEditGlobal => IsAdmin || (IsNew || _colis.Statut == StatutColis.EnAttente);
-    private bool CanEditFields => IsAdmin || (CanEditGlobal); // Ici, c'est pareil pour les champs autorisés au client
+    private bool CanEditFields => IsAdmin || (CanEditGlobal); 
 
     protected override async Task OnInitializedAsync()
     {
@@ -352,7 +394,6 @@
 
         if (!IsNew)
         {
-            // Mode Édition
             var dto = await ApiService.GetColisByIdAsync(Id.Value);
             if (dto != null) 
             {
@@ -360,39 +401,31 @@
                 _clientNameDisplay = _colis.Client?.NomComplet ?? "Inconnu";
                 _firstBarcode = _colis.Barcodes.FirstOrDefault()?.Value ?? "";
 
-                // --- CORRECTION : Vérification automatique de la case à cocher ---
+                // Vérification automatique de la case à cocher "Destinataire identique"
                 if (_colis.Client != null)
                 {
-                    // On compare le nom et le téléphone (nettoyés des espaces pour être sûr)
                     var destNom = _colis.Destinataire?.Trim().ToLower() ?? "";
                     var clientNom = _colis.Client.NomComplet.Trim().ToLower();
-                    var destTel = _colis.TelephoneDestinataire?.Trim() ?? "";
-                    var clientTel = _colis.Client.TelephonePrincipal?.Trim() ?? "";
-
-                    // Si les infos correspondent, on coche la case
-                    if (destNom == clientNom && destTel == clientTel)
+                    // Pour être sûr, on vérifie que le nom n'est pas vide
+                    if (!string.IsNullOrEmpty(destNom) && destNom == clientNom)
                     {
                         _sameAsClient = true;
                     }
                 }
-                // ----------------------------------------------------------------
             }
         }
         else
         {
-            // Mode Création
             if (!IsAdmin)
             {
-                // Client : Auto-assignation
-                // Il faut récupérer le ClientId via l'API profile ou stocké
                 var profile = await ApiService.GetUserProfileAsync();
                 if (profile != null)
                 {
                     _colis.ClientId = profile.ClientId;
                     _clientNameDisplay = $"{profile.Nom} {profile.Prenom}";
-                    await GenerateBarcode(); // Auto-générer pour le client
+                    await GenerateBarcode();
                     _sameAsClient = true;
-                    ToggleSameAsClient(); // Pré-remplir destinataire
+                    ToggleSameAsClient(); 
                 }
             }
         }
@@ -400,15 +433,12 @@
         _isLoading = false;
     }
 
-    // Gestion Client Admin
     private async Task FilterClients(KeyboardEventArgs e)
     {
         if (string.IsNullOrEmpty(_clientSearch) || _clientSearch.Length < 2) 
         {
             _filteredClients.Clear(); return;
         }
-        // Note: Idéalement faire une recherche API serveur, ici on simule si on a pas l'endpoint search
-        // Si vous avez GetClientsAsync() qui renvoie tout, on filtre en mémoire (ok pour < 1000 clients)
         var allClients = await ApiService.GetClientsAsync();
         if (allClients != null)
         {
@@ -422,87 +452,95 @@
         _clientNameDisplay = client.NomComplet;
         _filteredClients.Clear();
         _clientSearch = "";
+        
+        // Si "Identique" est coché, on met à jour le destinataire immédiatement
+        if (_sameAsClient) ToggleSameAsClient();
     }
 
-    // Logique Métier
     private async Task GenerateBarcode()
     {
         var code = await ApiService.GenerateBarcodeAsync();
-        if (!string.IsNullOrEmpty(code))
-        {
-            _firstBarcode = code;
-            // On l'ajoute à la liste des barcodes du colis au moment de la sauvegarde
-        }
+        if (!string.IsNullOrEmpty(code)) _firstBarcode = code;
     }
 
     private void ToggleSameAsClient()
     {
         if (_sameAsClient)
         {
-            // Si Admin, on ne peut pas deviner les infos client si on ne les a pas chargées complètement
-            // Si Client connecté, on les a via le profil.
-            // Pour simplifier, on copie juste le nom affiché
             _colis.Destinataire = _clientNameDisplay;
-            // _colis.TelephoneDestinataire = ... (nécessiterait l'objet Client complet)
+            // Si on avait le client complet, on mettrait aussi le téléphone
         }
     }
     
-    private void CalculatePrice()
-    {
-        if(_colis.Volume > 0 && _pricePerM3 > 0)
-        {
-            _colis.PrixTotal = _colis.Volume * _pricePerM3;
-        }
-    }
-
     // Gestion Modals
     private void ShowInventory() => _showInventory = true;
-	private async Task SaveInventory(string json)
-	{
-		_colis.InventaireJson = json;
-		_showInventory = false;
+	
+	private async Task SaveInventory(InventoryModal.InventoryResult result)
+    {
+        // 1. Mise à jour locale (pour affichage immédiat)
+        _colis.InventaireJson = result.Json;
+        _colis.SignatureClientInventaire = result.Signature;
+        _colis.LieuSignatureInventaire = result.Lieu;
+        _colis.DateSignatureInventaire = result.Date;
+        
+        // Fermeture de la modale uniquement
+        _showInventory = false;
 
-		if (!string.IsNullOrEmpty(json))
-		{
-			try
-			{
-				// Important : Options camelCase ici aussi
-				var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-				var items = JsonSerializer.Deserialize<List<InventaireItem>>(json, options);
+        // 2. Calculs locaux
+        int newPieces = 0;
+        decimal newValeur = 0;
 
-				if (items != null && items.Any())
-				{
-					_colis.NombrePieces = items.Sum(i => i.Quantite);
-					// CORRECTION DU CALCUL (Total = Somme(Valeur * Quantité) si Valeur est unitaire)
-					// Si Valeur est déjà le total de la ligne, laissez Sum(Valeur)
-					_colis.ValeurDeclaree = items.Sum(i => i.Valeur); 
-				}
-				
-                var inventaireDto = new UpdateInventaireDto
-				{
-					ColisId = _colis.Id,
-					InventaireJson = _colis.InventaireJson,
-					TotalPieces = _colis.NombrePieces,
-					TotalValeurDeclaree = _colis.ValeurDeclaree
-				};
-				
-				// C'est cet appel qui va réellement sauvegarder l'inventaire maintenant
-                await ApiService.UpdateInventaireAsync(inventaireDto);
-				
-			}
-			catch { }
-		}
+        if (!string.IsNullOrEmpty(result.Json))
+        {
+            try
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                var items = JsonSerializer.Deserialize<List<InventaireItem>>(result.Json, options);
 
-		// SAUVEGARDE EN BASE
-		var dto = new UpdateInventaireDto 
-		{ 
-			ColisId = _colis.Id, 
-			InventaireJson = _colis.InventaireJson,
-			TotalPieces = _colis.NombrePieces,
-			TotalValeurDeclaree = _colis.ValeurDeclaree
-		};
-		await ApiService.UpdateInventaireAsync(dto);
-	}
+                if (items != null && items.Any())
+                {
+                    newPieces = items.Sum(i => i.Quantite);
+                    newValeur = items.Sum(i => i.Valeur); 
+                }
+                
+                _colis.NombrePieces = newPieces;
+                _colis.ValeurDeclaree = newValeur;
+            }
+            catch { }
+        }
+
+        // 3. Sauvegarde via l'API dédiée (SANS REDIRECTION)
+        try
+        {
+            var dto = new UpdateInventaireDto
+            {
+                ColisId = _colis.Id,
+                InventaireJson = _colis.InventaireJson,
+                TotalPieces = newPieces,
+                TotalValeurDeclaree = newValeur,
+                // Ajout des signatures
+                LieuSignatureInventaire = _colis.LieuSignatureInventaire,
+                DateSignatureInventaire = _colis.DateSignatureInventaire,
+                SignatureClientInventaire = _colis.SignatureClientInventaire
+            };
+
+            var success = await ApiService.UpdateInventaireAsync(dto);
+            
+            if (success)
+            {
+                // Feedback discret (optionnel) ou rien
+                StateHasChanged(); // Rafraîchir la vue pour afficher les nouvelles valeurs (pièces, prix)
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la sauvegarde de l'inventaire.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur SaveInventory: {ex.Message}");
+        }
+    }
 
     private void ShowPayments() => _showPayments = true;
     private void UpdatePaidAmount(decimal totalPaid)
@@ -510,14 +548,11 @@
         _colis.SommePayee = totalPaid;
     }
 
-    // Sauvegarde
     private async Task SaveParcel()
     {
-        // Préparation DTO
         var barcodesList = new List<string>();
         if(!string.IsNullOrEmpty(_firstBarcode)) barcodesList.Add(_firstBarcode);
         
-        // Mapping manuel vers Create/Update DTO
         if (IsNew)
         {
             var createDto = new CreateColisDto
@@ -526,7 +561,6 @@
                 Designation = _colis.Designation,
                 DestinationFinale = _colis.DestinationFinale,
                 Barcodes = barcodesList,
-                // ... mapper autres champs
                 Type = _colis.Type,
                 TypeEnvoi = _colis.TypeEnvoi,
                 EstFragile = _colis.EstFragile,
@@ -537,7 +571,6 @@
                 LivraisonADomicile = _colis.LivraisonADomicile,
                 AdresseLivraison = _colis.AdresseLivraison,
                 InventaireJson = _colis.InventaireJson,
-                // Admin fields
                 Volume = IsAdmin ? _colis.Volume : 0,
                 PrixTotal = IsAdmin ? _colis.PrixTotal : 0,
                 ConteneurId = IsAdmin ? _colis.ConteneurId : null
@@ -552,10 +585,9 @@
                 ClientId = _colis.ClientId,
                 Designation = _colis.Designation,
                 DestinationFinale = _colis.DestinationFinale,
-                Barcodes = _colis.Barcodes.Select(b => b.Value).ToList(), // Garder existants
-                Statut = _colis.Statut, // Admin peut changer
-                // ... mapper reste comme create
-                 Type = _colis.Type,
+                Barcodes = _colis.Barcodes.Select(b => b.Value).ToList(),
+                Statut = _colis.Statut,
+                Type = _colis.Type,
                 TypeEnvoi = _colis.TypeEnvoi,
                 EstFragile = _colis.EstFragile,
                 ManipulationSpeciale = _colis.ManipulationSpeciale,
@@ -568,14 +600,15 @@
                 Volume = _colis.Volume,
                 PrixTotal = _colis.PrixTotal,
                 ConteneurId = _colis.ConteneurId,
-                SommePayee = _colis.SommePayee
+                SommePayee = _colis.SommePayee,
+                LieuSignatureInventaire = _colis.LieuSignatureInventaire,
+                DateSignatureInventaire = _colis.DateSignatureInventaire,
+                SignatureClientInventaire = _colis.SignatureClientInventaire
             };
-            // Si nouveau barcode généré en edit
             if(!string.IsNullOrEmpty(_firstBarcode) && !updateDto.Barcodes.Contains(_firstBarcode))
             {
                 updateDto.Barcodes.Add(_firstBarcode);
             }
-            
             await ApiService.UpdateColisAsync(_colis.Id, updateDto);
         }
         
@@ -598,29 +631,23 @@
 		};
 	}
 	
-	// Variables pour le menu
     private bool _isExportMenuOpen = false;
-
     private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
 
     private async Task ExportPdf(bool includeFinancials)
     {
-        _isExportMenuOpen = false; // Fermer le menu
+        _isExportMenuOpen = false;
         _isLoading = true;
         StateHasChanged();
-
         try
         {
             var pdfData = await ApiService.ExportColisPdfAsync(_colis.Id, includeFinancials);
-
             if (pdfData != null && pdfData.Length > 0)
             {
                 var safeRef = _colis.NumeroReference.Replace("/", "-");
                 var fileName = $"Colis_{safeRef}_{(includeFinancials ? "Complet" : "Simple")}.pdf";
-
                 using var stream = new MemoryStream(pdfData);
                 using var streamRef = new DotNetStreamReference(stream);
-
                 await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
             }
             else
@@ -638,5 +665,4 @@
             StateHasChanged();
         }
     }
-	
 }

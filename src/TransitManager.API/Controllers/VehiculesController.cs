@@ -13,12 +13,46 @@ namespace TransitManager.API.Controllers
     {
         private readonly IVehiculeService _vehiculeService;
         private readonly ILogger<VehiculesController> _logger;
+		private readonly IExportService _exportService;
 
-        public VehiculesController(IVehiculeService vehiculeService, ILogger<VehiculesController> logger)
-        {
-            _vehiculeService = vehiculeService;
-            _logger = logger;
-        }
+		public VehiculesController(
+			IVehiculeService vehiculeService, 
+			IExportService exportService, // <-- AJOUT
+			ILogger<VehiculesController> logger)
+		{
+			_vehiculeService = vehiculeService;
+			_exportService = exportService; // <-- AJOUT
+			_logger = logger;
+		}
+
+		// Ajoutez la méthode d'action
+		[HttpGet("{id}/export/pdf")]
+		public async Task<IActionResult> ExportPdf(Guid id, [FromQuery] bool includeFinancials = false, [FromQuery] bool includePhotos = false)
+		{
+			try
+			{
+				// IMPORTANT : On doit récupérer le véhicule AVEC les documents pour les photos
+				// Le service standard GetByIdAsync ne fait peut-être pas le .Include(d => d.Documents).
+				// Option A : Modifier le service GetByIdAsync pour inclure Documents (Recommandé).
+				// Option B : Si vous ne voulez pas modifier le service, le repository sera appelé en lazy loading si configuré, ou les photos seront vides.
+				
+				// On suppose ici que GetByIdAsync renvoie l'entité complète. 
+				// Si les photos ne s'affichent pas, allez dans VehiculeRepository.GetWithDetailsAsync et ajoutez .Include(v => v.Documents)
+				
+				var vehicule = await _vehiculeService.GetByIdAsync(id);
+				if (vehicule == null) return NotFound();
+
+				var pdfData = await _exportService.GenerateVehiculePdfAsync(vehicule, includeFinancials, includePhotos);
+				
+				var safeImmat = vehicule.Immatriculation.Replace(" ", "_");
+				return File(pdfData, "application/pdf", $"Vehicule_{safeImmat}.pdf");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Erreur export véhicule");
+				return StatusCode(500, "Erreur interne lors de la génération du PDF");
+			}
+		}
 
 
 		// GET: api/vehicules

@@ -20,6 +20,7 @@ namespace TransitManager.Core.Interfaces
 		Task<byte[]> GenerateColisTicketPdfAsync(Colis colis);
 		Task<byte[]> GenerateContainerPdfAsync(Conteneur conteneur, bool includeFinancials);
 		Task<byte[]> GenerateColisPdfAsync(Colis colis, bool includeFinancials);
+		Task<byte[]> GenerateVehiculePdfAsync(Vehicule vehicule, bool includeFinancials, bool includePhotos);
     }
 
 

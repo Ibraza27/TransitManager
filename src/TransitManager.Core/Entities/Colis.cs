@@ -37,6 +37,17 @@ namespace TransitManager.Core.Entities
         private bool _livraisonADomicile;
         private decimal _prixTotal;
         private decimal _sommePayee;
+
+        private string? _lieuSignatureInventaire;
+        private DateTime? _dateSignatureInventaire;
+        private string? _signatureClientInventaire; // Base64
+
+        [StringLength(100)]
+        public string? LieuSignatureInventaire { get => _lieuSignatureInventaire; set => SetProperty(ref _lieuSignatureInventaire, value); }
+        
+        public DateTime? DateSignatureInventaire { get => _dateSignatureInventaire; set => SetProperty(ref _dateSignatureInventaire, value); }
+        
+        public string? SignatureClientInventaire { get => _signatureClientInventaire; set => SetProperty(ref _signatureClientInventaire, value); }
         
         // --- NOUVEAU CHAMP ---
         private string? _numeroPlomb;

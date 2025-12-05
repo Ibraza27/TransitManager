@@ -79,6 +79,8 @@ namespace TransitManager.Web.Services
 		Task<Document?> UploadDocumentAsync(IBrowserFile file, TypeDocument type, Guid? clientId, Guid? vehiculeId, Guid? colisId, Guid? conteneurId);
 		Task<byte[]> DownloadDocumentAsync(Guid id); // Retourne les bytes pour le téléchargement JS
 		Task<bool> DeleteDocumentAsync(Guid id);
+		
+		Task<byte[]> ExportVehiculePdfAsync(Guid id, bool includeFinancials, bool includePhotos);
 				
     }
 }

@@ -8,9 +8,7 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
-
 <PageTitle>@(IsNew ? "Nouveau Véhicule" : "Détail Véhicule") - Hippocampe</PageTitle>
-
 <div class="container mt-4 mb-5">
     <!-- En-tête -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -25,14 +23,40 @@
                 <span class="text-muted ms-2 small">Immat: @_vehicule.Immatriculation</span>
             }
         </div>
-        <div class="d-flex gap-2">
-             <button class="btn btn-primary" @onclick="SaveVehicle" disabled="@(!CanEditGlobal)">
+        <div class="d-flex gap-2 position-relative">
+            <!-- MENU EXPORT -->
+            <div class="dropdown">
+                <button class="btn btn-outline-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>PDF
+                </button>
+                <ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" style="right: auto; left: 0; margin-top: 5px;">
+                    <li>
+                        <button class="dropdown-item" @onclick="() => ExportPdf(false, false)">
+                            📄 État des lieux Simple
+                        </button>
+                    </li>
+                    <li>
+                        <button class="dropdown-item" @onclick="() => ExportPdf(true, false)">
+                            💰 État des lieux + Prix
+                        </button>
+                    </li>
+                    <li>
+                        <button class="dropdown-item" @onclick="() => ExportPdf(true, true)">
+                            📸 Dossier Complet (+ Photos)
+                        </button>
+                    </li>
+                </ul>
+                @if (_isExportMenuOpen)
+                {
+                    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" @onclick="ToggleExportMenu"></div>
+                }
+            </div>
+            <button class="btn btn-primary" @onclick="SaveVehicle" disabled="@(!CanEditGlobal)">
                 <i class="bi bi-save me-2"></i> Enregistrer
             </button>
             <a href="/my-vehicles" class="btn btn-outline-dark">Retour</a>
         </div>
     </div>
-
     @if (_isLoading)
     {
         <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
@@ -55,7 +79,6 @@
                 </li>
              }
         </ul>
-
         <div class="tab-content">
             
             <!-- ONGLET INFOS (Contenu existant réorganisé) -->
@@ -95,7 +118,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <!-- Infos Véhicule -->
                         <div class="card shadow-sm border-0 mb-4">
                             <div class="card-header bg-white"><h5 class="mb-0 text-primary">Véhicule</h5></div>
@@ -139,7 +161,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="col-lg-4">
                         <!-- État des lieux (Bouton d'accès rapide) -->
                         <div class="card shadow-sm border-info mb-4">
@@ -158,7 +179,6 @@
                                 </button>
                             </div>
                         </div>
-
                         <!-- Administration -->
                         <div class="card shadow-sm border-0 mb-4">
                             <div class="card-header bg-light">Administration</div>
@@ -182,7 +202,6 @@
                                 }
                             </div>
                         </div>
-
                         <!-- Finances -->
                         <div class="card shadow-sm border-success">
                             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
@@ -213,7 +232,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- ONGLET DOCUMENTS -->
             @if (!IsNew)
             {
@@ -221,12 +239,10 @@
                     <DocumentManager EntityId="@_vehicule.Id" EntityType="Vehicule" />
                 </div>
             }
-
         </div>
     }
-
     <!-- MODALES -->
-    <VehicleInspectionModal IsVisible="_showInspection" 
+    <VehicleInspectionModal IsVisible="_showInspection"
                             Type="@_vehicule.Type"
                             JsonPoints="@_vehicule.EtatDesLieux"
                             JsonStrokes="@_vehicule.EtatDesLieuxRayures"
@@ -237,51 +253,45 @@
                             DateSignature="@_vehicule.DateEtatDesLieux"
                             OnSave="SaveInspection"
                             OnClose="() => _showInspection = false" />
-
     <PaymentModal IsVisible="_showPayments"
                   IsAdmin="@IsAdmin"
-                  ColisId="@Guid.Empty" 
+                  ColisId="@Guid.Empty"
                   VehiculeId="@_vehicule.Id"
                   ClientId="@_vehicule.ClientId"
                   TotalAmount="@_vehicule.PrixTotal"
                   OnPaymentsChanged="UpdatePaidAmount"
                   OnClose="() => _showPayments = false" />
 </div>
-
 @code {
     [Parameter] public Guid? Id { get; set; }
-
     private Vehicule _vehicule = new() { Statut = StatutVehicule.EnAttente };
     private bool _isLoading = true;
     private bool IsNew => Id == null;
     private bool IsAdmin = false;
-    
+
     private string _activeTab = "infos";
     private string _clientNameDisplay = "";
     private bool _sameAsClient = false;
     private bool _showInspection = false;
     private bool _showPayments = false;
-    
+    private bool _isExportMenuOpen = false;
+
     private List<Client> _clients = new();
     private List<Conteneur> _containers = new();
-
     private bool CanEditGlobal => IsAdmin || (IsNew || _vehicule.Statut == StatutVehicule.EnAttente);
     private bool CanEditFields => IsAdmin || (CanEditGlobal);
-
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         IsAdmin = authState.User.IsInRole("Administrateur");
-
         if (IsAdmin)
         {
             var c = await ApiService.GetClientsAsync();
             if (c != null) _clients = c.OrderBy(x => x.Nom).ToList();
-            
+
             var ct = await ApiService.GetConteneursAsync();
             if (ct != null) _containers = ct.ToList();
         }
-
         if (!IsNew)
         {
             _vehicule = await ApiService.GetVehiculeByIdAsync(Id.Value) ?? new();
@@ -290,7 +300,7 @@
                  var client = await ApiService.GetClientByIdAsync(_vehicule.ClientId);
                  _clientNameDisplay = client?.NomComplet ?? "Client";
             }
-             
+
             // Check same client
             if (_vehicule.Destinataire == (IsAdmin ? _clients.FirstOrDefault(c=>c.Id == _vehicule.ClientId)?.NomComplet : _clientNameDisplay))
             {
@@ -313,7 +323,6 @@
         }
         _isLoading = false;
     }
-
     private void OnClientChanged(ChangeEventArgs e)
     {
         if (Guid.TryParse(e.Value?.ToString(), out Guid cid))
@@ -324,7 +333,6 @@
             if (_sameAsClient) ToggleSameAsClient();
         }
     }
-
     private void ToggleSameAsClient()
     {
         if (_sameAsClient)
@@ -334,30 +342,58 @@
             // Note: Pour le téléphone, il faudrait charger l'objet client complet si pas admin
         }
     }
-
+    private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
+    private async Task ExportPdf(bool includeFinancials, bool includePhotos)
+    {
+        _isExportMenuOpen = false;
+        _isLoading = true;
+        StateHasChanged();
+        try
+        {
+            var pdfData = await ApiService.ExportVehiculePdfAsync(_vehicule.Id, includeFinancials, includePhotos);
+            if (pdfData != null && pdfData.Length > 0)
+            {
+                var safeImmat = _vehicule.Immatriculation.Replace(" ", "_");
+                var fileName = $"Vehicule_{safeImmat}.pdf";
+                using var stream = new MemoryStream(pdfData);
+                using var streamRef = new DotNetStreamReference(stream);
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Erreur: Fichier vide reçu.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
     private async Task UpdatePaidAmount(decimal total)
     {
         _vehicule.SommePayee = total;
         if (!IsNew) await ApiService.UpdateVehiculeAsync(_vehicule.Id, _vehicule);
     }
-
     // Callback de la modale d'inspection
     private void SaveInspection(VehicleInspectionModal.InspectionResult result)
     {
         // Mise à jour des données Schéma
         _vehicule.EtatDesLieux = result.EtatDesLieuxPoints;
         _vehicule.EtatDesLieuxRayures = result.EtatDesLieuxRayures;
-
         // Mise à jour des données Accessoires & Signature
         _vehicule.AccessoiresJson = result.AccessoiresJson;
         _vehicule.SignatureAgent = result.SignatureAgent;
         _vehicule.SignatureClient = result.SignatureClient;
         _vehicule.LieuEtatDesLieux = result.Lieu;
         _vehicule.DateEtatDesLieux = result.Date;
-        
+
         _showInspection = false;
     }
-
     private async Task SaveVehicle()
     {
         if (string.IsNullOrWhiteSpace(_vehicule.Immatriculation) || string.IsNullOrWhiteSpace(_vehicule.Marque))
@@ -365,9 +401,8 @@
             await JSRuntime.InvokeVoidAsync("alert", "Immatriculation et Marque requises.");
             return;
         }
-
         // Clean object for API (remove circular refs)
-        var toSend = new Vehicule 
+        var toSend = new Vehicule
         {
             Id = _vehicule.Id,
             ClientId = _vehicule.ClientId,
@@ -386,7 +421,7 @@
             ValeurDeclaree = _vehicule.ValeurDeclaree,
             PrixTotal = _vehicule.PrixTotal,
             SommePayee = _vehicule.SommePayee,
-            
+
             // Données Inspection
             EtatDesLieux = _vehicule.EtatDesLieux,
             EtatDesLieuxRayures = _vehicule.EtatDesLieuxRayures,
@@ -396,7 +431,6 @@
             LieuEtatDesLieux = _vehicule.LieuEtatDesLieux,
             DateEtatDesLieux = _vehicule.DateEtatDesLieux
         };
-
         bool success;
         if (IsNew)
         {
@@ -407,11 +441,9 @@
         {
             success = await ApiService.UpdateVehiculeAsync(toSend.Id, toSend);
         }
-
         if (success) Navigation.NavigateTo("/my-vehicles");
         else await JSRuntime.InvokeVoidAsync("alert", "Erreur sauvegarde");
     }
-
     private string GetStatusBadgeClass(StatutVehicule s) => s switch
     {
         StatutVehicule.EnAttente => "bg-warning text-dark",

@@ -1,144 +1,173 @@
 @using System.Text.Json
 @using TransitManager.Core.Entities
+@inject IJSRuntime JSRuntime
+
 @if (IsVisible)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-clipboard-check me-2"></i>Inventaire du colis</h5>
-                    <button type="button" class="btn-close" @onclick="Cancel"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-clipboard-check me-2"></i>Inventaire & Validation</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
                 </div>
-                <div class="modal-body">
-                    @if (IsReadOnly)
-                    {
-                        <div class="alert alert-info small py-2">
-                            <i class="bi bi-lock me-2"></i>Mode lecture seule.
-                        </div>
-                    }
-                    else
-                    {
-                        <!-- Formulaire d'ajout / Édition -->
-                        <div class="card bg-light mb-3 border-0">
-                            <div class="card-body p-3">
-                                <div class="row g-2 align-items-end">
-                                    <div class="col-md-4">
-                                        <label class="small text-muted fw-bold">Désignation</label>
-                                        <input type="text" class="form-control form-control-sm" @bind="_newItem.Designation" placeholder="Ex: Chemises..." />
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="small text-muted fw-bold">Quantité</label>
-                                        <!-- Ajout de min="1" pour éviter la division par zéro -->
-                                        <input type="number" class="form-control form-control-sm" @bind="_newItem.Quantite" min="1" />
-                                    </div>
-                                    
-                                    <!-- MODIFICATION : Saisie du TOTAL -->
-                                    <div class="col-md-2">
-                                        <label class="small text-muted fw-bold">Valeur Totale (€)</label>
-                                        <input type="number" class="form-control form-control-sm" @bind="_newItem.Valeur" min="0" step="0.01" />
-                                    </div>
+                
+                <div class="modal-body p-0">
+                    <!-- Onglets -->
+                    <ul class="nav nav-tabs nav-fill bg-light" role="tablist">
+                        <li class="nav-item">
+                            <button class='nav-link @(_activeTab == "items" ? "active fw-bold" : "")' @onclick='() => ChangeTab("items")'>
+                                <i class="bi bi-list-check me-2"></i>Articles
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class='nav-link @(_activeTab == "signature" ? "active fw-bold" : "")' @onclick='() => ChangeTab("signature")'>
+                                <i class="bi bi-pen me-2"></i>Validation
+                            </button>
+                        </li>
+                    </ul>
 
-                                    <div class="col-md-3">
-                                        <label class="small text-muted fw-bold">Date</label>
-                                        <input type="date" class="form-control form-control-sm" @bind="_newItem.Date" />
-                                    </div>
-                                    <div class="col-md-1">
-                                        <button class="btn btn-sm btn-success w-100 fw-bold" @onclick="AddItem"
-                                                disabled="@string.IsNullOrWhiteSpace(_newItem.Designation)"
-                                                title="Ajouter">
-                                            ➕
-                                        </button>
+                    <div class="tab-content p-3">
+                        
+                        <!-- ONGLET 1 : ARTICLES -->
+                        <div class='tab-pane fade @(_activeTab == "items" ? "show active" : "")'>
+                            @if (IsReadOnly)
+                            {
+                                <div class="alert alert-info small py-2 mb-3">
+                                    <i class="bi bi-lock me-2"></i>Mode lecture seule.
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- Formulaire d'ajout -->
+                                <div class="card bg-light mb-3 border-0">
+                                    <div class="card-body p-3">
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-4">
+                                                <label class="small text-muted fw-bold">Désignation</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="_newItem.Designation" placeholder="Ex: Chemises..." />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="small text-muted fw-bold">Quantité</label>
+                                                <input type="number" class="form-control form-control-sm" @bind="_newItem.Quantite" min="1" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="small text-muted fw-bold">Total (€)</label>
+                                                <input type="number" class="form-control form-control-sm" @bind="_newItem.Valeur" min="0" step="0.01" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="small text-muted fw-bold">Date</label>
+                                                <input type="date" class="form-control form-control-sm" @bind="_newItem.Date" />
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button class="btn btn-sm btn-success w-100 fw-bold" @onclick="AddItem" disabled="@string.IsNullOrWhiteSpace(_newItem.Designation)" title="Ajouter">➕</button>
+                                            </div>
+                                        </div>
+                                        @if(_newItem.Quantite > 0)
+                                        {
+                                            <div class="text-end mt-1">
+                                                <small class="text-muted fst-italic">P.U. : <strong>@((_newItem.Valeur / _newItem.Quantite).ToString("C2"))</strong></small>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
-                                <!-- Affichage du prix unitaire calculé en temps réel pour info -->
-                                @if(_newItem.Quantite > 0)
-                                {
-                                    <div class="text-end mt-1">
-                                        <small class="text-muted fst-italic">
-                                            Soit un prix unitaire de : <strong>@((_newItem.Valeur / _newItem.Quantite).ToString("C2"))</strong>
-                                        </small>
-                                    </div>
-                                }
+                            }
+                            
+                            <!-- Tableau -->
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover table-bordered mb-0 align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Désignation</th>
+                                            <th class="text-center">Qté</th>
+                                            <th class="text-end">Total</th>
+                                            <th class="text-end text-muted">P.U.</th>
+                                            @if (!IsReadOnly) { <th style="width: 80px;" class="text-center">Actions</th> }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in _items.OrderByDescending(i => i.Date))
+                                        {
+                                            <tr>
+                                                <td>@item.Date.ToString("dd/MM/yy")</td>
+                                                <td>@item.Designation</td>
+                                                <td class="text-center fw-bold">@item.Quantite</td>
+                                                <td class="text-end fw-bold text-primary">@item.Valeur.ToString("C2")</td>
+                                                <td class="text-end text-muted small">@(item.Quantite > 0 ? (item.Valeur / item.Quantite).ToString("C2") : "-")</td>
+                                                @if (!IsReadOnly)
+                                                {
+                                                    <td class="text-center">
+                                                        <div class="d-flex justify-content-center gap-2">
+                                                            <button class="btn btn-outline-primary btn-sm border-0" @onclick="() => EditItem(item)">✏️</button>
+                                                            <button class="btn btn-outline-danger btn-sm border-0" @onclick="() => RemoveItem(item)">🗑️</button>
+                                                        </div>
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                        @if (!_items.Any()) { <tr><td colspan="6" class="text-center text-muted fst-italic py-3">Aucun article</td></tr> }
+                                    </tbody>
+                                    <tfoot class="fw-bold bg-light">
+                                        <tr>
+                                            <td colspan="2" class="text-end">TOTAUX :</td>
+                                            <td class="text-center">@_items.Sum(i => i.Quantite)</td>
+                                            <td class="text-end text-primary">@_items.Sum(i => i.Valeur).ToString("C2")</td>
+                                            <td colspan="@(IsReadOnly ? 1 : 2)"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
                         </div>
-                    }
-                    
-                    <!-- Tableau -->
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover table-bordered mb-0 align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Désignation</th>
-                                    <th class="text-center">Qté</th>
-                                    <th class="text-end">Total Ligne</th> <!-- Anciennement Valeur U -->
-                                    <th class="text-end text-muted">Prix Unitaire</th> <!-- Anciennement Total -->
-                                    @if (!IsReadOnly) { <th style="width: 80px;" class="text-center">Actions</th> }
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in _items.OrderByDescending(i => i.Date))
-                                {
-                                    <tr>
-                                        <td>@item.Date.ToString("dd/MM/yyyy")</td>
-                                        <td>@item.Designation</td>
-                                        <td class="text-center fw-bold">@item.Quantite</td>
-                                        
-                                        <!-- Valeur Totale (Stockée dans item.Valeur) -->
-                                        <td class="text-end fw-bold text-primary">@item.Valeur.ToString("C2")</td>
-                                        
-                                        <!-- Prix Unitaire Calculé (Total / Qté) -->
-                                        <td class="text-end text-muted small">
-                                            @(item.Quantite > 0 ? (item.Valeur / item.Quantite).ToString("C2") : "-")
-                                        </td>
 
-                                        @if (!IsReadOnly)
-                                        {
-                                            <td class="text-center">
-                                                <div class="d-flex justify-content-center gap-2">
-                                                    <button class="btn btn-outline-primary btn-sm border-0" @onclick="() => EditItem(item)" title="Modifier">
-                                                        ✏️
-                                                    </button>
-                                                    <button class="btn btn-outline-danger btn-sm border-0" @onclick="() => RemoveItem(item)" title="Supprimer">
-                                                        🗑️
-                                                    </button>
+                        <!-- ONGLET 2 : SIGNATURE -->
+                        <div class='tab-pane fade @(_activeTab == "signature" ? "show active" : "")'>
+                            <div class="row g-3">
+                                <div class="col-12 mb-3">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Fait à</span>
+                                        <input type="text" class="form-control" @bind="_lieu" placeholder="Ville..." disabled="@IsReadOnly">
+                                        <span class="input-group-text">Le</span>
+                                        <input type="date" class="form-control" @bind="_dateSignature" disabled="@IsReadOnly">
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header bg-light fw-bold text-center">Signature du Client (Validation Inventaire)</div>
+                                        <div class="card-body p-0 position-relative" style="height: 250px; background-color: #fff;">
+                                            @if (!string.IsNullOrEmpty(_signatureBase64))
+                                            {
+                                                <img src="@_signatureBase64" style="width:100%; height:100%; object-fit:contain;" />
+                                                @if(!IsReadOnly) {
+                                                    <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" @onclick="ReSign">Re-signer</button>
+                                                }
+                                            }
+                                            else if (!IsReadOnly)
+                                            {
+                                                <canvas id="sig-canvas-inventory" style="width:100%; height:100%; cursor:crosshair;"></canvas>
+                                                <div class="position-absolute bottom-0 end-0 m-2">
+                                                    <button class="btn btn-sm btn-light border" @onclick="ClearCanvas">Effacer</button>
                                                 </div>
-                                            </td>
-                                        }
-                                    </tr>
-                                }
-                                @if (!_items.Any())
-                                {
-                                    <tr><td colspan="6" class="text-center text-muted fst-italic py-3">Aucun article dans l'inventaire</td></tr>
-                                }
-                            </tbody>
-                            <tfoot class="fw-bold bg-light">
-                                <tr>
-                                    <td colspan="2" class="text-end">TOTAUX :</td>
-                                    
-                                    <!-- Total Quantité -->
-                                    <td class="text-center">@_items.Sum(i => i.Quantite)</td>
-                                    
-                                    <!-- Total Valeur (Somme des totaux) -->
-                                    <td class="text-end text-primary">@_items.Sum(i => i.Valeur).ToString("C2")</td>
-                                    
-                                    <!-- Somme des Prix Unitaires (Demandé) -->
-                                    <td class="text-end text-muted small">
-                                        @(_items.Sum(i => i.Quantite > 0 ? (i.Valeur / i.Quantite) : 0).ToString("C2"))
-                                    </td>
-                                    
-                                    @if (!IsReadOnly) { <td></td> }
-                                </tr>
-                            </tfoot>
-                        </table>
+                                            }
+                                            else { <div class="d-flex h-100 align-items-center justify-content-center text-muted">Non signé</div> }
+                                        </div>
+                                    </div>
+                                    <div class="form-text text-muted mt-2 text-center">
+                                        En signant, le client atteste de l'exactitude de l'inventaire ci-dessus.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
                 <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Annuler</button>
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Annuler</button>
                     @if (!IsReadOnly)
                     {
-                        <button type="button" class="btn btn-primary px-4" @onclick="Save">
-                            <i class="bi bi-save me-2"></i>Valider l'inventaire
+                        <button type="button" class="btn btn-primary px-4" @onclick="SaveAndClose">
+                            <i class="bi bi-check-lg me-2"></i>Valider et Enregistrer
                         </button>
                     }
                 </div>
@@ -151,71 +180,123 @@
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public bool IsReadOnly { get; set; }
     [Parameter] public string? JsonData { get; set; }
-    [Parameter] public EventCallback<string> OnSave { get; set; }
+    [Parameter] public string? Signature { get; set; }
+    [Parameter] public string? Lieu { get; set; }
+    [Parameter] public DateTime? Date { get; set; }
+    
+    [Parameter] public EventCallback<InventoryResult> OnSave { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
+    public class InventoryResult
+    {
+        public string Json { get; set; } = "";
+        public string Signature { get; set; } = "";
+        public string Lieu { get; set; } = "";
+        public DateTime? Date { get; set; }
+    }
+
+    private string _activeTab = "items";
     private List<InventaireItem> _items = new();
     private InventaireItem _newItem = new() { Date = DateTime.Now, Quantite = 1 };
+    
+    private string? _signatureBase64;
+    private string? _lieu;
+    private DateTime _dateSignature;
 
-    protected override void OnParametersSet()
+	protected override void OnParametersSet()
     {
         if (IsVisible)
         {
+            _activeTab = "items"; // Revenir au premier onglet par défaut
+            
+            // 1. Chargement de l'inventaire JSON
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             
             if (!string.IsNullOrEmpty(JsonData) && JsonData != "[]" && JsonData != "null")
             {
-                try
-                {
-                    _items = JsonSerializer.Deserialize<List<InventaireItem>>(JsonData, options) ?? new List<InventaireItem>();
-                }
-                catch
-                {
-                    _items = new List<InventaireItem>();
-                }
+                try { _items = JsonSerializer.Deserialize<List<InventaireItem>>(JsonData, options) ?? new(); }
+                catch { _items = new(); }
             }
-            else if (!_items.Any())
-            {
-                _items = new List<InventaireItem>();
+            else if (!_items.Any()) 
+            { 
+                _items = new List<InventaireItem>(); 
             }
 
+            // Reset nouvel item
             _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
+            
+            // 2. --- CORRECTION : Chargement des données de signature ---
+            // On écrase les variables locales avec les données venant de la BDD (via le Parent)
+            _signatureBase64 = Signature;
+            
+            // Si le lieu est vide en BDD, on met une valeur par défaut, sinon on prend la valeur BDD
+            _lieu = string.IsNullOrEmpty(Lieu) ? "Tresses" : Lieu;
+            
+            // Si la date est null, on met aujourd'hui
+            _dateSignature = Date ?? DateTime.Now;
+        }
+    }
+
+    private async Task ChangeTab(string tab)
+    {
+        _activeTab = tab;
+        if (tab == "signature")
+        {
+            await Task.Delay(200);
+            if (!IsReadOnly && string.IsNullOrEmpty(_signatureBase64))
+            {
+                await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-inventory");
+            }
         }
     }
 
     private void AddItem()
     {
-        // On ajoute l'item (Valeur = Total saisi par l'utilisateur)
-        _items.Add(new InventaireItem
-        {
-            Designation = _newItem.Designation,
-            Quantite = _newItem.Quantite,
-            Valeur = _newItem.Valeur, 
-            Date = _newItem.Date
-        });
-
+        _items.Add(new InventaireItem { Designation = _newItem.Designation, Quantite = _newItem.Quantite, Valeur = _newItem.Valeur, Date = _newItem.Date });
         _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
     }
 
     private void EditItem(InventaireItem item)
     {
-        _newItem = new InventaireItem
-        {
-            Designation = item.Designation,
-            Quantite = item.Quantite,
-            Valeur = item.Valeur,
-            Date = item.Date
-        };
+        _newItem = new InventaireItem { Designation = item.Designation, Quantite = item.Quantite, Valeur = item.Valeur, Date = item.Date };
         _items.Remove(item);
     }
 
     private void RemoveItem(InventaireItem item) => _items.Remove(item);
 
-    private async Task Save()
+    private async Task ClearCanvas() => await JSRuntime.InvokeVoidAsync("signaturePad.clear", "sig-canvas-inventory");
+
+    private async Task ReSign()
     {
-        var json = JsonSerializer.Serialize(_items);
-        await OnSave.InvokeAsync(json);
+        _signatureBase64 = null;
+        await Task.Delay(50);
+        await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-inventory");
     }
 
-    private async Task Cancel() => await OnClose.InvokeAsync();
+
+	private async Task SaveAndClose()
+    {
+        // Récupérer la signature du canvas si on est sur l'onglet signature
+        if (_activeTab == "signature" && string.IsNullOrEmpty(_signatureBase64))
+        {
+             try {
+                 _signatureBase64 = await JSRuntime.InvokeAsync<string>("signaturePad.getImage", "sig-canvas-inventory");
+             } catch {}
+        }
+        
+        // Nettoyage si vide
+        if (_signatureBase64 != null && _signatureBase64.Length < 500) _signatureBase64 = null;
+
+        var result = new InventoryResult
+        {
+            Json = JsonSerializer.Serialize(_items),
+            Signature = _signatureBase64 ?? "",
+            Lieu = _lieu ?? "",
+            Date = _dateSignature
+        };
+        
+        await OnSave.InvokeAsync(result);
+    }
+	
+    private async Task Close() => await OnClose.InvokeAsync();
 }

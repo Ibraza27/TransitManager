@@ -125,6 +125,9 @@ namespace TransitManager.Infrastructure.Services
                 colisInDb.TypeEnvoi = colisDto.TypeEnvoi;
                 colisInDb.ConteneurId = colisDto.ConteneurId;
                 colisInDb.Statut = colisDto.Statut;
+                colisInDb.LieuSignatureInventaire = colisDto.LieuSignatureInventaire;
+                colisInDb.DateSignatureInventaire = colisDto.DateSignatureInventaire;
+                colisInDb.SignatureClientInventaire = colisDto.SignatureClientInventaire;
 
                 context.Update(colisInDb);
 
@@ -168,31 +171,30 @@ namespace TransitManager.Infrastructure.Services
             }
         }
 
+
 		public async Task UpdateInventaireAsync(UpdateInventaireDto dto)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == dto.ColisId);
-			
-			if (colis != null)
-			{
-				// 1. Mise à jour des données
-				colis.InventaireJson = dto.InventaireJson;
-				
-				// On s'assure d'utiliser les valeurs envoyées par le client qui a fait le calcul
-				// (Ou on pourrait désérialiser le JSON ici pour recalculer côté serveur pour plus de sécurité)
-				colis.NombrePieces = dto.TotalPieces;
-				colis.ValeurDeclaree = dto.TotalValeurDeclaree;
-				
-				// 2. Marquer l'entité comme modifiée
-				context.Colis.Update(colis);
-				
-				// 3. Sauvegarder
-				await context.SaveChangesAsync();
-				
-				// 4. Mettre à jour les stats du client parent (facultatif mais conseillé)
-				await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
-			}
-		}
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == dto.ColisId);
+            
+            if (colis != null)
+            {
+                // 1. Mise à jour des données inventaire
+                colis.InventaireJson = dto.InventaireJson;
+                colis.NombrePieces = dto.TotalPieces;
+                colis.ValeurDeclaree = dto.TotalValeurDeclaree;
+
+                // 2. Mise à jour de la signature (AJOUT)
+                colis.LieuSignatureInventaire = dto.LieuSignatureInventaire;
+                colis.DateSignatureInventaire = dto.DateSignatureInventaire;
+                colis.SignatureClientInventaire = dto.SignatureClientInventaire;
+                
+                context.Colis.Update(colis);
+                await context.SaveChangesAsync();
+                
+                await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
+            }
+        }
 
         public async Task<bool> AssignToConteneurAsync(Guid colisId, Guid conteneurId)
         {

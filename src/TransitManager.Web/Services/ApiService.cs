@@ -726,5 +726,20 @@ namespace TransitManager.Web.Services
 			catch { return false; }
 		}
 		
+		public async Task<byte[]> ExportVehiculePdfAsync(Guid id, bool includeFinancials, bool includePhotos)
+		{
+			var url = $"api/vehicules/{id}/export/pdf?includeFinancials={includeFinancials}&includePhotos={includePhotos}";
+			try
+			{
+				var response = await _httpClient.GetAsync(url);
+				if (!response.IsSuccessStatusCode) return Array.Empty<byte>();
+				return await response.Content.ReadAsByteArrayAsync();
+			}
+			catch
+			{
+				return Array.Empty<byte>();
+			}
+		}
+		
     }
 }

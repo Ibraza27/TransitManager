@@ -37,13 +37,19 @@
                 <ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" 
                     style="right: auto; left: 0; margin-top: 5px;">
                     <li>
-                        <button class="dropdown-item" @onclick="() => ExportPdf(false)">
-                            📄 Fiche Colis (Sans prix)
+                        <button class="dropdown-item" @onclick="() => ExportPdf(false, false)">
+                            📄 Fiche Colis (Simple)
                         </button>
                     </li>
                     <li>
-                        <button class="dropdown-item" @onclick="() => ExportPdf(true)">
-                            💰 Facture / Reçu (Avec prix)
+                        <button class="dropdown-item" @onclick="() => ExportPdf(true, false)">
+                            💰 Reçu Financier (+ Prix)
+                        </button>
+                    </li>
+                    <li>
+                        <!-- NOUVELLE OPTION -->
+                        <button class="dropdown-item" @onclick="() => ExportPdf(true, true)">
+                            📸 Dossier Complet (+ Photos)
                         </button>
                     </li>
                 </ul>
@@ -634,20 +640,25 @@
     private bool _isExportMenuOpen = false;
     private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
 
-    private async Task ExportPdf(bool includeFinancials)
+	private async Task ExportPdf(bool includeFinancials, bool includePhotos)
     {
         _isExportMenuOpen = false;
         _isLoading = true;
         StateHasChanged();
+
         try
         {
-            var pdfData = await ApiService.ExportColisPdfAsync(_colis.Id, includeFinancials);
+            // Appel avec les deux booléens
+            var pdfData = await ApiService.ExportColisPdfAsync(_colis.Id, includeFinancials, includePhotos);
+
             if (pdfData != null && pdfData.Length > 0)
             {
                 var safeRef = _colis.NumeroReference.Replace("/", "-");
-                var fileName = $"Colis_{safeRef}_{(includeFinancials ? "Complet" : "Simple")}.pdf";
+                var fileName = $"Colis_{safeRef}.pdf";
+
                 using var stream = new MemoryStream(pdfData);
                 using var streamRef = new DotNetStreamReference(stream);
+
                 await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
             }
             else

@@ -24,14 +24,12 @@
         </div>
 		<div class="d-flex gap-2 position-relative">
 			
-			<!-- MENU D'EXPORTATION 100% BLAZOR -->
+			<!-- MENU D'EXPORTATION -->
 			<div class="dropdown">
-				<!-- Le bouton appelle une méthode C# pour basculer l'état -->
 				<button class="btn btn-outline-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
 					<i class="bi bi-file-earmark-pdf me-2"></i>Exporter PDF
 				</button>
 
-				<!-- Le menu s'affiche si _isExportMenuOpen est true via CSS dynamique -->
 				<ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" 
 					style="right: auto; left: 0; margin-top: 5px;">
 					<li>
@@ -46,7 +44,6 @@
 					</li>
 				</ul>
 				
-				<!-- (Optionnel) Un calque transparent pour fermer le menu si on clique ailleurs -->
 				@if (_isExportMenuOpen)
 				{
 					<div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" 
@@ -57,8 +54,6 @@
 			<button class="btn btn-outline-primary" @onclick="LoadData">
 				<i class="bi bi-arrow-clockwise me-2"></i>Actualiser
 			</button>
-			
-			
 			
             <button class="btn btn-primary" @onclick="SaveContainer">
                 <i class="bi bi-save me-2"></i> Enregistrer
@@ -78,320 +73,349 @@
     }
     else
     {
-        <!-- STATISTIQUES GLOBALES (Cards) -->
-        @if (!IsNew)
-        {
-            <div class="row mb-4 g-3">
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white shadow-sm h-100">
-                        <div class="card-body text-center">
-                            <h3 class="mb-0">@_dto.PrixTotalGlobal.ToString("C0")</h3>
-                            <small class="text-white-50 fw-bold">PRIX TOTAL GLOBAL</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-success text-white shadow-sm h-100">
-                        <div class="card-body text-center">
-                            <h3 class="mb-0">@_dto.TotalPayeGlobal.ToString("C0")</h3>
-                            <small class="text-white-50 fw-bold">TOTAL PAYÉ</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-danger text-white shadow-sm h-100">
-                        <div class="card-body text-center">
-                            <h3 class="mb-0">@_dto.TotalRestantGlobal.ToString("C0")</h3>
-                            <small class="text-white-50 fw-bold">TOTAL RESTANT</small>
-                        </div>
-                    </div>
-                </div>
-                 <div class="col-md-3">
-                    <div class="card bg-secondary text-white shadow-sm h-100">
-                        <div class="card-body text-center">
-                            <h3 class="mb-0">@(_dto.Colis.Count + _dto.Vehicules.Count)</h3>
-                            <small class="text-white-50 fw-bold">ÉLÉMENTS (Colis + Véhicules)</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
+        <!-- NAVIGATION ONGLETS -->
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <button class="nav-link @(_activeTab == "infos" ? "active fw-bold" : "")" @onclick='() => _activeTab = "infos"'>
+                    <i class="bi bi-info-circle me-2"></i>Informations Générales
+                </button>
+            </li>
+            @if (!IsNew)
+            {
+                <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "documents" ? "active fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
+                        <i class="bi bi-folder2-open me-2"></i>Documents
+                    </button>
+                </li>
+            }
+        </ul>
 
-        <!-- FORMULAIRE INFORMATIONS GÉNÉRALES -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-light fw-bold">Informations Générales</div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Numéro Dossier *</label>
-                        <input type="text" class="form-control fw-bold" @bind="_conteneur.NumeroDossier" />
+        <div class="tab-content">
+            
+            <!-- ONGLET 1 : INFORMATIONS (Contenu existant encapsulé) -->
+            <div class="tab-pane fade @(_activeTab == "infos" ? "show active" : "")">
+
+                <!-- STATISTIQUES GLOBALES (Cards) -->
+                @if (!IsNew)
+                {
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white shadow-sm h-100">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">@_dto.PrixTotalGlobal.ToString("C0")</h3>
+                                    <small class="text-white-50 fw-bold">PRIX TOTAL GLOBAL</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white shadow-sm h-100">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">@_dto.TotalPayeGlobal.ToString("C0")</h3>
+                                    <small class="text-white-50 fw-bold">TOTAL PAYÉ</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white shadow-sm h-100">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">@_dto.TotalRestantGlobal.ToString("C0")</h3>
+                                    <small class="text-white-50 fw-bold">TOTAL RESTANT</small>
+                                </div>
+                            </div>
+                        </div>
+                         <div class="col-md-3">
+                            <div class="card bg-secondary text-white shadow-sm h-100">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">@(_dto.Colis.Count + _dto.Vehicules.Count)</h3>
+                                    <small class="text-white-50 fw-bold">ÉLÉMENTS (Colis + Véhicules)</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Numéro Plomb</label>
-                        <input type="text" class="form-control" @bind="_conteneur.NumeroPlomb" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Compagnie</label>
-                        <input type="text" class="form-control" @bind="_conteneur.NomCompagnie" />
-                    </div>
-                     <div class="col-md-3">
-                        <label class="form-label">Transitaire</label>
-                        <input type="text" class="form-control" @bind="_conteneur.NomTransitaire" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Destination *</label>
-                        <input type="text" class="form-control" @bind="_conteneur.Destination" />
-                    </div>
-                     <div class="col-md-3">
-                        <label class="form-label">Pays</label>
-                        <input type="text" class="form-control" @bind="_conteneur.PaysDestination" />
-                    </div>
-                     <div class="col-md-3">
-                        <label class="form-label">Statut</label>
-                        <select class="form-select" @bind="_conteneur.Statut">
-                             @foreach(var s in Enum.GetValues<StatutConteneur>()) {<option value="@s">@s</option>}
-                        </select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Commentaires</label>
-                        <textarea class="form-control" rows="2" @bind="_conteneur.Commentaires"></textarea>
+                }
+
+                <!-- FORMULAIRE INFORMATIONS GÉNÉRALES -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-light fw-bold">Informations Générales</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Numéro Dossier *</label>
+                                <input type="text" class="form-control fw-bold" @bind="_conteneur.NumeroDossier" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Numéro Plomb</label>
+                                <input type="text" class="form-control" @bind="_conteneur.NumeroPlomb" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Compagnie</label>
+                                <input type="text" class="form-control" @bind="_conteneur.NomCompagnie" />
+                            </div>
+                             <div class="col-md-3">
+                                <label class="form-label">Transitaire</label>
+                                <input type="text" class="form-control" @bind="_conteneur.NomTransitaire" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Destination *</label>
+                                <input type="text" class="form-control" @bind="_conteneur.Destination" />
+                            </div>
+                             <div class="col-md-3">
+                                <label class="form-label">Pays</label>
+                                <input type="text" class="form-control" @bind="_conteneur.PaysDestination" />
+                            </div>
+                             <div class="col-md-3">
+                                <label class="form-label">Statut</label>
+                                <select class="form-select" @bind="_conteneur.Statut">
+                                     @foreach(var s in Enum.GetValues<StatutConteneur>()) {<option value="@s">@s</option>}
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Commentaires</label>
+                                <textarea class="form-control" rows="2" @bind="_conteneur.Commentaires"></textarea>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4"/>
+                        <h6 class="text-muted mb-3 text-uppercase small fw-bold">Dates Clés</h6>
+                        <div class="row g-3">
+                             <div class="col-md-2">
+                                <label class="form-label small">Réception</label>
+                                <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateReception" />
+                            </div>
+                             <div class="col-md-2">
+                                <label class="form-label small">Chargement</label>
+                                <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateChargement" />
+                            </div>
+                             <div class="col-md-2">
+                                <label class="form-label small">Départ</label>
+                                <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateDepart" />
+                            </div>
+                             <div class="col-md-2">
+                                <label class="form-label small">Arrivée</label>
+                                <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateArriveeDestination" />
+                            </div>
+                             <div class="col-md-2">
+                                <label class="form-label small">Clôture</label>
+                                <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateCloture" />
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <hr class="my-4"/>
-                <h6 class="text-muted mb-3 text-uppercase small fw-bold">Dates Clés</h6>
-                <div class="row g-3">
-                     <div class="col-md-2">
-                        <label class="form-label small">Réception</label>
-                        <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateReception" />
+
+                @if (!IsNew)
+                {
+                    <div class="row g-4">
+                        
+                        <!-- RÉCAPITULATIF PAR CLIENT -->
+                        <div class="col-lg-12">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-light fw-bold">Récapitulatif par Client</div>
+                                <div class="table-responsive" style="max-height: 300px;">
+                                    <table class="table table-hover mb-0 table-sm">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>Client</th>
+												<th>Téléphone</th>
+                                                <th class="text-center">Colis</th>
+                                                <th class="text-center">Véhicules</th>
+                                                <th class="text-end">Total</th>
+                                                <th class="text-end">Payé</th>
+                                                <th class="text-end">Restant</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var stat in _dto.StatsParClient)
+                                            {
+                                                <tr>
+                                                    <td class="fw-bold">@stat.NomClient</td>
+													<td class="small text-muted">@stat.Telephone</td>
+                                                    <td class="text-center">@stat.NombreColis</td>
+                                                    <td class="text-center">@stat.NombreVehicules</td>
+                                                    <td class="text-end">@stat.TotalPrix.ToString("C0")</td>
+                                                    <td class="text-end text-success">@stat.TotalPaye.ToString("C0")</td>
+                                                    <td class="text-end text-danger fw-bold">@stat.ResteAPayer.ToString("C0")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- GESTION COLIS -->
+                        <div class="col-lg-12">
+                            <div class="card shadow-sm border-primary">
+                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold"><i class="bi bi-box-seam me-2"></i>Colis Affectés (@_dto.Colis.Count)</span>
+                                    <button class="btn btn-sm btn-light text-primary fw-bold shadow-sm" @onclick="() => _showAddParcel = true">
+                                        ➕ Ajouter des Colis
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+										<thead class="table-light">
+											<tr>
+												<th>Réf</th>
+												<th>Client</th>
+												<th>Désignation</th>
+												<th>Destination</th>
+												<th class="text-end">Prix</th>
+												<th class="text-end">Payé</th>
+												<th class="text-end">Restant</th>
+												<th class="text-center">Statut</th>
+												<th class="text-end pe-3">Actions</th>
+											</tr>
+										</thead>
+										<tbody>
+											@foreach (var c in _dto.Colis)
+											{
+												<tr>
+													<td class="font-monospace text-primary">@c.NumeroReference</td>
+													<td>
+														<div class="fw-bold">@c.ClientNomComplet</div>
+														<small class="text-muted">@c.ClientTelephonePrincipal</small>
+													</td>
+													<td>@c.Designation</td>
+													<td>@c.DestinationFinale</td>
+													<td class="text-end fw-bold">@c.PrixTotal.ToString("C0")</td>
+													<td class="text-end text-success">@c.SommePayee.ToString("C0")</td>
+													
+													<td class="text-end">
+														 @if (c.RestantAPayer > 0)
+														 {
+															 <span class="text-danger fw-bold">@c.RestantAPayer.ToString("C0")</span>
+														 }
+														 else
+														 {
+															 <span class="text-success"><i class="bi bi-check-all"></i></span>
+														 }
+													</td>
+
+													<td class="text-center"><span class="badge bg-secondary">@c.Statut</span></td>																					
+                                                    <td class="text-end pe-3">
+                                                        <div class="d-flex justify-content-end gap-2">
+                                                            <a href="colis/edit/@c.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
+                                                                ✏️
+                                                            </a>
+                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignColis(c)" title="Retirer du conteneur">
+                                                                ❌
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+										@if (_dto.Colis.Any())
+										{
+											<tfoot class="bg-light fw-bold border-top">
+												<tr>
+													<td colspan="4" class="text-end text-secondary text-uppercase pe-3">Totaux Colis :</td>
+													<td class="text-end">@_dto.Colis.Sum(c => c.PrixTotal).ToString("C0")</td>
+													<td class="text-end text-success">@_dto.Colis.Sum(c => c.SommePayee).ToString("C0")</td>
+													<td class="text-end text-danger">@_dto.Colis.Sum(c => c.RestantAPayer).ToString("C0")</td>
+													<td colspan="2"></td>
+												</tr>
+											</tfoot>
+										}
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- GESTION VÉHICULES -->
+                        <div class="col-lg-12">
+                            <div class="card shadow-sm border-success">
+                                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold"><i class="bi bi-car-front-fill me-2"></i>Véhicules Affectés (@_dto.Vehicules.Count)</span>
+                                     <button class="btn btn-sm btn-light text-success fw-bold shadow-sm" @onclick="() => _showAddVehicle = true">
+                                        ➕ Ajouter des Véhicules
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Immatriculation</th>
+                                                <th>Client</th>
+                                                <th>Modèle</th>
+                                                <th>Destination</th>
+                                                <th class="text-end">Prix</th>
+                                                <th class="text-end">Payé</th>
+												<th class="text-end">Restant</th>
+                                                <th class="text-center">Statut</th>
+                                                <th class="text-end pe-3">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var v in _dto.Vehicules)
+                                            {
+                                                <tr>
+                                                    <td class="font-monospace text-success fw-bold">@v.Immatriculation</td>
+                                                    <td>
+                                                        <div class="fw-bold">@v.ClientNomComplet</div>
+                                                        <small class="text-muted">@v.ClientTelephonePrincipal</small>
+                                                    </td>
+                                                    <td>@v.Marque @v.Modele</td>
+                                                    <td>@v.DestinationFinale</td>
+                                                    <td class="text-end fw-bold">@v.PrixTotal.ToString("C0")</td>
+                                                    <td class="text-end text-success">@v.SommePayee.ToString("C0")</td>
+                                                    <td class="text-end">
+                                                         @if (v.RestantAPayer > 0)
+                                                         {
+                                                             <span class="text-danger fw-bold">@v.RestantAPayer.ToString("C0")</span>
+                                                         }
+                                                         else
+                                                         {
+                                                             <span class="text-success"><i class="bi bi-check-all"></i></span>
+                                                         }
+                                                    </td>                                            
+                                                    <td class="text-center"><span class="badge bg-secondary">@v.Statut</span></td>
+                                                    <td class="text-end pe-3">
+                                                        <div class="d-flex justify-content-end gap-2">
+                                                            <a href="vehicule/edit/@v.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
+                                                                ✏️
+                                                            </a>
+                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignVehicle(v)" title="Retirer du conteneur">
+                                                                ❌
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                        @if (_dto.Vehicules.Any())
+                                        {
+                                            <tfoot class="bg-light fw-bold border-top">
+                                                <tr>
+                                                    <td colspan="4" class="text-end text-secondary text-uppercase pe-3">Totaux Véhicules :</td>
+                                                    <td class="text-end">@_dto.Vehicules.Sum(v => v.PrixTotal).ToString("C0")</td>
+                                                    <td class="text-end text-success">@_dto.Vehicules.Sum(v => v.SommePayee).ToString("C0")</td>
+                                                    <td class="text-end text-danger">@_dto.Vehicules.Sum(v => v.RestantAPayer).ToString("C0")</td>
+                                                    <td colspan="2"></td>
+                                                </tr>
+                                            </tfoot>
+                                        }
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                     <div class="col-md-2">
-                        <label class="form-label small">Chargement</label>
-                        <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateChargement" />
-                    </div>
-                     <div class="col-md-2">
-                        <label class="form-label small">Départ</label>
-                        <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateDepart" />
-                    </div>
-                     <div class="col-md-2">
-                        <label class="form-label small">Arrivée</label>
-                        <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateArriveeDestination" />
-                    </div>
-                     <div class="col-md-2">
-                        <label class="form-label small">Clôture</label>
-                        <input type="date" class="form-control form-control-sm" @bind="_conteneur.DateCloture" />
-                    </div>
-                </div>
+                }
             </div>
+
+            <!-- ONGLET 2 : DOCUMENTS (Nouveau) -->
+            @if (!IsNew)
+            {
+                <div class="tab-pane fade @(_activeTab == "documents" ? "show active" : "")">
+                    <!-- On passe "Conteneur" comme type d'entité au DocumentManager -->
+                    <DocumentManager EntityId="@_conteneur.Id" EntityType="Conteneur" />
+                </div>
+            }
+
         </div>
-
-        @if (!IsNew)
-        {
-            <div class="row g-4">
-                
-                <!-- RÉCAPITULATIF PAR CLIENT -->
-                <div class="col-lg-12">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-light fw-bold">Récapitulatif par Client</div>
-                        <div class="table-responsive" style="max-height: 300px;">
-                            <table class="table table-hover mb-0 table-sm">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th>Client</th>
-										<th>Téléphone</th>
-                                        <th class="text-center">Colis</th>
-                                        <th class="text-center">Véhicules</th>
-                                        <th class="text-end">Total</th>
-                                        <th class="text-end">Payé</th>
-                                        <th class="text-end">Restant</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var stat in _dto.StatsParClient)
-                                    {
-                                        <tr>
-                                            <td class="fw-bold">@stat.NomClient</td>
-											<td class="small text-muted">@stat.Telephone</td>
-                                            <td class="text-center">@stat.NombreColis</td>
-                                            <td class="text-center">@stat.NombreVehicules</td>
-                                            <td class="text-end">@stat.TotalPrix.ToString("C0")</td>
-                                            <td class="text-end text-success">@stat.TotalPaye.ToString("C0")</td>
-                                            <td class="text-end text-danger fw-bold">@stat.ResteAPayer.ToString("C0")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- GESTION COLIS -->
-                <div class="col-lg-12">
-                    <div class="card shadow-sm border-primary">
-                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                            <span class="fw-bold"><i class="bi bi-box-seam me-2"></i>Colis Affectés (@_dto.Colis.Count)</span>
-                            <button class="btn btn-sm btn-light text-primary fw-bold shadow-sm" @onclick="() => _showAddParcel = true">
-                                ➕ Ajouter des Colis
-                            </button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-								<thead class="table-light">
-									<tr>
-										<th>Réf</th>
-										<th>Client</th>
-										<th>Désignation</th>
-										<th>Destination</th>
-										<th class="text-end">Prix</th>
-										<th class="text-end">Payé</th>
-										<th class="text-end">Restant</th>
-										<th class="text-center">Statut</th>
-										<th class="text-end pe-3">Actions</th>
-									</tr>
-								</thead>
-								<tbody>
-									@foreach (var c in _dto.Colis)
-									{
-										<tr>
-											<td class="font-monospace text-primary">@c.NumeroReference</td>
-											<td>
-												<!-- AJOUT TÉLÉPHONE -->
-												<div class="fw-bold">@c.ClientNomComplet</div>
-												<small class="text-muted">@c.ClientTelephonePrincipal</small>
-											</td>
-											<td>@c.Designation</td>
-											<td>@c.DestinationFinale</td>
-											<td class="text-end fw-bold">@c.PrixTotal.ToString("C0")</td>
-											<td class="text-end text-success">@c.SommePayee.ToString("C0")</td>
-											
-											<!-- AJOUT RESTANT -->
-											<td class="text-end">
-												 @if (c.RestantAPayer > 0)
-												 {
-													 <span class="text-danger fw-bold">@c.RestantAPayer.ToString("C0")</span>
-												 }
-												 else
-												 {
-													 <span class="text-success"><i class="bi bi-check-all"></i></span>
-												 }
-											</td>
-
-											<td class="text-center"><span class="badge bg-secondary">@c.Statut</span></td>																					
-                                            <td class="text-end pe-3">
-                                                <div class="d-flex justify-content-end gap-2">
-                                                    <a href="colis/edit/@c.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
-                                                        ✏️
-                                                    </a>
-                                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignColis(c)" title="Retirer du conteneur">
-                                                        ❌
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-								@if (_dto.Colis.Any())
-								{
-									<tfoot class="bg-light fw-bold border-top">
-										<tr>
-											<td colspan="4" class="text-end text-secondary text-uppercase pe-3">Totaux Colis :</td>
-											<td class="text-end">@_dto.Colis.Sum(c => c.PrixTotal).ToString("C0")</td>
-											<td class="text-end text-success">@_dto.Colis.Sum(c => c.SommePayee).ToString("C0")</td>
-											<td class="text-end text-danger">@_dto.Colis.Sum(c => c.RestantAPayer).ToString("C0")</td> <!-- AJOUT -->
-											<td colspan="2"></td>
-										</tr>
-									</tfoot>
-								}
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- GESTION VÉHICULES -->
-                <div class="col-lg-12">
-                    <div class="card shadow-sm border-success">
-                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                            <span class="fw-bold"><i class="bi bi-car-front-fill me-2"></i>Véhicules Affectés (@_dto.Vehicules.Count)</span>
-                             <button class="btn btn-sm btn-light text-success fw-bold shadow-sm" @onclick="() => _showAddVehicle = true">
-                                ➕ Ajouter des Véhicules
-                            </button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Immatriculation</th>
-                                        <th>Client</th>
-                                        <th>Modèle</th>
-                                        <th>Destination</th>
-                                        <th class="text-end">Prix</th>
-                                        <th class="text-end">Payé</th>
-										<th class="text-end">Restant</th>
-                                        <th class="text-center">Statut</th>
-                                        <th class="text-end pe-3">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var v in _dto.Vehicules)
-                                    {
-                                        <tr>
-                                            <td class="font-monospace text-success fw-bold">@v.Immatriculation</td>
-                                            <td>
-                                                <!-- CORRECTION : Utilisation de 'v' partout ici -->
-                                                <div class="fw-bold">@v.ClientNomComplet</div>
-                                                <small class="text-muted">@v.ClientTelephonePrincipal</small>
-                                            </td>
-                                            <td>@v.Marque @v.Modele</td>
-                                            <td>@v.DestinationFinale</td>
-                                            <td class="text-end fw-bold">@v.PrixTotal.ToString("C0")</td>
-                                            <td class="text-end text-success">@v.SommePayee.ToString("C0")</td>
-                                            <td class="text-end">
-                                                 <!-- CORRECTION : Utilisation de 'v' pour le reste à payer -->
-                                                 @if (v.RestantAPayer > 0)
-                                                 {
-                                                     <span class="text-danger fw-bold">@v.RestantAPayer.ToString("C0")</span>
-                                                 }
-                                                 else
-                                                 {
-                                                     <span class="text-success"><i class="bi bi-check-all"></i></span>
-                                                 }
-                                            </td>                                            
-                                            <td class="text-center"><span class="badge bg-secondary">@v.Statut</span></td>
-                                            <td class="text-end pe-3">
-                                                <div class="d-flex justify-content-end gap-2">
-                                                    <a href="vehicule/edit/@v.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
-                                                        ✏️
-                                                    </a>
-                                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignVehicle(v)" title="Retirer du conteneur">
-                                                        ❌
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                                @if (_dto.Vehicules.Any())
-                                {
-                                    <tfoot class="bg-light fw-bold border-top">
-                                        <tr>
-                                            <td colspan="4" class="text-end text-secondary text-uppercase pe-3">Totaux Véhicules :</td>
-                                            <td class="text-end">@_dto.Vehicules.Sum(v => v.PrixTotal).ToString("C0")</td>
-                                            <td class="text-end text-success">@_dto.Vehicules.Sum(v => v.SommePayee).ToString("C0")</td>
-                                            <!-- CORRECTION : Somme sur v.RestantAPayer -->
-                                            <td class="text-end text-danger">@_dto.Vehicules.Sum(v => v.RestantAPayer).ToString("C0")</td>
-                                            <td colspan="2"></td>
-                                        </tr>
-                                    </tfoot>
-                                }
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
     }
 
-    <!-- MODALES -->
+    <!-- MODALES (Inchangées) -->
     <ParcelSelector IsVisible="_showAddParcel" OnClose="() => _showAddParcel = false" OnSelectionConfirmed="AddParcels" />
     <VehicleSelector IsVisible="_showAddVehicle" OnClose="() => _showAddVehicle = false" OnSelectionConfirmed="AddVehicles" />
 
@@ -400,9 +424,6 @@
 @code {
     [Parameter] public Guid? Id { get; set; }
 
-    // Deux objets : 
-    // _dto pour l'affichage des listes et stats (Read-Only)
-    // _conteneur pour l'édition des infos générales (Read-Write)
     private ConteneurDetailDto _dto = new();
     private Conteneur _conteneur = new() { DateReception = DateTime.Now };
     
@@ -410,6 +431,13 @@
     private bool IsNew => Id == null;
     private bool _showAddParcel = false;
     private bool _showAddVehicle = false;
+    
+    // État des onglets
+    private string _activeTab = "infos";
+    
+    // État du menu export
+    private bool _isExportMenuOpen = false;
+    private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
 
     protected override async Task OnInitializedAsync()
     {
@@ -423,14 +451,9 @@
         var resultDto = await ApiService.GetConteneurDetailAsync(Id.Value);
         if (resultDto != null) _dto = resultDto;
 
-        // 2. Charger l'entité simple pour l'édition du formulaire (via l'endpoint GET standard)
-        // Note: Si vous n'avez pas GetById qui retourne l'entité simple sans Include lourds, 
-        // vous pouvez mapper manuellement depuis le DTO, mais c'est mieux de recharger l'entité propre.
-        // Je suppose ici que GetConteneurByIdAsync existe (créé à l'étape précédente pour la vue liste).
-        // Si non, mappez depuis le DTO.
+        // 2. Charger l'entité simple pour l'édition du formulaire
         try 
         {
-            // On mappe manuellement pour être sûr d'avoir un objet propre pour l'Update
             _conteneur = new Conteneur 
             {
                 Id = _dto.Id,
@@ -450,7 +473,7 @@
                 DateCloture = _dto.DateCloture
             };
         }
-        catch {} // Fallback
+        catch {} 
         
         _isLoading = false;
         StateHasChanged();
@@ -468,7 +491,6 @@
         else
         {
             await ApiService.UpdateConteneurAsync(_conteneur.Id, _conteneur);
-            // Rester sur la page et recharger
             await LoadData();
         }
     }
@@ -505,61 +527,37 @@
         }
     }
 	
-
-    private bool _isExportMenuOpen = false;
-
-    // 2. Méthode pour ouvrir/fermer
-    private void ToggleExportMenu()
-    {
-        _isExportMenuOpen = !_isExportMenuOpen;
-    }
-
-    // 3. Ta méthode ExportPdf modifiée pour fermer le menu au début
     private async Task ExportPdf(bool includeFinancials)
     {
-        // On ferme le menu immédiatement
         _isExportMenuOpen = false;
-        
-        Console.WriteLine("Step 1: [WEB VIEW] Clic sur le bouton Exporter (Menu Blazor).");
         _isLoading = true;
         StateHasChanged();
 
         try
         {
-			Console.WriteLine($"Step 2: [WEB VIEW] Appel du service ApiService.ExportConteneurPdfAsync pour ID: {_conteneur.Id}");
-			
 			var pdfData = await ApiService.ExportConteneurPdfAsync(_conteneur.Id, includeFinancials);
 			
-			Console.WriteLine($"Step 7: [WEB VIEW] Retour du service. Données reçues : {(pdfData != null ? pdfData.Length + " octets" : "NULL")}");
-
 			if (pdfData != null && pdfData.Length > 0)
 			{
-				// Nettoyage du nom
 				var safeDossier = _conteneur.NumeroDossier?
 					.Replace("/", "-")
 					.Replace("\\", "-") 
 					.Replace(":", "-") ?? "Inconnu";
 				
 				var fileName = $"Dossier_{safeDossier}_{(includeFinancials ? "Complet" : "Manifeste")}.pdf";
-				Console.WriteLine($"Step 8: [WEB VIEW] Nom du fichier généré : {fileName}");
 
 				using var stream = new MemoryStream(pdfData);
 				using var streamRef = new DotNetStreamReference(stream);
 				
-				Console.WriteLine("Step 9: [WEB VIEW] Appel JavaScript 'downloadFileFromStream'...");
 				await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
-				Console.WriteLine("Step 10: [WEB VIEW] Appel JavaScript terminé.");
 			}
 			else
 			{
-				Console.WriteLine("Step 7b: [WEB VIEW] ERREUR : Le tableau d'octets reçu est vide ou null.");
 				await JSRuntime.InvokeVoidAsync("alert", "Erreur : Le fichier reçu est vide.");
 			}
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"Step ERROR [WEB VIEW]: Exception attrapée dans la vue : {ex.Message}");
-			Console.WriteLine($"StackTrace : {ex.StackTrace}");
 			await JSRuntime.InvokeVoidAsync("alert", $"Exception Vue : {ex.Message}");
 		}
 		finally
@@ -568,5 +566,4 @@
 			StateHasChanged();
 		}
 	}
-	
 }

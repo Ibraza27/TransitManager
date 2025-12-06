@@ -136,6 +136,9 @@ namespace TransitManager.Core.Entities
         public virtual Client? Client { get; set; }
         public virtual Conteneur? Conteneur { get; set; }
 		
+
+		public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
+		
 		public virtual ICollection<Paiement> Paiements { get; set; } = new List<Paiement>();
 
         // public decimal Volume => (Longueur * Largeur * Hauteur) / 1000000m; // MODIFIÉ (devient une propriété normale)

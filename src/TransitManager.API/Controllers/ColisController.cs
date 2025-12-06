@@ -26,27 +26,29 @@ namespace TransitManager.API.Controllers
 			_logger = logger;
 		}
 
-		// Ajoutez cette nouvelle méthode
-		// GET: api/colis/{id}/export/pdf?includeFinancials=true
-		[HttpGet("{id}/export/pdf")]
-		public async Task<IActionResult> ExportPdf(Guid id, [FromQuery] bool includeFinancials = false)
-		{
-			try
-			{
-				var colis = await _colisService.GetByIdAsync(id);
-				if (colis == null) return NotFound("Colis introuvable");
 
-				var pdfData = await _exportService.GenerateColisPdfAsync(colis, includeFinancials);
-				
-				var safeName = colis.NumeroReference.Replace("/", "-");
-				return File(pdfData, "application/pdf", $"Colis_{safeName}.pdf");
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "Erreur export colis");
-				return StatusCode(500, "Erreur lors de la génération du PDF");
-			}
-		}
+		// GET: api/colis/{id}/export/pdf?includeFinancials=true&includePhotos=true
+        [HttpGet("{id}/export/pdf")]
+        public async Task<IActionResult> ExportPdf(Guid id, [FromQuery] bool includeFinancials = false, [FromQuery] bool includePhotos = false)
+        {
+            try
+            {
+                // Le service GetByIdAsync inclut maintenant les Documents
+                var colis = await _colisService.GetByIdAsync(id);
+                if (colis == null) return NotFound();
+
+                // On passe le nouveau paramètre
+                var pdfData = await _exportService.GenerateColisPdfAsync(colis, includeFinancials, includePhotos);
+                
+                var safeName = colis.NumeroReference.Replace("/", "-");
+                return File(pdfData, "application/pdf", $"Colis_{safeName}.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur export colis");
+                return StatusCode(500, "Erreur lors de la génération du PDF");
+            }
+        }
 		
         // PUT: api/colis/inventaire
         [HttpPut("inventaire")]

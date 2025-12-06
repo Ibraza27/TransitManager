@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransitManager.Core.Entities;
+
 namespace TransitManager.Infrastructure.Data.Configurations
 {
     /// <summary>
@@ -65,30 +66,37 @@ namespace TransitManager.Infrastructure.Data.Configurations
                 .WithMany()
                 .HasForeignKey(d => d.ClientId)
                 .OnDelete(DeleteBehavior.SetNull);
+
             builder.HasOne(d => d.Colis)
-                .WithMany()
+                .WithMany(c => c.Documents) // IMPORTANT : Doit matcher la propriété dans Colis.cs
                 .HasForeignKey(d => d.ColisId)
                 .OnDelete(DeleteBehavior.SetNull);
+
             builder.HasOne(d => d.Conteneur)
                 .WithMany()
                 .HasForeignKey(d => d.ConteneurId)
                 .OnDelete(DeleteBehavior.SetNull);
+
             builder.HasOne(d => d.Paiement)
                 .WithMany()
                 .HasForeignKey(d => d.PaiementId)
                 .OnDelete(DeleteBehavior.SetNull);
+
             builder.HasOne(d => d.DocumentParent)
                 .WithMany()
                 .HasForeignKey(d => d.DocumentParentId)
                 .OnDelete(DeleteBehavior.SetNull);
+
             builder.HasOne(d => d.Vehicule)
                 .WithMany(v => v.Documents)
                 .HasForeignKey(d => d.VehiculeId)
                 .OnDelete(DeleteBehavior.SetNull);
+
             // Propriétés calculées (ignorées par EF)
             builder.Ignore(d => d.NomComplet);
             builder.Ignore(d => d.TailleFormatee);
             builder.Ignore(d => d.EstExpire);
+
             // Valeurs par défaut
             builder.Property(d => d.DateCreation)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
@@ -98,6 +106,7 @@ namespace TransitManager.Infrastructure.Data.Configurations
                 .HasDefaultValue(false);
             builder.Property(d => d.EstArchive)
                 .HasDefaultValue(false);
+
             // Concurrence optimiste
             builder.Property(d => d.RowVersion)
                 .IsRowVersion();

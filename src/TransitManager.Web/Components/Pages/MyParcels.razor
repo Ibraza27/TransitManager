@@ -239,7 +239,7 @@
         get => _selectedContainer;
         set { _selectedContainer = value; StateHasChanged(); }
     }
-    private IEnumerable<ColisListItemDto> FilteredParcels
+	private IEnumerable<ColisListItemDto> FilteredParcels
     {
         get
         {
@@ -252,8 +252,9 @@
                     (c.Designation?.ToLower().Contains(lowerTerm) ?? false) ||
                     (c.DestinationFinale?.ToLower().Contains(lowerTerm) ?? false) ||
                     (c.NumeroReference?.ToLower().Contains(lowerTerm) ?? false) ||
-                    // AJOUT DU FILTRE SUR LE NOM DU CLIENT
-                    (c.ClientNomComplet?.ToLower().Contains(lowerTerm) ?? false)
+                    (c.ClientNomComplet?.ToLower().Contains(lowerTerm) ?? false) ||
+                    // --- AJOUT ICI ---
+                    (c.ClientTelephonePrincipal?.Contains(lowerTerm) ?? false)
                 );
             }
             if (SelectedStatus.HasValue)

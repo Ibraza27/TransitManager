@@ -642,9 +642,11 @@ namespace TransitManager.Web.Services
 			}
 		}
 		
-		public async Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials)
+
+		public async Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials, bool includePhotos)
 		{
-			var url = $"api/colis/{id}/export/pdf?includeFinancials={includeFinancials}";
+			// On ajoute le paramètre includePhotos à l'URL
+			var url = $"api/colis/{id}/export/pdf?includeFinancials={includeFinancials}&includePhotos={includePhotos}";
 			try
 			{
 				var response = await _httpClient.GetAsync(url);
@@ -656,7 +658,7 @@ namespace TransitManager.Web.Services
 				return Array.Empty<byte>();
 			}
 		}
-		
+				
 		// Ajoutez ces méthodes dans la classe ApiService
 
 		public async Task<IEnumerable<Document>> GetDocumentsByEntityAsync(string entityType, Guid entityId)

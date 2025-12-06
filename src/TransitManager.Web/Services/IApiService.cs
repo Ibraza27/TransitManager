@@ -72,7 +72,6 @@ namespace TransitManager.Web.Services
 		Task<PortalAccessResult> CreateOrResetPortalAccessAsync(Guid clientId);
 		Task<bool> RegisterClientAsync(RegisterClientRequestDto request);
 		Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials);
-		Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials);
 
 		// Ajoutez ces signatures dans l'interface IApiService
 		Task<IEnumerable<Document>> GetDocumentsByEntityAsync(string entityType, Guid entityId);
@@ -81,6 +80,7 @@ namespace TransitManager.Web.Services
 		Task<bool> DeleteDocumentAsync(Guid id);
 		
 		Task<byte[]> ExportVehiculePdfAsync(Guid id, bool includeFinancials, bool includePhotos);
+		Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials, bool includePhotos);
 				
     }
 }

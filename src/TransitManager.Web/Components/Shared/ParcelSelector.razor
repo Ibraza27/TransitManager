@@ -129,12 +129,17 @@
         }
     }
 
-    private IEnumerable<SelectableItem<ColisListItemDto>> FilteredItems =>
+	private IEnumerable<SelectableItem<ColisListItemDto>> FilteredItems =>
         string.IsNullOrWhiteSpace(SearchTerm) 
         ? _items 
-        : _items.Where(x => x.Data.ClientNomComplet.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) || 
-                            x.Data.NumeroReference.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
-                            x.Data.DestinationFinale.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase));
+        : _items.Where(x => 
+            x.Data.ClientNomComplet.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) || 
+            x.Data.NumeroReference.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            x.Data.DestinationFinale.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            // --- AJOUTS ICI ---
+            (x.Data.ClientTelephonePrincipal != null && x.Data.ClientTelephonePrincipal.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase)) ||
+            (x.Data.AllBarcodes != null && x.Data.AllBarcodes.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+        );
 
     private void ToggleAll(ChangeEventArgs e)
     {

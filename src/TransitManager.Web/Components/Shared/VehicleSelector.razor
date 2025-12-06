@@ -122,12 +122,16 @@
         }
     }
 
-    private IEnumerable<SelectableItem<VehiculeListItemDto>> FilteredItems =>
+	private IEnumerable<SelectableItem<VehiculeListItemDto>> FilteredItems =>
         string.IsNullOrWhiteSpace(SearchTerm) 
         ? _items 
-        : _items.Where(x => x.Data.Immatriculation.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) || 
-                            x.Data.ClientNomComplet.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
-                            x.Data.Marque.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase));
+        : _items.Where(x => 
+            x.Data.Immatriculation.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) || 
+            x.Data.ClientNomComplet.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            x.Data.Marque.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            // --- AJOUT ICI ---
+            (x.Data.ClientTelephonePrincipal != null && x.Data.ClientTelephonePrincipal.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+        );
 
     private void ToggleAll(ChangeEventArgs e)
     {

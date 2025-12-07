@@ -193,5 +193,27 @@ namespace TransitManager.API.Controllers
             }
         }		
 		
+		// GET: api/vehicules/{id}/export/attestation
+		[HttpGet("{id}/export/attestation")]
+		public async Task<IActionResult> ExportAttestation(Guid id)
+		{
+			try
+			{
+				// On récupère le véhicule avec les infos client
+				var vehicule = await _vehiculeService.GetByIdAsync(id);
+				if (vehicule == null) return NotFound();
+
+				var pdfData = await _exportService.GenerateAttestationValeurPdfAsync(vehicule);
+				
+				var safeImmat = vehicule.Immatriculation.Replace(" ", "_");
+				return File(pdfData, "application/pdf", $"Attestation_Valeur_{safeImmat}.pdf");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Erreur export attestation");
+				return StatusCode(500, "Erreur interne");
+			}
+		}
+		
     }
 }

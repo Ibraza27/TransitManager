@@ -45,6 +45,13 @@
                             📸 Dossier Complet (+ Photos)
                         </button>
                     </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <!-- NOUVELLE OPTION -->
+                        <button class="dropdown-item" @onclick="ExportAttestation">
+                            ⚖️ Attestation de Valeur
+                        </button>
+                    </li>
                 </ul>
                 @if (_isExportMenuOpen)
                 {
@@ -451,4 +458,41 @@
         StatutVehicule.Probleme => "bg-danger",
         _ => "bg-info text-dark"
     };
+	
+	private async Task ExportAttestation()
+    {
+        _isExportMenuOpen = false;
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var pdfData = await ApiService.ExportAttestationValeurPdfAsync(_vehicule.Id);
+
+            if (pdfData != null && pdfData.Length > 0)
+            {
+                var safeImmat = _vehicule.Immatriculation.Replace(" ", "_");
+                var fileName = $"Attestation_Valeur_{safeImmat}.pdf";
+
+                using var stream = new MemoryStream(pdfData);
+                using var streamRef = new DotNetStreamReference(stream);
+
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Erreur: Fichier vide reçu.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+	
 }

@@ -1583,6 +1583,42 @@ namespace TransitManager.Infrastructure.Services
                         {
                             column.Item().Text($"Autres observations : {accessoires.AutresObservations}").FontSize(9).Italic();
                         }
+
+                        // --- AJOUT : SECTION DÉCLARATION ET RESPONSABILITÉ ---
+                        column.Item().PaddingTop(15).Background(Colors.Grey.Lighten5).Padding(10).Column(c =>
+                        {
+                            // Valeur du véhicule
+                            c.Item().Row(r => 
+                            {
+                                r.RelativeItem().Text("Valeur du véhicule en euros :").Bold().FontSize(10);
+                                
+                                // --- MODIFICATION : Affichage conditionnel ---
+                                if (vehicule.ValeurDeclaree > 0)
+                                {
+                                    // Si une valeur est saisie, on l'affiche avec le sigle €
+                                    r.RelativeItem().Text($"{vehicule.ValeurDeclaree:N0} €").AlignRight().FontSize(10).Bold();
+                                }
+                                else
+                                {
+                                    // Sinon, on affiche les pointillés pour remplissage manuel
+                                    r.RelativeItem().Text("........................................").AlignRight().FontSize(10);
+                                }
+                            });
+
+                            c.Item().PaddingTop(10).Text("Je certifie que mes effets personnels m'appartiennent").Bold().FontSize(10);
+
+                            c.Item().PaddingTop(5).Text(text =>
+                            {
+                                text.DefaultTextStyle(x => x.FontSize(8)); // Texte légal un peu plus petit
+                                text.Span("Important : ").Bold();
+                                text.Span("en tant que responsable du chargement de mes effets personnels dans le conteneur et/ou véhicule, je certifie l'exactitude de ma liste et que mes colis ne contiennent aucun produit dangereux au sens du code IMDG qui peut comprendre des produits tels que : ");
+                                text.Span("ARTICLES EXPLOSIFS, GAZ COMPRIMÉ, RECHARGE DE GAZ, AÉROSOLS, PRODUITS CORROSIFS, PRODUITS TOXIQUES OU MATIÈRES RADIOACTIVES.").Bold();
+                            });
+
+                            c.Item().PaddingTop(2).Text("La non observation de cette règle de sécurité engagera ma responsabilité civile et pénale en cas de litige.").FontSize(8);
+                            c.Item().PaddingTop(2).Text("L'entreprise ne peut pas être tenue responsable en cas de dommage causé par la surcharge de votre véhicule.").FontSize(8);
+                        });
+						
                         // D. SIGNATURES
                         column.Item().PaddingTop(10).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Row(row =>
                         {
@@ -1775,6 +1811,161 @@ namespace TransitManager.Infrastructure.Services
                 return Array.Empty<byte>();
             }
         }
+		
+		public async Task<byte[]> GenerateAttestationValeurPdfAsync(Vehicule vehicule)
+		{
+			return await Task.Run(() =>
+			{
+				var logoPath = Path.Combine(AppContext.BaseDirectory, "Resources", "logo.jpg");
+
+				var document = QuestPDF.Fluent.Document.Create(container =>
+				{
+					container.Page(page =>
+					{
+						page.Size(PageSizes.A4);
+						page.Margin(2, Unit.Centimetre);
+						page.PageColor(Colors.White);
+						page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
+
+						page.Header().Element(ComposeHeader);
+						page.Content().Element(ComposeContent);
+					});
+				});
+
+				return document.GeneratePdf();
+
+				void ComposeHeader(IContainer container)
+				{
+					container.Column(column =>
+					{
+						if (File.Exists(logoPath))
+						{
+							try { column.Item().Height(60).AlignLeft().Image(logoPath).FitHeight(); } catch { }
+						}
+						column.Item().Text("HIPPOCAMPE IMPORT-EXPORT").Bold().FontSize(10).FontColor(Colors.Blue.Darken2);
+					});
+				}
+
+				void ComposeContent(IContainer container)
+				{
+					// On réduit le padding vertical global pour gagner de la place
+					container.PaddingVertical(10).Column(column =>
+					{
+						// TITRE
+						column.Item().AlignCenter().Text("ATTESTATION DE VALEUR").FontSize(18).Bold().Underline();
+						column.Item().AlignCenter().Text($"({vehicule.Type})").FontSize(14);
+						
+						column.Item().Height(20); // Espace réduit
+
+						// DÉCLARATION
+						column.Item().Text(text =>
+						{
+							text.Span("Je soussigné ");
+							text.Span($"{vehicule.Client?.NomComplet}").Bold();
+							text.Span($" déclare vouloir expédier à {vehicule.DestinationFinale} mon véhicule personnel décrit ci-dessous :");
+						});
+
+						column.Item().Height(15);
+
+						column.Item().Text("Je certifie les informations suivantes :").Underline().Bold();
+						
+						column.Item().Height(10);
+
+						// TABLEAU 1 : INFOS VÉHICULE
+						column.Item().Table(table =>
+						{
+							table.ColumnsDefinition(columns =>
+							{
+								columns.ConstantColumn(150);
+								columns.RelativeColumn();
+							});
+
+							static IContainer CellStyle(IContainer c) => c.Border(1).BorderColor(Colors.Black).Padding(5);
+							
+							void AddRow(string label, string value)
+							{
+								table.Cell().Element(CellStyle).Text(label).Bold();
+								table.Cell().Element(CellStyle).Text(value);
+							}
+
+							AddRow("Marque :", vehicule.Marque);
+							AddRow("Modèle :", vehicule.Modele);
+							AddRow("Immatriculation :", vehicule.Immatriculation);
+							AddRow("Valeur :", $"{vehicule.ValeurDeclaree:N0} €");
+							AddRow("N° de téléphone :", vehicule.Client?.TelephonePrincipal ?? "");
+							AddRow("Adresse mail :", vehicule.Client?.Email ?? "");
+						});
+
+						column.Item().Height(15);
+
+						// TABLEAU 2 : ADRESSE UNIQUE (Fusionnée)
+						column.Item().Table(table =>
+						{
+							table.ColumnsDefinition(columns =>
+							{
+								columns.ConstantColumn(150);
+								columns.RelativeColumn();
+							});
+							
+							static IContainer CellStyle(IContainer c) => c.Border(1).BorderColor(Colors.Black).Padding(5).AlignMiddle();
+
+							// Construction de l'adresse complète
+							string adresseComplete = vehicule.Client?.AdressePrincipale ?? "";
+							if (!string.IsNullOrEmpty(vehicule.Client?.CodePostal) || !string.IsNullOrEmpty(vehicule.Client?.Ville))
+							{
+								adresseComplete += $", {vehicule.Client?.CodePostal} {vehicule.Client?.Ville}";
+							}
+							if (!string.IsNullOrEmpty(vehicule.Client?.Pays))
+							{
+								adresseComplete += $", {vehicule.Client?.Pays}";
+							}
+
+							// Une seule ligne "Adresse :"
+							table.Cell().Element(CellStyle).Height(40).Text("Adresse :");
+							table.Cell().Element(CellStyle).Text(adresseComplete);
+						});
+
+						column.Item().Height(15);
+
+						// DOCUMENTS À JOINDRE
+						column.Item().Text("Documents à joindre :").Bold().Underline();
+						column.Item().Text("- copie carte grise");
+						column.Item().Text("- copie du certificat de cession (si la carte grise n'est pas au nom de l'acheteur)");
+						column.Item().Text("- certificat de non-gage");
+						column.Item().Text("- Facture d'achat (si achat dans un concessionnaire ou dans un garage)");
+						column.Item().Text("- copie de la pièce d'identité de l'acheteur");
+
+						column.Item().Height(25);
+
+						// PIED DE PAGE
+						column.Item().AlignCenter().Text("Attestation fait pour servir et valoir ce que de droit");
+
+						column.Item().Height(25);
+
+						// DATE ET SIGNATURE
+						// Lieu et Date sur la même ligne
+						string lieu = !string.IsNullOrEmpty(vehicule.LieuEtatDesLieux) ? vehicule.LieuEtatDesLieux : "Bordeaux";
+						string date = vehicule.DateEtatDesLieux.HasValue ? vehicule.DateEtatDesLieux.Value.ToString("dd/MM/yyyy") : DateTime.Now.ToString("dd/MM/yyyy");
+
+						column.Item().Text($"Fait à {lieu}, le {date}");
+						
+						column.Item().PaddingTop(5).Text("Signature :");
+						
+						// Insertion de la signature client
+						if (!string.IsNullOrEmpty(vehicule.SignatureClient))
+						{
+							try
+							{
+								var bytes = Convert.FromBase64String(vehicule.SignatureClient.Split(',')[1]);
+								// Syntaxe corrigée ici aussi
+								column.Item().Height(50).AlignLeft().Image(bytes).FitHeight();
+							}
+							catch { }
+						}
+					});
+				}
+			});
+		}				
 		
     }
 }

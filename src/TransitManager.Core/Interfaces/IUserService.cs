@@ -18,5 +18,6 @@ namespace TransitManager.Core.Interfaces
         Task<IEnumerable<Client>> GetUnlinkedClientsAsync();
 		Task<bool> UnlockAccountAsync(Guid id);
 		Task<bool> ChangePasswordManualAsync(Guid id, string newPassword);
+		Task<int> DeleteUnconfirmedAccountsAsync(int hoursOld);
     }
 }

@@ -11,5 +11,6 @@ namespace TransitManager.Core.Entities
         
         // --- AJOUT ---
         public DateTime? LockoutEnd { get; set; }
+		public bool IsEmailUnconfirmed { get; set; }
     }
 }

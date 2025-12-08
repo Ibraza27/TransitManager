@@ -82,6 +82,9 @@ namespace TransitManager.Web.Services
 		Task<byte[]> ExportVehiculePdfAsync(Guid id, bool includeFinancials, bool includePhotos);
 		Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials, bool includePhotos);
 		Task<byte[]> ExportAttestationValeurPdfAsync(Guid id);
+        Task<bool> ForgotPasswordAsync(string email);
+        Task<bool> ResetPasswordAsync(ResetPasswordDto request);
+        Task<bool> VerifyEmailAsync(VerifyEmailDto request);
 				
     }
 }

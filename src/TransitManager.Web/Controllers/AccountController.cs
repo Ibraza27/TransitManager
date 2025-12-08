@@ -18,7 +18,7 @@ namespace TransitManager.Web.Controllers
             _httpClientFactory = httpClientFactory;
         }
 
-        [HttpPost("/account/login")]
+		[HttpPost("/account/login")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login([FromForm] LoginRequestDto model)
         {
@@ -26,76 +26,84 @@ namespace TransitManager.Web.Controllers
             
             if (!ModelState.IsValid)
             {
-                Console.WriteLine("🛂 [AccountController] ❌ ModelState invalide.");
-                // Idéalement, retourner à la page de login avec un message d'erreur.
-                // Pour l'instant, une redirection simple suffit.
                 return Redirect("/login?error=invalid_input");
             }
 
             try
             {
-                // Utiliser HttpClientFactory pour obtenir un client configuré
                 var apiClient = _httpClientFactory.CreateClient("API");
-
-                Console.WriteLine($"🛂 [AccountController] ➡️ Envoi de la requête de login à l'API pour {model.Email}...");
                 var response = await apiClient.PostAsJsonAsync("api/auth/login-with-cookie", model);
-                Console.WriteLine($"🛂 [AccountController] ⬅️ Réponse de l'API reçue : {response.StatusCode}");
-
-                // TRÈS IMPORTANT : Transférer l'en-tête "Set-Cookie"
+                
+                // Transfert des cookies (Auth ou autres)
                 if (response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders))
                 {
-                    Console.WriteLine("🛂 [AccountController] ✅ En-tête 'Set-Cookie' trouvé ! Transfert à la réponse du navigateur...");
-                    // On attache le cookie à la réponse que CE contrôleur envoie au navigateur de l'utilisateur.
                     Response.Headers["Set-Cookie"] = setCookieHeaders.ToArray();
-                    Console.WriteLine("🛂 [AccountController] ✅ Cookie transféré avec succès.");
-                }
-                else
-                {
-                    Console.WriteLine("🛂 [AccountController] ⚠️ Aucun en-tête 'Set-Cookie' trouvé dans la réponse de l'API.");
                 }
 
                 if (response.IsSuccessStatusCode)
                 {
-                    // La connexion a réussi, on redirige l'utilisateur vers la page d'accueil.
-                    // Le navigateur va recevoir cette redirection ET le cookie à sauvegarder.
-                    Console.WriteLine("🛂 [AccountController] ✅ Connexion API réussie. Redirection vers l'accueil...");
+                    Console.WriteLine("🛂 [AccountController] ✅ Succès. Redirection Accueil.");
                     return Redirect("/");
                 }
                 else
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"🛂 [AccountController] ❌ Échec : {errorContent}");
-                    
+                    Console.WriteLine($"🛂 [AccountController] ⚠️ API Erreur: {response.StatusCode}");
+
+                    // URL par défaut
                     string redirectUrl = "/login?error=auth_failed";
 
-                    // Tentative de lecture du JSON pour voir s'il y a un lockout
-                    try 
+                    // Gestion 403 : Email non confirmé
+                    if (response.StatusCode == System.Net.HttpStatusCode.Forbidden) 
                     {
-                        using var doc = System.Text.Json.JsonDocument.Parse(errorContent);
-                        if (doc.RootElement.TryGetProperty("lockoutEnd", out var lockElem) && lockElem.GetString() != null)
-                        {
-                            var lockoutTime = lockElem.GetString();
-                            redirectUrl = $"/login?error=locked&until={System.Net.WebUtility.UrlEncode(lockoutTime)}";
-                        }
-                        else if(doc.RootElement.TryGetProperty("message", out var msgElem))
-                        {
-                             // On pourrait passer le message custom, mais auth_failed suffit souvent
-                        }
+                        // CORRECTION : Utilisation de Uri.EscapeDataString pour éviter les caractères invalides
+                        var safeEmail = Uri.EscapeDataString(model.Email ?? "");
+                        redirectUrl = $"/login?error=unconfirmed&email={safeEmail}";
                     }
-                    catch {}
+                    else
+                    {
+                        // Gestion Lockout (Json Parsing sécurisé)
+                        try 
+                        {
+                            using var doc = System.Text.Json.JsonDocument.Parse(errorContent);
+                            if (doc.RootElement.TryGetProperty("lockoutEnd", out var lockElem) && lockElem.GetString() != null)
+                            {
+                                var safeLockout = Uri.EscapeDataString(lockElem.GetString()!);
+                                redirectUrl = $"/login?error=locked&until={safeLockout}";
+                            }
+                        }
+                        catch { /* Ignorer les erreurs de parsing JSON */ }
+                    }
 
+                    Console.WriteLine($"🛂 [AccountController] ↪️ Redirection vers : {redirectUrl}");
                     return Redirect(redirectUrl);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"🛂 [AccountController] 💥 Erreur fatale lors du login : {ex.Message}");
+                Console.WriteLine($"🛂 [AccountController] 💥 Exception : {ex.Message}");
                 return Redirect("/login?error=server_error");
             }
             finally
             {
                  Console.WriteLine("🛂 [AccountController] === FIN Login POST ===");
             }
+        }
+
+
+		[HttpPost("/account/resend-confirmation")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResendConfirmation([FromForm] string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return Redirect("/login");
+
+            var apiClient = _httpClientFactory.CreateClient("API");
+            
+            // CORRECTION : Envoi d'un objet JSON structuré
+            var request = new { Email = email };
+            await apiClient.PostAsJsonAsync("api/auth/resend-confirmation", request);
+
+            return Redirect("/login?resend=success");
         }
 
         [HttpPost("/account/logout")]

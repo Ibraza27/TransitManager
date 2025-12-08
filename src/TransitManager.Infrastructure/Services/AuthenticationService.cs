@@ -9,18 +9,26 @@ using TransitManager.Infrastructure.Data;
 using BCryptNet = BCrypt.Net.BCrypt;
 using TransitManager.Core.Enums;
 using TransitManager.Core.DTOs;
+using Microsoft.Extensions.Configuration;
 
 namespace TransitManager.Infrastructure.Services
 {
     public class AuthenticationService : IAuthenticationService
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
+        private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
         private Utilisateur? _currentUser;
         public Utilisateur? CurrentUser => _currentUser;
 
-        public AuthenticationService(IDbContextFactory<TransitContext> contextFactory)
+        public AuthenticationService(
+            IDbContextFactory<TransitContext> contextFactory,
+            IEmailService emailService,
+            IConfiguration configuration)
         {
             _contextFactory = contextFactory;
+            _emailService = emailService;
+            _configuration = configuration;
         }
 
         public async Task<AuthenticationResult> LoginAsync(string identifier, string password)
@@ -48,19 +56,31 @@ namespace TransitManager.Infrastructure.Services
                     return new AuthenticationResult { Success = false, ErrorMessage = "Identifiant ou mot de passe incorrect (Utilisateur Inconnu)." };
                 }
                 Console.WriteLine($"[4] SUCCÈS : Utilisateur trouvé. ID : {user.Id}, Nom : {user.NomComplet}");
+				
+                bool isStaff = user.Role == RoleUtilisateur.Administrateur || user.Role == RoleUtilisateur.Gestionnaire;
 
+                if (!user.EmailConfirme && !isStaff)
+                {
+                    Console.WriteLine($"[5b] ÉCHEC : L'email {user.Email} n'est pas encore confirmé.");
+                    return new AuthenticationResult 
+                    { 
+                        Success = false, 
+                        ErrorMessage = "Email non confirmé.", // Message court pour le code
+                        IsEmailUnconfirmed = true // <--- IMPORTANT
+                    };
+                }
+				
                 if (user.EstVerrouille)
                 {
                     Console.WriteLine("[5] ÉCHEC : Le compte est verrouillé.");
                     // MODIFICATION ICI : On renvoie la date de fin
-                    return new AuthenticationResult 
-                    { 
-                        Success = false, 
+                    return new AuthenticationResult
+                    {
+                        Success = false,
                         ErrorMessage = "Votre compte est temporairement verrouillé.",
-                        LockoutEnd = user.DateVerrouillage 
+                        LockoutEnd = user.DateVerrouillage
                     };
                 }
-
                 Console.WriteLine("[5] Compte non verrouillé. Vérification du mot de passe...");
                 bool isPasswordValid = BCryptNet.Verify(password, user.MotDePasseHash);
                 if (!isPasswordValid)
@@ -169,16 +189,13 @@ namespace TransitManager.Infrastructure.Services
             }
             // Chercher un utilisateur déjà lié à ce client
             var user = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == clientId);
-
             string temporaryPassword = GenerateTemporaryPassword();
             string passwordHash = BCryptNet.HashPassword(temporaryPassword);
             if (user == null)
             {
                 // --- Création de l'utilisateur ---
                 Console.WriteLine("🔑 [AuthService] ℹ️ Aucun utilisateur existant. Création d'un nouveau compte client.");
-
                 string username = await GenerateUniqueUsernameAsync(client.Prenom, client.Nom, context);
-
                 user = new Utilisateur
                 {
                     NomUtilisateur = username,
@@ -191,7 +208,6 @@ namespace TransitManager.Infrastructure.Services
                     ClientId = client.Id,
                     Actif = true
                 };
-
                 context.Utilisateurs.Add(user);
                 Console.WriteLine($"🔑 [AuthService] ✅ Nouvel utilisateur créé. Nom d'utilisateur: {username}");
             }
@@ -259,11 +275,11 @@ namespace TransitManager.Infrastructure.Services
             }
             return sb.ToString();
         }
-		
-		public async Task<AuthenticationResult> RegisterClientAsync(RegisterClientRequestDto request)
+
+        public async Task<AuthenticationResult> RegisterClientAsync(RegisterClientRequestDto request)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            
+
             // 1. Vérification unicité Email
             var emailExists = await context.Utilisateurs.AnyAsync(u => u.Email.ToLower() == request.Email.ToLower());
             if (emailExists)
@@ -290,11 +306,13 @@ namespace TransitManager.Infrastructure.Services
                     Actif = true,
                     DateInscription = DateTime.UtcNow
                 };
-                
+
                 context.Clients.Add(client);
                 await context.SaveChangesAsync(); // Pour générer l'ID du client
 
                 // B. Création de l'Utilisateur lié
+                var token = Guid.NewGuid().ToString();
+
                 var user = new Utilisateur
                 {
                     NomUtilisateur = request.Email, // On utilise l'email comme login
@@ -306,7 +324,10 @@ namespace TransitManager.Infrastructure.Services
                     Role = RoleUtilisateur.Client,
                     ClientId = client.Id, // Liaison automatique
                     Actif = true,
-                    DateCreation = DateTime.UtcNow
+                    DateCreation = DateTime.UtcNow,
+                    EmailConfirme = false, // Par défaut
+                    TokenVerificationEmail = token,
+                    DateExpirationTokenEmail = DateTime.UtcNow.AddDays(1)
                 };
 
                 context.Utilisateurs.Add(user);
@@ -314,7 +335,24 @@ namespace TransitManager.Infrastructure.Services
 
                 await transaction.CommitAsync();
 
-                return new AuthenticationResult { Success = true, User = user };
+                // ENVOI EMAIL CONFIRMATION
+				string baseUrl = _configuration["ClientAppUrl"] ?? "https://localhost:7207";
+				
+				// CORRECTION : Utiliser Uri.EscapeDataString qui est plus strict que UrlEncode
+				string encodedToken = Uri.EscapeDataString(user.TokenVerificationEmail);
+				string encodedEmail = Uri.EscapeDataString(request.Email);
+				
+				string verifyLink = $"{baseUrl}/verify-email?email={encodedEmail}&token={encodedToken}";
+
+                string message = $@"
+                    <h3>Bienvenue sur TransitManager !</h3>
+                    <p>Merci de confirmer votre adresse email en cliquant ici :</p>
+                    <a href='{verifyLink}'>Confirmer mon compte</a>";
+
+                // On lance l'envoi sans attendre pour ne pas bloquer l'UI (Fire and Forget ou background job idéalement)
+                _ = _emailService.SendEmailAsync(request.Email, "Confirmation de compte", message);
+
+                return new AuthenticationResult { Success = true, User = user, ErrorMessage = "Compte créé. Veuillez vérifier vos emails." };
             }
             catch (Exception ex)
             {
@@ -322,6 +360,111 @@ namespace TransitManager.Infrastructure.Services
                 Console.WriteLine($"ERREUR INSCRIPTION: {ex.Message}");
                 return new AuthenticationResult { Success = false, ErrorMessage = "Une erreur technique est survenue lors de l'inscription." };
             }
+        }
+
+        // --- GESTION DU MOT DE PASSE OUBLIÉ ---
+        public async Task<bool> RequestPasswordResetAsync(string email)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var user = await context.Utilisateurs.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null) return false; // On ne dit pas si l'user existe ou non par sécurité, on retourne false silencieusement ou true générique
+
+            // Générer token
+            string token = Guid.NewGuid().ToString();
+            user.TokenReinitialisation = token;
+            user.ExpirationToken = DateTime.UtcNow.AddHours(1); // Valide 1h
+            await context.SaveChangesAsync();
+
+            // Générer Lien (Adapter l'URL de base selon votre déploiement Web)
+            string baseUrl = _configuration["ClientAppUrl"] ?? "https://localhost:7207";
+            string encodedToken = System.Net.WebUtility.UrlEncode(token);
+            string encodedEmail = System.Net.WebUtility.UrlEncode(email);
+            string resetLink = $"{baseUrl}/reset-password?email={encodedEmail}&token={encodedToken}";
+
+            string message = $@"
+                <h3>Réinitialisation de mot de passe</h3>
+                <p>Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :</p>
+                <a href='{resetLink}'>Réinitialiser mon mot de passe</a>
+                <p>Ce lien est valide pendant 1 heure.</p>";
+
+            await _emailService.SendEmailAsync(email, "Réinitialisation mot de passe - TransitManager", message);
+            return true;
+        }
+
+        public async Task<bool> ResetPasswordWithTokenAsync(string email, string token, string newPassword)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var user = await context.Utilisateurs.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null
+                || user.TokenReinitialisation != token
+                || user.ExpirationToken < DateTime.UtcNow)
+            {
+                return false;
+            }
+
+            user.MotDePasseHash = BCryptNet.HashPassword(newPassword);
+            user.TokenReinitialisation = null;
+            user.ExpirationToken = null;
+            user.DoitChangerMotDePasse = false; // Reset effectué
+
+            // On déverrouille le compte si besoin
+            user.DateVerrouillage = null;
+            user.TentativesConnexionEchouees = 0;
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        // --- GESTION DE L'INSCRIPTION AVEC VÉRIFICATION ---
+        public async Task<bool> VerifyEmailAsync(string email, string token)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var user = await context.Utilisateurs.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null
+                || user.TokenVerificationEmail != token
+                || user.DateExpirationTokenEmail < DateTime.UtcNow)
+            {
+                return false;
+            }
+
+            user.EmailConfirme = true;
+            user.TokenVerificationEmail = null;
+            user.DateExpirationTokenEmail = null;
+
+            await context.SaveChangesAsync();
+            return true;
+        }
+		
+		public async Task ResendConfirmationEmailAsync(string email)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var user = await context.Utilisateurs.FirstOrDefaultAsync(u => u.Email == email);
+
+            // Si l'utilisateur n'existe pas ou est déjà confirmé, on ne fait rien (sécurité)
+            if (user == null || user.EmailConfirme) return;
+
+            // On génère un nouveau token si l'ancien est expiré, sinon on renvoie le même
+            if (string.IsNullOrEmpty(user.TokenVerificationEmail) || user.DateExpirationTokenEmail < DateTime.UtcNow)
+            {
+                user.TokenVerificationEmail = Guid.NewGuid().ToString();
+                user.DateExpirationTokenEmail = DateTime.UtcNow.AddDays(1);
+                await context.SaveChangesAsync();
+            }
+
+			string baseUrl = _configuration["ClientAppUrl"] ?? "https://localhost:7207";
+            
+            // CORRECTION : Utiliser Uri.EscapeDataString qui est plus strict que UrlEncode
+            string encodedToken = Uri.EscapeDataString(user.TokenVerificationEmail);
+            string encodedEmail = Uri.EscapeDataString(email);
+            
+            string verifyLink = $"{baseUrl}/verify-email?email={encodedEmail}&token={encodedToken}";
+
+            string message = $@"
+                <h3>Confirmation de compte</h3>
+                <p>Vous avez demandé à recevoir de nouveau le lien de confirmation.</p>
+                <p>Cliquez ici pour activer votre compte :</p>
+                <a href='{verifyLink}'>Confirmer mon email</a>";
+
+            await _emailService.SendEmailAsync(email, "Relance : Confirmation de compte", message);
         }
 		
     }

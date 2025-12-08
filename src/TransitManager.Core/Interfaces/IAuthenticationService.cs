@@ -19,5 +19,12 @@ namespace TransitManager.Core.Interfaces
         Task<(Utilisateur? User, string? TemporaryPassword)> CreateOrResetPortalAccessAsync(Guid clientId);
         Task SynchronizeClientDataAsync(Client client);
 		Task<AuthenticationResult> RegisterClientAsync(RegisterClientRequestDto request);
+		// Mot de passe oublié
+        Task<bool> RequestPasswordResetAsync(string email);
+        Task<bool> ResetPasswordWithTokenAsync(string email, string token, string newPassword);
+
+        // Vérification Email
+        Task<bool> VerifyEmailAsync(string email, string token);
+		Task ResendConfirmationEmailAsync(string email);
     }
 }

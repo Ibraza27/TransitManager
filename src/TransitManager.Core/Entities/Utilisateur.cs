@@ -257,6 +257,22 @@ namespace TransitManager.Core.Entities
                 _ => new List<string>()
             };
         }
+		
+        /// <summary>
+        /// Indique si l'adresse email a été vérifiée
+        /// </summary>
+        public bool EmailConfirme { get; set; } = false;
+
+        /// <summary>
+        /// Jeton pour la vérification de l'email
+        /// </summary>
+        public string? TokenVerificationEmail { get; set; }
+
+        /// <summary>
+        /// Date d'expiration du jeton de vérification
+        /// </summary>
+        public DateTime? DateExpirationTokenEmail { get; set; }
+		
     }
 
 }

@@ -142,23 +142,26 @@
     private bool _showPassword = false;
     private bool _showConfirmPassword = false;
 
-    private async Task HandleRegistration()
+	private async Task HandleRegistration()
     {
         _isBusy = true;
         _errorMessage = null;
 
         try
         {
+            // Appel à l'API (qui envoie le mail de confirmation automatiquement si config OK)
             var success = await ApiService.RegisterClientAsync(_registerModel);
+            
             if (success)
             {
-                // Redirection vers le login avec un message de succès
+                // Redirection avec le paramètre 'registered=true'
+                // Le 'true' en 2ème argument force le rechargement complet (nécessaire pour nettoyer l'état Blazor)
                 Navigation.NavigateTo("/login?registered=true", true);
             }
         }
         catch (Exception ex)
         {
-            _errorMessage = "Erreur lors de l'inscription : " + ExtractErrorMessage(ex.Message);
+            _errorMessage = "Erreur : " + ExtractErrorMessage(ex.Message);
         }
         finally
         {

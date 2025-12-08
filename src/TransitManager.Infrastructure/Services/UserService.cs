@@ -206,5 +206,32 @@ namespace TransitManager.Infrastructure.Services
 			await context.SaveChangesAsync();
 			return true;
 		}
+		
+		public async Task<int> DeleteUnconfirmedAccountsAsync(int hoursOld)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var threshold = DateTime.UtcNow.AddHours(-hoursOld);
+
+            // On cherche les utilisateurs non confirmés ET dont le token est expiré ou vieux
+            var usersToDelete = await context.Utilisateurs
+                .Where(u => !u.EmailConfirme && u.DateCreation < threshold)
+                .Include(u => u.Client) // Pour supprimer le client lié aussi
+                .ToListAsync();
+
+            if (!usersToDelete.Any()) return 0;
+
+            foreach (var user in usersToDelete)
+            {
+                // Si un client a été créé spécifiquement pour cet user (cas de l'inscription web), on le supprime aussi
+                if (user.ClientId.HasValue && user.Client != null)
+                {
+                    context.Clients.Remove(user.Client);
+                }
+                context.Utilisateurs.Remove(user);
+            }
+
+            return await context.SaveChangesAsync();
+        }
+		
     }
 }

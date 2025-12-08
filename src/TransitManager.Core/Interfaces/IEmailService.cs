@@ -1,0 +1,9 @@
+using System.Threading.Tasks;
+
+namespace TransitManager.Core.Interfaces
+{
+    public interface IEmailService
+    {
+        Task SendEmailAsync(string to, string subject, string htmlMessage);
+    }
+}

@@ -66,6 +66,7 @@ builder.Services.AddTransient<IColisRepository, ColisRepository>();
 builder.Services.AddTransient<IConteneurRepository, ConteneurRepository>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+builder.Services.AddTransient<IEmailService, EmailService>();
 // --- SERVICES WEB API ---
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -165,5 +166,100 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
+
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<TransitContext>();
+    
+    // --- 1. Restauration & Protection Admin ---
+    var adminUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.Email == "admin@transitmanager.com");
+    if (adminUser == null)
+    {
+        Console.WriteLine("[Maintenance] ⚠️ Compte Admin introuvable ! Recréation...");
+        adminUser = new TransitManager.Core.Entities.Utilisateur
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+            NomUtilisateur = "admin",
+            Nom = "Administrateur",
+            Prenom = "Système",
+            Email = "admin@transitmanager.com",
+            // Mot de passe : Admin123!
+            MotDePasseHash = "$2a$11$Tb9CvmOW2h/YNRaP.3QZsOo3jxIN0IN.M4khQYoZu7Ji8i82WyDxu", 
+            Role = TransitManager.Core.Enums.RoleUtilisateur.Administrateur,
+            DateCreation = DateTime.UtcNow,
+            Actif = true,
+            EmailConfirme = true // Force la confirmation
+        };
+        context.Utilisateurs.Add(adminUser);
+        await context.SaveChangesAsync();
+        Console.WriteLine("[Maintenance] ✅ Compte Admin restauré.");
+    }
+    else if (!adminUser.EmailConfirme)
+    {
+        // Si l'admin existe mais n'est pas confirmé, on le valide de force pour éviter le blocage
+        adminUser.EmailConfirme = true;
+        await context.SaveChangesAsync();
+        Console.WriteLine("[Maintenance] ✅ Compte Admin validé de force.");
+    }
+
+    // --- 2. Validation massive des anciens comptes Staff (Hack temporaire) ---
+    // On valide automatiquement tous les comptes qui NE SONT PAS des clients (Gestionnaires, Comptables, etc.)
+    var staffUsers = await context.Utilisateurs
+        .Where(u => !u.EmailConfirme && u.Role != TransitManager.Core.Enums.RoleUtilisateur.Client)
+        .ToListAsync();
+        
+    foreach(var u in staffUsers) 
+    {
+        u.EmailConfirme = true; 
+    }
+    if (staffUsers.Any()) 
+    {
+        await context.SaveChangesAsync();
+        Console.WriteLine($"[Maintenance] {staffUsers.Count} comptes Staff validés automatiquement.");
+    }
+
+    // --- 3. Nettoyage des comptes CLIENTS non confirmés (Garbage Collection) ---
+    try
+    {
+        Console.WriteLine("[Maintenance] 🧹 Analyse des comptes expirés...");
+        
+        var threshold = DateTime.UtcNow.AddHours(-24); // Comptes créés il y a plus de 24h
+
+        // SÉCURITÉ : On filtre explicitement sur Role == Client
+        // On ne touche JAMAIS aux Admins, Gestionnaires, etc. ici.
+        var usersToDelete = await context.Utilisateurs
+            .Where(u => !u.EmailConfirme 
+                        && u.DateCreation < threshold
+                        && u.Role == TransitManager.Core.Enums.RoleUtilisateur.Client) 
+            .Include(u => u.Client) // Pour supprimer la fiche client associée si elle est orpheline
+            .ToListAsync();
+
+        if (usersToDelete.Any())
+        {
+            foreach (var user in usersToDelete)
+            {
+                // Si un client est lié et semble avoir été créé juste pour cet user (pas de code client métier spécifique), on nettoie
+                if (user.ClientId.HasValue && user.Client != null)
+                {
+                    context.Clients.Remove(user.Client);
+                }
+                context.Utilisateurs.Remove(user);
+            }
+
+            int count = await context.SaveChangesAsync();
+            Console.WriteLine($"[Maintenance] 🗑️ {count} inscriptions clients non confirmées ont été supprimées.");
+        }
+        else
+        {
+            Console.WriteLine("[Maintenance] Aucun compte client expiré à nettoyer.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Maintenance] ⚠️ Erreur lors du nettoyage : {ex.Message}");
+    }
+}
+ 
 Console.WriteLine("[API] Lancement de l'application.");
 app.Run();

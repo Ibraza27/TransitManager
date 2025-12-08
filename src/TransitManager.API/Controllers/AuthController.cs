@@ -89,19 +89,25 @@ namespace TransitManager.API.Controllers
 				Console.WriteLine("🛂 [API - LoginWithCookie] ❌ Données de connexion invalides.");
 				return BadRequest("Les données de connexion sont invalides.");
 			}
-
 			var authResult = await _authService.LoginAsync(request.Email, request.Password);
-
 			if (!authResult.Success || authResult.User == null)
 			{
 				Console.WriteLine("🛂 [API - LoginWithCookie] ❌ Échec de l'authentification.");
-                // MODIFICATION : On renvoie l'objet complet pour avoir LockoutEnd
-				return Unauthorized(new { 
-                    message = authResult.ErrorMessage ?? "Email ou mot de passe incorrect.",
-                    lockoutEnd = authResult.LockoutEnd 
-                });
-			}
 
+				// Si c'est un problème d'email non confirmé, on renvoie un 403 (Forbidden) spécifique
+				if (authResult.IsEmailUnconfirmed)
+				{
+					return StatusCode(403, new {
+						message = "Email non confirmé",
+						isEmailUnconfirmed = true
+					});
+				}
+				// ... retour erreur classique (Unauthorized) ...
+				return Unauthorized(new {
+					message = authResult.ErrorMessage ?? "Email ou mot de passe incorrect.",
+					lockoutEnd = authResult.LockoutEnd
+				});
+			}
 			Console.WriteLine("🛂 [API - LoginWithCookie] ✅ Authentification réussie. Création des claims...");
 			var claims = new List<Claim>
 			{
@@ -110,7 +116,6 @@ namespace TransitManager.API.Controllers
 				new Claim(ClaimTypes.Email, authResult.User.Email),
 				new Claim(ClaimTypes.Role, authResult.User.Role.ToString()),
 			};
-
 			// === DÉBUT DE L'AJOUT ===
 			// Si l'utilisateur est lié à un client, on ajoute cette information dans les claims.
 			if (authResult.User.ClientId.HasValue)
@@ -120,21 +125,18 @@ namespace TransitManager.API.Controllers
 				Console.WriteLine($"🛂 [API - LoginWithCookie]   -> Claim ClientID ajouté: {clientIdClaim.Type} = {clientIdClaim.Value}");
 			}
 			// === FIN DE L'AJOUT ===
-
 			foreach (var claim in claims)
 			{
 				Console.WriteLine($"🛂 [API - LoginWithCookie]   -> Claim ajouté: {claim.Type} = {claim.Value}");
 			}
-
 			var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 			var authProperties = new AuthenticationProperties
 			{
-				IsPersistent = true, 
+				IsPersistent = true,
 				ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
 			};
-			
-			Console.WriteLine($"🛂 [API - LoginWithCookie] 🍪 Propriétés du cookie: IsPersistent={authProperties.IsPersistent}, ExpiresUtc={authProperties.ExpiresUtc}");
 
+			Console.WriteLine($"🛂 [API - LoginWithCookie] 🍪 Propriétés du cookie: IsPersistent={authProperties.IsPersistent}, ExpiresUtc={authProperties.ExpiresUtc}");
 			try
 			{
 				// Crée le cookie chiffré et l'ajoute à la réponse HTTP
@@ -142,7 +144,7 @@ namespace TransitManager.API.Controllers
 					CookieAuthenticationDefaults.AuthenticationScheme,
 					new ClaimsPrincipal(claimsIdentity),
 					authProperties);
-				
+
 				Console.WriteLine("🛂 [API - LoginWithCookie] ✅ HttpContext.SignInAsync exécuté avec succès. Le cookie devrait être dans la réponse.");
 			}
 			catch (Exception ex)
@@ -150,14 +152,23 @@ namespace TransitManager.API.Controllers
 				Console.WriteLine($"🛂 [API - LoginWithCookie] 💥 ERREUR lors de HttpContext.SignInAsync: {ex.Message}");
 				// Ne pas bloquer le login même si le cookie échoue, le token JWT reste une solution de repli.
 			}
-
 			// Génère également le token JWT pour le localStorage
 			var token = _jwtService.GenerateToken(authResult.User);
 			Console.WriteLine("🛂 [API - LoginWithCookie] ✅ Token JWT généré. Envoi de la réponse OK.");
 			Console.WriteLine("🛂 [API - LoginWithCookie] === FIN ===");
-
 			return Ok(new { success = true, token = token, message = "Connexion réussie." });
 		}
+
+		[HttpPost("resend-confirmation")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResendConfirmation([FromBody] EmailRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email)) return BadRequest();
+            
+            await _authService.ResendConfirmationEmailAsync(request.Email);
+            return Ok(new { message = "Email renvoyé." });
+        }
+
 		
         // === AJOUTER CETTE MÉTHODE ===
         [Authorize] // Seuls les utilisateurs connectés peuvent se déconnecter
@@ -196,5 +207,34 @@ namespace TransitManager.API.Controllers
             }
         }
 		
+		[HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] string email)
+        {
+            await _authService.RequestPasswordResetAsync(email);
+            // On renvoie toujours OK pour ne pas divulguer si l'email existe ou non (sécurité)
+            return Ok(new { message = "Si cet email existe, un lien a été envoyé." });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
+        {
+            var result = await _authService.ResetPasswordWithTokenAsync(request.Email, request.Token, request.NewPassword);
+            if (result) return Ok(new { message = "Mot de passe réinitialisé avec succès." });
+            return BadRequest("Lien invalide ou expiré.");
+        }
+
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto request)
+        {
+            var result = await _authService.VerifyEmailAsync(request.Email, request.Token);
+            if (result) return Ok(new { message = "Email confirmé." });
+            return BadRequest("Lien invalide ou expiré.");
+        }
+		
     }
+	
+	public class EmailRequest
+	{
+		public string Email { get; set; } = string.Empty;
+	}
 }

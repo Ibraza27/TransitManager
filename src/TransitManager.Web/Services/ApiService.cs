@@ -757,6 +757,49 @@ namespace TransitManager.Web.Services
 				return Array.Empty<byte>();
 			}
 		}
+		
+        public async Task<bool> ForgotPasswordAsync(string email)
+        {
+            try
+            {
+                // L'API attend une string simple [FromBody], on l'envoie en JSON
+                var response = await _httpClient.PostAsJsonAsync("api/auth/forgot-password", email);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erreur ForgotPassword: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> ResetPasswordAsync(ResetPasswordDto request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/auth/reset-password", request);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erreur ResetPassword: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> VerifyEmailAsync(VerifyEmailDto request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/auth/verify-email", request);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erreur VerifyEmail: {ex.Message}");
+                return false;
+            }
+        }
 
     }
 }

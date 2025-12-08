@@ -215,6 +215,7 @@
                                         <div class="mt-2 pt-2 border-top border-danger">
                                             <form action="/account/resend-confirmation" method="post">
                                                 @Html.AntiForgeryToken()
+                                                <!-- Le nom "email" doit correspondre au paramètre [FromForm] string email du contrôleur -->
                                                 <input type="hidden" name="email" value="@targetEmail" />
                                                 <button type="submit" class="btn btn-sm btn-warning w-100 text-dark fw-bold">
                                                     <i class="bi bi-envelope-paper me-1"></i> Renvoyer l'email de validation

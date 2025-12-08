@@ -99,9 +99,19 @@ namespace TransitManager.Web.Controllers
 
             var apiClient = _httpClientFactory.CreateClient("API");
             
-            // CORRECTION : Envoi d'un objet JSON structuré
-            var request = new { Email = email };
-            await apiClient.PostAsJsonAsync("api/auth/resend-confirmation", request);
+            // CORRECTION : On utilise la classe EmailRequest définie dans l'API (ou un objet anonyme identique)
+            var request = new { email = email }; // Minuscule pour matcher le JSON standard
+            
+            var response = await apiClient.PostAsJsonAsync("api/auth/resend-confirmation", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // Log l'erreur pour comprendre le 400
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[AccountController] Erreur ResendConfirmation ({response.StatusCode}): {error}");
+                // On peut rediriger vers une erreur générique
+                return Redirect("/login?error=server_error");
+            }
 
             return Redirect("/login?resend=success");
         }

@@ -159,11 +159,15 @@ namespace TransitManager.API.Controllers
 			return Ok(new { success = true, token = token, message = "Connexion réussie." });
 		}
 
-		[HttpPost("resend-confirmation")]
-        [AllowAnonymous]
+        [HttpPost("resend-confirmation")]
+        [AllowAnonymous] // <--- CRUCIAL : Pas besoin d'être connecté
         public async Task<IActionResult> ResendConfirmation([FromBody] EmailRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Email)) return BadRequest();
+            // On accepte la requête même si email est null pour éviter de planter, mais on valide
+            if (request == null || string.IsNullOrWhiteSpace(request.Email)) 
+            {
+                return BadRequest("Email requis.");
+            }
             
             await _authService.ResendConfirmationEmailAsync(request.Email);
             return Ok(new { message = "Email renvoyé." });

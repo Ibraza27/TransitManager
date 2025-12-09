@@ -801,5 +801,27 @@ namespace TransitManager.Web.Services
             }
         }
 
+
+        public async Task<bool> ToggleUserEmailConfirmationAsync(Guid userId, bool isConfirmed)
+        {
+            try
+            {
+                // Envoi d'un booléen simple en JSON
+                var response = await _httpClient.PutAsJsonAsync($"api/users/{userId}/email-confirmation", isConfirmed);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> ResendUserConfirmationEmailAsync(Guid userId)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/users/{userId}/resend-confirmation", null);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
     }
 }

@@ -85,6 +85,8 @@ namespace TransitManager.Web.Services
         Task<bool> ForgotPasswordAsync(string email);
         Task<bool> ResetPasswordAsync(ResetPasswordDto request);
         Task<bool> VerifyEmailAsync(VerifyEmailDto request);
+        Task<bool> ToggleUserEmailConfirmationAsync(Guid userId, bool isConfirmed);
+        Task<bool> ResendUserConfirmationEmailAsync(Guid userId);
 				
     }
 }

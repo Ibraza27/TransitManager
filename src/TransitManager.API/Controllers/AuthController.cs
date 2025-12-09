@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using TransitManager.Core.DTOs;
 using Microsoft.AspNetCore.Authentication;
@@ -159,18 +160,41 @@ namespace TransitManager.API.Controllers
 			return Ok(new { success = true, token = token, message = "Connexion réussie." });
 		}
 
-        [HttpPost("resend-confirmation")]
-        [AllowAnonymous] // <--- CRUCIAL : Pas besoin d'être connecté
-        public async Task<IActionResult> ResendConfirmation([FromBody] EmailRequest request)
+
+		[HttpPost("resend-confirmation")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationDto request)
         {
-            // On accepte la requête même si email est null pour éviter de planter, mais on valide
-            if (request == null || string.IsNullOrWhiteSpace(request.Email)) 
+            Console.WriteLine("🚀 [API] REÇU : Requête resend-confirmation.");
+
+            if (request == null)
             {
-                return BadRequest("Email requis.");
+                Console.WriteLine("❌ [API] ERREUR : Le corps de la requête est vide ou mal formé.");
+                return BadRequest("Requête invalide.");
             }
-            
-            await _authService.ResendConfirmationEmailAsync(request.Email);
-            return Ok(new { message = "Email renvoyé." });
+
+            Console.WriteLine($"🔍 [API] Email reçu : '{request.Email}'");
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+            {
+                Console.WriteLine("❌ [API] ERREUR : L'email est vide.");
+                return BadRequest("L'email est requis.");
+            }
+
+            try
+            {
+                // Appel du service
+                await _authService.ResendConfirmationEmailAsync(request.Email);
+                
+                Console.WriteLine("✅ [API] SUCCÈS : Service exécuté sans erreur.");
+                return Ok(new { message = "Email renvoyé." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"💥 [API] EXCEPTION : {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+                return StatusCode(500, "Erreur interne API.");
+            }
         }
 
 		
@@ -227,18 +251,46 @@ namespace TransitManager.API.Controllers
             return BadRequest("Lien invalide ou expiré.");
         }
 
-        [HttpPost("verify-email")]
+		[HttpPost("verify-email")]
+        [AllowAnonymous] // Important : L'utilisateur n'est pas forcément connecté quand il clique sur le lien
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto request)
         {
-            var result = await _authService.VerifyEmailAsync(request.Email, request.Token);
-            if (result) return Ok(new { message = "Email confirmé." });
-            return BadRequest("Lien invalide ou expiré.");
+            Console.WriteLine($"🚀 [API] Réception demande Validation Email.");
+
+            if (request == null)
+            {
+                Console.WriteLine("❌ [API] Request est NULL.");
+                return BadRequest("Requête invalide.");
+            }
+
+            Console.WriteLine($"🔍 [API] Email: {request.Email}, Token: {request.Token}");
+
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Token))
+            {
+                Console.WriteLine("❌ [API] Email ou Token vide.");
+                return BadRequest("Email et Token sont requis.");
+            }
+
+            try 
+            {
+                var result = await _authService.VerifyEmailAsync(request.Email, request.Token);
+                
+                if (result) 
+                {
+                    Console.WriteLine("✅ [API] Email confirmé avec succès !");
+                    return Ok(new { message = "Email confirmé." });
+                }
+                
+                Console.WriteLine("⚠️ [API] Le service a retourné false (Token invalide ou expiré).");
+                return BadRequest("Lien invalide ou expiré.");
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"💥 [API] Erreur: {ex.Message}");
+                return StatusCode(500, "Erreur interne.");
+            }
         }
 		
     }
 	
-	public class EmailRequest
-	{
-		public string Email { get; set; } = string.Empty;
-	}
 }

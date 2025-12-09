@@ -19,5 +19,7 @@ namespace TransitManager.Core.Interfaces
 		Task<bool> UnlockAccountAsync(Guid id);
 		Task<bool> ChangePasswordManualAsync(Guid id, string newPassword);
 		Task<int> DeleteUnconfirmedAccountsAsync(int hoursOld);
+        Task<bool> ToggleEmailConfirmationAsync(Guid userId, bool isConfirmed);
+        Task<bool> ResendConfirmationEmailAdminAsync(Guid userId);
     }
 }

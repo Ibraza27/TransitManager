@@ -233,5 +233,39 @@ namespace TransitManager.Infrastructure.Services
             return await context.SaveChangesAsync();
         }
 		
+
+        public async Task<bool> ToggleEmailConfirmationAsync(Guid userId, bool isConfirmed)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var user = await context.Utilisateurs.FindAsync(userId);
+            if (user == null) return false;
+
+            user.EmailConfirme = isConfirmed;
+            
+            // Si on invalide l'email, on peut aussi vouloir réinitialiser le token pour forcer une nouvelle validation propre
+            if (!isConfirmed)
+            {
+                user.TokenVerificationEmail = Guid.NewGuid().ToString();
+                user.DateExpirationTokenEmail = DateTime.UtcNow.AddDays(1);
+            }
+
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ResendConfirmationEmailAdminAsync(Guid userId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var user = await context.Utilisateurs.FindAsync(userId);
+            
+            // On ne peut renvoyer que si l'utilisateur existe et que l'email n'est PAS confirmé
+            if (user == null || user.EmailConfirme) return false;
+
+            // On appelle la méthode de l'AuthService qui gère déjà la génération de token et l'envoi SMTP
+            await _authenticationService.ResendConfirmationEmailAsync(user.Email);
+            
+            return true;
+        }
+		
     }
 }

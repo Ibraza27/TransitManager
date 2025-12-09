@@ -129,5 +129,23 @@ namespace TransitManager.API.Controllers
 			if (!success) return NotFound();
 			return Ok(new { Message = "Mot de passe modifié." });
 		}
+		
+
+        [HttpPut("{id}/email-confirmation")]
+        public async Task<IActionResult> ToggleEmailConfirmation(Guid id, [FromBody] bool isConfirmed)
+        {
+            var success = await _userService.ToggleEmailConfirmationAsync(id, isConfirmed);
+            if (!success) return NotFound("Utilisateur introuvable.");
+            return Ok(new { Message = $"Statut email mis à jour : {(isConfirmed ? "Confirmé" : "Non confirmé")}" });
+        }
+
+        [HttpPost("{id}/resend-confirmation")]
+        public async Task<IActionResult> ResendConfirmationAdmin(Guid id)
+        {
+            var success = await _userService.ResendConfirmationEmailAdminAsync(id);
+            if (!success) return BadRequest("Impossible de renvoyer l'email (Utilisateur introuvable ou déjà confirmé).");
+            return Ok(new { Message = "Email de validation renvoyé avec succès." });
+        }
+		
     }
 }

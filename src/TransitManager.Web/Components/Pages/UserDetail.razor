@@ -133,19 +133,23 @@
                         <!-- Changement Manuel -->
                         <div class="mb-3">
                             <label class="form-label">Définir mot de passe @(IsNew ? "*" : "")</label>
-							<div class="input-group">
-								<input type="@(_showPassword ? "text" : "password")" 
-									   class="form-control" 
-									   placeholder="Saisir nouveau mot de passe" 
-									   @bind="_newPassword" />
-									   
-								<!-- REMPLACEMENT PAR DES ÉMOJIS -->
-								<button class="btn btn-outline-secondary" type="button" 
-										@onclick="() => _showPassword = !_showPassword"
-										title="@(_showPassword ? "Masquer" : "Afficher")">
-									@(_showPassword ? "🙈" : "👁️")
-								</button>
-							</div>
+                            <div class="input-group">
+                                <!-- AJOUT DE autocomplete="new-password" -->
+                                <input type="@(_showPassword ? "text" : "password")" 
+                                       class="form-control" 
+                                       placeholder="Saisir nouveau mot de passe" 
+                                       @bind="_newPassword"
+                                       autocomplete="new-password" /> 
+                                       
+                                <button class="btn btn-outline-secondary" type="button" 
+                                        @onclick="() => _showPassword = !_showPassword"
+                                        title="@(_showPassword ? "Masquer" : "Afficher")">
+                                    @(_showPassword ? "🙈" : "👁️")
+                                </button>
+                            </div>
+                            <div class="form-text text-muted small">
+                                Laisser vide pour conserver le mot de passe actuel.
+                            </div>
                         </div>
 
                         @if (!IsNew)
@@ -174,12 +178,51 @@
                     </div>
                 </div>
 
-                <!-- Carte Statut / Verrouillage -->
+				<!-- Carte Statut / Verrouillage / Email -->
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-light fw-bold">État du Compte</div>
                     <div class="card-body">
                         
-                        <!-- Message si verrouillé -->
+                        <!-- GESTION EMAIL -->
+                        <div class="mb-4 pb-3 border-bottom">
+                            <label class="form-label fw-bold small text-muted">VALIDATION EMAIL</label>
+                            
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="emailConfirmSwitch" 
+                                           checked="@_user.EmailConfirme" 
+                                           @onchange="ToggleEmailConfirm"> <!-- Event Change manuel -->
+                                    <label class="form-check-label" for="emailConfirmSwitch">
+                                        @(_user.EmailConfirme ? "Email Confirmé" : "Non Confirmé")
+                                    </label>
+                                </div>
+                                
+                                @if (_user.EmailConfirme)
+                                {
+                                    <span class="badge bg-success"><i class="bi bi-check-lg"></i> OK</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> En attente</span>
+                                }
+                            </div>
+
+                            @if (!_user.EmailConfirme && !IsNew)
+                            {
+                                <button class="btn btn-sm btn-outline-warning w-100" @onclick="ResendValidationEmail" disabled="@_isSendingEmail">
+                                    @if (_isSendingEmail)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span> <span>Envoi...</span>
+                                    }
+                                    else
+                                    {
+                                        <span><i class="bi bi-envelope-paper me-2"></i> Renvoyer l'email de validation</span>
+                                    }
+                                </button>
+                            }
+                        </div>
+
+                        <!-- GESTION VERROUILLAGE (Existant) -->
                         @if (_user.EstVerrouille)
                         {
                             <div class="alert alert-danger d-flex align-items-center" role="alert">
@@ -192,12 +235,6 @@
                             <button class="btn btn-danger w-100 mb-3" @onclick="UnlockAccount">
                                 🔓 DÉVERROUILLER MAINTENANT
                             </button>
-                        }
-                        else
-                        {
-                            <div class="alert alert-success py-2 px-3 mb-3">
-                                <i class="bi bi-check-circle-fill me-2"></i> Compte accessible
-                            </div>
                         }
 
                         <div class="form-check form-switch mb-2">
@@ -425,4 +462,64 @@
             // Petit toast ou alerte discret
         }
     }
+
+	private bool _isSendingEmail = false;
+
+    private async Task ToggleEmailConfirm(ChangeEventArgs e)
+    {
+        if (IsNew) 
+        {
+            // En création, on change juste la propriété locale
+            _user.EmailConfirme = (bool)(e.Value ?? false);
+            return;
+        }
+
+        bool newValue = (bool)(e.Value ?? false);
+        
+        // Confirmation visuelle si on invalide
+        if (!newValue)
+        {
+            bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", "Attention : En invalidant l'email, l'utilisateur ne pourra plus se connecter tant qu'il ne l'aura pas validé à nouveau. Continuer ?");
+            if (!confirm) 
+            {
+                // On force le rafraîchissement pour remettre le switch à sa place
+                StateHasChanged(); // Parfois insuffisant pour un checkbox HTML, mais on tente
+                await LoadData(); // Recharger les données est le plus sûr pour reset l'UI
+                return;
+            }
+        }
+
+        var success = await ApiService.ToggleUserEmailConfirmationAsync(_user.Id, newValue);
+        if (success)
+        {
+            _user.EmailConfirme = newValue;
+            // Petit toast
+            // await JSRuntime.InvokeVoidAsync("alert", "Statut email mis à jour.");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la mise à jour.");
+            await LoadData(); // Revenir à l'état réel
+        }
+    }
+
+    private async Task ResendValidationEmail()
+    {
+        _isSendingEmail = true;
+        StateHasChanged();
+
+        var success = await ApiService.ResendUserConfirmationEmailAsync(_user.Id);
+        
+        _isSendingEmail = false;
+        
+        if (success)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Email envoyé avec succès au client.");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de l'envoi.");
+        }
+    }	
+	
 }

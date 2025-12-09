@@ -1,4 +1,6 @@
 @page "/verify-email"
+@attribute [StreamRendering(false)]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @layout TransitManager.Web.Components.Layout.EmptyLayout
 @using TransitManager.Core.DTOs
 @using TransitManager.Web.Services
@@ -42,25 +44,42 @@
 
     private bool _isValidating = true;
     private bool _success = false;
+    private bool _hasRun = false; // Verrou pour éviter la double exécution
 
-	protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await Task.Delay(1000);
-
-        if (!string.IsNullOrEmpty(Token) && !string.IsNullOrEmpty(Email))
+        if (firstRender && !_hasRun)
         {
-            // Astuce : Remplacer les espaces par des + si le décodage a été trop zélé
-            // C'est un hack classique pour les tokens Web
+            _hasRun = true;
+            await ValidateEmail();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ValidateEmail()
+    {
+        await Task.Delay(1000); // Petit délai cosmétique
+
+        if (string.IsNullOrWhiteSpace(Token) || string.IsNullOrWhiteSpace(Email))
+        {
+            _isValidating = false;
+            _success = false;
+            return;
+        }
+
+        try
+        {
             var fixedToken = Token.Replace(" ", "+");
-            
             var dto = new VerifyEmailDto { Email = Email, Token = fixedToken };
             _success = await ApiService.VerifyEmailAsync(dto);
         }
-        else
+        catch
         {
             _success = false;
         }
-        
-        _isValidating = false;
+        finally
+        {
+            _isValidating = false;
+        }
     }
 }

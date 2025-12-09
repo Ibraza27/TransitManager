@@ -92,28 +92,40 @@ namespace TransitManager.Web.Controllers
 
 
 		[HttpPost("/account/resend-confirmation")]
-        [ValidateAntiForgeryToken]
+        [IgnoreAntiforgeryToken] // <--- MODIFICATION CRITIQUE : On désactive la sécurité temporairement pour tester
         public async Task<IActionResult> ResendConfirmation([FromForm] string email)
         {
-            if (string.IsNullOrWhiteSpace(email)) return Redirect("/login");
+            Console.WriteLine($"🌐 [WEB] CLIC REÇU : Demande de renvoi pour '{email}'");
 
-            var apiClient = _httpClientFactory.CreateClient("API");
-            
-            // CORRECTION : On utilise la classe EmailRequest définie dans l'API (ou un objet anonyme identique)
-            var request = new { email = email }; // Minuscule pour matcher le JSON standard
-            
-            var response = await apiClient.PostAsJsonAsync("api/auth/resend-confirmation", request);
-
-            if (!response.IsSuccessStatusCode)
+            if (string.IsNullOrWhiteSpace(email)) 
             {
-                // Log l'erreur pour comprendre le 400
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[AccountController] Erreur ResendConfirmation ({response.StatusCode}): {error}");
-                // On peut rediriger vers une erreur générique
-                return Redirect("/login?error=server_error");
+                Console.WriteLine("⚠️ [WEB] L'email est vide. Redirection.");
+                return Redirect("/login?error=invalid_input");
             }
 
-            return Redirect("/login?resend=success");
+            try 
+            {
+                var apiClient = _httpClientFactory.CreateClient("API");
+                var dto = new ResendConfirmationDto { Email = email };
+                
+                Console.WriteLine($"🌐 [WEB] Envoi à l'API...");
+                var response = await apiClient.PostAsJsonAsync("api/auth/resend-confirmation", dto);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"❌ [WEB] ERREUR API ({response.StatusCode}) : {content}");
+                    return Redirect("/login?error=server_error");
+                }
+
+                Console.WriteLine("✅ [WEB] Succès ! Redirection.");
+                return Redirect("/login?resend=success");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"💥 [WEB] CRASH : {ex.Message}");
+                return Redirect("/login?error=server_error");
+            }
         }
 
         [HttpPost("/account/logout")]

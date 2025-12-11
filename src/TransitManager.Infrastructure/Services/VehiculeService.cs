@@ -16,22 +16,53 @@ namespace TransitManager.Infrastructure.Services
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly IConteneurService _conteneurService;
         private readonly IClientService _clientService;
+        private readonly ITimelineService _timelineService; // AJOUT
+
+        // Statuts qui ne doivent pas être écrasés par le conteneur
+        private readonly StatutVehicule[] _statutsCritiques = new[]
+        {
+            StatutVehicule.Livre,
+            StatutVehicule.Retourne,
+            StatutVehicule.Probleme
+        };
 
         public VehiculeService(
             IDbContextFactory<TransitContext> contextFactory,
             IConteneurService conteneurService,
-            IClientService clientService)
+            IClientService clientService,
+            ITimelineService timelineService) // AJOUT
         {
             _contextFactory = contextFactory;
             _conteneurService = conteneurService;
             _clientService = clientService;
+            _timelineService = timelineService; // AJOUT
         }
 
         public async Task<Vehicule> CreateAsync(Vehicule vehicule)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
+            
+            // Si un conteneur est assigné à la création, on applique la logique de statut
+            if (vehicule.ConteneurId.HasValue)
+            {
+                var conteneur = await context.Conteneurs.FindAsync(vehicule.ConteneurId.Value);
+                if (conteneur != null)
+                {
+                    vehicule.Statut = GetStatutFromConteneur(conteneur.Statut);
+                    vehicule.NumeroPlomb = conteneur.NumeroPlomb;
+                }
+            }
+
             context.Vehicules.Add(vehicule);
             await context.SaveChangesAsync();
+
+            // Timeline Création
+            await _timelineService.AddEventAsync(
+                "Véhicule créé et enregistré",
+                vehiculeId: vehicule.Id,
+                statut: vehicule.Statut.ToString()
+            );
+
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
             if (vehicule.ConteneurId.HasValue)
             {
@@ -40,97 +71,150 @@ namespace TransitManager.Infrastructure.Services
             return vehicule;
         }
 
-		public async Task<Vehicule> UpdateAsync(Vehicule vehicule)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			var vehiculeInDb = await context.Vehicules.FindAsync(vehicule.Id);
+        public async Task<Vehicule> UpdateAsync(Vehicule vehicule)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var vehiculeInDb = await context.Vehicules.FindAsync(vehicule.Id);
 
-			if (vehiculeInDb == null)
-			{
-				throw new InvalidOperationException("Le véhicule que vous essayez de modifier n'existe plus.");
-			}
+            if (vehiculeInDb == null)
+            {
+                throw new InvalidOperationException("Le véhicule que vous essayez de modifier n'existe plus.");
+            }
 
-			var originalConteneurId = vehiculeInDb.ConteneurId;
+            var originalConteneurId = vehiculeInDb.ConteneurId;
+            var oldStatus = vehiculeInDb.Statut;
 
-			// --- MAPPAGE EXISTANT ---
-			vehiculeInDb.Immatriculation = vehicule.Immatriculation;
-			vehiculeInDb.Marque = vehicule.Marque;
-			vehiculeInDb.Modele = vehicule.Modele;
-			vehiculeInDb.Annee = vehicule.Annee;
-			vehiculeInDb.Kilometrage = vehicule.Kilometrage;
-			vehiculeInDb.DestinationFinale = vehicule.DestinationFinale;
-			vehiculeInDb.Destinataire = vehicule.Destinataire;
-			vehiculeInDb.TelephoneDestinataire = vehicule.TelephoneDestinataire;
-			vehiculeInDb.Type = vehicule.Type;
-			vehiculeInDb.Commentaires = vehicule.Commentaires;
-			vehiculeInDb.Statut = vehicule.Statut;
-			vehiculeInDb.ConteneurId = vehicule.ConteneurId;
-			
-			// Protection des données financières (si nécessaire)
-			if (vehicule.PrixTotal > 0) vehiculeInDb.PrixTotal = vehicule.PrixTotal;
-			if (vehicule.ValeurDeclaree > 0) vehiculeInDb.ValeurDeclaree = vehicule.ValeurDeclaree;
-			// On garde la SommePayee à jour si elle est envoyée
-			vehiculeInDb.SommePayee = vehicule.SommePayee;
+            // --- 1. Logique "Retourné" ---
+            if (vehicule.Statut == StatutVehicule.Retourne)
+            {
+                vehicule.ConteneurId = null;
+            }
 
-			// --- CORRECTION : MAPPAGE DES NOUVEAUX CHAMPS (État des lieux & Signatures) ---
-			// Si ces champs ne sont pas mis à jour ici, ils ne seront jamais sauvegardés !
-			vehiculeInDb.EtatDesLieux = vehicule.EtatDesLieux;
-			vehiculeInDb.EtatDesLieuxRayures = vehicule.EtatDesLieuxRayures;
-			
-			// Nouveaux champs ajoutés lors de la migration précédente
-			vehiculeInDb.AccessoiresJson = vehicule.AccessoiresJson;
-			vehiculeInDb.SignatureAgent = vehicule.SignatureAgent;
-			vehiculeInDb.SignatureClient = vehicule.SignatureClient;
-			vehiculeInDb.LieuEtatDesLieux = vehicule.LieuEtatDesLieux;
-			vehiculeInDb.DateEtatDesLieux = vehicule.DateEtatDesLieux;
-			// -----------------------------------------------------------------------------
+            // --- 2. Mappage des champs ---
+            vehiculeInDb.Immatriculation = vehicule.Immatriculation;
+            vehiculeInDb.Marque = vehicule.Marque;
+            vehiculeInDb.Modele = vehicule.Modele;
+            vehiculeInDb.Annee = vehicule.Annee;
+            vehiculeInDb.Kilometrage = vehicule.Kilometrage;
+            vehiculeInDb.DestinationFinale = vehicule.DestinationFinale;
+            vehiculeInDb.Destinataire = vehicule.Destinataire;
+            vehiculeInDb.TelephoneDestinataire = vehicule.TelephoneDestinataire;
+            vehiculeInDb.Type = vehicule.Type;
+            vehiculeInDb.Commentaires = vehicule.Commentaires;
+            vehiculeInDb.ConteneurId = vehicule.ConteneurId;
+            
+            // Protection financière
+            if (vehicule.PrixTotal > 0) vehiculeInDb.PrixTotal = vehicule.PrixTotal;
+            if (vehicule.ValeurDeclaree > 0) vehiculeInDb.ValeurDeclaree = vehicule.ValeurDeclaree;
+            vehiculeInDb.SommePayee = vehicule.SommePayee;
 
-			context.Entry(vehiculeInDb).Property("RowVersion").OriginalValue = vehicule.RowVersion;
+            // État des lieux
+            vehiculeInDb.EtatDesLieux = vehicule.EtatDesLieux;
+            vehiculeInDb.EtatDesLieuxRayures = vehicule.EtatDesLieuxRayures;
+            vehiculeInDb.AccessoiresJson = vehicule.AccessoiresJson;
+            vehiculeInDb.SignatureAgent = vehicule.SignatureAgent;
+            vehiculeInDb.SignatureClient = vehicule.SignatureClient;
+            vehiculeInDb.LieuEtatDesLieux = vehicule.LieuEtatDesLieux;
+            vehiculeInDb.DateEtatDesLieux = vehicule.DateEtatDesLieux;
 
-			try
-			{
-				await context.SaveChangesAsync();
-			}
-			catch (DbUpdateConcurrencyException ex)
-			{
-				var entry = ex.Entries.Single();
-				var databaseValues = await entry.GetDatabaseValuesAsync();
-				if (databaseValues == null)
-				{
-					throw new ConcurrencyException("Ce véhicule a été supprimé par un autre utilisateur.");
-				}
-				else
-				{
-					throw new ConcurrencyException("Ce véhicule a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
-				}
-			}
+            // --- 3. Logique Statut ---
+            if (_statutsCritiques.Contains(vehicule.Statut))
+            {
+                vehiculeInDb.Statut = vehicule.Statut;
+            }
+            else if (vehiculeInDb.ConteneurId.HasValue)
+            {
+                var conteneur = await context.Conteneurs.AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == vehiculeInDb.ConteneurId.Value);
 
-			// Appels aux services externes
-			await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehiculeInDb.ClientId);
-			if (originalConteneurId.HasValue)
-			{
-				await _conteneurService.RecalculateStatusAsync(originalConteneurId.Value);
-			}
-			if (vehiculeInDb.ConteneurId.HasValue && vehiculeInDb.ConteneurId != originalConteneurId)
-			{
-				await _conteneurService.RecalculateStatusAsync(vehiculeInDb.ConteneurId.Value);
-			}
+                if (conteneur != null)
+                {
+                    vehiculeInDb.Statut = GetStatutFromConteneur(conteneur.Statut);
+                    vehiculeInDb.NumeroPlomb = conteneur.NumeroPlomb;
+                }
+                else
+                {
+                    vehiculeInDb.Statut = vehicule.Statut;
+                }
+            }
+            else
+            {
+                vehiculeInDb.Statut = vehicule.Statut;
+                vehiculeInDb.NumeroPlomb = null;
+            }
 
-			return vehiculeInDb;
-		}
+            if (vehicule.ConteneurId == null)
+            {
+                vehiculeInDb.NumeroPlomb = null;
+            }
 
+            context.Entry(vehiculeInDb).Property("RowVersion").OriginalValue = vehicule.RowVersion;
+
+            try
+            {
+                await context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                throw new ConcurrencyException("Ce véhicule a été modifié par un autre utilisateur.");
+            }
+
+            // --- 4. Timeline ---
+            if (oldStatus != vehiculeInDb.Statut)
+            {
+                await _timelineService.AddEventAsync(
+                    $"Statut modifié : {oldStatus} -> {vehiculeInDb.Statut}",
+                    vehiculeId: vehiculeInDb.Id,
+                    statut: vehiculeInDb.Statut.ToString()
+                );
+            }
+
+            // Services externes
+            await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehiculeInDb.ClientId);
+            if (originalConteneurId.HasValue) await _conteneurService.RecalculateStatusAsync(originalConteneurId.Value);
+            if (vehiculeInDb.ConteneurId.HasValue && vehiculeInDb.ConteneurId != originalConteneurId) await _conteneurService.RecalculateStatusAsync(vehiculeInDb.ConteneurId.Value);
+
+            return vehiculeInDb;
+        }
 
         public async Task<bool> AssignToConteneurAsync(Guid vehiculeId, Guid conteneurId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             var vehicule = await context.Vehicules.FindAsync(vehiculeId);
             var conteneur = await context.Conteneurs.FindAsync(conteneurId);
-            var canReceiveStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation, StatutConteneur.Probleme };
-            if (vehicule == null || conteneur == null || !canReceiveStatuses.Contains(conteneur.Statut)) return false;
+            
+            var blockedStatuses = new[] { StatutConteneur.Cloture, StatutConteneur.Annule };
+            if (vehicule == null || conteneur == null || blockedStatuses.Contains(conteneur.Statut)) return false;
+
+            var oldStatus = vehicule.Statut;
+
             vehicule.ConteneurId = conteneurId;
-            vehicule.Statut = StatutVehicule.Affecte;
             vehicule.NumeroPlomb = conteneur.NumeroPlomb;
+
+            if (!_statutsCritiques.Contains(vehicule.Statut))
+            {
+                vehicule.Statut = GetStatutFromConteneur(conteneur.Statut);
+            }
+
             await context.SaveChangesAsync();
+
+            // Timeline
+            if (oldStatus != vehicule.Statut)
+            {
+                await _timelineService.AddEventAsync(
+                    $"Mise à jour automatique (Conteneur {conteneur.Statut}) : {oldStatus} -> {vehicule.Statut}",
+                    vehiculeId: vehicule.Id,
+                    statut: vehicule.Statut.ToString());
+            }
+
+            await _timelineService.AddEventAsync(
+                $"Affecté au conteneur {conteneur.NumeroDossier}",
+                vehiculeId: vehicule.Id,
+                conteneurId: conteneur.Id,
+                location: conteneur.NomCompagnie,
+                statut: vehicule.Statut.ToString()
+            );
+
             await _conteneurService.RecalculateStatusAsync(conteneurId);
             return true;
         }
@@ -140,26 +224,57 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var vehicule = await context.Vehicules.FindAsync(vehiculeId);
             if (vehicule == null || !vehicule.ConteneurId.HasValue) return false;
+            
             var originalConteneurId = vehicule.ConteneurId.Value;
+            var oldStatus = vehicule.Statut;
+
             vehicule.ConteneurId = null;
-            vehicule.Statut = StatutVehicule.EnAttente;
             vehicule.NumeroPlomb = null;
+
+            if (!_statutsCritiques.Contains(vehicule.Statut))
+            {
+                vehicule.Statut = StatutVehicule.EnAttente;
+            }
+
             await context.SaveChangesAsync();
+
+            if (oldStatus != vehicule.Statut)
+            {
+                await _timelineService.AddEventAsync(
+                    $"Retrait conteneur : {oldStatus} -> {vehicule.Statut}", 
+                    vehiculeId: vehicule.Id, 
+                    statut: vehicule.Statut.ToString());
+            }
+
             await _conteneurService.RecalculateStatusAsync(originalConteneurId);
             return true;
         }
 
-		public async Task<Vehicule?> GetByIdAsync(Guid id)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			return await context.Vehicules
-				.Include(v => v.Client)
-				.Include(v => v.Paiements)
-				.Include(v => v.Conteneur)
-				.Include(v => v.Documents)
-				.AsNoTracking()
-				.FirstOrDefaultAsync(v => v.Id == id);
-		}
+        private StatutVehicule GetStatutFromConteneur(StatutConteneur statutConteneur)
+        {
+            return statutConteneur switch
+            {
+                StatutConteneur.EnTransit => StatutVehicule.EnTransit,
+                StatutConteneur.Arrive => StatutVehicule.Arrive,
+                StatutConteneur.EnDedouanement => StatutVehicule.EnDedouanement,
+                StatutConteneur.Livre => StatutVehicule.Livre,
+                _ => StatutVehicule.Affecte
+            };
+        }
+
+        // ... (Les autres méthodes GetByIdAsync, GetAllAsync, etc. sont inchangées, je les réinclus pour être complet) ...
+        
+        public async Task<Vehicule?> GetByIdAsync(Guid id)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Vehicules
+                .Include(v => v.Client)
+                .Include(v => v.Paiements)
+                .Include(v => v.Conteneur)
+                .Include(v => v.Documents)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == id);
+        }
 
         public async Task<IEnumerable<Vehicule>> GetAllAsync()
         {
@@ -235,29 +350,20 @@ namespace TransitManager.Infrastructure.Services
                 await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
             }
         }
-		
-		public async Task<IEnumerable<Vehicule>> GetByUserIdAsync(Guid userId)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			
-			// 1. Trouver l'utilisateur pour avoir son ClientId
-			var user = await context.Utilisateurs.FindAsync(userId);
-			
-			// Si l'utilisateur n'est pas lié à un client, il ne voit rien
-			if (user == null || !user.ClientId.HasValue)
-			{
-				return Enumerable.Empty<Vehicule>();
-			}
+        
+        public async Task<IEnumerable<Vehicule>> GetByUserIdAsync(Guid userId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var user = await context.Utilisateurs.FindAsync(userId);
+            if (user == null || !user.ClientId.HasValue) return Enumerable.Empty<Vehicule>();
 
-			// 2. Retourner les véhicules de ce client
-			return await context.Vehicules
-				.Include(v => v.Client)
-				.Include(v => v.Conteneur)
-				.Where(v => v.ClientId == user.ClientId.Value && v.Actif)
-				.OrderByDescending(v => v.DateCreation)
-				.AsNoTracking()
-				.ToListAsync();
-		}
-		
+            return await context.Vehicules
+                .Include(v => v.Client)
+                .Include(v => v.Conteneur)
+                .Where(v => v.ClientId == user.ClientId.Value && v.Actif)
+                .OrderByDescending(v => v.DateCreation)
+                .AsNoTracking()
+                .ToListAsync();
+        }
     }
 }

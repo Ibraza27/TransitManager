@@ -27,6 +27,8 @@ namespace TransitManager.Infrastructure.Data
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
         public DbSet<Barcode> Barcodes { get; set; } = null!;
         public DbSet<Vehicule> Vehicules { get; set; } = null!;
+        public DbSet<Message> Messages { get; set; } = null!;
+        public DbSet<TrackingEvent> TrackingEvents { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -61,6 +63,8 @@ namespace TransitManager.Infrastructure.Data
             modelBuilder.Entity<Paiement>().HasQueryFilter(e => e.Actif);
             modelBuilder.Entity<Document>().HasQueryFilter(e => e.Actif);
             modelBuilder.Entity<Barcode>().HasQueryFilter(b => b.Colis.Actif);
+            modelBuilder.Entity<Message>().HasQueryFilter(e => e.Actif);
+            modelBuilder.Entity<TrackingEvent>().HasQueryFilter(e => e.Actif);
         }
 
         public override int SaveChanges()

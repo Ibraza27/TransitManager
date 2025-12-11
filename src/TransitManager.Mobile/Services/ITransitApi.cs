@@ -87,5 +87,20 @@ namespace TransitManager.Mobile.Services
 		
 		[Get("/api/utilities/generate-barcode")]
 		Task<string> GenerateBarcodeAsync();
+		
+
+        // --- Messagerie ---
+        [Get("/api/messages")]
+        Task<IEnumerable<MessageDto>> GetMessagesAsync([AliasAs("colisId")] Guid? colisId, [AliasAs("vehiculeId")] Guid? vehiculeId);
+
+        [Post("/api/messages")]
+        Task SendMessageAsync([Body] CreateMessageDto dto);
+
+        [Post("/api/messages/mark-read")]
+        Task MarkMessagesAsReadAsync([Body] object request); // On peut passer un objet anonyme
+
+        // --- Timeline ---
+        [Get("/api/timeline")]
+        Task<IEnumerable<TimelineDto>> GetTimelineAsync([AliasAs("colisId")] Guid? colisId, [AliasAs("vehiculeId")] Guid? vehiculeId);
     }
 }

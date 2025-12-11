@@ -67,6 +67,8 @@ builder.Services.AddTransient<IConteneurRepository, ConteneurRepository>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 builder.Services.AddTransient<IEmailService, EmailService>();
+builder.Services.AddTransient<IMessageService, MessageService>();
+builder.Services.AddTransient<ITimelineService, TimelineService>();
 // --- SERVICES WEB API ---
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -167,6 +169,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<TransitManager.Infrastructure.Hubs.AppHub>("/appHub");
 
  
 Console.WriteLine("[API] Lancement de l'application.");

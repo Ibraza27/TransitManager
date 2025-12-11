@@ -21,6 +21,7 @@ namespace TransitManager.Infrastructure.Services
         private readonly IMessenger _messenger;
         private readonly IVehiculeService _vehiculeService;
         private readonly IColisService _colisService;
+		private readonly ITimelineService _timelineService;
 
         public PaiementService(
             IDbContextFactory<TransitContext> contextFactory,
@@ -29,7 +30,8 @@ namespace TransitManager.Infrastructure.Services
             IClientService clientService,
             IMessenger messenger,
             IVehiculeService vehiculeService,
-            IColisService colisService)
+            IColisService colisService,
+			ITimelineService timelineService)
         {
             _contextFactory = contextFactory;
             _notificationService = notificationService;
@@ -38,6 +40,7 @@ namespace TransitManager.Infrastructure.Services
             _messenger = messenger;
             _vehiculeService = vehiculeService;
             _colisService = colisService;
+			_timelineService = timelineService;
         }
 
         public async Task<Paiement?> GetByIdAsync(Guid id)
@@ -112,6 +115,14 @@ namespace TransitManager.Infrastructure.Services
             paiement.Statut = StatutPaiement.Paye;
             context.Paiements.Add(paiement);
             await context.SaveChangesAsync();
+			
+            await _timelineService.AddEventAsync(
+                $"Paiement reçu : {paiement.Montant:C} ({paiement.ModePaiement})",
+                colisId: paiement.ColisId,
+                vehiculeId: paiement.VehiculeId,
+                conteneurId: paiement.ConteneurId
+            );
+			
             _messenger.Send(new PaiementUpdatedMessage());
             if (paiement.VehiculeId.HasValue)
             {
@@ -134,7 +145,16 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             context.Paiements.Update(paiement);
             await context.SaveChangesAsync();
+			
+            await _timelineService.AddEventAsync(
+                $"Paiement mis à jour : {paiement.Montant:C} ({paiement.ModePaiement})",
+                colisId: paiement.ColisId,
+                vehiculeId: paiement.VehiculeId,
+                conteneurId: paiement.ConteneurId
+            );
+			
             _messenger.Send(new PaiementUpdatedMessage());
+			
             if (paiement.VehiculeId.HasValue)
             {
                 await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(paiement.VehiculeId.Value);
@@ -157,6 +177,14 @@ namespace TransitManager.Infrastructure.Services
             var colisId = paiement.ColisId;
             paiement.Actif = false;
             await context.SaveChangesAsync();
+			
+            await _timelineService.AddEventAsync(
+                $"Paiement suprimer : {paiement.Montant:C} ({paiement.ModePaiement})",
+                colisId: paiement.ColisId,
+                vehiculeId: paiement.VehiculeId,
+                conteneurId: paiement.ConteneurId
+            );
+			
             _messenger.Send(new PaiementUpdatedMessage());
             if (vehiculeId.HasValue)
             {
@@ -176,6 +204,14 @@ namespace TransitManager.Infrastructure.Services
             var paiement = await context.Paiements.FindAsync(paiementId);
             if (paiement == null) return false;
             paiement.Statut = StatutPaiement.Paye;
+			
+            await _timelineService.AddEventAsync(
+                $"Paiement reçu : {paiement.Montant:C} ({paiement.ModePaiement})",
+                colisId: paiement.ColisId,
+                vehiculeId: paiement.VehiculeId,
+                conteneurId: paiement.ConteneurId
+            );
+			
             await context.SaveChangesAsync();
             _messenger.Send(new PaiementUpdatedMessage());
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
@@ -190,6 +226,14 @@ namespace TransitManager.Infrastructure.Services
             paiement.Statut = StatutPaiement.Annule;
             paiement.Commentaires = $"Annulé : {raison}";
             await context.SaveChangesAsync();
+			
+            await _timelineService.AddEventAsync(
+                $"Paiement suprimer : {paiement.Montant:C} ({paiement.ModePaiement})",
+                colisId: paiement.ColisId,
+                vehiculeId: paiement.VehiculeId,
+                conteneurId: paiement.ConteneurId
+            );
+			
             _messenger.Send(new PaiementUpdatedMessage());
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
             return true;

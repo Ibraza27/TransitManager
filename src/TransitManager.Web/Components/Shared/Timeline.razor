@@ -1,0 +1,125 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using TransitManager.Core.DTOs
+@inject IApiService ApiService
+@implements IAsyncDisposable
+
+<div class="timeline-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold text-uppercase text-muted small mb-0">
+            <i class="bi bi-clock-history me-2"></i>Historique & Suivi
+        </h6>
+        <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="LoadTimeline" title="Actualiser">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+    @if (_isLoading)
+    {
+        <div class="text-center py-4">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        </div>
+    }
+    else if (_events == null || !_events.Any())
+    {
+        <div class="text-center py-4 text-muted bg-light rounded">
+            <i class="bi bi-calendar-x fs-4 d-block mb-2"></i>
+            <small>Aucun événement enregistré.</small>
+        </div>
+    }
+    else
+    {
+        <div class="timeline">
+            @foreach (var evt in _events)
+            {
+                <div class="timeline-item">
+                    <div class="timeline-marker" style="background-color: @evt.ColorHex">
+                        <i class="bi bi-@evt.IconKey text-white" style="font-size: 0.8rem;"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="fw-bold text-dark">@evt.Statut</span>
+                            <small class="text-muted" style="font-size: 0.75rem;">@evt.Date.ToLocalTime().ToString("dd/MM HH:mm")</small>
+                        </div>
+                        <p class="mb-0 text-secondary small">@evt.Description</p>
+                        @if (!string.IsNullOrEmpty(evt.Location))
+                        {
+                            <div class="mt-1 text-muted x-small">
+                                <i class="bi bi-geo-alt-fill me-1"></i>@evt.Location
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid EntityId { get; set; }
+    [Parameter] public string EntityType { get; set; } = "Colis"; // "Colis" ou "Vehicule"
+    private List<TimelineDto> _events = new();
+    private bool _isLoading = false;
+    private HubConnection? _hubConnection;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (EntityId != Guid.Empty)
+        {
+            await LoadTimeline();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadTimeline();
+            await ConnectToSignalR();
+        }
+    }
+
+    private async Task ConnectToSignalR()
+    {
+        try
+        {
+            var hubUrl = "https://localhost:7243/appHub";
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(hubUrl)
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On<TimelineDto>("ReceiveTimelineEvent", async (evt) =>
+            {
+                // Ajouter le nouvel événement en haut de la liste (si trié par date desc)
+                _events.Insert(0, evt);
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("JoinGroup", EntityId.ToString());
+        }
+        catch
+        {
+            // Gérer l'erreur silencieusement ou logger
+        }
+    }
+
+    private async Task LoadTimeline()
+    {
+        _isLoading = true;
+        StateHasChanged();
+        Guid? colisId = EntityType == "Colis" ? EntityId : null;
+        Guid? vehiculeId = EntityType == "Vehicule" ? EntityId : null;
+        _events = (await ApiService.GetTimelineAsync(colisId, vehiculeId)).ToList();
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+}

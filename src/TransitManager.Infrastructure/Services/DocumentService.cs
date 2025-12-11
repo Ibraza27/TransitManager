@@ -16,16 +16,17 @@ namespace TransitManager.Infrastructure.Services
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly string _storageRootPath;
+        private readonly ITimelineService _timelineService; // AJOUT
 
-        public DocumentService(IDbContextFactory<TransitContext> contextFactory, IConfiguration configuration)
+        public DocumentService(
+            IDbContextFactory<TransitContext> contextFactory, 
+            IConfiguration configuration,
+            ITimelineService timelineService) // AJOUT
         {
             _contextFactory = contextFactory;
+            _timelineService = timelineService; // AJOUT
             
-            // On récupère le chemin de stockage depuis appsettings.json, sinon on utilise un défaut
-            // "Storage" sera créé à la racine de l'exécution de l'API
             _storageRootPath = configuration["FileStorage:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Storage");
-            
-            // Création du dossier racine s'il n'existe pas
             if (!Directory.Exists(_storageRootPath))
             {
                 Directory.CreateDirectory(_storageRootPath);
@@ -36,7 +37,6 @@ namespace TransitManager.Infrastructure.Services
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            // 1. Déterminer le sous-dossier (Organisation propre)
             string subFolder = "Misc";
             string entityIdFolder = Guid.NewGuid().ToString();
 
@@ -46,31 +46,22 @@ namespace TransitManager.Infrastructure.Services
             else if (conteneurId.HasValue) { subFolder = "Conteneurs"; entityIdFolder = conteneurId.Value.ToString(); }
 
             var targetDirectory = Path.Combine(_storageRootPath, subFolder, entityIdFolder);
-            if (!Directory.Exists(targetDirectory))
-            {
-                Directory.CreateDirectory(targetDirectory);
-            }
+            if (!Directory.Exists(targetDirectory)) Directory.CreateDirectory(targetDirectory);
 
-            // 2. Générer un nom de fichier unique pour éviter les écrasements
-            // Format: [GUID]_[NomOriginal]
             var uniqueFileName = $"{Guid.NewGuid()}_{SanitizeFileName(fileName)}";
             var fullPath = Path.Combine(targetDirectory, uniqueFileName);
 
-            // 3. Sauvegarder physiquement le fichier
-            // On rembobine le stream si nécessaire
             if (fileStream.CanSeek) fileStream.Position = 0;
-            
             using (var fileOutput = new FileStream(fullPath, FileMode.Create))
             {
                 await fileStream.CopyToAsync(fileOutput);
             }
 
-            // 4. Créer l'entrée en base de données
             var document = new Document
             {
-                Nom = fileName, // Nom affiché
+                Nom = fileName,
                 NomFichierOriginal = fileName,
-                CheminFichier = Path.Combine(subFolder, entityIdFolder, uniqueFileName), // Chemin relatif stocké
+                CheminFichier = Path.Combine(subFolder, entityIdFolder, uniqueFileName),
                 Type = typeDoc,
                 TypeMime = contentType,
                 Extension = Path.GetExtension(fileName).ToLower(),
@@ -86,6 +77,11 @@ namespace TransitManager.Infrastructure.Services
 
             context.Documents.Add(document);
             await context.SaveChangesAsync();
+
+            // --- AJOUT TIMELINE ---
+            string desc = $"Document ajouté : {fileName} ({typeDoc})";
+            await _timelineService.AddEventAsync(desc, colisId: colisId, vehiculeId: vehiculeId, conteneurId: conteneurId);
+            // ----------------------
 
             return document;
         }

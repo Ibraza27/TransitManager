@@ -15,11 +15,16 @@ namespace TransitManager.Infrastructure.Services
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;
+        private readonly ITimelineService _timelineService; // AJOUT
 
-        public ConteneurService(IDbContextFactory<TransitContext> contextFactory, INotificationService notificationService)
+        public ConteneurService(
+            IDbContextFactory<TransitContext> contextFactory, 
+            INotificationService notificationService,
+            ITimelineService timelineService) // AJOUT
         {
             _contextFactory = contextFactory;
             _notificationService = notificationService;
+            _timelineService = timelineService;
         }
 
         public async Task<Conteneur?> GetByIdAsync(Guid id)
@@ -49,24 +54,20 @@ namespace TransitManager.Infrastructure.Services
                 .ToListAsync();
         }
 
-		public async Task<Conteneur> CreateAsync(Conteneur conteneur)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			
-			// === DÉBUT DE LA CORRECTION ===
-			// On s'assure qu'on crée le conteneur "vide".
-			// Les colis/véhicules seront ajoutés après sa création.
-			conteneur.Colis = new List<Colis>();
-			conteneur.Vehicules = new List<Vehicule>();
-			// ==============================
+        public async Task<Conteneur> CreateAsync(Conteneur conteneur)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            
+            conteneur.Colis = new List<Colis>();
+            conteneur.Vehicules = new List<Vehicule>();
 
-			conteneur.Statut = CalculateStatusFromDates(conteneur);
-			context.Conteneurs.Add(conteneur);
-			await context.SaveChangesAsync();
-			
-			await _notificationService.NotifyAsync("Nouveau conteneur", $"Le conteneur {conteneur.NumeroDossier} pour {conteneur.Destination} a été créé.");
-			return conteneur;
-		}
+            conteneur.Statut = CalculateStatusFromDates(conteneur);
+            context.Conteneurs.Add(conteneur);
+            await context.SaveChangesAsync();
+            
+            await _notificationService.NotifyAsync("Nouveau conteneur", $"Le conteneur {conteneur.NumeroDossier} pour {conteneur.Destination} a été créé.");
+            return conteneur;
+        }
 
         public async Task RecalculateStatusAsync(Guid conteneurId)
         {
@@ -79,40 +80,35 @@ namespace TransitManager.Infrastructure.Services
             await UpdateAndSaveConteneurStatus(conteneur, context);
         }
 
-		public async Task<Conteneur> UpdateAsync(Conteneur conteneurFromUI)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			
-			var conteneurInDb = await context.Conteneurs
-				.Include(c => c.Colis)
-				.Include(c => c.Vehicules)
-				.FirstOrDefaultAsync(c => c.Id == conteneurFromUI.Id);
-				
-			if (conteneurInDb == null) throw new Exception("Conteneur non trouvé.");
+        public async Task<Conteneur> UpdateAsync(Conteneur conteneurFromUI)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            
+            var conteneurInDb = await context.Conteneurs
+                .Include(c => c.Colis)
+                .Include(c => c.Vehicules)
+                .FirstOrDefaultAsync(c => c.Id == conteneurFromUI.Id);
+                
+            if (conteneurInDb == null) throw new Exception("Conteneur non trouvé.");
 
-			// === DÉBUT DE LA CORRECTION ===
-			// On vide les listes de navigation de l'objet entrant pour éviter qu'EF Core 
-			// n'essaie de suivre les Colis/Véhicules/Clients et ne provoque l'erreur de "Tracking".
-			// La gestion des enfants (Ajout/Retrait) se fait via les méthodes Assign/Remove, pas ici.
-			conteneurFromUI.Colis = new List<Colis>();
-			conteneurFromUI.Vehicules = new List<Vehicule>();
-			// ==============================
+            conteneurFromUI.Colis = new List<Colis>();
+            conteneurFromUI.Vehicules = new List<Vehicule>();
 
-			var oldStatus = conteneurInDb.Statut;
-			
-			// Copie des valeurs scalaires (Numéro, Dates, etc.)
-			context.Entry(conteneurInDb).CurrentValues.SetValues(conteneurFromUI);
-			context.Entry(conteneurInDb).Property("RowVersion").OriginalValue = conteneurFromUI.RowVersion;
-			
-			await UpdateAndSaveConteneurStatus(conteneurInDb, context, oldStatus);
-			
-			if (conteneurInDb.NumeroPlomb != conteneurFromUI.NumeroPlomb)
-			{
-				await UpdatePlombOnChildren(conteneurInDb.Id, conteneurInDb.NumeroPlomb, context);
-			}
-			
-			return conteneurInDb;
-		}
+            var oldStatus = conteneurInDb.Statut;
+            
+            context.Entry(conteneurInDb).CurrentValues.SetValues(conteneurFromUI);
+            context.Entry(conteneurInDb).Property("RowVersion").OriginalValue = conteneurFromUI.RowVersion;
+            
+            await UpdateAndSaveConteneurStatus(conteneurInDb, context, oldStatus);
+            
+            if (conteneurInDb.NumeroPlomb != conteneurFromUI.NumeroPlomb)
+            {
+                await UpdatePlombOnChildren(conteneurInDb.Id, conteneurInDb.NumeroPlomb, context);
+            }
+            
+            return conteneurInDb;
+        }
+
         private async Task UpdateAndSaveConteneurStatus(Conteneur conteneur, TransitContext context, StatutConteneur? oldStatus = null)
         {
             var problemColis = conteneur.Colis.Any(c => c.Statut == StatutColis.Probleme || c.Statut == StatutColis.Perdu);
@@ -192,12 +188,39 @@ namespace TransitManager.Infrastructure.Services
                 default:
                     newColisStatus = StatutColis.Affecte; newVehiculeStatus = StatutVehicule.Affecte; break;
             }
+
+            // --- NOUVELLE LOGIQUE TIMELINE ---
+            // On récupère les IDs des colis concernés avant la mise à jour
+            var colisIds = await context.Colis
+                .Where(c => c.ConteneurId == conteneur.Id && !ignoredColisStatuses.Contains(c.Statut))
+                .Select(c => c.Id)
+                .ToListAsync();
+
+            var vehiculeIds = await context.Vehicules
+                .Where(v => v.ConteneurId == conteneur.Id && !ignoredVehiculeStatuses.Contains(v.Statut))
+                .Select(v => v.Id)
+                .ToListAsync();
+
+            // Mise à jour des statuts
             await context.Colis
                 .Where(c => c.ConteneurId == conteneur.Id && !ignoredColisStatuses.Contains(c.Statut))
                 .ExecuteUpdateAsync(s => s.SetProperty(c => c.Statut, newColisStatus));
             await context.Vehicules
                 .Where(v => v.ConteneurId == conteneur.Id && !ignoredVehiculeStatuses.Contains(v.Statut))
                 .ExecuteUpdateAsync(s => s.SetProperty(v => v.Statut, newVehiculeStatus));
+
+            // CRÉATION DES ÉVÉNEMENTS TIMELINE
+            string descriptionEvent = $"Mise à jour via conteneur {conteneur.NumeroDossier} : {conteneur.Statut}";
+
+            foreach (var cid in colisIds)
+            {
+                await _timelineService.AddEventAsync(descriptionEvent, colisId: cid, statut: newColisStatus.ToString());
+            }
+
+            foreach (var vid in vehiculeIds)
+            {
+                await _timelineService.AddEventAsync(descriptionEvent, vehiculeId: vid, statut: newVehiculeStatus.ToString());
+            }
         }
 
         private async Task UpdatePlombOnChildren(Guid conteneurId, string? numeroPlomb, TransitContext context)
@@ -275,12 +298,10 @@ namespace TransitManager.Infrastructure.Services
 			return await context.Conteneurs.CountAsync(c => c.Actif && !inactiveStatuses.Contains(c.Statut));
 		}
 
-		// Implémentons les autres méthodes avec des valeurs par défaut pour éviter de futures erreurs
 		public Task<decimal> GetAverageFillingRateAsync()
 		{
-			// Logique complexe, on retourne 0 pour l'instant
 			return Task.FromResult(0m);
-    }
+        }
 
 		public async Task<IEnumerable<Conteneur>> GetUpcomingDeparturesAsync(int days)
 		{
@@ -292,9 +313,7 @@ namespace TransitManager.Infrastructure.Services
 				.ToListAsync();
 		}
 
-		// Pour cette méthode, nous allons faire une approximation. Une vraie mesure nécessiterait de connaître la capacité de chaque conteneur.
-		// Nous allons considérer qu'un conteneur est "presque plein" s'il a plus de X colis.
-		public async Task<IEnumerable<Conteneur>> GetAlmostFullContainersAsync(decimal threshold) // threshold sera un nombre de colis pour notre approximation
+		public async Task<IEnumerable<Conteneur>> GetAlmostFullContainersAsync(decimal threshold)
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
 			var activeStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation };
@@ -307,10 +326,8 @@ namespace TransitManager.Infrastructure.Services
 
 		public Task<Dictionary<string, int>> GetStatsByDestinationAsync()
 		{
-			// Logique à implémenter plus tard
 			return Task.FromResult(new Dictionary<string, int>());
 		}
-
 
         public Task<bool> CanAddColisAsync(Guid conteneurId, Guid colisId) => throw new NotImplementedException();
 
@@ -320,9 +337,6 @@ namespace TransitManager.Infrastructure.Services
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
 			
-			// On récupère les conteneurs où :
-			// - Soit il y a un colis appartenant au client
-			// - Soit il y a un véhicule appartenant au client
 			return await context.Conteneurs
 				.Include(c => c.Colis)
 				.Include(c => c.Vehicules)
@@ -334,6 +348,5 @@ namespace TransitManager.Infrastructure.Services
 				.AsNoTracking()
 				.ToListAsync();
 		}
-		
     }
 }

@@ -10,9 +10,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using TransitManager.Web.Components.Shared
-
 <PageTitle>@(IsNew ? "Nouveau Colis" : "Détail Colis") - Hippocampe</PageTitle>
-
 <div class="container mt-4 mb-5">
     <!-- En-tête -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -59,7 +57,6 @@
                          @onclick="ToggleExportMenu"></div>
                 }
             </div>
-
              <!-- Boutons actions -->
             <button class="btn btn-outline-secondary" @onclick="ShowInventory">
                 <i class="bi bi-clipboard-list me-2"></i>Inventaire
@@ -71,14 +68,12 @@
                     <i class="bi bi-cash-coin me-2"></i>Paiements
                 </button>
             }
-
             <button class="btn btn-primary" @onclick="SaveParcel" disabled="@(!CanEditGlobal)">
                 <i class="bi bi-save me-2"></i>Enregistrer
             </button>
             <a href="/my-parcels" class="btn btn-outline-dark">Retour</a>
         </div>
     </div>
-
     @if (_isLoading)
     {
         <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
@@ -99,9 +94,18 @@
                         Documents & Photos
                     </button>
                 </li>
+                <li class="nav-item">
+					<button class="nav-link @(_activeTab == "suivi" ? "active fw-bold" : "")" @onclick='() => _activeTab = "suivi"'>
+                        <i class="bi bi-chat-left-text me-2"></i>
+                        Suivi & Discussion
+                        @if(_unreadMessagesCount > 0 && _activeTab != "suivi")
+                        {
+                            <span class="badge bg-danger rounded-pill ms-2">@_unreadMessagesCount</span>
+                        }
+                    </button>
+                </li>
              }
         </ul>
-
         <div class="tab-content">
             
             <!-- ONGLET 1 : INFOS & FINANCES -->
@@ -141,7 +145,6 @@
                                             <input type="text" class="form-control" value="@_clientNameDisplay" disabled />
                                         }
                                     </div>
-
                                     <div class="col-md-6">
                                         <label class="form-label">Désignation <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" @bind="_colis.Designation" disabled="@(!CanEditFields)" />
@@ -150,7 +153,6 @@
                                         <label class="form-label">Destination Finale <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" @bind="_colis.DestinationFinale" disabled="@(!CanEditFields)" />
                                     </div>
-
                                      <div class="col-12">
                                         <label class="form-label">Code-barres</label>
                                         <div class="input-group">
@@ -166,7 +168,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <!-- Carte Destinataire -->
                         <div class="card shadow-sm border-0 mb-4">
                             <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-geo-alt me-2"></i>Destinataire</h5></div>
@@ -176,7 +177,6 @@
                                            @bind="_sameAsClient" @onclick="ToggleSameAsClient" disabled="@(!CanEditFields)">
                                     <label class="form-check-label" for="sameRecipient">Destinataire identique au propriétaire</label>
                                 </div>
-
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">Nom Destinataire</label>
@@ -187,14 +187,11 @@
                                         <input type="text" class="form-control" @bind="_colis.TelephoneDestinataire" disabled="@(_sameAsClient || !CanEditFields)" />
                                     </div>
                                 </div>
-
                                 <hr />
-
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="homeDelivery" @bind="_colis.LivraisonADomicile" disabled="@(!CanEditFields)">
                                     <label class="form-check-label" for="homeDelivery">Livraison à domicile</label>
                                 </div>
-
                                  <div class="mb-3">
                                     <label class="form-label">Adresse de Livraison</label>
                                     <textarea class="form-control" rows="2" @bind="_colis.AdresseLivraison" disabled="@(!_colis.LivraisonADomicile || !CanEditFields)"></textarea>
@@ -237,7 +234,6 @@
                             </div>
                         </div>
                     </div>
-
                     <!-- COLONNE DROITE : ADMIN & FINANCES -->
                     <div class="col-lg-4">
                         <!-- Statut -->
@@ -263,7 +259,6 @@
                                 }
                             </div>
                         </div>
-
                         <!-- Finances -->
                         <div class="card shadow-sm border-0 border-top border-3 border-success">
                             <div class="card-header bg-white py-3"><h5 class="mb-0 text-success"><i class="bi bi-currency-euro me-2"></i>Finances</h5></div>
@@ -303,7 +298,6 @@
                                         </div>
                                     </div>
                                 }
-
                                 <div class="mb-3">
                                     <label class="form-label fw-bold text-primary">PRIX TOTAL (€)</label>
                                     <input type="number" class="form-control form-control-lg fw-bold text-primary" @bind="_colis.PrixTotal" disabled="@(!IsAdmin)" />
@@ -322,12 +316,31 @@
                     </div>
                 </div>
             </div>
-
             <!-- ONGLET 2 : DOCUMENTS (Nouveau) -->
             @if (!IsNew)
             {
                 <div class="tab-pane fade @(_activeTab == "documents" ? "show active" : "")">
                     <DocumentManager EntityId="@_colis.Id" EntityType="Colis" />
+                </div>
+            }
+            <!-- ONGLET 3 : SUIVI & DISCUSSION -->
+            @if (!IsNew)
+            {
+                <div class="tab-pane fade @(_activeTab == "suivi" ? "show active" : "")">
+                    <div class="row g-4">
+                        <div class="col-lg-5">
+                            <!-- TIMELINE -->
+                            <Timeline EntityId="@_colis.Id" EntityType="Colis" />
+                        </div>
+                        <div class="col-lg-7">
+                            <!-- CHAT -->
+							<!-- On passe _activeTab == "suivi" pour dire au chat s'il est affiché -->
+							<ChatBox EntityId="@_colis.Id" 
+									 EntityType="Colis" 
+									 OnUnreadCountChanged="UpdateUnreadBadge" 
+									 IsVisible="@(_activeTab == "suivi")" />
+                        </div>
+                    </div>
                 </div>
             }
         </div>
@@ -342,7 +355,6 @@
 					Date="@_colis.DateSignatureInventaire"
 					OnSave="SaveInventory"
 					OnClose="() => _showInventory = false" />
-
     <PaymentModal IsVisible="_showPayments"
                   IsAdmin="@IsAdmin"
                   ColisId="@_colis.Id"
@@ -350,19 +362,15 @@
                   TotalAmount="@_colis.PrixTotal"
                   OnPaymentsChanged="UpdatePaidAmount"
                   OnClose="() => _showPayments = false" />
-
 </div>
-
 @code {
     [Parameter] public Guid? Id { get; set; }
-
     private Colis _colis = new() { DateArrivee = DateTime.UtcNow, Statut = StatutColis.EnAttente };
     private bool _isLoading = true;
     private bool IsNew => Id == null;
     
     // Navigation Tabs
     private string _activeTab = "infos";
-
     // Contexte Utilisateur
     private bool IsAdmin = false;
     private Guid CurrentUserId;
@@ -379,11 +387,9 @@
     private string _clientSearch = "";
     private List<Client> _filteredClients = new();
     private List<Conteneur> _containers = new();
-
     // Logic Permissions
     private bool CanEditGlobal => IsAdmin || (IsNew || _colis.Statut == StatutColis.EnAttente);
     private bool CanEditFields => IsAdmin || (CanEditGlobal); 
-
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -392,12 +398,10 @@
         IsAdmin = user.IsInRole("Administrateur");
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim != null) Guid.TryParse(userIdClaim.Value, out CurrentUserId);
-
         if (IsAdmin)
         {
              _containers = (await ApiService.GetConteneursAsync())?.ToList() ?? new();
         }
-
         if (!IsNew)
         {
             var dto = await ApiService.GetColisByIdAsync(Id.Value);
@@ -406,7 +410,6 @@
                 _colis = dto;
                 _clientNameDisplay = _colis.Client?.NomComplet ?? "Inconnu";
                 _firstBarcode = _colis.Barcodes.FirstOrDefault()?.Value ?? "";
-
                 // Vérification automatique de la case à cocher "Destinataire identique"
                 if (_colis.Client != null)
                 {
@@ -438,7 +441,6 @@
         
         _isLoading = false;
     }
-
     private async Task FilterClients(KeyboardEventArgs e)
     {
         if (string.IsNullOrEmpty(_clientSearch) || _clientSearch.Length < 2) 
@@ -451,7 +453,6 @@
             _filteredClients = allClients.Where(c => c.NomComplet.Contains(_clientSearch, StringComparison.OrdinalIgnoreCase)).Take(5).ToList();
         }
     }
-
     private void SelectClient(Client client)
     {
         _colis.ClientId = client.Id;
@@ -462,13 +463,11 @@
         // Si "Identique" est coché, on met à jour le destinataire immédiatement
         if (_sameAsClient) ToggleSameAsClient();
     }
-
     private async Task GenerateBarcode()
     {
         var code = await ApiService.GenerateBarcodeAsync();
         if (!string.IsNullOrEmpty(code)) _firstBarcode = code;
     }
-
     private void ToggleSameAsClient()
     {
         if (_sameAsClient)
@@ -491,18 +490,15 @@
         
         // Fermeture de la modale uniquement
         _showInventory = false;
-
         // 2. Calculs locaux
         int newPieces = 0;
         decimal newValeur = 0;
-
         if (!string.IsNullOrEmpty(result.Json))
         {
             try
             {
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
                 var items = JsonSerializer.Deserialize<List<InventaireItem>>(result.Json, options);
-
                 if (items != null && items.Any())
                 {
                     newPieces = items.Sum(i => i.Quantite);
@@ -514,7 +510,6 @@
             }
             catch { }
         }
-
         // 3. Sauvegarde via l'API dédiée (SANS REDIRECTION)
         try
         {
@@ -529,7 +524,6 @@
                 DateSignatureInventaire = _colis.DateSignatureInventaire,
                 SignatureClientInventaire = _colis.SignatureClientInventaire
             };
-
             var success = await ApiService.UpdateInventaireAsync(dto);
             
             if (success)
@@ -547,13 +541,11 @@
             Console.WriteLine($"Erreur SaveInventory: {ex.Message}");
         }
     }
-
     private void ShowPayments() => _showPayments = true;
     private void UpdatePaidAmount(decimal totalPaid)
     {
         _colis.SommePayee = totalPaid;
     }
-
     private async Task SaveParcel()
     {
         var barcodesList = new List<string>();
@@ -639,26 +631,21 @@
 	
     private bool _isExportMenuOpen = false;
     private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
-
 	private async Task ExportPdf(bool includeFinancials, bool includePhotos)
     {
         _isExportMenuOpen = false;
         _isLoading = true;
         StateHasChanged();
-
         try
         {
             // Appel avec les deux booléens
             var pdfData = await ApiService.ExportColisPdfAsync(_colis.Id, includeFinancials, includePhotos);
-
             if (pdfData != null && pdfData.Length > 0)
             {
                 var safeRef = _colis.NumeroReference.Replace("/", "-");
                 var fileName = $"Colis_{safeRef}.pdf";
-
                 using var stream = new MemoryStream(pdfData);
                 using var streamRef = new DotNetStreamReference(stream);
-
                 await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
             }
             else
@@ -675,5 +662,16 @@
             _isLoading = false;
             StateHasChanged();
         }
+		
     }
+	
+	private int _unreadMessagesCount = 0;
+    
+    private async Task UpdateUnreadBadge(int count)
+    {
+        _unreadMessagesCount = count;
+        // CORRECTION : On utilise InvokeAsync pour revenir sur le thread UI
+        await InvokeAsync(StateHasChanged);
+    }
+	
 }

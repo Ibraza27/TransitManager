@@ -822,6 +822,59 @@ namespace TransitManager.Web.Services
             }
             catch { return false; }
         }
+		
+
+        public async Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId)
+        {
+            try
+            {
+                var query = colisId.HasValue ? $"colisId={colisId}" : $"vehiculeId={vehiculeId}";
+                return await _httpClient.GetFromJsonAsync<IEnumerable<MessageDto>>($"api/messages?{query}", _jsonOptions) 
+                       ?? Enumerable.Empty<MessageDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erreur GetMessages: {ex.Message}");
+                return Enumerable.Empty<MessageDto>();
+            }
+        }
+
+        public async Task<bool> SendMessageAsync(CreateMessageDto dto)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/messages", dto);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task MarkMessagesAsReadAsync(Guid? colisId, Guid? vehiculeId)
+        {
+            try
+            {
+                var request = new { ColisId = colisId, VehiculeId = vehiculeId };
+                await _httpClient.PostAsJsonAsync("api/messages/mark-read", request);
+            }
+            catch { /* Ignorer les erreurs de marquage */ }
+        }
+
+        public async Task<IEnumerable<TimelineDto>> GetTimelineAsync(Guid? colisId, Guid? vehiculeId)
+        {
+            try
+            {
+                var query = colisId.HasValue ? $"colisId={colisId}" : $"vehiculeId={vehiculeId}";
+                return await _httpClient.GetFromJsonAsync<IEnumerable<TimelineDto>>($"api/timeline?{query}", _jsonOptions) 
+                       ?? Enumerable.Empty<TimelineDto>();
+            }
+            catch
+            {
+                return Enumerable.Empty<TimelineDto>();
+            }
+        }
 
     }
 }

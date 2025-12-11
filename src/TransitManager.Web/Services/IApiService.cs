@@ -87,6 +87,14 @@ namespace TransitManager.Web.Services
         Task<bool> VerifyEmailAsync(VerifyEmailDto request);
         Task<bool> ToggleUserEmailConfirmationAsync(Guid userId, bool isConfirmed);
         Task<bool> ResendUserConfirmationEmailAsync(Guid userId);
+		
+        // --- Messagerie ---
+        Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId);
+        Task<bool> SendMessageAsync(CreateMessageDto dto);
+        Task MarkMessagesAsReadAsync(Guid? colisId, Guid? vehiculeId);
+
+        // --- Timeline ---
+        Task<IEnumerable<TimelineDto>> GetTimelineAsync(Guid? colisId, Guid? vehiculeId);
 				
     }
 }

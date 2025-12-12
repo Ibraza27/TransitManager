@@ -44,14 +44,15 @@
         }
         else if (!_messages.Any())
         {
-            <div class="text-center mt-5 text-muted">
+            <div class="text-center mt-5">
                 <div class="mb-3"><span class="fs-1 opacity-25">💬</span></div>
-                <p class="small">Aucun message.<br>Commencez la discussion !</p>
+                <p class="text-muted small">Aucun message.<br>Commencez la discussion !</p>
             </div>
         }
         else
         {
-            <!-- CORRECTION 1 : Groupement par date pour le sticky header correct -->
+            DateTime? lastDate = null;
+
             @foreach (var group in _messages.GroupBy(m => m.DateEnvoi.ToLocalTime().Date))
             {
                 <div class="date-group">
@@ -91,9 +92,7 @@
                                     <span>@msg.DateEnvoi.ToLocalTime().ToString("HH:mm")</span>
                                     @if(msg.EstMoi)
                                     {
-                                        <span class="status-icon @(msg.IsRead ? "text-info" : "text-muted") ms-1 fw-bold">
-                                            @(msg.IsRead ? "✓✓" : "✓") 
-                                        </span>
+                                        <span class="status-icon @(msg.IsRead ? "text-info" : "text-muted") ms-1 fw-bold">@(msg.IsRead ? "✓✓" : "✓")</span>
                                     }
                                 </div>
                             </div>
@@ -131,21 +130,12 @@
                     </select>
                 </div>
             </div>
-            <button class="btn btn-sm text-danger fs-5" @onclick="() => _selectedFile = null" title="Annuler">❌</button>
+            <button class="btn btn-sm text-danger fs-5" @onclick="() => _selectedFile = null">❌</button>
         </div>
     }
 
     <!-- Footer -->
     <div class="chat-footer p-3 bg-white border-top">
-        @if (_isTyping && !string.IsNullOrEmpty(_typingUserName))
-        {
-            <div class="mb-2">
-                <span class="typing-animate small text-success fw-bold">
-                    @_typingUserName est en train d'écrire...
-                </span>
-            </div>
-        }
-
         @if (_isAdmin)
         {
             <div class="form-check form-switch mb-2">
@@ -208,6 +198,8 @@
             el.onscroll = () => {
                 if (el.scrollHeight - el.scrollTop - el.clientHeight > 200) {
                     btn.style.display = 'block';
+                    // Reset count if user scrolls down
+                    // (Logic can be improved but kept simple here)
                 } else {
                     btn.style.display = 'none';
                 }
@@ -241,6 +233,9 @@
     private System.Timers.Timer? _typingTimer;
     private bool _isTyping = false;
     private string _typingUserName = "";
+    
+    // Pour détecter le changement d'ID de l'entité
+    private Guid _loadedEntityId = Guid.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -256,50 +251,56 @@
     {
         if (firstRender)
         {
-            await LoadData(false); // Chargement initial sans scroll
-            await ConnectToSignalR();
+            await InitializeChat();
             await JSRuntime.InvokeVoidAsync("chatHelpers.initScrollListener", _chatContainerId, $"scroll-down-btn-{_chatContainerId}");
         }
     }
 
-    // CORRECTION 2 : Gestion fine de la visibilité et de la lecture
     protected override async Task OnParametersSetAsync()
     {
-        // Si l'onglet devient visible ET qu'on a des messages
-        if (IsVisible)
+        // 1. Détection changement d'entité (Ex: On change de colis sans recharger la page)
+        if (EntityId != Guid.Empty && EntityId != _loadedEntityId)
         {
-            if (_messages.Any())
-            {
-                await ProcessReadAndScroll();
-            }
-            else if(!_isLoading && _hubConnection == null)
-            {
-                // Cas rare : navigation rapide, on force le chargement
-                await LoadData(false);
-            }
+            _loadedEntityId = EntityId;
+            await InitializeChat();
         }
+        
+        // 2. Détection changement visibilité (Ex: Clic sur l'onglet)
+        // Si l'onglet devient visible ET qu'on a des messages non lus
+        if (IsVisible && !_isLoading && _messages.Any())
+        {
+            await ProcessReadAndScroll();
+        }
+    }
+
+    private async Task InitializeChat()
+    {
+        _isLoading = true;
+        await InvokeAsync(StateHasChanged);
+
+        await LoadData(false); 
+        await ConnectToSignalR();
+
+        _isLoading = false;
+        await InvokeAsync(StateHasChanged);
+        
+        if (IsVisible) await ProcessReadAndScroll();
     }
 
     private async Task ForceReload() => await LoadData(true);
 
     private async Task LoadData(bool forceScroll)
     {
-        _isLoading = true;
-        await InvokeAsync(StateHasChanged);
-        
         Guid? colisId = EntityType == "Colis" ? EntityId : null;
         Guid? vehiculeId = EntityType == "Vehicule" ? EntityId : null;
+        Guid? conteneurId = EntityType == "Conteneur" ? EntityId : null; // CORRECTION: Gestion Conteneur
 
-        _messages = (await ApiService.GetMessagesAsync(colisId, vehiculeId)).ToList();
+        _messages = (await ApiService.GetMessagesAsync(colisId, vehiculeId, conteneurId)).ToList();
         
-        // CORRECTION 3 : On met à jour le badge mais on ne marque PAS comme lu ici
         UpdateBadgeCount();
 
-        _isLoading = false;
-        await InvokeAsync(StateHasChanged);
-
         if (forceScroll && IsVisible) await ScrollToBottom();
-        else if (IsVisible) await ProcessReadAndScroll();
+        // NOTE: On n'appelle PAS ProcessReadAndScroll ici, c'est géré par OnParametersSetAsync ou InitializeChat
     }
 
     private async Task ProcessReadAndScroll()
@@ -307,26 +308,24 @@
         // 1. Chercher le premier non lu
         var firstUnread = _messages.FirstOrDefault(m => !m.EstMoi && !m.IsRead);
         
-        // Attendre que le rendu se fasse (display: block)
-        await Task.Delay(50); 
+        await Task.Delay(100); 
 
-        // 2. Scroll intelligent
         if (firstUnread != null) await ScrollToMessage(firstUnread.Id);
         else await ScrollToBottom();
 
-        // 3. Marquer comme lu
+        // 2. Marquer comme lu
         if (_messages.Any(m => !m.EstMoi && !m.IsRead))
         {
             Guid? colisId = EntityType == "Colis" ? EntityId : null;
             Guid? vehiculeId = EntityType == "Vehicule" ? EntityId : null;
-            
-            await ApiService.MarkMessagesAsReadAsync(colisId, vehiculeId);
+            Guid? conteneurId = EntityType == "Conteneur" ? EntityId : null; // CORRECTION
+
+            await ApiService.MarkMessagesAsReadAsync(colisId, vehiculeId, conteneurId);
             
             if (_isConnected) await _hubConnection.InvokeAsync("SendReadReceipt", EntityId.ToString());
-
-            // Mise à jour locale
+            
             foreach(var m in _messages.Where(m => !m.EstMoi)) m.IsRead = true;
-            UpdateBadgeCount(); // Remet le badge à 0
+            UpdateBadgeCount();
         }
     }
 
@@ -340,6 +339,8 @@
     {
         try 
         {
+            if (_hubConnection != null) await _hubConnection.DisposeAsync();
+
             var hubUrl = "https://localhost:7243/appHub"; 
             _hubConnection = new HubConnectionBuilder().WithUrl(hubUrl).WithAutomaticReconnect().Build();
 
@@ -355,7 +356,6 @@
 
                     if (IsVisible)
                     {
-                        // Si visible : Scroll auto si proche du bas + Mark Read
                         bool scrolled = await JSRuntime.InvokeAsync<bool>("chatHelpers.scrollToBottomIfNear", _chatContainerId);
                         
                         if (!scrolled) {
@@ -364,16 +364,15 @@
                         } else {
                             Guid? colisId = EntityType == "Colis" ? EntityId : null;
                             Guid? vehiculeId = EntityType == "Vehicule" ? EntityId : null;
-                            await ApiService.MarkMessagesAsReadAsync(colisId, vehiculeId);
+                            Guid? conteneurId = EntityType == "Conteneur" ? EntityId : null;
+
+                            await ApiService.MarkMessagesAsReadAsync(colisId, vehiculeId, conteneurId);
                             await _hubConnection.InvokeAsync("SendReadReceipt", EntityId.ToString());
-                            
-                            // On marque le message reçu comme lu localement
                             msg.IsRead = true;
                         }
                     }
                     else
                     {
-                        // Si masqué : Incrémenter Badge
                         UpdateBadgeCount();
                     }
                 }
@@ -410,24 +409,23 @@
         catch { }
     }
 
-    // ... (Reste du code SendMessage, OnFileSelected, etc. inchangé) ...
-
     private async Task SendMessage()
     {
         if (string.IsNullOrWhiteSpace(_newMessageText) && _selectedFile == null) return;
         _isSending = true;
 
         Guid? docId = null;
+        Guid? cId = EntityType == "Colis" ? EntityId : null;
+        Guid? vId = EntityType == "Vehicule" ? EntityId : null;
+        Guid? contId = EntityType == "Conteneur" ? EntityId : null; // CORRECTION
+
         if (_selectedFile != null)
         {
-             Guid? cId = EntityType == "Colis" ? EntityId : null;
-             Guid? vId = EntityType == "Vehicule" ? EntityId : null;
-             var doc = await ApiService.UploadDocumentAsync(_selectedFile, _selectedDocType, null, vId, cId, null);
+             var doc = await ApiService.UploadDocumentAsync(_selectedFile, _selectedDocType, null, vId, cId, contId);
              if (doc != null) docId = doc.Id;
         }
 
-        var tempMsg = new MessageDto 
-        { 
+        var tempMsg = new MessageDto { 
             Contenu = _newMessageText, DateEnvoi = DateTime.UtcNow, EstMoi = true, NomExpediteur = "Moi", 
             IsInternal = _isInternal, HasAttachment = docId.HasValue, AttachmentName = _selectedFile?.Name, AttachmentId = docId, IsRead = false
         };
@@ -441,8 +439,9 @@
         var dto = new CreateMessageDto
         {
             Contenu = textToSend,
-            ColisId = EntityType == "Colis" ? EntityId : null,
-            VehiculeId = EntityType == "Vehicule" ? EntityId : null,
+            ColisId = cId,
+            VehiculeId = vId,
+            ConteneurId = contId, // CORRECTION
             IsInternal = _isInternal,
             DocumentId = docId
         };

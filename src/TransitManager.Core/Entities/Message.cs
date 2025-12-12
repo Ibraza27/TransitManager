@@ -20,6 +20,9 @@ namespace TransitManager.Core.Entities
 
         public Guid? VehiculeId { get; set; }
         public virtual Vehicule? Vehicule { get; set; }
+		
+        public Guid? ConteneurId { get; set; }
+        public virtual Conteneur? Conteneur { get; set; }
 
         // Options
         public bool IsInternal { get; set; } // Si True, invisible pour le client

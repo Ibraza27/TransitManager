@@ -22,39 +22,38 @@
                 @(IsNew ? "Nouveau Dossier" : $"Dossier {_dto.NumeroDossier}")
             </h2>
         </div>
-		<div class="d-flex gap-2 position-relative">
-			
-			<!-- MENU D'EXPORTATION -->
-			<div class="dropdown">
-				<button class="btn btn-outline-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
-					<i class="bi bi-file-earmark-pdf me-2"></i>Exporter PDF
-				</button>
+        <div class="d-flex gap-2 position-relative">
+            <!-- MENU D'EXPORTATION -->
+            <div class="dropdown">
+                <button class="btn btn-outline-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>Exporter PDF
+                </button>
 
-				<ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" 
-					style="right: auto; left: 0; margin-top: 5px;">
-					<li>
-						<button class="dropdown-item" @onclick="() => ExportPdf(false)">
-							📄 Manifeste Simple (Sans prix)
-						</button>
-					</li>
-					<li>
-						<button class="dropdown-item" @onclick="() => ExportPdf(true)">
-							💰 Rapport Complet (Avec prix)
-						</button>
-					</li>
-				</ul>
-				
-				@if (_isExportMenuOpen)
-				{
-					<div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" 
-						 @onclick="ToggleExportMenu"></div>
-				}
-			</div>
+                <ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" 
+                    style="right: auto; left: 0; margin-top: 5px;">
+                    <li>
+                        <button class="dropdown-item" @onclick="() => ExportPdf(false)">
+                            📄 Manifeste Simple (Sans prix)
+                        </button>
+                    </li>
+                    <li>
+                        <button class="dropdown-item" @onclick="() => ExportPdf(true)">
+                            💰 Rapport Complet (Avec prix)
+                        </button>
+                    </li>
+                </ul>
+                
+                @if (_isExportMenuOpen)
+                {
+                    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" 
+                         @onclick="ToggleExportMenu"></div>
+                }
+            </div>
 
-			<button class="btn btn-outline-primary" @onclick="LoadData">
-				<i class="bi bi-arrow-clockwise me-2"></i>Actualiser
-			</button>
-			
+            <button class="btn btn-outline-primary" @onclick="LoadData">
+                <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+            </button>
+            
             <button class="btn btn-primary" @onclick="SaveContainer">
                 <i class="bi bi-save me-2"></i> Enregistrer
             </button>
@@ -80,6 +79,22 @@
                     <i class="bi bi-info-circle me-2"></i>Informations Générales
                 </button>
             </li>
+            
+            <!-- ONGLET DISCUSSION (NOUVEAU) -->
+            @if (!IsNew)
+            {
+                <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "discussion" ? "active fw-bold" : "")" @onclick='() => _activeTab = "discussion"'>
+                        <i class="bi bi-chat-dots me-2"></i>
+                        Discussion
+                        @if(_unreadMessagesCount > 0 && _activeTab != "discussion")
+                        {
+                            <span class="badge bg-danger rounded-pill ms-2">@_unreadMessagesCount</span>
+                        }
+                    </button>
+                </li>
+            }
+
             @if (!IsNew)
             {
                 <li class="nav-item">
@@ -92,10 +107,10 @@
 
         <div class="tab-content">
             
-            <!-- ONGLET 1 : INFORMATIONS (Contenu existant encapsulé) -->
+            <!-- ONGLET 1 : INFORMATIONS -->
             <div class="tab-pane fade @(_activeTab == "infos" ? "show active" : "")">
 
-                <!-- STATISTIQUES GLOBALES (Cards) -->
+                <!-- STATISTIQUES GLOBALES -->
                 @if (!IsNew)
                 {
                     <div class="row mb-4 g-3">
@@ -127,7 +142,7 @@
                             <div class="card bg-secondary text-white shadow-sm h-100">
                                 <div class="card-body text-center">
                                     <h3 class="mb-0">@(_dto.Colis.Count + _dto.Vehicules.Count)</h3>
-                                    <small class="text-white-50 fw-bold">ÉLÉMENTS (Colis + Véhicules)</small>
+                                    <small class="text-white-50 fw-bold">ÉLÉMENTS</small>
                                 </div>
                             </div>
                         </div>
@@ -215,7 +230,7 @@
                                         <thead class="table-light sticky-top">
                                             <tr>
                                                 <th>Client</th>
-												<th>Téléphone</th>
+                                                <th>Téléphone</th>
                                                 <th class="text-center">Colis</th>
                                                 <th class="text-center">Véhicules</th>
                                                 <th class="text-end">Total</th>
@@ -228,7 +243,7 @@
                                             {
                                                 <tr>
                                                     <td class="fw-bold">@stat.NomClient</td>
-													<td class="small text-muted">@stat.Telephone</td>
+                                                    <td class="small text-muted">@stat.Telephone</td>
                                                     <td class="text-center">@stat.NombreColis</td>
                                                     <td class="text-center">@stat.NombreVehicules</td>
                                                     <td class="text-end">@stat.TotalPrix.ToString("C0")</td>
@@ -248,56 +263,53 @@
                                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                                     <span class="fw-bold"><i class="bi bi-box-seam me-2"></i>Colis Affectés (@_dto.Colis.Count)</span>
                                     <button class="btn btn-sm btn-light text-primary fw-bold shadow-sm" @onclick="() => _showAddParcel = true">
-                                        ➕ Ajouter des Colis
+                                        ➕ Ajouter
                                     </button>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle mb-0">
-										<thead class="table-light">
-											<tr>
-												<th>Réf</th>
-												<th>Client</th>
-												<th>Désignation</th>
-												<th>Destination</th>
-												<th class="text-end">Prix</th>
-												<th class="text-end">Payé</th>
-												<th class="text-end">Restant</th>
-												<th class="text-center">Statut</th>
-												<th class="text-end pe-3">Actions</th>
-											</tr>
-										</thead>
-										<tbody>
-											@foreach (var c in _dto.Colis)
-											{
-												<tr>
-													<td class="font-monospace text-primary">@c.NumeroReference</td>
-													<td>
-														<div class="fw-bold">@c.ClientNomComplet</div>
-														<small class="text-muted">@c.ClientTelephonePrincipal</small>
-													</td>
-													<td>@c.Designation</td>
-													<td>@c.DestinationFinale</td>
-													<td class="text-end fw-bold">@c.PrixTotal.ToString("C0")</td>
-													<td class="text-end text-success">@c.SommePayee.ToString("C0")</td>
-													
-													<td class="text-end">
-														 @if (c.RestantAPayer > 0)
-														 {
-															 <span class="text-danger fw-bold">@c.RestantAPayer.ToString("C0")</span>
-														 }
-														 else
-														 {
-															 <span class="text-success"><i class="bi bi-check-all"></i></span>
-														 }
-													</td>
-
-													<td class="text-center"><span class="badge bg-secondary">@c.Statut</span></td>																					
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Réf</th>
+                                                <th>Client</th>
+                                                <th>Désignation</th>
+                                                <th>Destination</th>
+                                                <th class="text-end">Prix</th>
+                                                <th class="text-end">Payé</th>
+                                                <th class="text-end">Restant</th>
+                                                <th class="text-center">Statut</th>
+                                                <th class="text-end pe-3">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var c in _dto.Colis)
+                                            {
+                                                <tr>
+                                                    <td class="font-monospace text-primary">@c.NumeroReference</td>
+                                                    <td>
+                                                        <div class="fw-bold">@c.ClientNomComplet</div>
+                                                    </td>
+                                                    <td>@c.Designation</td>
+                                                    <td>@c.DestinationFinale</td>
+                                                    <td class="text-end fw-bold">@c.PrixTotal.ToString("C0")</td>
+                                                    <td class="text-end text-success">@c.SommePayee.ToString("C0")</td>
+                                                    <td class="text-end">
+                                                         @if (c.RestantAPayer > 0)
+                                                         {
+                                                             <span class="text-danger fw-bold">@c.RestantAPayer.ToString("C0")</span>
+                                                         }
+                                                         else
+                                                         {
+                                                             <span class="text-success"><i class="bi bi-check-all"></i></span>
+                                                         }
+                                                    </td>
+                                                    <td class="text-center"><span class="badge bg-secondary">@c.Statut</span></td>                                                                                 
                                                     <td class="text-end pe-3">
                                                         <div class="d-flex justify-content-end gap-2">
                                                             <a href="colis/edit/@c.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
                                                                 ✏️
                                                             </a>
-                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignColis(c)" title="Retirer du conteneur">
+                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignColis(c)" title="Retirer">
                                                                 ❌
                                                             </button>
                                                         </div>
@@ -305,18 +317,6 @@
                                                 </tr>
                                             }
                                         </tbody>
-										@if (_dto.Colis.Any())
-										{
-											<tfoot class="bg-light fw-bold border-top">
-												<tr>
-													<td colspan="4" class="text-end text-secondary text-uppercase pe-3">Totaux Colis :</td>
-													<td class="text-end">@_dto.Colis.Sum(c => c.PrixTotal).ToString("C0")</td>
-													<td class="text-end text-success">@_dto.Colis.Sum(c => c.SommePayee).ToString("C0")</td>
-													<td class="text-end text-danger">@_dto.Colis.Sum(c => c.RestantAPayer).ToString("C0")</td>
-													<td colspan="2"></td>
-												</tr>
-											</tfoot>
-										}
                                     </table>
                                 </div>
                             </div>
@@ -328,7 +328,7 @@
                                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                                     <span class="fw-bold"><i class="bi bi-car-front-fill me-2"></i>Véhicules Affectés (@_dto.Vehicules.Count)</span>
                                      <button class="btn btn-sm btn-light text-success fw-bold shadow-sm" @onclick="() => _showAddVehicle = true">
-                                        ➕ Ajouter des Véhicules
+                                        ➕ Ajouter
                                     </button>
                                 </div>
                                 <div class="table-responsive">
@@ -341,7 +341,7 @@
                                                 <th>Destination</th>
                                                 <th class="text-end">Prix</th>
                                                 <th class="text-end">Payé</th>
-												<th class="text-end">Restant</th>
+                                                <th class="text-end">Restant</th>
                                                 <th class="text-center">Statut</th>
                                                 <th class="text-end pe-3">Actions</th>
                                             </tr>
@@ -353,7 +353,6 @@
                                                     <td class="font-monospace text-success fw-bold">@v.Immatriculation</td>
                                                     <td>
                                                         <div class="fw-bold">@v.ClientNomComplet</div>
-                                                        <small class="text-muted">@v.ClientTelephonePrincipal</small>
                                                     </td>
                                                     <td>@v.Marque @v.Modele</td>
                                                     <td>@v.DestinationFinale</td>
@@ -375,7 +374,7 @@
                                                             <a href="vehicule/edit/@v.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
                                                                 ✏️
                                                             </a>
-                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignVehicle(v)" title="Retirer du conteneur">
+                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignVehicle(v)" title="Retirer">
                                                                 ❌
                                                             </button>
                                                         </div>
@@ -383,18 +382,6 @@
                                                 </tr>
                                             }
                                         </tbody>
-                                        @if (_dto.Vehicules.Any())
-                                        {
-                                            <tfoot class="bg-light fw-bold border-top">
-                                                <tr>
-                                                    <td colspan="4" class="text-end text-secondary text-uppercase pe-3">Totaux Véhicules :</td>
-                                                    <td class="text-end">@_dto.Vehicules.Sum(v => v.PrixTotal).ToString("C0")</td>
-                                                    <td class="text-end text-success">@_dto.Vehicules.Sum(v => v.SommePayee).ToString("C0")</td>
-                                                    <td class="text-end text-danger">@_dto.Vehicules.Sum(v => v.RestantAPayer).ToString("C0")</td>
-                                                    <td colspan="2"></td>
-                                                </tr>
-                                            </tfoot>
-                                        }
                                     </table>
                                 </div>
                             </div>
@@ -403,11 +390,26 @@
                 }
             </div>
 
-            <!-- ONGLET 2 : DOCUMENTS (Nouveau) -->
+            <!-- ONGLET 2 : DISCUSSION (NOUVEAU) -->
+            @if (!IsNew)
+            {
+                <div class="tab-pane fade @(_activeTab == "discussion" ? "show active" : "")">
+                    <div class="row justify-content-center">
+                        <div class="col-lg-10">
+                            <!-- CHAT pour Conteneur -->
+                            <ChatBox EntityId="@_conteneur.Id" 
+                                     EntityType="Conteneur" 
+                                     OnUnreadCountChanged="UpdateUnreadBadge" 
+                                     IsVisible="@(_activeTab == "discussion")" />
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- ONGLET 3 : DOCUMENTS -->
             @if (!IsNew)
             {
                 <div class="tab-pane fade @(_activeTab == "documents" ? "show active" : "")">
-                    <!-- On passe "Conteneur" comme type d'entité au DocumentManager -->
                     <DocumentManager EntityId="@_conteneur.Id" EntityType="Conteneur" />
                 </div>
             }
@@ -415,7 +417,7 @@
         </div>
     }
 
-    <!-- MODALES (Inchangées) -->
+    <!-- MODALES -->
     <ParcelSelector IsVisible="_showAddParcel" OnClose="() => _showAddParcel = false" OnSelectionConfirmed="AddParcels" />
     <VehicleSelector IsVisible="_showAddVehicle" OnClose="() => _showAddVehicle = false" OnSelectionConfirmed="AddVehicles" />
 
@@ -432,10 +434,16 @@
     private bool _showAddParcel = false;
     private bool _showAddVehicle = false;
     
-    // État des onglets
     private string _activeTab = "infos";
     
-    // État du menu export
+    // Gestion Badge
+    private int _unreadMessagesCount = 0;
+    private async Task UpdateUnreadBadge(int count)
+    {
+        _unreadMessagesCount = count;
+        await InvokeAsync(StateHasChanged);
+    }
+    
     private bool _isExportMenuOpen = false;
     private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
 
@@ -447,11 +455,9 @@
 
     private async Task LoadData()
     {
-        // 1. Charger le DTO complet pour les listes et stats
         var resultDto = await ApiService.GetConteneurDetailAsync(Id.Value);
         if (resultDto != null) _dto = resultDto;
 
-        // 2. Charger l'entité simple pour l'édition du formulaire
         try 
         {
             _conteneur = new Conteneur 
@@ -535,35 +541,35 @@
 
         try
         {
-			var pdfData = await ApiService.ExportConteneurPdfAsync(_conteneur.Id, includeFinancials);
-			
-			if (pdfData != null && pdfData.Length > 0)
-			{
-				var safeDossier = _conteneur.NumeroDossier?
-					.Replace("/", "-")
-					.Replace("\\", "-") 
-					.Replace(":", "-") ?? "Inconnu";
-				
-				var fileName = $"Dossier_{safeDossier}_{(includeFinancials ? "Complet" : "Manifeste")}.pdf";
+            var pdfData = await ApiService.ExportConteneurPdfAsync(_conteneur.Id, includeFinancials);
+            
+            if (pdfData != null && pdfData.Length > 0)
+            {
+                var safeDossier = _conteneur.NumeroDossier?
+                    .Replace("/", "-")
+                    .Replace("\\", "-") 
+                    .Replace(":", "-") ?? "Inconnu";
+                
+                var fileName = $"Dossier_{safeDossier}_{(includeFinancials ? "Complet" : "Manifeste")}.pdf";
 
-				using var stream = new MemoryStream(pdfData);
-				using var streamRef = new DotNetStreamReference(stream);
-				
-				await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
-			}
-			else
-			{
-				await JSRuntime.InvokeVoidAsync("alert", "Erreur : Le fichier reçu est vide.");
-			}
-		}
-		catch (Exception ex)
-		{
-			await JSRuntime.InvokeVoidAsync("alert", $"Exception Vue : {ex.Message}");
-		}
-		finally
-		{
-			_isLoading = false;
-			StateHasChanged();
-		}
-	}
+                using var stream = new MemoryStream(pdfData);
+                using var streamRef = new DotNetStreamReference(stream);
+                
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Erreur : Le fichier reçu est vide.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Exception Vue : {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
 }

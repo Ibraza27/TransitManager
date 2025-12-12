@@ -824,11 +824,15 @@ namespace TransitManager.Web.Services
         }
 		
 
-        public async Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId)
+        public async Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId)
         {
             try
             {
-                var query = colisId.HasValue ? $"colisId={colisId}" : $"vehiculeId={vehiculeId}";
+                // Construction de la query string
+                var query = colisId.HasValue ? $"colisId={colisId}" 
+                          : vehiculeId.HasValue ? $"vehiculeId={vehiculeId}"
+                          : $"conteneurId={conteneurId}";
+
                 return await _httpClient.GetFromJsonAsync<IEnumerable<MessageDto>>($"api/messages?{query}", _jsonOptions) 
                        ?? Enumerable.Empty<MessageDto>();
             }
@@ -852,14 +856,18 @@ namespace TransitManager.Web.Services
             }
         }
 
-        public async Task MarkMessagesAsReadAsync(Guid? colisId, Guid? vehiculeId)
+		public async Task MarkMessagesAsReadAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId)
         {
             try
             {
-                var request = new { ColisId = colisId, VehiculeId = vehiculeId };
+                // On inclut bien le conteneurId dans la requête
+                var request = new { ColisId = colisId, VehiculeId = vehiculeId, ConteneurId = conteneurId };
                 await _httpClient.PostAsJsonAsync("api/messages/mark-read", request);
             }
-            catch { /* Ignorer les erreurs de marquage */ }
+            catch 
+            { 
+                // Ignorer les erreurs de marquage (fire and forget)
+            }
         }
 
         public async Task<IEnumerable<TimelineDto>> GetTimelineAsync(Guid? colisId, Guid? vehiculeId)

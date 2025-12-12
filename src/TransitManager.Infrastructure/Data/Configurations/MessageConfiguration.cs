@@ -32,6 +32,11 @@ namespace TransitManager.Infrastructure.Data.Configurations
                 .WithMany()
                 .HasForeignKey(m => m.VehiculeId)
                 .OnDelete(DeleteBehavior.Cascade);
+				
+			builder.HasOne(m => m.Conteneur)
+                .WithMany()
+                .HasForeignKey(m => m.ConteneurId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Relation Document (Si on supprime le message, on ne supprime PAS le document car il peut être ailleurs)
             builder.HasOne(m => m.PieceJointe)

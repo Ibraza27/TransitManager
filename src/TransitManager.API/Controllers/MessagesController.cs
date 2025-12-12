@@ -19,24 +19,26 @@ namespace TransitManager.API.Controllers
         }
 
         // GET: api/messages?colisId=...&vehiculeId=...
-        [HttpGet]
-        public async Task<IActionResult> GetMessages([FromQuery] Guid? colisId, [FromQuery] Guid? vehiculeId)
+		[HttpGet]
+        public async Task<IActionResult> GetMessages([FromQuery] Guid? colisId, [FromQuery] Guid? vehiculeId, [FromQuery] Guid? conteneurId)
         {
-            if (!colisId.HasValue && !vehiculeId.HasValue)
-                return BadRequest("Un ID de Colis ou de Véhicule est requis.");
+            // Vérifiez que cette ligne inclut bien conteneurId.HasValue
+            if (!colisId.HasValue && !vehiculeId.HasValue && !conteneurId.HasValue)
+                return BadRequest("Un ID de Colis, Véhicule ou Conteneur est requis.");
 
             var userId = GetCurrentUserId();
-            var messages = await _messageService.GetMessagesAsync(colisId, vehiculeId, userId);
+            var messages = await _messageService.GetMessagesAsync(colisId, vehiculeId, conteneurId, userId);
             
             return Ok(messages);
         }
 
         // POST: api/messages
-        [HttpPost]
+		[HttpPost]
         public async Task<IActionResult> SendMessage([FromBody] CreateMessageDto dto)
         {
-            if (!dto.ColisId.HasValue && !dto.VehiculeId.HasValue)
-                return BadRequest("Le message doit être lié à un Colis ou un Véhicule.");
+            // On ajoute la vérification pour le Conteneur
+            if (!dto.ColisId.HasValue && !dto.VehiculeId.HasValue && !dto.ConteneurId.HasValue)
+                return BadRequest("Le message doit être lié à un Colis, un Véhicule ou un Conteneur.");
 
             var userId = GetCurrentUserId();
             
@@ -56,7 +58,8 @@ namespace TransitManager.API.Controllers
         public async Task<IActionResult> MarkAsRead([FromBody] MarkReadDto request)
         {
             var userId = GetCurrentUserId();
-            await _messageService.MarkAsReadAsync(request.ColisId, request.VehiculeId, userId);
+            // AJOUT DU PARAMÈTRE conteneurId
+            await _messageService.MarkAsReadAsync(request.ColisId, request.VehiculeId, request.ConteneurId, userId);
             return Ok();
         }
 
@@ -77,5 +80,6 @@ namespace TransitManager.API.Controllers
     {
         public Guid? ColisId { get; set; }
         public Guid? VehiculeId { get; set; }
+        public Guid? ConteneurId { get; set; } // AJOUT
     }
 }

@@ -28,6 +28,7 @@ namespace TransitManager.Core.DTOs
         public string Contenu { get; set; } = string.Empty;
         public Guid? ColisId { get; set; }
         public Guid? VehiculeId { get; set; }
+		public Guid? ConteneurId { get; set; }
         public bool IsInternal { get; set; }
         
         // ID d'un document déjà uploadé à lier

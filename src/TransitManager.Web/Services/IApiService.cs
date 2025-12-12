@@ -89,9 +89,9 @@ namespace TransitManager.Web.Services
         Task<bool> ResendUserConfirmationEmailAsync(Guid userId);
 		
         // --- Messagerie ---
-        Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId);
+        Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId);
         Task<bool> SendMessageAsync(CreateMessageDto dto);
-        Task MarkMessagesAsReadAsync(Guid? colisId, Guid? vehiculeId);
+        Task MarkMessagesAsReadAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId); // Avec les 3 paramètres
 
         // --- Timeline ---
         Task<IEnumerable<TimelineDto>> GetTimelineAsync(Guid? colisId, Guid? vehiculeId);

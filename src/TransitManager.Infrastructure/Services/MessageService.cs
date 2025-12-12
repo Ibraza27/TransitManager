@@ -48,6 +48,7 @@ namespace TransitManager.Infrastructure.Services
                 ExpediteurId = senderId,
                 ColisId = dto.ColisId,
                 VehiculeId = dto.VehiculeId,
+				ConteneurId = dto.ConteneurId,
                 IsInternal = dto.IsInternal,
                 DocumentId = dto.DocumentId,
                 DateEnvoi = DateTime.UtcNow
@@ -75,7 +76,9 @@ namespace TransitManager.Infrastructure.Services
                 // -----------------------------------------------------------------
             };
 
-            string groupName = dto.ColisId.HasValue ? dto.ColisId.ToString() : dto.VehiculeId.ToString();
+			string groupName = dto.ColisId.HasValue ? dto.ColisId.ToString() 
+							 : dto.VehiculeId.HasValue ? dto.VehiculeId.ToString()
+							 : dto.ConteneurId.ToString();
             await _hubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", messageDto);
 
             // --- NOTIFICATION ---
@@ -111,7 +114,7 @@ namespace TransitManager.Infrastructure.Services
             return message;
         }
 
-        public async Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId, Guid currentUserId)
+        public async Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId, Guid currentUserId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             var currentUser = await context.Utilisateurs.FindAsync(currentUserId);
@@ -122,9 +125,10 @@ namespace TransitManager.Infrastructure.Services
                 .Include(m => m.PieceJointe)
                 .AsNoTracking();
 
-            if (colisId.HasValue) query = query.Where(m => m.ColisId == colisId);
-            else if (vehiculeId.HasValue) query = query.Where(m => m.VehiculeId == vehiculeId);
-            else return new List<MessageDto>();
+			if (colisId.HasValue) query = query.Where(m => m.ColisId == colisId);
+			else if (vehiculeId.HasValue) query = query.Where(m => m.VehiculeId == vehiculeId);
+			else if (conteneurId.HasValue) query = query.Where(m => m.ConteneurId == conteneurId); // AJOUT
+			else return new List<MessageDto>();
 
             // Filtrer les notes internes si l'utilisateur n'est pas admin
             if (!isAdmin)
@@ -150,7 +154,7 @@ namespace TransitManager.Infrastructure.Services
             });
         }
 
-        public async Task MarkAsReadAsync(Guid? colisId, Guid? vehiculeId, Guid userId)
+        public async Task MarkAsReadAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId, Guid userId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             
@@ -159,6 +163,7 @@ namespace TransitManager.Infrastructure.Services
 
             if (colisId.HasValue) query = query.Where(m => m.ColisId == colisId);
             else if (vehiculeId.HasValue) query = query.Where(m => m.VehiculeId == vehiculeId);
+			else if (conteneurId.HasValue) query = query.Where(m => m.ConteneurId == conteneurId);
 
             var unreadMessages = await query.ToListAsync();
             if (unreadMessages.Any())

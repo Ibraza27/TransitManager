@@ -4,11 +4,14 @@
 @using TransitManager.Core.Enums
 @using TransitManager.Web.Components.Shared
 @using System.Security.Claims
+@using System.IO
 @inject IApiService ApiService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
+
 <PageTitle>@(IsNew ? "Nouveau Véhicule" : "Détail Véhicule") - Hippocampe</PageTitle>
+
 <div class="container mt-4 mb-5">
     <!-- En-tête -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -47,7 +50,6 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <!-- NOUVELLE OPTION -->
                         <button class="dropdown-item" @onclick="ExportAttestation">
                             ⚖️ Attestation de Valeur
                         </button>
@@ -64,6 +66,7 @@
             <a href="/my-vehicles" class="btn btn-outline-dark">Retour</a>
         </div>
     </div>
+
     @if (_isLoading)
     {
         <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
@@ -74,21 +77,38 @@
         <ul class="nav nav-tabs mb-4">
             <li class="nav-item">
                 <button class="nav-link @(_activeTab == "infos" ? "active fw-bold" : "")" @onclick='() => _activeTab = "infos"'>
-                    Informations & Finances
+                    <i class="bi bi-info-circle me-2"></i>Informations & Finances
                 </button>
             </li>
+            
+            <!-- ONGLET SUIVI & DISCUSSION (NOUVEAU) -->
+            @if (!IsNew)
+            {
+                <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "suivi" ? "active fw-bold" : "")" @onclick='() => _activeTab = "suivi"'>
+                        <i class="bi bi-chat-left-text me-2"></i>
+                        Suivi & Discussion
+                        @if(_unreadMessagesCount > 0 && _activeTab != "suivi")
+                        {
+                            <span class="badge bg-danger rounded-pill ms-2">@_unreadMessagesCount</span>
+                        }
+                    </button>
+                </li>
+            }
+
              @if (!IsNew)
              {
                 <li class="nav-item">
                     <button class="nav-link @(_activeTab == "documents" ? "active fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
-                        Documents & Photos
+                        <i class="bi bi-folder2-open me-2"></i>Documents & Photos
                     </button>
                 </li>
              }
         </ul>
+
         <div class="tab-content">
             
-            <!-- ONGLET INFOS (Contenu existant réorganisé) -->
+            <!-- ONGLET 1 : INFOS (Existant) -->
             <div class="tab-pane fade @(_activeTab == "infos" ? "show active" : "")">
                 <div class="row g-4">
                     <div class="col-lg-8">
@@ -169,7 +189,7 @@
                         </div>
                     </div>
                     <div class="col-lg-4">
-                        <!-- État des lieux (Bouton d'accès rapide) -->
+                        <!-- État des lieux -->
                         <div class="card shadow-sm border-info mb-4">
                             <div class="card-body text-center">
                                 <h5 class="text-info mb-3"><i class="bi bi-clipboard-check me-2"></i>État des Lieux</h5>
@@ -239,7 +259,28 @@
                     </div>
                 </div>
             </div>
-            <!-- ONGLET DOCUMENTS -->
+
+            <!-- ONGLET 2 : SUIVI & DISCUSSION (NOUVEAU) -->
+            @if (!IsNew)
+            {
+                <div class="tab-pane fade @(_activeTab == "suivi" ? "show active" : "")">
+                    <div class="row g-4">
+                        <div class="col-lg-5">
+                            <!-- TIMELINE -->
+                            <Timeline EntityId="@_vehicule.Id" EntityType="Vehicule" />
+                        </div>
+                        <div class="col-lg-7">
+                            <!-- CHAT -->
+                            <ChatBox EntityId="@_vehicule.Id" 
+                                     EntityType="Vehicule" 
+                                     OnUnreadCountChanged="UpdateUnreadBadge" 
+                                     IsVisible="@(_activeTab == "suivi")" />
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- ONGLET 3 : DOCUMENTS (Existant) -->
             @if (!IsNew)
             {
                 <div class="tab-pane fade @(_activeTab == "documents" ? "show active" : "")">
@@ -248,6 +289,7 @@
             }
         </div>
     }
+
     <!-- MODALES -->
     <VehicleInspectionModal IsVisible="_showInspection"
                             Type="@_vehicule.Type"
@@ -269,6 +311,7 @@
                   OnPaymentsChanged="UpdatePaidAmount"
                   OnClose="() => _showPayments = false" />
 </div>
+
 @code {
     [Parameter] public Guid? Id { get; set; }
     private Vehicule _vehicule = new() { Statut = StatutVehicule.EnAttente };
@@ -283,10 +326,20 @@
     private bool _showPayments = false;
     private bool _isExportMenuOpen = false;
 
+    // Gestion du badge notification
+    private int _unreadMessagesCount = 0;
+    
+    private async Task UpdateUnreadBadge(int count)
+    {
+        _unreadMessagesCount = count;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private List<Client> _clients = new();
     private List<Conteneur> _containers = new();
     private bool CanEditGlobal => IsAdmin || (IsNew || _vehicule.Statut == StatutVehicule.EnAttente);
     private bool CanEditFields => IsAdmin || (CanEditGlobal);
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -330,6 +383,7 @@
         }
         _isLoading = false;
     }
+
     private void OnClientChanged(ChangeEventArgs e)
     {
         if (Guid.TryParse(e.Value?.ToString(), out Guid cid))
@@ -340,6 +394,7 @@
             if (_sameAsClient) ToggleSameAsClient();
         }
     }
+
     private void ToggleSameAsClient()
     {
         if (_sameAsClient)
@@ -349,7 +404,9 @@
             // Note: Pour le téléphone, il faudrait charger l'objet client complet si pas admin
         }
     }
+
     private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
+
     private async Task ExportPdf(bool includeFinancials, bool includePhotos)
     {
         _isExportMenuOpen = false;
@@ -381,18 +438,18 @@
             StateHasChanged();
         }
     }
+
     private async Task UpdatePaidAmount(decimal total)
     {
         _vehicule.SommePayee = total;
         if (!IsNew) await ApiService.UpdateVehiculeAsync(_vehicule.Id, _vehicule);
     }
+
     // Callback de la modale d'inspection
     private void SaveInspection(VehicleInspectionModal.InspectionResult result)
     {
-        // Mise à jour des données Schéma
         _vehicule.EtatDesLieux = result.EtatDesLieuxPoints;
         _vehicule.EtatDesLieuxRayures = result.EtatDesLieuxRayures;
-        // Mise à jour des données Accessoires & Signature
         _vehicule.AccessoiresJson = result.AccessoiresJson;
         _vehicule.SignatureAgent = result.SignatureAgent;
         _vehicule.SignatureClient = result.SignatureClient;
@@ -401,6 +458,7 @@
 
         _showInspection = false;
     }
+
     private async Task SaveVehicle()
     {
         if (string.IsNullOrWhiteSpace(_vehicule.Immatriculation) || string.IsNullOrWhiteSpace(_vehicule.Marque))
@@ -408,7 +466,7 @@
             await JSRuntime.InvokeVoidAsync("alert", "Immatriculation et Marque requises.");
             return;
         }
-        // Clean object for API (remove circular refs)
+
         var toSend = new Vehicule
         {
             Id = _vehicule.Id,
@@ -428,7 +486,7 @@
             ValeurDeclaree = _vehicule.ValeurDeclaree,
             PrixTotal = _vehicule.PrixTotal,
             SommePayee = _vehicule.SommePayee,
-
+            
             // Données Inspection
             EtatDesLieux = _vehicule.EtatDesLieux,
             EtatDesLieuxRayures = _vehicule.EtatDesLieuxRayures,
@@ -438,6 +496,7 @@
             LieuEtatDesLieux = _vehicule.LieuEtatDesLieux,
             DateEtatDesLieux = _vehicule.DateEtatDesLieux
         };
+
         bool success;
         if (IsNew)
         {
@@ -451,6 +510,7 @@
         if (success) Navigation.NavigateTo("/my-vehicles");
         else await JSRuntime.InvokeVoidAsync("alert", "Erreur sauvegarde");
     }
+
     private string GetStatusBadgeClass(StatutVehicule s) => s switch
     {
         StatutVehicule.EnAttente => "bg-warning text-dark",
@@ -494,5 +554,4 @@
             StateHasChanged();
         }
     }
-	
 }

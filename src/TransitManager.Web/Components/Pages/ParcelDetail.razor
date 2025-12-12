@@ -50,6 +50,12 @@
                             📸 Dossier Complet (+ Photos)
                         </button>
                     </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <button class="dropdown-item" @onclick="ExportTicket">
+                            🏷️ Étiquette / Ticket
+                        </button>
+                    </li>
                 </ul>
                 @if (_isExportMenuOpen)
                 {
@@ -672,6 +678,42 @@
         _unreadMessagesCount = count;
         // CORRECTION : On utilise InvokeAsync pour revenir sur le thread UI
         await InvokeAsync(StateHasChanged);
+    }
+	
+	private async Task ExportTicket()
+    {
+        _isExportMenuOpen = false;
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var pdfData = await ApiService.ExportTicketPdfAsync(_colis.Id);
+
+            if (pdfData != null && pdfData.Length > 0)
+            {
+                var safeRef = _colis.NumeroReference.Replace("/", "-");
+                var fileName = $"Ticket_{safeRef}.pdf";
+
+                using var stream = new MemoryStream(pdfData);
+                using var streamRef = new DotNetStreamReference(stream);
+
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Erreur: Fichier vide reçu.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 	
 }

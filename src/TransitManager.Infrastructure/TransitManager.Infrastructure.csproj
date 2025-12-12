@@ -25,6 +25,7 @@
     <PackageReference Include="System.Drawing.Common" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="ZXing.Net" />
+    <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" />
     <PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" />
     
     <!-- PDF & Graphique -->

@@ -56,11 +56,12 @@
     <PackageVersion Include="System.Diagnostics.Process" Version="4.3.0" />
     <PackageVersion Include="System.Drawing.Common" Version="8.0.6" />
     <PackageVersion Include="ZXing.Net" Version="0.16.9" />
+    <PackageVersion Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.13" />
     <PackageVersion Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.12" />
     <!-- PDF & Graphique -->
     <PackageVersion Include="QuestPDF" Version="2024.12.1" />
-    <PackageVersion Include="SkiaSharp" Version="2.88.9" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.9" />
+    <PackageVersion Include="SkiaSharp" Version="2.88.8" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
     <PackageVersion Include="ClosedXML" Version="0.104.2" />
   </ItemGroup>
 </Project>

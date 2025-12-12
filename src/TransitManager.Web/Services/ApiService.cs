@@ -883,6 +883,20 @@ namespace TransitManager.Web.Services
                 return Enumerable.Empty<TimelineDto>();
             }
         }
+		
+		public async Task<byte[]> ExportTicketPdfAsync(Guid id)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/colis/{id}/export/ticket");
+                if (!response.IsSuccessStatusCode) return Array.Empty<byte>();
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            catch
+            {
+                return Array.Empty<byte>();
+            }
+        }
 
     }
 }

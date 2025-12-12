@@ -14,6 +14,7 @@ using TransitManager.Core.Interfaces;
 using System.Text.Json;
 using QuestPDF.Elements;
 using SkiaSharp;
+using ZXing;
 using Microsoft.Extensions.Configuration;
 
 namespace TransitManager.Infrastructure.Services
@@ -752,79 +753,115 @@ namespace TransitManager.Infrastructure.Services
                 .PaddingVertical(5).PaddingHorizontal(5);
         }
 
-        public async Task<byte[]> GenerateColisTicketPdfAsync(Colis colis)
+
+		public async Task<byte[]> GenerateColisTicketPdfAsync(Colis colis)
         {
-            var barcodeService = new BarcodeService();
+            // On récupère la valeur du code-barres
             var firstBarcode = colis.Barcodes.FirstOrDefault()?.Value ?? colis.NumeroReference;
-            var barcodeImage = await barcodeService.GenerateBarcodeImageAsync(firstBarcode, width: 350, height: 80);
+            
+            // Génération de l'image du code-barres avec ZXing.SkiaSharp
+            var barcodeWriter = new ZXing.SkiaSharp.BarcodeWriter
+            {
+                Format = ZXing.BarcodeFormat.CODE_128,
+                Options = new ZXing.Common.EncodingOptions
+                {
+                    Height = 80,
+                    Width = 300,
+                    Margin = 0,
+                    PureBarcode = true 
+                }
+            };
+
+            var bitmap = barcodeWriter.Write(firstBarcode);
+            var barcodeImage = bitmap.Encode(SKEncodedImageFormat.Png, 100).ToArray();
+
             return await Task.Run(() =>
             {
                 return PdfDocument.Create(container =>
                 {
-                    // Boucle pour créer autant de pages que nécessaire
-                    for (int i = 0; i < colis.NombrePieces; i += 2)
+                    // CORRECTION : 1 Étiquette = 1 Page de 100x75mm
+                    // Cela évite les erreurs de calcul de hauteur "75mm + 75mm > 150mm"
+                    for (int i = 0; i < colis.NombrePieces; i++)
                     {
                         container.Page(page =>
                         {
-                            page.Size(100, 150, Unit.Millimetre);
-                            page.Margin(0);
-                            page.Content().Column(column =>
-                            {
-                                // Ticket 1 (pièce i + 1)
-                                var pieceNumber1 = i + 1;
-                                column.Item().Height(75, Unit.Millimetre).Element(cont => ComposeTicket(cont, colis, barcodeImage, pieceNumber1));
-
-                                // Ticket 2 (pièce i + 2), seulement s'il existe
-                                if (i + 2 <= colis.NombrePieces)
-                                {
-                                    var pieceNumber2 = i + 2;
-                                    column.Item().Height(75, Unit.Millimetre).Element(cont => ComposeTicket(cont, colis, barcodeImage, pieceNumber2));
-                                }
-                            });
+                            // Taille standard étiquette (Largeur x Hauteur)
+                            page.Size(100, 75, Unit.Millimetre);
+                            page.Margin(2, Unit.Millimetre); // Petite marge
+                            page.PageColor(Colors.White);
+                            page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
+                            
+                            page.Content().Element(cont => ComposeTicket(cont, colis, barcodeImage, firstBarcode, i + 1));
                         });
                     }
                 }).GeneratePdf();
             });
         }
 
-        // La méthode ComposeTicket accepte maintenant le numéro de la pièce
-        static void ComposeTicket(IContainer container, Colis colis, byte[] barcodeImage, int pieceNumber)
+
+		static void ComposeTicket(IContainer container, Colis colis, byte[] barcodeImage, string barcodeValue, int pieceNumber)
         {
             container
                 .Border(1)
-                .PaddingVertical(2, Unit.Millimetre)
-                .PaddingHorizontal(5, Unit.Millimetre)
+                // Marge interne de 3mm (suffisant pour ne pas coller au bord, mais gagne de la place)
+                .Padding(3, Unit.Millimetre) 
                 .Column(column =>
                 {
-                    column.Spacing(2); // Augmenter l'espacement entre les lignes
-                    column.Item().AlignCenter().Text(colis.Destinataire).FontSize(22).ExtraBold();
-                    column.Item().AlignCenter().Text($"Tel : {colis.TelephoneDestinataire}").FontSize(12);
+                    // Espacement réduit entre les éléments pour éviter le débordement
+                    column.Spacing(2);
+
+                    // 1. Destinataire (Gros mais sans excès)
+                    column.Item().AlignCenter().Text(colis.Destinataire)
+                        .FontSize(18).Black().LineHeight(0.9f); // LineHeight réduit pour tasser si sur 2 lignes
+                    
+                    // 2. Téléphone
+                    if (!string.IsNullOrEmpty(colis.TelephoneDestinataire))
+                    {
+                        column.Item().AlignCenter().Text($"Tél : {colis.TelephoneDestinataire}")
+                            .FontSize(14).Bold();
+                    }
+                    
+                    // 3. Mention Domicile (Plus compacte)
                     if (colis.LivraisonADomicile)
                     {
-                        column.Item().AlignCenter().PaddingTop(2).Background(Colors.Grey.Lighten2).PaddingHorizontal(5).Text("À LIVRER À DOMICILE").Bold().FontSize(12);
+                        column.Item().AlignCenter().PaddingVertical(2)
+                            .Background(Colors.Grey.Lighten3).PaddingHorizontal(8)
+                            .Text("LIVRAISON DOMICILE").ExtraBold().FontSize(10);
                     }
-                    if (!string.IsNullOrWhiteSpace(colis.AdresseLivraison))
+                    
+                    // 4. Destination & Adresse
+                    column.Item().PaddingTop(2).Column(c => 
                     {
-                        column.Item().PaddingTop(2).Text(text =>
-                        {
-                            text.DefaultTextStyle(x => x.FontSize(9));
-                            text.Span("Adresse : ").SemiBold();
-                            text.Span(colis.AdresseLivraison);
-                        });
-                    }
+                        c.Spacing(0); // Pas d'espace entre Destination et Adresse
 
-                    column.Item().PaddingTop(2).Text(text =>
-                    {
-                        text.DefaultTextStyle(x => x.FontSize(9));
-                        text.Span("Destination : ").SemiBold();
-                        text.Span(colis.DestinationFinale);
+                        c.Item().Text(text =>
+                        {
+                            text.Span("Dest: ").FontSize(10).SemiBold();
+                            text.Span(colis.DestinationFinale).FontSize(14).ExtraBold(); 
+                        });
+                        
+                        if (!string.IsNullOrWhiteSpace(colis.AdresseLivraison))
+                        {
+                            // Coupe proprement si trop long pour ne pas casser la mise en page
+                            c.Item().Text(colis.AdresseLivraison).FontSize(9).Italic(); 
+                        }
                     });
 
-                    column.Item().PaddingTop(2).AlignCenter().Text($"Colis: {pieceNumber} / {colis.NombrePieces}").FontSize(11).SemiBold();
-                    column.Item().PaddingTop(2).ExtendHorizontal().AlignCenter().Image(barcodeImage, ImageScaling.FitWidth);
+                    // 5. Compteur Colis
+                    column.Item().PaddingTop(2).AlignCenter().Text($"Colis {pieceNumber} / {colis.NombrePieces}")
+                        .FontSize(12).Bold();
+                    
+                    // 6. Code-barres (12mm est suffisant et standard)
+                    column.Item().Height(12, Unit.Millimetre).AlignCenter().Image(barcodeImage).FitHeight();
+                    column.Item().AlignCenter().Text(barcodeValue).FontSize(8).LetterSpacing(1);
 
-                    // Réduire l'espacement au-dessus du nom de l'entreprise
-                    column.Item().AlignCenter().PaddingTop(1).Background(Colors.Grey.Lighten2).PaddingHorizontal(5).Text("HIPPOCAMPE IMPORT-EXPORT").Bold().FontSize(12);
+                    // 7. Pied de page
+                    // On utilise Weight(1) sur un Spacer invisible avant le footer si on voulait pousser au fond,
+                    // mais ici on laisse le flux naturel pour éviter de forcer une nouvelle page.
+                    column.Item().PaddingTop(2).AlignCenter()
+                        .Background(Colors.Grey.Lighten4).PaddingHorizontal(5)
+                        .Text("HIPPOCAMPE IMPORT-EXPORT")
+                        .Black().FontSize(11); 
                 });
         }
 

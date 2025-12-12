@@ -236,5 +236,27 @@ namespace TransitManager.API.Controllers
 			}
 		}
 		
+		
+		[HttpGet("{id}/export/ticket")]
+        public async Task<IActionResult> ExportTicket(Guid id)
+        {
+            try
+            {
+                var colis = await _colisService.GetByIdAsync(id);
+                if (colis == null) return NotFound();
+
+                // Appel de la méthode existante du service d'export (celle utilisée par WPF)
+                var pdfData = await _exportService.GenerateColisTicketPdfAsync(colis);
+                
+                var safeRef = colis.NumeroReference.Replace("/", "-");
+                return File(pdfData, "application/pdf", $"Ticket_{safeRef}.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur export ticket");
+                return StatusCode(500, "Erreur interne");
+            }
+        }
+		
     }
 }

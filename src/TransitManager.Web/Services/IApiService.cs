@@ -95,6 +95,8 @@ namespace TransitManager.Web.Services
 
         // --- Timeline ---
         Task<IEnumerable<TimelineDto>> GetTimelineAsync(Guid? colisId, Guid? vehiculeId);
+		
+		Task<byte[]> ExportTicketPdfAsync(Guid id);
 				
     }
 }

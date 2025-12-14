@@ -217,7 +217,7 @@ namespace TransitManager.Infrastructure.Services
                         message: $"Votre véhicule {vehiculeInDb.Marque} ({vehiculeInDb.Immatriculation}) est maintenant : {vehiculeInDb.Statut}",
                         userId: clientUser.Id,
                         categorie: CategorieNotification.StatutVehicule,
-                        actionUrl: $"/my-vehicles", // Lien vue client
+                        actionUrl: $"/vehicule/edit/{vehiculeInDb.Id}",
                         entityId: vehiculeInDb.Id,
                         entityType: "Vehicule"
                     );

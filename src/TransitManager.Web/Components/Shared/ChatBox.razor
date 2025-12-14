@@ -3,10 +3,13 @@
 @using TransitManager.Core.Enums
 @using System.Security.Claims
 @using System.IO
+@using Microsoft.AspNetCore.Http
 @inject IApiService ApiService
 @inject IJSRuntime JSRuntime
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@inject IConfiguration Configuration
+@inject IHttpContextAccessor HttpContextAccessor
 @implements IAsyncDisposable
 
 <div class="chat-wrapper shadow-sm">
@@ -198,8 +201,6 @@
             el.onscroll = () => {
                 if (el.scrollHeight - el.scrollTop - el.clientHeight > 200) {
                     btn.style.display = 'block';
-                    // Reset count if user scrolls down
-                    // (Logic can be improved but kept simple here)
                 } else {
                     btn.style.display = 'none';
                 }
@@ -234,7 +235,6 @@
     private bool _isTyping = false;
     private string _typingUserName = "";
     
-    // Pour détecter le changement d'ID de l'entité
     private Guid _loadedEntityId = Guid.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -251,22 +251,21 @@
     {
         if (firstRender)
         {
-            await InitializeChat();
             await JSRuntime.InvokeVoidAsync("chatHelpers.initScrollListener", _chatContainerId, $"scroll-down-btn-{_chatContainerId}");
+            await InitializeChat(); // On lance l'initialisation complète ici
         }
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        // 1. Détection changement d'entité (Ex: On change de colis sans recharger la page)
         if (EntityId != Guid.Empty && EntityId != _loadedEntityId)
         {
             _loadedEntityId = EntityId;
-            await InitializeChat();
+            // Si c'est un changement d'entité, on recharge tout
+            // Note: On évite de le faire lors du premier rendu car OnAfterRender s'en charge
+            if (_hubConnection != null) await InitializeChat(); 
         }
         
-        // 2. Détection changement visibilité (Ex: Clic sur l'onglet)
-        // Si l'onglet devient visible ET qu'on a des messages non lus
         if (IsVisible && !_isLoading && _messages.Any())
         {
             await ProcessReadAndScroll();
@@ -293,32 +292,28 @@
     {
         Guid? colisId = EntityType == "Colis" ? EntityId : null;
         Guid? vehiculeId = EntityType == "Vehicule" ? EntityId : null;
-        Guid? conteneurId = EntityType == "Conteneur" ? EntityId : null; // CORRECTION: Gestion Conteneur
+        Guid? conteneurId = EntityType == "Conteneur" ? EntityId : null;
 
-        _messages = (await ApiService.GetMessagesAsync(colisId, vehiculeId, conteneurId)).ToList();
-        
-        UpdateBadgeCount();
-
-        if (forceScroll && IsVisible) await ScrollToBottom();
-        // NOTE: On n'appelle PAS ProcessReadAndScroll ici, c'est géré par OnParametersSetAsync ou InitializeChat
+        try {
+            _messages = (await ApiService.GetMessagesAsync(colisId, vehiculeId, conteneurId)).ToList();
+            UpdateBadgeCount();
+            if (forceScroll && IsVisible) await ScrollToBottom();
+        } catch {}
     }
 
     private async Task ProcessReadAndScroll()
     {
-        // 1. Chercher le premier non lu
         var firstUnread = _messages.FirstOrDefault(m => !m.EstMoi && !m.IsRead);
-        
         await Task.Delay(100); 
 
         if (firstUnread != null) await ScrollToMessage(firstUnread.Id);
         else await ScrollToBottom();
 
-        // 2. Marquer comme lu
         if (_messages.Any(m => !m.EstMoi && !m.IsRead))
         {
             Guid? colisId = EntityType == "Colis" ? EntityId : null;
             Guid? vehiculeId = EntityType == "Vehicule" ? EntityId : null;
-            Guid? conteneurId = EntityType == "Conteneur" ? EntityId : null; // CORRECTION
+            Guid? conteneurId = EntityType == "Conteneur" ? EntityId : null;
 
             await ApiService.MarkMessagesAsReadAsync(colisId, vehiculeId, conteneurId);
             
@@ -337,12 +332,52 @@
 
     private async Task ConnectToSignalR()
     {
+        // Nettoyage de l'ancienne connexion si elle existe pour une autre entité
+        if (_hubConnection != null) await _hubConnection.DisposeAsync();
+
         try 
         {
-            if (_hubConnection != null) await _hubConnection.DisposeAsync();
+            var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7243"; 
+            var hubUrl = $"{apiBaseUrl}/appHub";
 
-            var hubUrl = "https://localhost:7243/appHub"; 
-            _hubConnection = new HubConnectionBuilder().WithUrl(hubUrl).WithAutomaticReconnect().Build();
+            var httpContext = HttpContextAccessor.HttpContext;
+            string? cookieValue = null;
+            if (httpContext != null)
+            {
+                cookieValue = httpContext.Request.Cookies["TransitManager.AuthCookie"] 
+                           ?? httpContext.Request.Cookies[".AspNetCore.Cookies"];
+            }
+
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(hubUrl, options => {
+                    // 1. Cookie
+                    if (!string.IsNullOrEmpty(cookieValue))
+                    {
+                        if (options.Headers == null) options.Headers = new Dictionary<string, string>();
+                        var cleanCookie = cookieValue.Split(';')[0].Trim();
+                        options.Headers["Cookie"] = $"TransitManager.AuthCookie={cleanCookie}";
+                    }
+
+                    // 2. Transports Hybrides (WebSockets + LongPolling)
+                    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets | 
+                                         Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+                    
+                    // 3. Réactivation de la négociation
+                    options.SkipNegotiation = false;
+
+                    // 4. Bypass SSL
+                    options.HttpMessageHandlerFactory = (handler) => {
+                        if (handler is HttpClientHandler clientHandler)
+                            clientHandler.ServerCertificateCustomValidationCallback = (m, c, ch, e) => true;
+                        return handler;
+                    };
+                })
+                .WithAutomaticReconnect()
+                .Build();
+            
+            // Timeouts
+            _hubConnection.ServerTimeout = TimeSpan.FromMinutes(4);
+            _hubConnection.HandshakeTimeout = TimeSpan.FromSeconds(30);
 
             _hubConnection.On<MessageDto>("ReceiveMessage", async (msg) =>
             {
@@ -403,10 +438,15 @@
                 _typingTimer.Start();
             });
 
+            Console.WriteLine($"🚀 [Chat] Connexion au groupe {EntityId}...");
             await _hubConnection.StartAsync();
             await _hubConnection.InvokeAsync("JoinGroup", EntityId.ToString());
+            Console.WriteLine($"✅ [Chat] Connecté !");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ [Chat] Erreur Connexion : {ex.Message}");
+        }
     }
 
     private async Task SendMessage()
@@ -417,7 +457,7 @@
         Guid? docId = null;
         Guid? cId = EntityType == "Colis" ? EntityId : null;
         Guid? vId = EntityType == "Vehicule" ? EntityId : null;
-        Guid? contId = EntityType == "Conteneur" ? EntityId : null; // CORRECTION
+        Guid? contId = EntityType == "Conteneur" ? EntityId : null;
 
         if (_selectedFile != null)
         {
@@ -441,7 +481,7 @@
             Contenu = textToSend,
             ColisId = cId,
             VehiculeId = vId,
-            ConteneurId = contId, // CORRECTION
+            ConteneurId = contId,
             IsInternal = _isInternal,
             DocumentId = docId
         };

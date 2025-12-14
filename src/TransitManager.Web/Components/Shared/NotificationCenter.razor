@@ -1,12 +1,14 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @using TransitManager.Core.Entities
 @using TransitManager.Core.Enums
+@using Microsoft.AspNetCore.Http 
 @inject IApiService ApiService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IConfiguration Configuration
 @inject IJSRuntime JSRuntime
-@inject ILocalStorageService LocalStorage 
+@inject ILocalStorageService LocalStorage
+@inject IHttpContextAccessor HttpContextAccessor 
 @implements IAsyncDisposable
 
 <div class="dropdown">
@@ -129,36 +131,60 @@
     private bool _isOpen = false;
     private HubConnection? _hubConnection;
     private List<Notification> _activeToasts = new();
+    private bool _isConnected = false;
 
-    protected override async Task OnInitializedAsync()
+    // On évite le SSR (Server Side Rendering) pour SignalR
+    protected override void OnInitialized() { }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadUnreadCount();
-        // On lance la connexion sans attendre pour ne pas bloquer le rendu initial
-        _ = ConnectSignalR();
+        if (firstRender)
+        {
+            await LoadUnreadCount();
+            await ConnectSignalR();
+        }
     }
 
-	private async Task ConnectSignalR()
+    private async Task ConnectSignalR()
     {
-        if (_hubConnection is not null && _hubConnection.State == HubConnectionState.Connected) return;
+        if (_isConnected) return;
 
         try 
         {
+            // Récupération de l'URL
             var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7243"; 
             var hubUrl = $"{apiBaseUrl}/notificationHub";
 
-            // Récupérer le token JWT stocké (si l'auth cookie échoue, le token prend le relais)
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            // Récupération du Cookie
+            var httpContext = HttpContextAccessor.HttpContext;
+            string? cookieValue = null;
+            if (httpContext != null)
+            {
+                cookieValue = httpContext.Request.Cookies["TransitManager.AuthCookie"] 
+                           ?? httpContext.Request.Cookies[".AspNetCore.Cookies"];
+            }
 
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(hubUrl, options => {
                     
-                    // 1. Tenter avec les cookies (Credentials)
-                    options.UseDefaultCredentials = true; 
-                    
-                    // 2. Ajouter le Token JWT en secours (C'est souvent ça qui sauve SignalR)
-                    options.AccessTokenProvider = () => Task.FromResult(token);
+                    // 1. Injection du Cookie (Essentiel)
+                    if (!string.IsNullOrEmpty(cookieValue))
+                    {
+                        if (options.Headers == null) options.Headers = new Dictionary<string, string>();
+                        // On nettoie le cookie pour éviter les doublons ou caractères invalides
+                        var cleanCookie = cookieValue.Split(';')[0].Trim(); 
+                        options.Headers["Cookie"] = $"TransitManager.AuthCookie={cleanCookie}";
+                    }
 
-                    // 3. Bypass SSL pour dev
+                    // 2. STABILITÉ : On autorise le repli sur LongPolling si WebSocket échoue
+                    // C'est souvent ce qui sauve la connexion sur des réseaux complexes/VPN
+                    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets | 
+                                         Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+                    
+                    // 3. IMPORTANT : On réactive la négociation pour que le SSL bypass s'applique correctement dès le début
+                    options.SkipNegotiation = false;
+
+                    // 4. Bypass SSL (Indispensable pour l'IP 100.x.x.x et localhost)
                     options.HttpMessageHandlerFactory = (handler) => {
                         if (handler is HttpClientHandler clientHandler)
                         {
@@ -167,77 +193,64 @@
                         return handler;
                     };
                 })
-                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5) })
+                // Reconnexion automatique agressive
+                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(20) })
                 .Build();
 
-            // 4. Gestion de la réception du message
+            // Timeouts étendus
+            _hubConnection.ServerTimeout = TimeSpan.FromMinutes(4);
+            _hubConnection.HandshakeTimeout = TimeSpan.FromSeconds(30);
+
+            // Gestion des messages
             _hubConnection.On<object>("ReceiveNotification", async (obj) =>
             {
-                // On revient sur le thread UI pour mettre à jour l'affichage
                 await InvokeAsync(async () => 
                 {
-                    Console.WriteLine("🔔 SIGNAL REÇU !");
-                    
-                    // Incrémenter le compteur visuel immédiatement
                     _unreadCount++;
-                    
-                    // Si le menu est ouvert, on recharge toute la liste
-                    if (_isOpen) 
-                    {
-                        await LoadNotifications();
-                    }
+                    if (_isOpen) await LoadNotifications();
                     else 
                     {
-                         // Sinon, on charge juste la dernière pour le Toast
-                         // Petit délai pour laisser le temps à la transaction BDD de finir
-                         await Task.Delay(500);
-                         
+                         await Task.Delay(500); // Petit délai pour la BDD
                          var latestList = await ApiService.GetMyNotificationsAsync();
                          var latest = latestList.FirstOrDefault();
-                         
-                         if (latest != null && !_activeToasts.Any(t => t.Id == latest.Id)) 
-                         {
-                             ShowToast(latest);
-                         }
+                         if (latest != null && !_activeToasts.Any(t => t.Id == latest.Id)) ShowToast(latest);
                     }
-                    
-                    // Force le rafraîchissement du composant (pastille rouge)
                     StateHasChanged();
                 });
             });
 
-            // 5. Gestion de la fermeture inattendue
             _hubConnection.Closed += async (error) => 
             {
-                Console.WriteLine($"⚠️ SignalR fermé : {error?.Message}.");
+                _isConnected = false;
+                Console.WriteLine($"⚠️ [Notif] SignalR fermé : {error?.Message}");
                 await InvokeAsync(StateHasChanged);
             };
 
-            _hubConnection.Reconnecting += (error) =>
+            _hubConnection.Reconnected += (id) =>
             {
-                 Console.WriteLine($"🔄 SignalR tentative de reconnexion...");
-                 return Task.CompletedTask;
+                _isConnected = true;
+                Console.WriteLine($"✅ [Notif] SignalR Reconnecté !");
+                return Task.CompletedTask;
             };
 
-            _hubConnection.Reconnected += (connectionId) =>
-            {
-                 Console.WriteLine($"✅ SignalR reconnecté !");
-                 return Task.CompletedTask;
-            };
-
+            Console.WriteLine($"🚀 [Notif] Tentative connexion SignalR vers {hubUrl}...");
             await _hubConnection.StartAsync();
-            Console.WriteLine($"✅ [Notification] Connecté au Hub : {hubUrl}");
+            _isConnected = true;
+            Console.WriteLine($"✅ [Notif] Connecté !");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ [Notification] Erreur Connexion : {ex.Message}");
+            _isConnected = false;
+            Console.WriteLine($"❌ [Notif] Erreur Connexion : {ex.Message}");
         }
     }
 	
     private async Task LoadUnreadCount()
     {
-        _unreadCount = await ApiService.GetUnreadNotificationsCountAsync();
-        await InvokeAsync(StateHasChanged);
+        try {
+            _unreadCount = await ApiService.GetUnreadNotificationsCountAsync();
+            await InvokeAsync(StateHasChanged);
+        } catch {}
     }
 
     private void ToggleDropdown()
@@ -251,13 +264,11 @@
     private async Task LoadNotifications()
     {
         _isLoading = true;
-        await InvokeAsync(StateHasChanged); // Affiche le spinner
-        
-        _notifications = (await ApiService.GetMyNotificationsAsync()).ToList();
-        
-        // On met à jour le compteur réel au passage, pour être sûr
-        _unreadCount = _notifications.Count(n => !n.EstLue);
-        
+        await InvokeAsync(StateHasChanged); 
+        try {
+            _notifications = (await ApiService.GetMyNotificationsAsync()).ToList();
+            _unreadCount = _notifications.Count(n => !n.EstLue);
+        } catch {}
         _isLoading = false;
         await InvokeAsync(StateHasChanged);
     }
@@ -272,46 +283,27 @@
 
     private async Task HandleClick(Notification notif)
     {
-        if (!notif.EstLue)
-        {
+        if (!notif.EstLue) {
             notif.EstLue = true;
             if (_unreadCount > 0) _unreadCount--;
             _ = ApiService.MarkNotificationAsReadAsync(notif.Id);
         }
-
         RemoveToast(notif);
         _isOpen = false;
-
-        if (!string.IsNullOrEmpty(notif.ActionUrl))
-        {
-            bool exists = true;
-            if (notif.RelatedEntityId.HasValue && !string.IsNullOrEmpty(notif.RelatedEntityType))
-            {
-                exists = await ApiService.CheckEntityExistsAsync(notif.RelatedEntityType, notif.RelatedEntityId.Value);
-            }
-
-            if (exists) Navigation.NavigateTo(notif.ActionUrl);
-            else await JSRuntime.InvokeVoidAsync("alert", "Élément introuvable (supprimé ?).");
-        }
+        if (!string.IsNullOrEmpty(notif.ActionUrl)) Navigation.NavigateTo(notif.ActionUrl);
     }
 
     private void ShowToast(Notification notif)
     {
         _activeToasts.Add(notif);
         InvokeAsync(StateHasChanged);
-        
         var timer = new System.Timers.Timer(5000);
-        timer.Elapsed += (s, e) => { 
-            RemoveToast(notif); 
-            timer.Dispose(); 
-        };
+        timer.Elapsed += (s, e) => { RemoveToast(notif); timer.Dispose(); };
         timer.Start();
     }
     
-    private void RemoveToast(Notification n) 
-    {
-        if(_activeToasts.Contains(n)) 
-        {
+    private void RemoveToast(Notification n) {
+        if(_activeToasts.Contains(n)) {
             _activeToasts.Remove(n);
             InvokeAsync(StateHasChanged);
         }

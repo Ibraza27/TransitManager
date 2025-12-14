@@ -229,7 +229,7 @@ namespace TransitManager.Infrastructure.Services
                         message: $"Votre colis {colis.NumeroReference} est maintenant : {newColisStatus}",
                         userId: colis.Client.UserAccount.Id,
                         categorie: CategorieNotification.StatutColis,
-                        actionUrl: $"/my-parcels",
+                        actionUrl: $"/colis/edit/{colis.Id}",
                         entityId: colis.Id,
                         entityType: "Colis"
                     );
@@ -251,7 +251,7 @@ namespace TransitManager.Infrastructure.Services
                         message: $"Votre véhicule {vehicule.Marque} ({vehicule.Immatriculation}) est maintenant : {newVehiculeStatus}",
                         userId: vehicule.Client.UserAccount.Id,
                         categorie: CategorieNotification.StatutVehicule,
-                        actionUrl: $"/my-vehicles",
+                        actionUrl: $"/vehicule/edit/{vehicule.Id}",
                         entityId: vehicule.Id,
                         entityType: "Vehicule"
                     );

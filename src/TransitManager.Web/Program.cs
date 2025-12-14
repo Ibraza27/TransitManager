@@ -41,7 +41,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.Cookie.Name = "TransitManager.AuthCookie";
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Strict;
+        
+        // === MODIFICATION ICI : Strict -> None ===
+        options.Cookie.SameSite = SameSiteMode.None; 
+        // =========================================
+        
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         options.LoginPath = "/login";
         options.LogoutPath = "/account/logout";

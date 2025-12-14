@@ -174,7 +174,13 @@ builder.Services.AddSignalR(options => {
     options.KeepAliveInterval = TimeSpan.FromSeconds(15);
     options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
 });
+
+// === AJOUTER CETTE LIGNE ICI ===
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, TransitManager.API.Hubs.CustomUserIdProvider>();
+// ===============================
+
 builder.Services.AddCors(options =>
+// ... la suite reste inchangée
 {
     options.AddPolicy("AllowAll", policy =>
     {

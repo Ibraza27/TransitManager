@@ -242,7 +242,7 @@ namespace TransitManager.Infrastructure.Services
                             message: $"Votre colis {colisInDb.NumeroReference} est maintenant : {colisInDb.Statut}",
                             userId: clientUser.Id,
                             categorie: CategorieNotification.StatutColis,
-                            actionUrl: $"/my-parcels", // URL côté client
+                            actionUrl: $"/colis/edit/{colisInDb.Id}",
                             entityId: colisInDb.Id,
                             entityType: "Colis"
                         );
@@ -348,24 +348,64 @@ namespace TransitManager.Infrastructure.Services
             };
         }
 
-        public async Task UpdateInventaireAsync(UpdateInventaireDto dto)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == dto.ColisId);
-            if (colis != null)
-            {
-                colis.InventaireJson = dto.InventaireJson;
-                colis.NombrePieces = dto.TotalPieces;
-                colis.ValeurDeclaree = dto.TotalValeurDeclaree;
-                colis.LieuSignatureInventaire = dto.LieuSignatureInventaire;
-                colis.DateSignatureInventaire = dto.DateSignatureInventaire;
-                colis.SignatureClientInventaire = dto.SignatureClientInventaire;
-                context.Colis.Update(colis);
-                await context.SaveChangesAsync();
-                await _timelineService.AddEventAsync("Inventaire mis à jour", colisId: colis.Id);
-                await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
-            }
-        }
+		public async Task UpdateInventaireAsync(UpdateInventaireDto dto)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			// On récupère le colis
+			var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == dto.ColisId);
+			
+			if (colis != null)
+			{
+				// 1. Mise à jour des données
+				colis.InventaireJson = dto.InventaireJson;
+				colis.NombrePieces = dto.TotalPieces;
+				colis.ValeurDeclaree = dto.TotalValeurDeclaree;
+				colis.LieuSignatureInventaire = dto.LieuSignatureInventaire;
+				colis.DateSignatureInventaire = dto.DateSignatureInventaire;
+				colis.SignatureClientInventaire = dto.SignatureClientInventaire;
+				
+				context.Colis.Update(colis);
+				await context.SaveChangesAsync();
+				
+				// 2. Timeline
+				await _timelineService.AddEventAsync("Inventaire mis à jour", colisId: colis.Id);
+				await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
+
+				// === AJOUT : NOTIFICATIONS ===
+
+				// A. Notifier les Administrateurs
+				await _notificationService.CreateAndSendAsync(
+					title: "📋 Inventaire Modifié",
+					message: $"L'inventaire du colis {colis.NumeroReference} a été mis à jour ({colis.NombrePieces} pces).",
+					userId: null, // null = Broadcast aux Admins
+					categorie: CategorieNotification.Inventaire,
+					actionUrl: $"/colis/edit/{colis.Id}",
+					entityId: colis.Id,
+					entityType: "Colis"
+				);
+
+				// B. Notifier le Client (s'il a un compte utilisateur)
+				// On cherche l'utilisateur lié à ce client
+				var clientUser = await context.Utilisateurs
+					.AsNoTracking()
+					.FirstOrDefaultAsync(u => u.ClientId == colis.ClientId);
+
+				if (clientUser != null)
+				{
+					await _notificationService.CreateAndSendAsync(
+						title: "📋 Inventaire Validé",
+						message: $"L'inventaire de votre colis {colis.NumeroReference} a été mis à jour et sauvegardé.",
+						userId: clientUser.Id, // ID du client
+						categorie: CategorieNotification.Inventaire,
+						actionUrl: $"/colis/edit/{colis.Id}",
+						entityId: colis.Id,
+						entityType: "Colis"
+					);
+				}
+				// =============================
+			}
+		}
 
         public async Task<Colis?> GetByIdAsync(Guid id)
         {

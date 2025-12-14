@@ -100,51 +100,88 @@ namespace TransitManager.Infrastructure.Services
                 .ToListAsync();
         }
 
-        public async Task<Paiement> CreateAsync(Paiement paiement)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var client = await context.Clients.FindAsync(paiement.ClientId);
-            if (client == null)
-            {
-                throw new InvalidOperationException("Client non trouvé.");
-            }
-            if (string.IsNullOrEmpty(paiement.NumeroRecu))
-            {
-                paiement.NumeroRecu = await GenerateUniqueReceiptNumberAsync(context);
-            }
-            paiement.Statut = StatutPaiement.Paye;
-            context.Paiements.Add(paiement);
-            await context.SaveChangesAsync();
+		public async Task<Paiement> CreateAsync(Paiement paiement)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			var client = await context.Clients.FindAsync(paiement.ClientId);
+			if (client == null)
+			{
+				throw new InvalidOperationException("Client non trouvé.");
+			}
+			if (string.IsNullOrEmpty(paiement.NumeroRecu))
+			{
+				paiement.NumeroRecu = await GenerateUniqueReceiptNumberAsync(context);
+			}
+			paiement.Statut = StatutPaiement.Paye;
+			context.Paiements.Add(paiement);
+			await context.SaveChangesAsync();
+
+			await _timelineService.AddEventAsync(
+				$"Paiement reçu : {paiement.Montant:C} ({paiement.ModePaiement})",
+				colisId: paiement.ColisId,
+				vehiculeId: paiement.VehiculeId,
+				conteneurId: paiement.ConteneurId
+			);
+
+			var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == paiement.ClientId);
 			
-            await _timelineService.AddEventAsync(
-                $"Paiement reçu : {paiement.Montant:C} ({paiement.ModePaiement})",
-                colisId: paiement.ColisId,
-                vehiculeId: paiement.VehiculeId,
-                conteneurId: paiement.ConteneurId
-            );
-			
-            _messenger.Send(new PaiementUpdatedMessage());
-            if (paiement.VehiculeId.HasValue)
-            {
-                await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(paiement.VehiculeId.Value);
-            }
-            if (paiement.ColisId.HasValue)
-            {
-                await _colisService.RecalculateAndUpdateColisStatisticsAsync(paiement.ColisId.Value);
-            }
-            await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
-            await _notificationService.NotifyAsync(
-                "Paiement reçu",
-                $"Paiement de {paiement.Montant:C} reçu de {client.NomComplet}"
-            );
-            return paiement;
-        }
+			// Notif Client
+			if (clientUser != null) {
+				await _notificationService.CreateAndSendAsync(
+					"💰 Paiement Reçu",
+					$"Paiement de {paiement.Montant:C} validé.",
+					clientUser.Id,
+					CategorieNotification.Paiement,
+					actionUrl: GetPaiementActionUrl(paiement),
+					entityId: paiement.Id,
+					entityType: "Paiement"
+				);
+			}
+
+			// Notif Admin
+			await _notificationService.CreateAndSendAsync(
+				"💰 Nouveau Paiement",
+				$"Paiement de {paiement.Montant:C} ({client.NomComplet})",
+				null, // Admin
+				CategorieNotification.Paiement,
+				actionUrl: GetPaiementActionUrl(paiement), // <--- URL CORRIGÉE
+				entityId: paiement.Id,
+				entityType: "Paiement"
+			);
+
+			_messenger.Send(new PaiementUpdatedMessage());
+			if (paiement.VehiculeId.HasValue)
+			{
+				await _vehiculeService.RecalculateAndUpdateVehiculeStatisticsAsync(paiement.VehiculeId.Value);
+			}
+			if (paiement.ColisId.HasValue)
+			{
+				await _colisService.RecalculateAndUpdateColisStatisticsAsync(paiement.ColisId.Value);
+			}
+			await _clientService.RecalculateAndUpdateClientStatisticsAsync(paiement.ClientId);
+			await _notificationService.NotifyAsync(
+				"Paiement reçu",
+				$"Paiement de {paiement.Montant:C} reçu de {client.NomComplet}"
+			);
+			return paiement;
+		}
+
 
         public async Task<Paiement> UpdateAsync(Paiement paiement)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             context.Paiements.Update(paiement);
             await context.SaveChangesAsync();
+			
+			await _notificationService.CreateAndSendAsync(
+				"Modification Paiement",
+				$"Le paiement {paiement.NumeroRecu} a été modifié.",
+				null, // Admin seulement pour modif
+				CategorieNotification.Paiement,
+				actionUrl: GetPaiementActionUrl(paiement),
+				entityId: paiement.Id,
+				entityType: "Paiement"
+			);
 			
             await _timelineService.AddEventAsync(
                 $"Paiement mis à jour : {paiement.Montant:C} ({paiement.ModePaiement})",
@@ -177,6 +214,21 @@ namespace TransitManager.Infrastructure.Services
             var colisId = paiement.ColisId;
             paiement.Actif = false;
             await context.SaveChangesAsync();
+			
+			// Après SaveChangesAsync (Attention, l'objet est supprimé/inactif, pas de redirection possible vers lui-même)
+			// On redirige vers le parent
+			string parentUrl = "";
+			if (paiement.ColisId.HasValue) parentUrl = $"/colis/edit/{paiement.ColisId}";
+			else if (paiement.VehiculeId.HasValue) parentUrl = $"/vehicule/edit/{paiement.VehiculeId}";
+
+			await _notificationService.CreateAndSendAsync(
+				"Suppression Paiement",
+				$"Le paiement {paiement.NumeroRecu} de {paiement.Montant:C} a été supprimé.",
+				null, // Admin
+				CategorieNotification.Paiement,
+				actionUrl: parentUrl,
+				priorite: PrioriteNotification.Haute
+			);
 			
             await _timelineService.AddEventAsync(
                 $"Paiement suprimer : {paiement.Montant:C} ({paiement.ModePaiement})",
@@ -389,5 +441,14 @@ namespace TransitManager.Infrastructure.Services
             while (await context.Paiements.AnyAsync(p => p.NumeroRecu == numero));
             return numero;
         }
+		
+		private string GetPaiementActionUrl(Paiement p)
+		{
+			if (p.ColisId.HasValue) return $"/colis/edit/{p.ColisId}";
+			if (p.VehiculeId.HasValue) return $"/vehicule/edit/{p.VehiculeId}";
+			if (p.ConteneurId.HasValue) return $"/conteneur/detail/{p.ConteneurId}";
+			return "/finance"; // Fallback
+		}
+		
     }
 }

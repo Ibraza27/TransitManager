@@ -1,15 +1,12 @@
 using System;
-using System.ComponentModel.DataAnnotations; // Ajout nécessaire
+using System.ComponentModel.DataAnnotations;
 using TransitManager.Core.Enums;
 
 namespace TransitManager.Core.Entities
 {
     public class NotificationEventArgs : EventArgs
     {
-        public string Title { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
-        public TypeNotification Type { get; set; }
-        public PrioriteNotification Priorite { get; set; }
+        public Notification Notification { get; set; } = new();
     }
 
     public class Notification : BaseEntity
@@ -21,27 +18,34 @@ namespace TransitManager.Core.Entities
         [Required]
         public string Message { get; set; } = string.Empty;
         
+        // Visuel
+        public string Icone { get; set; } = "bi-info-circle"; // Classe CSS Bootstrap Icons par défaut
+        public string Couleur { get; set; } = "text-primary"; // Classe CSS couleur
+        
         public TypeNotification Type { get; set; }
         public PrioriteNotification Priorite { get; set; }
+        public CategorieNotification Categorie { get; set; } // NOUVEAU
         
-        public Guid? UtilisateurId { get; set; }
+        // Destinataire
+        public Guid? UtilisateurId { get; set; } // Si null = Broadcast (ex: tous les admins)
+        public virtual Utilisateur? Utilisateur { get; set; }
+        
+        // État
         public bool EstLue { get; set; }
         public DateTime? DateLecture { get; set; }
         
-        // --- Navigation Web Classique ---
+        // Deep Linking (Navigation)
         [StringLength(500)]
-        public string? ActionUrl { get; set; }
+        public string? ActionUrl { get; set; } // URL relative (ex: "/colis/edit/...")
         
-        [StringLength(100)]
-        public string? ActionParametre { get; set; }
-
-        // --- NOUVEAUX CHAMPS POUR DEEP LINKING (Mobile & App) ---
-        // Permet de savoir programmatiquement vers quoi rediriger
         public Guid? RelatedEntityId { get; set; }
-        
         [StringLength(50)]
-        public string? RelatedEntityType { get; set; } // "Colis", "Vehicule", "Paiement"
+        public string? RelatedEntityType { get; set; } // "Colis", "Vehicule", etc.
 
-        public virtual Utilisateur? Utilisateur { get; set; }
+        public Notification()
+        {
+            DateCreation = DateTime.UtcNow;
+            EstLue = false;
+        }
     }
 }

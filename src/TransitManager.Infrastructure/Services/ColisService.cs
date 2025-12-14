@@ -19,6 +19,8 @@ namespace TransitManager.Infrastructure.Services
         private readonly IConteneurService _conteneurService;
         private readonly IClientService _clientService;
         private readonly ITimelineService _timelineService;
+        private readonly IAuthenticationService _authService;
+
         // Définition centralisée des statuts qui ne doivent PAS être écrasés par le conteneur
         private readonly StatutColis[] _statutsCritiques = new[]
         {
@@ -33,13 +35,15 @@ namespace TransitManager.Infrastructure.Services
             INotificationService notificationService,
             IConteneurService conteneurService,
             IClientService clientService,
-            ITimelineService timelineService)
+            ITimelineService timelineService,
+            IAuthenticationService authService)
         {
             _contextFactory = contextFactory;
             _notificationService = notificationService;
             _conteneurService = conteneurService;
             _clientService = clientService;
             _timelineService = timelineService;
+            _authService = authService;
         }
 
         public async Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId)
@@ -99,6 +103,31 @@ namespace TransitManager.Infrastructure.Services
             context.Colis.Add(newColis);
             await context.SaveChangesAsync();
             await _timelineService.AddEventAsync("Colis créé et enregistré", colisId: newColis.Id, statut: newColis.Statut.ToString());
+
+            // NOTIFICATION ADMIN
+            await _notificationService.CreateAndSendAsync(
+                title: "📦 Nouveau Colis",
+                message: $"Colis {newColis.NumeroReference} ajouté pour {newColis.Client?.NomComplet ?? "Client"}",
+                userId: null, // Broadcast Admin
+                categorie: CategorieNotification.StatutColis,
+                actionUrl: $"/colis/edit/{newColis.Id}", // URL Admin
+                entityId: newColis.Id,
+                entityType: "Colis"
+            );
+
+			var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == newColis.ClientId);
+			if (clientUser != null)
+			{
+				await _notificationService.CreateAndSendAsync(
+					title: "📦 Nouveau Colis",
+					message: $"Un nouveau colis ({newColis.NumeroReference}) a été ajouté à votre dossier.",
+					userId: clientUser.Id, // Cible le client
+					categorie: CategorieNotification.StatutColis,
+					actionUrl: $"/colis/edit/{newColis.Id}", // Redirige vers le détail
+					entityId: newColis.Id,
+					entityType: "Colis"
+				);
+			}
 
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(newColis.ClientId);
             if (newColis.ConteneurId.HasValue) await _conteneurService.RecalculateStatusAsync(newColis.ConteneurId.Value);
@@ -201,6 +230,23 @@ namespace TransitManager.Infrastructure.Services
                         colisId: colisInDb.Id,
                         statut: colisInDb.Statut.ToString()
                     );
+
+                    // NOTIFICATION CLIENT
+                    // On notifie le client si ce n'est pas un statut interne ou si le user a un compte
+                    var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == colisInDb.ClientId);
+                    if (clientUser != null)
+                    {
+                        string emoji = colisInDb.Statut == StatutColis.Livre ? "✅" : "📦";
+                        await _notificationService.CreateAndSendAsync(
+                            title: $"{emoji} Mise à jour Colis",
+                            message: $"Votre colis {colisInDb.NumeroReference} est maintenant : {colisInDb.Statut}",
+                            userId: clientUser.Id,
+                            categorie: CategorieNotification.StatutColis,
+                            actionUrl: $"/my-parcels", // URL côté client
+                            entityId: colisInDb.Id,
+                            entityType: "Colis"
+                        );
+                    }
                 }
 
                 // --- 6. Appels Services Externes ---
@@ -246,7 +292,8 @@ namespace TransitManager.Infrastructure.Services
                 await _timelineService.AddEventAsync(
                     $"Mise à jour automatique (Conteneur {conteneur.Statut}) : {oldStatus} -> {colis.Statut}",
                     colisId: colis.Id,
-                    statut: colis.Statut.ToString());
+                    statut: colis.Statut.ToString()
+                );
             }
             await _timelineService.AddEventAsync(
                 $"Affecté au conteneur {conteneur.NumeroDossier}",

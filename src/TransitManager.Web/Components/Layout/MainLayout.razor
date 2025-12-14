@@ -26,7 +26,11 @@
 			<AuthorizeView>
 				<Authorized Context="AuthContext">
 					<div class="d-flex align-items-center gap-2">
-						<!-- Texte "Bonjour" caché sur mobile (d-none d-md-inline) -->
+						
+						<!-- C'EST ICI QUE DOIT ÊTRE LA CLOCHE -->
+						<NotificationCenter @rendermode="RenderMode.InteractiveServer" />
+						<!-- FIN CLOCHE -->
+
 						<span class="d-none d-md-inline fw-medium text-secondary">
 							👋 @AuthContext.User.Identity?.Name
 						</span>

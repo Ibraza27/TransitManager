@@ -1,0 +1,304 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using TransitManager.Core.Entities
+@using TransitManager.Core.Enums
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IConfiguration Configuration
+@inject IJSRuntime JSRuntime 
+@implements IAsyncDisposable
+
+<div class="dropdown">
+    <!-- Bouton Cloche -->
+    <button class="btn btn-link text-primary position-relative p-0 me-3" 
+            type="button" 
+            id="notifDropdown" 
+            data-bs-toggle="dropdown" 
+            aria-expanded="false" 
+            @onclick="ToggleDropdown">
+        <i class="bi bi-bell-fill fs-5"></i>
+        
+        @if (_unreadCount > 0)
+        {
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" 
+                  style="font-size: 0.6rem; animation: pulse 2s infinite;">
+                @(_unreadCount > 99 ? "99+" : _unreadCount)
+            </span>
+        }
+    </button>
+    
+    <!-- Menu Déroulant -->
+    <div class="dropdown-menu dropdown-menu-end shadow-lg p-0 border-0 @(_isOpen ? "show" : "")" 
+         style="width: 380px; max-height: 500px; overflow-y: auto; right: 0; left: auto; z-index: 1050;">
+        
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-primary text-white sticky-top">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-bell me-2"></i>Notifications</h6>
+            @if (_notifications.Any(n => !n.EstLue))
+            {
+                <button class="btn btn-sm btn-light text-primary fw-bold py-0" @onclick="MarkAllRead" @onclick:stopPropagation="true">
+                    <small>Tout lire</small>
+                </button>
+            }
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="text-center p-4 text-muted">
+                <div class="spinner-border spinner-border-sm mb-2"></div>
+                <p class="mb-0 small">Chargement...</p>
+            </div>
+        }
+        else if (_notifications == null || !_notifications.Any())
+        {
+            <div class="text-center p-5 text-muted">
+                <i class="bi bi-bell-slash fs-1 d-block mb-3 opacity-25"></i>
+                <span>Aucune notification.</span>
+            </div>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var notif in _notifications)
+                {
+                    <div class="list-group-item list-group-item-action p-3 border-bottom @(!notif.EstLue ? "bg-blue-50" : "")" 
+                         style="cursor: pointer;" 
+                         @onclick="() => HandleClick(notif)">
+                        
+                        <div class="d-flex">
+                            <div class="me-3 mt-1 position-relative">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center @GetIconBackgroundClass(notif.Categorie)" style="width: 40px; height: 40px;">
+                                    <i class="bi @notif.Icone fs-5 text-white"></i>
+                                </div>
+                                @if (!notif.EstLue)
+                                {
+                                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+                                }
+                            </div>
+                            
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <strong class="small @(!notif.EstLue ? "fw-bold text-dark" : "text-secondary")">@notif.Title</strong>
+                                    <small class="text-muted ms-2" style="font-size: 0.7rem; white-space: nowrap;">@GetTimeAgo(notif.DateCreation)</small>
+                                </div>
+                                <p class="mb-0 small text-secondary text-break lh-sm">@notif.Message</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    
+    <!-- Overlay de fermeture -->
+    @if (_isOpen)
+    {
+        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1040;" @onclick="CloseDropdown"></div>
+    }
+</div>
+
+<!-- TOASTS -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+    @foreach (var toast in _activeToasts)
+    {
+        <div class="toast show shadow-lg border-0 mb-2 fade-in-up" role="alert">
+            <div class="toast-header @GetIconBackgroundClass(toast.Categorie) text-white">
+                <i class="bi @toast.Icone me-2"></i>
+                <strong class="me-auto">@toast.Title</strong>
+                <small>À l'instant</small>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => RemoveToast(toast)"></button>
+            </div>
+            <div class="toast-body bg-white cursor-pointer" @onclick="() => HandleClick(toast)">
+                @toast.Message
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .bg-blue-50 { background-color: #f0f7ff; }
+    .fade-in-up { animation: fadeInUp 0.3s ease-out; }
+    @@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @@keyframes pulse { 0% { transform: scale(1) translate(-50%, -50%); } 50% { transform: scale(1.2) translate(-50%, -50%); } 100% { transform: scale(1) translate(-50%, -50%); } }
+</style>
+
+@code {
+    private List<Notification> _notifications = new();
+    private int _unreadCount = 0;
+    private bool _isLoading = false;
+    private bool _isOpen = false;
+    private HubConnection? _hubConnection;
+    private List<Notification> _activeToasts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Initialiser le compteur
+        await LoadUnreadCount();
+        
+        // 2. Lancer SignalR
+        // IMPORTANT : On le fait en "fire and forget" pour ne pas bloquer le rendu initial
+        _ = ConnectSignalR();
+    }
+
+    private async Task ConnectSignalR()
+    {
+        try 
+        {
+            var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7243"; 
+            var hubUrl = $"{apiBaseUrl}/notificationHub";
+
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(hubUrl, options => {
+                    options.HttpMessageHandlerFactory = (handler) => {
+                        if (handler is HttpClientHandler clientHandler)
+                            clientHandler.ServerCertificateCustomValidationCallback = (m, c, ch, e) => true;
+                        return handler;
+                    };
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On<object>("ReceiveNotification", async (obj) =>
+            {
+                // RECEPTION DU SIGNAL
+                await InvokeAsync(async () => 
+                {
+                    Console.WriteLine("🔔 SIGNAL REÇU ! Mise à jour UI...");
+                    
+                    // 1. On incrémente visuellement tout de suite
+                    _unreadCount++;
+                    
+                    // 2. On charge le détail pour le toast
+                    var latest = (await ApiService.GetMyNotificationsAsync()).FirstOrDefault();
+                    if (latest != null && !_activeToasts.Any(t => t.Id == latest.Id))
+                    {
+                         ShowToast(latest);
+                         
+                         // Si la liste est ouverte, on l'actualise aussi
+                         if (_isOpen)
+                         {
+                             _notifications.Insert(0, latest);
+                         }
+                    }
+                    
+                    // 3. Force le rendu
+                    StateHasChanged();
+                });
+            });
+
+            await _hubConnection.StartAsync();
+            Console.WriteLine($"✅ [Notification] Connecté au Hub.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ [Notification] Erreur Connexion : {ex.Message}");
+        }
+    }
+
+    private async Task LoadUnreadCount()
+    {
+        _unreadCount = await ApiService.GetUnreadNotificationsCountAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleDropdown()
+    {
+        _isOpen = !_isOpen;
+        if (_isOpen) _ = LoadNotifications();
+    }
+
+    private void CloseDropdown() => _isOpen = false;
+
+    private async Task LoadNotifications()
+    {
+        _isLoading = true;
+        StateHasChanged(); // Affiche le spinner
+        
+        _notifications = (await ApiService.GetMyNotificationsAsync()).ToList();
+        
+        // On met à jour le compteur réel au passage, pour être sûr
+        _unreadCount = _notifications.Count(n => !n.EstLue);
+        
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task MarkAllRead()
+    {
+        await ApiService.MarkAllNotificationsAsReadAsync();
+        foreach (var n in _notifications) n.EstLue = true;
+        _unreadCount = 0;
+        StateHasChanged();
+    }
+
+    private async Task HandleClick(Notification notif)
+    {
+        if (!notif.EstLue)
+        {
+            notif.EstLue = true;
+            if (_unreadCount > 0) _unreadCount--;
+            _ = ApiService.MarkNotificationAsReadAsync(notif.Id);
+        }
+
+        RemoveToast(notif);
+        _isOpen = false;
+
+        if (!string.IsNullOrEmpty(notif.ActionUrl))
+        {
+            bool exists = true;
+            if (notif.RelatedEntityId.HasValue && !string.IsNullOrEmpty(notif.RelatedEntityType))
+            {
+                exists = await ApiService.CheckEntityExistsAsync(notif.RelatedEntityType, notif.RelatedEntityId.Value);
+            }
+
+            if (exists) Navigation.NavigateTo(notif.ActionUrl);
+            else await JSRuntime.InvokeVoidAsync("alert", "Élément introuvable (supprimé ?).");
+        }
+    }
+
+    private void ShowToast(Notification notif)
+    {
+        _activeToasts.Add(notif);
+        StateHasChanged();
+        
+        var timer = new System.Timers.Timer(5000);
+        timer.Elapsed += (s, e) => { 
+            RemoveToast(notif); 
+            timer.Dispose(); 
+        };
+        timer.Start();
+    }
+    
+    private void RemoveToast(Notification n) 
+    {
+        if(_activeToasts.Contains(n)) 
+        {
+            _activeToasts.Remove(n);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private string GetTimeAgo(DateTime date)
+    {
+        var span = DateTime.UtcNow - date.ToUniversalTime();
+        if (span.TotalMinutes < 1) return "À l'instant";
+        if (span.TotalMinutes < 60) return $"Il y a {(int)span.TotalMinutes} min";
+        if (span.TotalHours < 24) return $"Il y a {(int)span.TotalHours} h";
+        return date.ToLocalTime().ToString("dd/MM");
+    }
+
+    private string GetIconBackgroundClass(CategorieNotification cat) => cat switch
+    {
+        CategorieNotification.StatutColis => "bg-primary",
+        CategorieNotification.StatutVehicule => "bg-info",
+        CategorieNotification.StatutConteneur => "bg-indigo",
+        CategorieNotification.Paiement => "bg-success",
+        CategorieNotification.AlerteDouane => "bg-danger",
+        CategorieNotification.NouveauMessage => "bg-warning",
+        _ => "bg-secondary"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null) await _hubConnection.DisposeAsync();
+    }
+}

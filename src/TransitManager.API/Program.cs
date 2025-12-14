@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using TransitManager.API.Hubs;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
 using TransitManager.Infrastructure.Repositories;
@@ -16,6 +15,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using QuestPDF.Infrastructure;
 using System.IO;
+using TransitManager.Infrastructure.Hubs;
+
+
 var builder = WebApplication.CreateBuilder(args);
 QuestPDF.Settings.License = LicenseType.Community;
 // --- LOG AU DÉMARRAGE ---
@@ -73,6 +75,7 @@ builder.Services.AddTransient<ITimelineService, TimelineService>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+		options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true; // <--- AJOUTER CETTE LIGNE
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
@@ -169,7 +172,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
-app.MapHub<TransitManager.Infrastructure.Hubs.AppHub>("/appHub");
+app.MapHub<AppHub>("/appHub");
 
  
 Console.WriteLine("[API] Lancement de l'application.");

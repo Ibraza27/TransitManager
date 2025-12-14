@@ -16,16 +16,19 @@ namespace TransitManager.Infrastructure.Services
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly string _storageRootPath;
-        private readonly ITimelineService _timelineService; // AJOUT
+        private readonly ITimelineService _timelineService;
+        private readonly INotificationService _notificationService; // AJOUT
 
         public DocumentService(
-            IDbContextFactory<TransitContext> contextFactory, 
+            IDbContextFactory<TransitContext> contextFactory,
             IConfiguration configuration,
-            ITimelineService timelineService) // AJOUT
+            ITimelineService timelineService,
+            INotificationService notificationService) // AJOUT
         {
             _contextFactory = contextFactory;
-            _timelineService = timelineService; // AJOUT
-            
+            _timelineService = timelineService;
+            _notificationService = notificationService; // AJOUT
+
             _storageRootPath = configuration["FileStorage:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Storage");
             if (!Directory.Exists(_storageRootPath))
             {
@@ -82,6 +85,45 @@ namespace TransitManager.Infrastructure.Services
             string desc = $"Document ajouté : {fileName} ({typeDoc})";
             await _timelineService.AddEventAsync(desc, colisId: colisId, vehiculeId: vehiculeId, conteneurId: conteneurId);
             // ----------------------
+
+            // Déterminer le propriétaire (Client) pour le notifier
+            Guid? ownerClientId = clientId;
+            if (!ownerClientId.HasValue && colisId.HasValue) {
+                var c = await context.Colis.FindAsync(colisId);
+                ownerClientId = c?.ClientId;
+            }
+            // (Pareil pour Vehicule...)
+
+            // URL de redirection vers l'entité parente
+            string actionUrl = "";
+            if (colisId.HasValue) actionUrl = $"/colis/edit/{colisId}";
+            else if (vehiculeId.HasValue) actionUrl = $"/vehicule/edit/{vehiculeId}";
+            else if (conteneurId.HasValue) actionUrl = $"/conteneur/detail/{conteneurId}";
+
+            // Notifier Admin
+            await _notificationService.CreateAndSendAsync(
+                "Nouveau Document",
+                $"Document ajouté : {fileName}",
+                null, // Admin
+                CategorieNotification.Document,
+                actionUrl: actionUrl
+            );
+
+            // Notifier Client (si le doc n'est pas confidentiel)
+            if (!estConfidentiel && ownerClientId.HasValue)
+            {
+                var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == ownerClientId);
+                if (clientUser != null)
+                {
+                    await _notificationService.CreateAndSendAsync(
+                        "Nouveau Document",
+                        $"Un document a été ajouté à votre dossier : {fileName}",
+                        clientUser.Id,
+                        CategorieNotification.Document,
+                        actionUrl: actionUrl
+                    );
+                }
+            }
 
             return document;
         }
@@ -160,8 +202,48 @@ namespace TransitManager.Infrastructure.Services
 
             // 2. Suppression Logique (ou physique en base si on préfère)
             // Ici on fait une suppression physique de la ligne BDD car le fichier n'existe plus
-            context.Documents.Remove(doc); 
+            context.Documents.Remove(doc);
             await context.SaveChangesAsync();
+
+            // Logique de notification pour la suppression
+            // Déterminer le propriétaire (Client) pour le notifier
+            Guid? ownerClientId = doc.ClientId;
+            if (!ownerClientId.HasValue && doc.ColisId.HasValue) {
+                var c = await context.Colis.FindAsync(doc.ColisId);
+                ownerClientId = c?.ClientId;
+            }
+            // (Pareil pour Vehicule...)
+
+            // URL de redirection vers l'entité parente
+            string actionUrl = "";
+            if (doc.ColisId.HasValue) actionUrl = $"/colis/edit/{doc.ColisId}";
+            else if (doc.VehiculeId.HasValue) actionUrl = $"/vehicule/edit/{doc.VehiculeId}";
+            else if (doc.ConteneurId.HasValue) actionUrl = $"/conteneur/detail/{doc.ConteneurId}";
+
+            // Notifier Admin
+            await _notificationService.CreateAndSendAsync(
+                "Document Supprimé",
+                $"Document supprimé : {doc.Nom}",
+                null, // Admin
+                CategorieNotification.Document,
+                actionUrl: actionUrl
+            );
+
+            // Notifier Client (si le doc n'est pas confidentiel)
+            if (!doc.EstConfidentiel && ownerClientId.HasValue)
+            {
+                var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == ownerClientId);
+                if (clientUser != null)
+                {
+                    await _notificationService.CreateAndSendAsync(
+                        "Document Supprimé",
+                        $"Un document a été supprimé de votre dossier : {doc.Nom}",
+                        clientUser.Id,
+                        CategorieNotification.Document,
+                        actionUrl: actionUrl
+                    );
+                }
+            }
 
             return true;
         }

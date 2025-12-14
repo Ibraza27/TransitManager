@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -7,90 +8,140 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using TransitManager.Infrastructure.Hubs;
 
 namespace TransitManager.Infrastructure.Services
 {
     public class NotificationService : INotificationService
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
-        private readonly IAuthenticationService _authenticationService;
-        public event EventHandler<NotificationEventArgs>? NotificationReceived;
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IAuthenticationService _authService;
 
-        public NotificationService(IDbContextFactory<TransitContext> contextFactory, IAuthenticationService authenticationService)
+        public NotificationService(
+            IDbContextFactory<TransitContext> contextFactory,
+            IHubContext<NotificationHub> hubContext,
+            IAuthenticationService authService)
         {
             _contextFactory = contextFactory;
-            _authenticationService = authenticationService;
+            _hubContext = hubContext;
+            _authService = authService;
         }
 
-        public async Task NotifyAsync(string title, string message, TypeNotification type = TypeNotification.Information, PrioriteNotification priorite = PrioriteNotification.Normale)
+        public async Task CreateAndSendAsync(
+            string title, string message, Guid? userId,
+            CategorieNotification categorie, string? actionUrl = null,
+            Guid? entityId = null, string? entityType = null,
+            PrioriteNotification priorite = PrioriteNotification.Normale)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            var notification = new Notification
+
+            // 1. Identifier l'expéditeur (celui qui fait l'action)
+            var currentUserId = _authService.CurrentUser?.Id;
+
+            // 2. Déterminer les destinataires
+            var recipients = new List<Guid>();
+
+            if (userId.HasValue)
             {
-                Title = title,
-                Message = message,
-                Type = type,
-                Priorite = priorite,
-                // Vérification de l'utilisateur actuel avant assignation
-                UtilisateurId = _authenticationService.CurrentUser?.Id != Guid.Empty
-                    ? _authenticationService.CurrentUser?.Id
-                    : null
-            };
-            context.Set<Notification>().Add(notification);
-            await context.SaveChangesAsync();
-            NotificationReceived?.Invoke(this, new NotificationEventArgs
+                // Cible un utilisateur spécifique
+                recipients.Add(userId.Value);
+            }
+            else
             {
-                Title = title,
-                Message = message,
-                Type = type,
-                Priorite = priorite
-            });
-            if (priorite == PrioriteNotification.Haute || priorite == PrioriteNotification.Urgente)
+                // Cible tous les Admins/Gestionnaires
+                var admins = await context.Utilisateurs
+                    .Where(u => u.Role == RoleUtilisateur.Administrateur || u.Role == RoleUtilisateur.Gestionnaire)
+                    .Select(u => u.Id)
+                    .ToListAsync();
+                recipients.AddRange(admins);
+            }
+
+            // 3. FILTRE CRITIQUE : Retirer l'utilisateur actuel de la liste des destinataires
+            // On ne veut pas s'auto-notifier
+            if (currentUserId.HasValue)
             {
-                await SendEmailNotificationAsync(notification);
-                if (priorite == PrioriteNotification.Urgente)
+                recipients.RemoveAll(id => id == currentUserId.Value);
+            }
+
+            // Si plus personne à notifier, on arrête
+            if (!recipients.Any()) return;
+
+            // 4. Créer et Sauvegarder
+            var notifsToSend = new List<Notification>();
+
+            foreach (var recipientId in recipients)
+            {
+                var notif = new Notification
                 {
-                    await SendSmsNotificationAsync(notification);
+                    UtilisateurId = recipientId,
+                    Title = title,
+                    Message = message,
+                    Categorie = categorie,
+                    ActionUrl = actionUrl,
+                    RelatedEntityId = entityId,
+                    RelatedEntityType = entityType,
+                    Priorite = priorite,
+                    Icone = GetIconForCategory(categorie),
+                    Couleur = GetColorForCategory(categorie),
+                    DateCreation = DateTime.UtcNow,
+                    EstLue = false
+                };
+                context.Notifications.Add(notif);
+                notifsToSend.Add(notif);
+            }
+
+            await context.SaveChangesAsync();
+
+            // 5. Envoyer via SignalR
+            foreach (var notif in notifsToSend)
+            {
+                var notifDto = new
+                {
+                    notif.Id,
+                    notif.Title,
+                    notif.Message,
+                    notif.Icone,
+                    notif.Couleur,
+                    notif.ActionUrl,
+                    notif.DateCreation,
+                    notif.Categorie,
+                    notif.EstLue
+                };
+
+                if (notif.UtilisateurId.HasValue)
+                {
+                    await _hubContext.Clients.User(notif.UtilisateurId.Value.ToString())
+                        .SendAsync("ReceiveNotification", notifDto);
                 }
             }
         }
 
-        public async Task<IEnumerable<Notification>> GetUserNotificationsAsync(Guid userId)
+        public async Task<IEnumerable<Notification>> GetUserNotificationsAsync(Guid userId, int count = 20)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<Notification>()
-                .Where(n => n.UtilisateurId == userId || n.UtilisateurId == null)
+            return await context.Notifications
+                .Where(n => n.UtilisateurId == userId)
                 .OrderByDescending(n => n.DateCreation)
-                .Take(100)
+                .Take(count)
+                .AsNoTracking()
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Notification>> GetUnreadNotificationsAsync(Guid userId)
+        public async Task<int> GetUnreadCountAsync(Guid userId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<Notification>()
-                .Where(n => (n.UtilisateurId == userId || n.UtilisateurId == null) && !n.EstLue)
-                .OrderByDescending(n => n.DateCreation)
-                .ToListAsync();
-        }
-
-        public async Task<int> GetUnreadCountAsync()
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var userId = _authenticationService.CurrentUser?.Id;
-            if (!userId.HasValue) return 0;
-            return await context.Set<Notification>()
-                .CountAsync(n => (n.UtilisateurId == userId || n.UtilisateurId == null) && !n.EstLue);
+            return await context.Notifications.CountAsync(n => n.UtilisateurId == userId && !n.EstLue);
         }
 
         public async Task MarkAsReadAsync(Guid notificationId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            var notification = await context.Set<Notification>().FindAsync(notificationId);
-            if (notification != null)
+            var notif = await context.Notifications.FindAsync(notificationId);
+            if (notif != null && !notif.EstLue)
             {
-                notification.EstLue = true;
-                notification.DateLecture = DateTime.UtcNow;
+                notif.EstLue = true;
+                notif.DateLecture = DateTime.UtcNow;
                 await context.SaveChangesAsync();
             }
         }
@@ -98,38 +149,46 @@ namespace TransitManager.Infrastructure.Services
         public async Task MarkAllAsReadAsync(Guid userId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            var notifications = await context.Set<Notification>()
-                .Where(n => (n.UtilisateurId == userId || n.UtilisateurId == null) && !n.EstLue)
-                .ToListAsync();
-            foreach (var notification in notifications)
-            {
-                notification.EstLue = true;
-                notification.DateLecture = DateTime.UtcNow;
-            }
-            await context.SaveChangesAsync();
+            await context.Notifications
+                .Where(n => n.UtilisateurId == userId && !n.EstLue)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(n => n.EstLue, true)
+                    .SetProperty(n => n.DateLecture, DateTime.UtcNow));
         }
 
-        public async Task DeleteNotificationAsync(Guid notificationId)
+        // Helpers visuels (privés)
+        private string GetIconForCategory(CategorieNotification cat) => cat switch
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var notification = await context.Set<Notification>().FindAsync(notificationId);
-            if (notification != null)
-            {
-                context.Set<Notification>().Remove(notification);
-                await context.SaveChangesAsync();
-            }
-        }
+            CategorieNotification.StatutColis => "bi-box-seam",
+            CategorieNotification.StatutVehicule => "bi-car-front",
+            CategorieNotification.StatutConteneur => "bi-box",
+            CategorieNotification.Paiement => "bi-cash-coin",
+            CategorieNotification.Document => "bi-file-earmark-text",
+            CategorieNotification.Message or CategorieNotification.NouveauMessage => "bi-chat-dots",
+            CategorieNotification.Inventaire => "bi-list-check",
+            CategorieNotification.NouveauClient => "bi-person-plus",
+            CategorieNotification.AlerteDouane => "bi-shield-exclamation",
+            _ => "bi-bell"
+        };
 
-        private Task SendEmailNotificationAsync(Notification notification)
+        private string GetColorForCategory(CategorieNotification cat) => cat switch
         {
-            // TODO: Implémenter l'envoi d'email
-            return Task.CompletedTask;
-        }
+            CategorieNotification.Paiement => "text-success",
+            CategorieNotification.StatutConteneur => "text-info",
+            CategorieNotification.AlerteDouane => "text-danger",
+            CategorieNotification.StatutColis or CategorieNotification.StatutVehicule => "text-primary",
+            CategorieNotification.Inventaire or CategorieNotification.Document => "text-warning",
+            _ => "text-secondary"
+        };
 
-        private Task SendSmsNotificationAsync(Notification notification)
+        // Implémentation explicite de l'événement de l'interface (même si on ne l'utilise pas ici pour le web)
+        public event EventHandler<NotificationEventArgs>? NotificationReceived;
+
+        // Méthode simple NotifyAsync demandée par l'interface héritée (pour compatibilité WPF)
+        public async Task NotifyAsync(string title, string message, TypeNotification type = TypeNotification.Information, PrioriteNotification priorite = PrioriteNotification.Normale)
         {
-            // TODO: Implémenter l'envoi de SMS
-            return Task.CompletedTask;
+            // On redirige vers la nouvelle méthode plus complète
+            await CreateAndSendAsync(title, message, null, CategorieNotification.Systeme, null, null, null, priorite);
         }
     }
 }

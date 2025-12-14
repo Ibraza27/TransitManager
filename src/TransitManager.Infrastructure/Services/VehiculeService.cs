@@ -16,7 +16,9 @@ namespace TransitManager.Infrastructure.Services
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly IConteneurService _conteneurService;
         private readonly IClientService _clientService;
-        private readonly ITimelineService _timelineService; // AJOUT
+        private readonly ITimelineService _timelineService;
+        private readonly INotificationService _notificationService;
+        private readonly IAuthenticationService _authService;
 
         // Statuts qui ne doivent pas être écrasés par le conteneur
         private readonly StatutVehicule[] _statutsCritiques = new[]
@@ -30,18 +32,22 @@ namespace TransitManager.Infrastructure.Services
             IDbContextFactory<TransitContext> contextFactory,
             IConteneurService conteneurService,
             IClientService clientService,
-            ITimelineService timelineService) // AJOUT
+            ITimelineService timelineService,
+            INotificationService notificationService,
+            IAuthenticationService authService)
         {
             _contextFactory = contextFactory;
             _conteneurService = conteneurService;
             _clientService = clientService;
-            _timelineService = timelineService; // AJOUT
+            _timelineService = timelineService;
+            _notificationService = notificationService;
+            _authService = authService;
         }
 
         public async Task<Vehicule> CreateAsync(Vehicule vehicule)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            
+
             // Si un conteneur est assigné à la création, on applique la logique de statut
             if (vehicule.ConteneurId.HasValue)
             {
@@ -61,6 +67,38 @@ namespace TransitManager.Infrastructure.Services
                 "Véhicule créé et enregistré",
                 vehiculeId: vehicule.Id,
                 statut: vehicule.Statut.ToString()
+            );
+
+            // Notification création (Pour le Client si créé par Admin)
+            var currentUser = _authService.CurrentUser;
+            bool isAdmin = currentUser?.Role == RoleUtilisateur.Administrateur || currentUser?.Role == RoleUtilisateur.Gestionnaire;
+
+            if (isAdmin)
+            {
+                var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == vehicule.ClientId);
+                if (clientUser != null)
+                {
+                    await _notificationService.CreateAndSendAsync(
+                        title: "🚗 Nouveau Véhicule",
+                        message: $"Le véhicule {vehicule.Marque} {vehicule.Modele} ({vehicule.Immatriculation}) a été ajouté à votre dossier.",
+                        userId: clientUser.Id,
+                        categorie: CategorieNotification.StatutVehicule,
+                        actionUrl: $"/vehicule/edit/{vehicule.Id}",
+                        entityId: vehicule.Id,
+                        entityType: "Vehicule"
+                    );
+                }
+            }
+
+            // Notification aux Admins (si créé par un autre admin ou via un import)
+            await _notificationService.CreateAndSendAsync(
+                title: "🚗 Nouveau Véhicule",
+                message: $"Nouveau véhicule ajouté : {vehicule.Immatriculation} (Client : {vehicule.ClientId})",
+                userId: null, // Broadcast Admin
+                categorie: CategorieNotification.StatutVehicule,
+                actionUrl: $"/vehicule/edit/{vehicule.Id}",
+                entityId: vehicule.Id,
+                entityType: "Vehicule"
             );
 
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
@@ -102,7 +140,7 @@ namespace TransitManager.Infrastructure.Services
             vehiculeInDb.Type = vehicule.Type;
             vehiculeInDb.Commentaires = vehicule.Commentaires;
             vehiculeInDb.ConteneurId = vehicule.ConteneurId;
-            
+
             // Protection financière
             if (vehicule.PrixTotal > 0) vehiculeInDb.PrixTotal = vehicule.PrixTotal;
             if (vehicule.ValeurDeclaree > 0) vehiculeInDb.ValeurDeclaree = vehicule.ValeurDeclaree;
@@ -159,14 +197,31 @@ namespace TransitManager.Infrastructure.Services
                 throw new ConcurrencyException("Ce véhicule a été modifié par un autre utilisateur.");
             }
 
-            // --- 4. Timeline ---
+            // Notification Changement de Statut
             if (oldStatus != vehiculeInDb.Statut)
             {
+                // Timeline
                 await _timelineService.AddEventAsync(
                     $"Statut modifié : {oldStatus} -> {vehiculeInDb.Statut}",
                     vehiculeId: vehiculeInDb.Id,
                     statut: vehiculeInDb.Statut.ToString()
                 );
+
+                // Notifier le Client
+                var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == vehiculeInDb.ClientId);
+                if (clientUser != null)
+                {
+                    string emoji = vehiculeInDb.Statut == StatutVehicule.Livre ? "✅" : "🚗";
+                    await _notificationService.CreateAndSendAsync(
+                        title: $"{emoji} Mise à jour Véhicule",
+                        message: $"Votre véhicule {vehiculeInDb.Marque} ({vehiculeInDb.Immatriculation}) est maintenant : {vehiculeInDb.Statut}",
+                        userId: clientUser.Id,
+                        categorie: CategorieNotification.StatutVehicule,
+                        actionUrl: $"/my-vehicles", // Lien vue client
+                        entityId: vehiculeInDb.Id,
+                        entityType: "Vehicule"
+                    );
+                }
             }
 
             // Services externes
@@ -182,7 +237,7 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var vehicule = await context.Vehicules.FindAsync(vehiculeId);
             var conteneur = await context.Conteneurs.FindAsync(conteneurId);
-            
+
             var blockedStatuses = new[] { StatutConteneur.Cloture, StatutConteneur.Annule };
             if (vehicule == null || conteneur == null || blockedStatuses.Contains(conteneur.Statut)) return false;
 
@@ -224,7 +279,7 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var vehicule = await context.Vehicules.FindAsync(vehiculeId);
             if (vehicule == null || !vehicule.ConteneurId.HasValue) return false;
-            
+
             var originalConteneurId = vehicule.ConteneurId.Value;
             var oldStatus = vehicule.Statut;
 
@@ -241,8 +296,8 @@ namespace TransitManager.Infrastructure.Services
             if (oldStatus != vehicule.Statut)
             {
                 await _timelineService.AddEventAsync(
-                    $"Retrait conteneur : {oldStatus} -> {vehicule.Statut}", 
-                    vehiculeId: vehicule.Id, 
+                    $"Retrait conteneur : {oldStatus} -> {vehicule.Statut}",
+                    vehiculeId: vehicule.Id,
                     statut: vehicule.Statut.ToString());
             }
 
@@ -262,8 +317,6 @@ namespace TransitManager.Infrastructure.Services
             };
         }
 
-        // ... (Les autres méthodes GetByIdAsync, GetAllAsync, etc. sont inchangées, je les réinclus pour être complet) ...
-        
         public async Task<Vehicule?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -350,7 +403,7 @@ namespace TransitManager.Infrastructure.Services
                 await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
             }
         }
-        
+
         public async Task<IEnumerable<Vehicule>> GetByUserIdAsync(Guid userId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();

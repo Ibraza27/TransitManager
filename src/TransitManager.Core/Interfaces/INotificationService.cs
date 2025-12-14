@@ -8,13 +8,26 @@ namespace TransitManager.Core.Interfaces
 {
     public interface INotificationService
     {
-        Task NotifyAsync(string title, string message, TypeNotification type = TypeNotification.Information, PrioriteNotification priorite = PrioriteNotification.Normale);
-        Task<IEnumerable<Notification>> GetUserNotificationsAsync(Guid userId);
-        Task<IEnumerable<Notification>> GetUnreadNotificationsAsync(Guid userId);
-        Task<int> GetUnreadCountAsync();
+        // Méthode générique puissante (Nouvelle)
+        Task CreateAndSendAsync(
+            string title, 
+            string message, 
+            Guid? userId, // Null = Pour les Admins
+            CategorieNotification categorie,
+            string? actionUrl = null,
+            Guid? entityId = null,
+            string? entityType = null,
+            PrioriteNotification priorite = PrioriteNotification.Normale);
+
+        Task<IEnumerable<Notification>> GetUserNotificationsAsync(Guid userId, int count = 20);
+        Task<int> GetUnreadCountAsync(Guid userId);
         Task MarkAsReadAsync(Guid notificationId);
         Task MarkAllAsReadAsync(Guid userId);
-        Task DeleteNotificationAsync(Guid notificationId);
+        
+        // --- MÉTHODE DE COMPATIBILITÉ (POUR CORRIGER L'ERREUR) ---
+        Task NotifyAsync(string title, string message, TypeNotification type = TypeNotification.Information, PrioriteNotification priorite = PrioriteNotification.Normale);
+        
+        // Événement pour le WPF (optionnel si tu utilises SignalR partout, mais gardons-le pour la sécurité)
         event EventHandler<NotificationEventArgs>? NotificationReceived;
     }
 }

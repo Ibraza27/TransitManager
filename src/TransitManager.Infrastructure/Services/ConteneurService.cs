@@ -15,30 +15,34 @@ namespace TransitManager.Infrastructure.Services
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly INotificationService _notificationService;
-        private readonly ITimelineService _timelineService; // AJOUT
+        private readonly ITimelineService _timelineService;
+        
+        // --- AJOUT : Service d'authentification ---
+        private readonly IAuthenticationService _authService;
 
         public ConteneurService(
             IDbContextFactory<TransitContext> contextFactory, 
             INotificationService notificationService,
-            ITimelineService timelineService) // AJOUT
+            ITimelineService timelineService,
+            IAuthenticationService authService) // --- AJOUT ---
         {
             _contextFactory = contextFactory;
             _notificationService = notificationService;
             _timelineService = timelineService;
+            _authService = authService; // --- AJOUT ---
         }
 
+        // ... GetByIdAsync, GetAllAsync, CreateAsync (Inchangés) ...
+        
         public async Task<Conteneur?> GetByIdAsync(Guid id)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Conteneurs
                 .AsSplitQuery()
                 .IgnoreQueryFilters()
-                .Include(c => c.Colis)
-                    .ThenInclude(col => col.Client)
-                .Include(c => c.Colis)
-                    .ThenInclude(col => col.Barcodes.Where(b => b.Actif))
-                .Include(c => c.Vehicules)
-                    .ThenInclude(v => v.Client)
+                .Include(c => c.Colis).ThenInclude(col => col.Client)
+                .Include(c => c.Colis).ThenInclude(col => col.Barcodes.Where(b => b.Actif))
+                .Include(c => c.Vehicules).ThenInclude(v => v.Client)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
@@ -57,14 +61,11 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Conteneur> CreateAsync(Conteneur conteneur)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            
             conteneur.Colis = new List<Colis>();
             conteneur.Vehicules = new List<Vehicule>();
-
             conteneur.Statut = CalculateStatusFromDates(conteneur);
             context.Conteneurs.Add(conteneur);
             await context.SaveChangesAsync();
-            
             await _notificationService.NotifyAsync("Nouveau conteneur", $"Le conteneur {conteneur.NumeroDossier} pour {conteneur.Destination} a été créé.");
             return conteneur;
         }
@@ -83,34 +84,43 @@ namespace TransitManager.Infrastructure.Services
         public async Task<Conteneur> UpdateAsync(Conteneur conteneurFromUI)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-            
             var conteneurInDb = await context.Conteneurs
                 .Include(c => c.Colis)
                 .Include(c => c.Vehicules)
                 .FirstOrDefaultAsync(c => c.Id == conteneurFromUI.Id);
-                
+
             if (conteneurInDb == null) throw new Exception("Conteneur non trouvé.");
 
-            conteneurFromUI.Colis = new List<Colis>();
-            conteneurFromUI.Vehicules = new List<Vehicule>();
-
             var oldStatus = conteneurInDb.Statut;
-            
+
             context.Entry(conteneurInDb).CurrentValues.SetValues(conteneurFromUI);
             context.Entry(conteneurInDb).Property("RowVersion").OriginalValue = conteneurFromUI.RowVersion;
-            
+
             await UpdateAndSaveConteneurStatus(conteneurInDb, context, oldStatus);
-            
+
             if (conteneurInDb.NumeroPlomb != conteneurFromUI.NumeroPlomb)
             {
                 await UpdatePlombOnChildren(conteneurInDb.Id, conteneurInDb.NumeroPlomb, context);
             }
-            
+
+            // Notification ADMIN pour le conteneur lui-même
+            if (oldStatus != conteneurInDb.Statut)
+            {
+                await _notificationService.CreateAndSendAsync(
+                    "🚢 Statut Conteneur",
+                    $"Le conteneur {conteneurInDb.NumeroDossier} est passé à : {conteneurInDb.Statut}",
+                    null, // Admin
+                    CategorieNotification.StatutConteneur,
+                    actionUrl: $"/conteneur/detail/{conteneurInDb.Id}"
+                );
+            }
+
             return conteneurInDb;
         }
 
         private async Task UpdateAndSaveConteneurStatus(Conteneur conteneur, TransitContext context, StatutConteneur? oldStatus = null)
         {
+            // ... (Calcul statut inchangé) ...
             var problemColis = conteneur.Colis.Any(c => c.Statut == StatutColis.Probleme || c.Statut == StatutColis.Perdu);
             var problemVehicule = conteneur.Vehicules.Any(v => v.Statut == StatutVehicule.Probleme);
             if (problemColis || problemVehicule)
@@ -120,39 +130,32 @@ namespace TransitManager.Infrastructure.Services
             else if ((conteneur.Colis.Any() || conteneur.Vehicules.Any()) && conteneur.Colis.All(c => c.Statut == StatutColis.Livre) && conteneur.Vehicules.All(v => v.Statut == StatutVehicule.Livre))
             {
                 conteneur.Statut = StatutConteneur.Cloture;
-                if (!conteneur.DateCloture.HasValue)
-                {
-                    conteneur.DateCloture = DateTime.UtcNow;
-                }
+                if (!conteneur.DateCloture.HasValue) conteneur.DateCloture = DateTime.UtcNow;
             }
             else
             {
                 conteneur.Statut = CalculateStatusFromDates(conteneur);
             }
+
             var currentStatusInDb = oldStatus ?? (await context.Entry(conteneur).GetDatabaseValuesAsync())?.GetValue<StatutConteneur>(nameof(Conteneur.Statut)) ?? conteneur.Statut;
+            
+            // Si le statut a changé, on met à jour les enfants ET on notifie
             if (conteneur.Statut != currentStatusInDb)
             {
                 await UpdateChildrenStatus(conteneur, context);
             }
+
             try
             {
                 await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException ex)
             {
-                var entry = ex.Entries.Single();
-                var databaseValues = await entry.GetDatabaseValuesAsync();
-                if (databaseValues == null)
-                {
-                    throw new ConcurrencyException("Ce dossier conteneur a été supprimé par un autre utilisateur.");
-                }
-                else
-                {
-                    throw new ConcurrencyException("Ce dossier conteneur a été modifié par un autre utilisateur. Vos modifications n'ont pas pu être enregistrées.");
-                }
+               throw new ConcurrencyException("Conflit de concurrence.");
             }
         }
 
+        // ... CalculateStatusFromDates (Inchangé) ...
         private StatutConteneur CalculateStatusFromDates(Conteneur conteneur)
         {
             if (conteneur.DateCloture.HasValue) return StatutConteneur.Cloture;
@@ -168,61 +171,96 @@ namespace TransitManager.Infrastructure.Services
         {
             var ignoredColisStatuses = new[] { StatutColis.Probleme, StatutColis.Perdu, StatutColis.Retourne, StatutColis.Livre };
             var ignoredVehiculeStatuses = new[] { StatutVehicule.Probleme, StatutVehicule.Retourne, StatutVehicule.Livre };
-            if (conteneur.Statut == StatutConteneur.Probleme)
-            {
-                return;
-            }
+            
+            if (conteneur.Statut == StatutConteneur.Probleme) return;
+
             StatutColis newColisStatus;
             StatutVehicule newVehiculeStatus;
+            
+            // Mapping du statut
             switch (conteneur.Statut)
             {
-                case StatutConteneur.EnTransit:
-                    newColisStatus = StatutColis.EnTransit; newVehiculeStatus = StatutVehicule.EnTransit; break;
-                case StatutConteneur.Arrive:
-                    newColisStatus = StatutColis.Arrive; newVehiculeStatus = StatutVehicule.Arrive; break;
-                case StatutConteneur.EnDedouanement:
-                    newColisStatus = StatutColis.EnDedouanement; newVehiculeStatus = StatutVehicule.EnDedouanement; break;
+                case StatutConteneur.EnTransit: newColisStatus = StatutColis.EnTransit; newVehiculeStatus = StatutVehicule.EnTransit; break;
+                case StatutConteneur.Arrive: newColisStatus = StatutColis.Arrive; newVehiculeStatus = StatutVehicule.Arrive; break;
+                case StatutConteneur.EnDedouanement: newColisStatus = StatutColis.EnDedouanement; newVehiculeStatus = StatutVehicule.EnDedouanement; break;
                 case StatutConteneur.Cloture:
-                case StatutConteneur.Livre:
-                    newColisStatus = StatutColis.Livre; newVehiculeStatus = StatutVehicule.Livre; break;
-                default:
-                    newColisStatus = StatutColis.Affecte; newVehiculeStatus = StatutVehicule.Affecte; break;
+                case StatutConteneur.Livre: newColisStatus = StatutColis.Livre; newVehiculeStatus = StatutVehicule.Livre; break;
+                default: newColisStatus = StatutColis.Affecte; newVehiculeStatus = StatutVehicule.Affecte; break;
             }
 
-            // --- NOUVELLE LOGIQUE TIMELINE ---
-            // On récupère les IDs des colis concernés avant la mise à jour
-            var colisIds = await context.Colis
+            // === DÉBUT DE LA CORRECTION : RÉCUPÉRATION POUR NOTIFICATION ===
+            
+            // 1. Récupérer les Colis concernés AVEC le Client
+            var colisToUpdate = await context.Colis
                 .Where(c => c.ConteneurId == conteneur.Id && !ignoredColisStatuses.Contains(c.Statut))
-                .Select(c => c.Id)
+                .Include(c => c.Client).ThenInclude(cl => cl.UserAccount) // Important pour avoir l'ID User
                 .ToListAsync();
 
-            var vehiculeIds = await context.Vehicules
+            // 2. Récupérer les Véhicules concernés AVEC le Client
+            var vehiculesToUpdate = await context.Vehicules
                 .Where(v => v.ConteneurId == conteneur.Id && !ignoredVehiculeStatuses.Contains(v.Statut))
-                .Select(v => v.Id)
+                .Include(v => v.Client).ThenInclude(cl => cl.UserAccount)
                 .ToListAsync();
 
-            // Mise à jour des statuts
+            // 3. Mise à jour de masse (Performante)
             await context.Colis
                 .Where(c => c.ConteneurId == conteneur.Id && !ignoredColisStatuses.Contains(c.Statut))
                 .ExecuteUpdateAsync(s => s.SetProperty(c => c.Statut, newColisStatus));
+            
             await context.Vehicules
                 .Where(v => v.ConteneurId == conteneur.Id && !ignoredVehiculeStatuses.Contains(v.Statut))
                 .ExecuteUpdateAsync(s => s.SetProperty(v => v.Statut, newVehiculeStatus));
 
-            // CRÉATION DES ÉVÉNEMENTS TIMELINE
+            // 4. BOUCLE DE NOTIFICATION CLIENTS
             string descriptionEvent = $"Mise à jour via conteneur {conteneur.NumeroDossier} : {conteneur.Statut}";
 
-            foreach (var cid in colisIds)
+            // Pour les Colis
+            foreach (var colis in colisToUpdate)
             {
-                await _timelineService.AddEventAsync(descriptionEvent, colisId: cid, statut: newColisStatus.ToString());
+                // Timeline
+                await _timelineService.AddEventAsync(descriptionEvent, colisId: colis.Id, statut: newColisStatus.ToString());
+                
+                // Notif Client
+                if (colis.Client?.UserAccount != null)
+                {
+                    string emoji = newColisStatus == StatutColis.Livre ? "✅" : "📦";
+                    await _notificationService.CreateAndSendAsync(
+                        title: $"{emoji} Suivi Colis",
+                        message: $"Votre colis {colis.NumeroReference} est maintenant : {newColisStatus}",
+                        userId: colis.Client.UserAccount.Id,
+                        categorie: CategorieNotification.StatutColis,
+                        actionUrl: $"/my-parcels",
+                        entityId: colis.Id,
+                        entityType: "Colis"
+                    );
+                }
             }
 
-            foreach (var vid in vehiculeIds)
+            // Pour les Véhicules
+            foreach (var vehicule in vehiculesToUpdate)
             {
-                await _timelineService.AddEventAsync(descriptionEvent, vehiculeId: vid, statut: newVehiculeStatus.ToString());
+                // Timeline
+                await _timelineService.AddEventAsync(descriptionEvent, vehiculeId: vehicule.Id, statut: newVehiculeStatus.ToString());
+                
+                // Notif Client
+                if (vehicule.Client?.UserAccount != null)
+                {
+                    string emoji = newVehiculeStatus == StatutVehicule.Livre ? "✅" : "🚗";
+                    await _notificationService.CreateAndSendAsync(
+                        title: $"{emoji} Suivi Véhicule",
+                        message: $"Votre véhicule {vehicule.Marque} ({vehicule.Immatriculation}) est maintenant : {newVehiculeStatus}",
+                        userId: vehicule.Client.UserAccount.Id,
+                        categorie: CategorieNotification.StatutVehicule,
+                        actionUrl: $"/my-vehicles",
+                        entityId: vehicule.Id,
+                        entityType: "Vehicule"
+                    );
+                }
             }
+            // === FIN DE LA CORRECTION ===
         }
 
+        // ... Reste du fichier inchangé (UpdatePlombOnChildren, DeleteAsync, etc.) ...
         private async Task UpdatePlombOnChildren(Guid conteneurId, string? numeroPlomb, TransitContext context)
         {
             await context.Colis.Where(c => c.ConteneurId == conteneurId).ExecuteUpdateAsync(s => s.SetProperty(c => c.NumeroPlomb, numeroPlomb));
@@ -239,7 +277,7 @@ namespace TransitManager.Infrastructure.Services
             if (conteneur == null) return false;
             if (conteneur.Colis.Any() || conteneur.Vehicules.Any())
             {
-                throw new InvalidOperationException("Impossible de supprimer un conteneur qui n'est pas vide. Veuillez d'abord retirer tous les colis et véhicules.");
+                throw new InvalidOperationException("Impossible de supprimer un conteneur qui n'est pas vide.");
             }
             conteneur.Actif = false;
             conteneur.Statut = StatutConteneur.Annule;
@@ -247,6 +285,7 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
+        // ... (Autres méthodes de lecture inchangées) ...
         public async Task<IEnumerable<Conteneur>> GetActiveAsync()
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -286,67 +325,53 @@ namespace TransitManager.Infrastructure.Services
         }
 
         public Task<bool> CloseConteneurAsync(Guid id) => throw new NotImplementedException();
-
         public Task<bool> SetDepartureAsync(Guid id, DateTime departureDate) => throw new NotImplementedException();
-
         public Task<bool> SetArrivalAsync(Guid id, DateTime arrivalDate) => throw new NotImplementedException();
 
-		public async Task<int> GetActiveCountAsync()
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			var inactiveStatuses = new[] { StatutConteneur.Cloture, StatutConteneur.Annule, StatutConteneur.Livre };
-			return await context.Conteneurs.CountAsync(c => c.Actif && !inactiveStatuses.Contains(c.Statut));
-		}
-
-		public Task<decimal> GetAverageFillingRateAsync()
-		{
-			return Task.FromResult(0m);
+        public async Task<int> GetActiveCountAsync()
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var inactiveStatuses = new[] { StatutConteneur.Cloture, StatutConteneur.Annule, StatutConteneur.Livre };
+            return await context.Conteneurs.CountAsync(c => c.Actif && !inactiveStatuses.Contains(c.Statut));
         }
 
-		public async Task<IEnumerable<Conteneur>> GetUpcomingDeparturesAsync(int days)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			var upcomingDate = DateTime.UtcNow.AddDays(days);
-			return await context.Conteneurs
-				.Where(c => c.Actif && c.DateDepart.HasValue && c.DateDepart.Value >= DateTime.UtcNow && c.DateDepart.Value <= upcomingDate)
-				.OrderBy(c => c.DateDepart)
-				.ToListAsync();
-		}
+        public Task<decimal> GetAverageFillingRateAsync() => Task.FromResult(0m);
 
-		public async Task<IEnumerable<Conteneur>> GetAlmostFullContainersAsync(decimal threshold)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			var activeStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation };
-			return await context.Conteneurs
-				.Where(c => c.Actif && activeStatuses.Contains(c.Statut) && (c.Colis.Count() + c.Vehicules.Count()) >= (int)threshold)
-				.Include(c => c.Colis)
-				.Include(c => c.Vehicules)
-				.ToListAsync();
-		}
+        public async Task<IEnumerable<Conteneur>> GetUpcomingDeparturesAsync(int days)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var upcomingDate = DateTime.UtcNow.AddDays(days);
+            return await context.Conteneurs
+                .Where(c => c.Actif && c.DateDepart.HasValue && c.DateDepart.Value >= DateTime.UtcNow && c.DateDepart.Value <= upcomingDate)
+                .OrderBy(c => c.DateDepart)
+                .ToListAsync();
+        }
 
-		public Task<Dictionary<string, int>> GetStatsByDestinationAsync()
-		{
-			return Task.FromResult(new Dictionary<string, int>());
-		}
+        public async Task<IEnumerable<Conteneur>> GetAlmostFullContainersAsync(decimal threshold)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var activeStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation };
+            return await context.Conteneurs
+                .Where(c => c.Actif && activeStatuses.Contains(c.Statut) && (c.Colis.Count() + c.Vehicules.Count()) >= (int)threshold)
+                .Include(c => c.Colis)
+                .Include(c => c.Vehicules)
+                .ToListAsync();
+        }
 
+        public Task<Dictionary<string, int>> GetStatsByDestinationAsync() => Task.FromResult(new Dictionary<string, int>());
         public Task<bool> CanAddColisAsync(Guid conteneurId, Guid colisId) => throw new NotImplementedException();
-
         public Task<decimal> CalculateProfitabilityAsync(Guid conteneurId) => throw new NotImplementedException();
-		
-		public async Task<IEnumerable<Conteneur>> GetByClientIdAsync(Guid clientId)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			
-			return await context.Conteneurs
-				.Include(c => c.Colis)
-				.Include(c => c.Vehicules)
-				.Where(c => c.Actif && (
-					c.Colis.Any(col => col.ClientId == clientId && col.Actif) || 
-					c.Vehicules.Any(v => v.ClientId == clientId && v.Actif)
-				))
-				.OrderByDescending(c => c.DateCreation)
-				.AsNoTracking()
-				.ToListAsync();
-		}
+        
+        public async Task<IEnumerable<Conteneur>> GetByClientIdAsync(Guid clientId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Conteneurs
+                .Include(c => c.Colis)
+                .Include(c => c.Vehicules)
+                .Where(c => c.Actif && (c.Colis.Any(col => col.ClientId == clientId && col.Actif) || c.Vehicules.Any(v => v.ClientId == clientId && v.Actif)))
+                .OrderByDescending(c => c.DateCreation)
+                .AsNoTracking()
+                .ToListAsync();
+        }
     }
 }

@@ -26,93 +26,128 @@ namespace TransitManager.Infrastructure.Services
 			_hubContext = hubContext;
         }
 
+
 		public async Task<Message> SendMessageAsync(CreateMessageDto dto, Guid senderId)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
 
-            var sender = await context.Utilisateurs.FindAsync(senderId);
-            if (sender == null) throw new Exception("Expéditeur inconnu");
+			var sender = await context.Utilisateurs.FindAsync(senderId);
+			if (sender == null) throw new Exception("Expéditeur inconnu");
 
-            // --- CORRECTION : On récupère les infos du document SI il y en a un ---
-            string? attachmentName = null;
-            if (dto.DocumentId.HasValue)
-            {
-                var doc = await context.Documents.FindAsync(dto.DocumentId.Value);
-                if (doc != null) attachmentName = doc.NomFichierOriginal;
-            }
-            // ----------------------------------------------------------------------
+			string? attachmentName = null;
+			if (dto.DocumentId.HasValue)
+			{
+				var doc = await context.Documents.FindAsync(dto.DocumentId.Value);
+				if (doc != null) attachmentName = doc.NomFichierOriginal;
+			}
 
-            var message = new Message
-            {
-                Contenu = dto.Contenu,
-                ExpediteurId = senderId,
-                ColisId = dto.ColisId,
-                VehiculeId = dto.VehiculeId,
+			var message = new Message
+			{
+				Contenu = dto.Contenu,
+				ExpediteurId = senderId,
+				ColisId = dto.ColisId,
+				VehiculeId = dto.VehiculeId,
 				ConteneurId = dto.ConteneurId,
-                IsInternal = dto.IsInternal,
-                DocumentId = dto.DocumentId,
-                DateEnvoi = DateTime.UtcNow
-            };
+				IsInternal = dto.IsInternal,
+				DocumentId = dto.DocumentId,
+				DateEnvoi = DateTime.UtcNow
+			};
 
-            context.Messages.Add(message);
-            await context.SaveChangesAsync();
-            
-            // --- TEMPS RÉEL ---
-            var messageDto = new MessageDto 
-            { 
-                Id = message.Id,
-                Contenu = message.Contenu,
-                DateEnvoi = message.DateEnvoi,
-                NomExpediteur = sender.NomComplet, 
-                IsInternal = message.IsInternal,
-                IsRead = message.IsRead,
-                EstMoi = false, 
-                EstAdmin = sender.Role == RoleUtilisateur.Administrateur,
-                
-                // --- CORRECTION : On remplit bien ces champs pour le temps réel ---
-                HasAttachment = dto.DocumentId.HasValue,
-                AttachmentId = dto.DocumentId,
-                AttachmentName = attachmentName 
-                // -----------------------------------------------------------------
-            };
+			context.Messages.Add(message);
+			await context.SaveChangesAsync();
 
-			string groupName = dto.ColisId.HasValue ? dto.ColisId.ToString() 
-							 : dto.VehiculeId.HasValue ? dto.VehiculeId.ToString()
-							 : dto.ConteneurId.ToString();
-            await _hubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", messageDto);
+			// SignalR
+			var messageDto = new MessageDto
+			{
+				Id = message.Id,
+				Contenu = message.Contenu,
+				DateEnvoi = message.DateEnvoi,
+				NomExpediteur = sender.NomComplet,
+				IsInternal = message.IsInternal,
+				IsRead = message.IsRead,
+				EstMoi = false,
+				EstAdmin = sender.Role == RoleUtilisateur.Administrateur,
+				HasAttachment = dto.DocumentId.HasValue,
+				AttachmentId = dto.DocumentId,
+				AttachmentName = attachmentName
+			};
 
-            // --- NOTIFICATION ---
-            // Si c'est une note interne, on ne notifie pas le client
-            if (!dto.IsInternal)
-            {
-                Guid? clientId = null;
-                string itemRef = "";
+			string groupName = dto.ColisId.HasValue ? dto.ColisId.ToString()
+								 : dto.VehiculeId.HasValue ? dto.VehiculeId.ToString()
+								 : dto.ConteneurId.ToString() ?? "General";
+			
+			if (!string.IsNullOrEmpty(groupName))
+			{
+				await _hubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", messageDto);
+			}
 
-                // Trouver le client concerné
-                if (dto.ColisId.HasValue)
-                {
-                    var colis = await context.Colis.Include(c => c.Client).FirstOrDefaultAsync(c => c.Id == dto.ColisId);
-                    clientId = colis?.ClientId; // L'ID du Client (entité Client)
-                    itemRef = colis?.NumeroReference ?? "Colis";
-                }
-                // (Ajouter logique véhicule ici de la même façon)
+			// Notifications
+			if (sender.Role == RoleUtilisateur.Client)
+			{
+				// Notifier les admins
+				await _notificationService.CreateAndSendAsync(
+					"Nouveau Message",
+					$"Message de {sender.NomComplet} : {Truncate(dto.Contenu, 30)}", // Utilisation de notre helper
+					null, // Admin
+					CategorieNotification.NouveauMessage,
+					actionUrl: GetMessageUrl(dto)
+				);
+			}
+			else if (!dto.IsInternal)
+			{
+				// Notifier le client
+				Guid? clientId = null;
 
-                // Si l'expéditeur est un admin, on notifie le client
-                if (sender.Role != RoleUtilisateur.Client && clientId.HasValue)
-                {
-                    // Trouver le User lié au Client
-                    var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == clientId);
-                    if (clientUser != null)
-                    {
-                        // On crée la notif pour l'utilisateur du client
-                        // NOTE : J'utilise le service de notif standard, mais il faudra peut-être l'adapter pour cibler un User spécifique autre que le courant
-                        // Pour l'instant, c'est conceptuel.
-                    }
-                }
-            }
+				if (dto.ColisId.HasValue)
+				{
+					var colis = await context.Colis.Include(c => c.Client).FirstOrDefaultAsync(c => c.Id == dto.ColisId);
+					clientId = colis?.ClientId;
+				}
+				else if (dto.VehiculeId.HasValue)
+				{
+					var vehicule = await context.Vehicules.Include(v => v.Client).FirstOrDefaultAsync(v => v.Id == dto.VehiculeId);
+					clientId = vehicule?.ClientId;
+				}
+				// NOTE : On ne notifie pas de client spécifique pour un Conteneur car il y en a plusieurs.
 
-            return message;
-        }
+				if (clientId.HasValue)
+				{
+					var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == clientId);
+					if (clientUser != null)
+					{
+						await _notificationService.CreateAndSendAsync(
+							"Nouveau Message",
+							$"Vous avez reçu un message : {Truncate(dto.Contenu, 30)}",
+							clientUser.Id,
+							CategorieNotification.NouveauMessage,
+							actionUrl: GetMessageUrl(dto)
+						);
+					}
+				}
+			}
+
+			return message;
+		}
+
+		// --- AJOUTER CETTE MÉTHODE PRIVÉE EN BAS DE LA CLASSE ---
+		private string Truncate(string value, int maxLength)
+		{
+			if (string.IsNullOrEmpty(value)) return value;
+			return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...";
+		}
+
+		private string GetMessageUrl(CreateMessageDto dto)
+		{
+			if (dto.ColisId.HasValue)
+				return $"/colis/edit/{dto.ColisId}";
+			else if (dto.VehiculeId.HasValue)
+				return $"/vehicule/edit/{dto.VehiculeId}";
+			else if (dto.ConteneurId.HasValue)
+				return $"/conteneur/detail/{dto.ConteneurId}";
+			else
+				return "#";
+		}
+
 
         public async Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId, Guid currentUserId)
         {

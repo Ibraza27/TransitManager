@@ -24,7 +24,9 @@ namespace TransitManager.Web.Services
             {
                 PropertyNameCaseInsensitive = true,
                 ReferenceHandler = ReferenceHandler.Preserve
+				
             };
+			_jsonOptions.Converters.Add(new JsonStringEnumConverter());
         }
 
         public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto loginRequest)
@@ -897,6 +899,83 @@ namespace TransitManager.Web.Services
                 return Array.Empty<byte>();
             }
         }
+		
+
+        // --- Notifications Implementation ---
+        public async Task<IEnumerable<Notification>> GetMyNotificationsAsync()
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<IEnumerable<Notification>>("api/notifications", _jsonOptions) 
+                       ?? Enumerable.Empty<Notification>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erreur GetMyNotifications: {ex.Message}");
+                return Enumerable.Empty<Notification>();
+            }
+        }
+
+        public async Task<int> GetUnreadNotificationsCountAsync()
+        {
+            try
+            {
+                var result = await _httpClient.GetFromJsonAsync<JsonElement>("api/notifications/count");
+                if (result.TryGetProperty("count", out var countProp))
+                {
+                    return countProp.GetInt32();
+                }
+                return 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        public async Task MarkNotificationAsReadAsync(Guid id)
+        {
+            try
+            {
+                await _httpClient.PostAsync($"api/notifications/{id}/read", null);
+            }
+            catch { /* Ignorer les erreurs réseau sur une action secondaire */ }
+        }
+
+        public async Task MarkAllNotificationsAsReadAsync()
+        {
+            try
+            {
+                await _httpClient.PostAsync("api/notifications/read-all", null);
+            }
+            catch { }
+        }
+		
+		public async Task<bool> CheckEntityExistsAsync(string entityType, Guid id)
+		{
+			try
+			{
+				string endpoint = entityType.ToLower() switch
+				{
+					"colis" => $"api/colis/{id}",
+					"vehicule" => $"api/vehicules/{id}",
+					"conteneur" => $"api/conteneurs/{id}",
+					"paiement" => $"api/paiements/{id}",
+					// Pour les autres types ou si inconnu, on laisse passer par défaut
+					_ => null 
+				};
+
+				if (endpoint == null) return true;
+
+				// On fait une requête légère. Si l'API renvoie 404, l'entité est supprimée.
+				var response = await _httpClient.GetAsync(endpoint);
+				return response.IsSuccessStatusCode;
+			}
+			catch
+			{
+				return false;
+			}
+		}
 
     }
 }

@@ -278,7 +278,7 @@ namespace TransitManager.WPF.ViewModels
         {
             try
             {
-                NotificationCount = await _notificationService.GetUnreadCountAsync();
+                NotificationCount = await _notificationService.GetUnreadCountAsync(CurrentUser?.Id ?? Guid.Empty);
             }
             catch (Exception ex)
             {
@@ -286,32 +286,35 @@ namespace TransitManager.WPF.ViewModels
             }
         }
 
-        private void OnNotificationReceived(object? sender, NotificationEventArgs e)
-        {
-            // Afficher la notification toast
-            switch (e.Type)
-            {
-                case TypeNotification.Information:
-                    _notifier.ShowInformation(e.Message);
-                    break;
-                case TypeNotification.Succes:
-                    _notifier.ShowSuccess(e.Message);
-                    break;
-                case TypeNotification.Avertissement:
-                    _notifier.ShowWarning(e.Message);
-                    break;
-                case TypeNotification.Erreur:
-                    _notifier.ShowError(e.Message);
-                    break;
-                default:
-                    _notifier.ShowInformation(e.Message);
-                    break;
-            }
+		private void OnNotificationReceived(object? sender, NotificationEventArgs e)
+		{
+			// On accède aux propriétés via e.Notification
+			var notif = e.Notification;
 
-            // Mettre à jour le compteur
-            NotificationCount++;
-        }
+			// Afficher la notification toast
+			switch (notif.Type)
+			{
+				case TypeNotification.Information:
+					_notifier.ShowInformation(notif.Message);
+					break;
+				case TypeNotification.Succes:
+					_notifier.ShowSuccess(notif.Message);
+					break;
+				case TypeNotification.Avertissement:
+					_notifier.ShowWarning(notif.Message);
+					break;
+				case TypeNotification.Erreur:
+					_notifier.ShowError(notif.Message);
+					break;
+				default:
+					_notifier.ShowInformation(notif.Message);
+					break;
+			}
 
+			// Mettre à jour le compteur
+			NotificationCount++;
+		}
+		
         protected override void Dispose(bool disposing)
         {
             if (disposing)

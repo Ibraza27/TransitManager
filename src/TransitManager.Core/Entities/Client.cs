@@ -113,12 +113,13 @@ namespace TransitManager.Core.Entities
             CodeClient = GenerateCodeClient();
         }
 
-        private static string GenerateCodeClient()
-        {
-            var date = DateTime.Now.ToString("yyyyMMdd");
-            var random = new Random().Next(1000, 9999);
-            return $"CLI-{date}-{random}";
-        }
+		private static string GenerateCodeClient()
+		{
+			var date = DateTime.UtcNow.ToString("yyyyMMdd");
+			var unique = Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper();
+			return $"CLI-{date}-{unique}";
+		}
+
         
         public string NomComplet => $"{Nom} {Prenom}";
         public string AdresseComplete => $"{AdressePrincipale}, {CodePostal} {Ville}, {Pays}";

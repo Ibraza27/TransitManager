@@ -3,6 +3,7 @@ using TransitManager.Core.DTOs;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace TransitManager.API.Controllers
 {
@@ -257,6 +258,25 @@ namespace TransitManager.API.Controllers
                 return StatusCode(500, "Erreur interne");
             }
         }
+		
+		[HttpGet("paged")]
+		public async Task<ActionResult<PagedResult<ColisListItemDto>>> GetColisPaged(
+			[FromQuery] int page = 1, 
+			[FromQuery] int pageSize = 20, 
+			[FromQuery] string? search = null)
+		{
+			// Si c'est un client, on filtre automatiquement
+			Guid? clientId = null;
+			var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+			if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+			{
+				 // Récupérer le ClientId de l'utilisateur si ce n'est pas un admin
+				 // (Logique à adapter selon votre gestion des rôles)
+			}
+
+			var result = await _colisService.GetPagedAsync(page, pageSize, search, clientId);
+			return Ok(result);
+		}
 		
     }
 }

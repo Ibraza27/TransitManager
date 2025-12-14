@@ -568,5 +568,67 @@ namespace TransitManager.Infrastructure.Services
                 .OrderByDescending(c => c.DateArrivee)
                 .ToListAsync();
         }
+		
+		public async Task<PagedResult<ColisListItemDto>> GetPagedAsync(int page, int pageSize, string? search = null, Guid? clientId = null)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
+			
+			var query = context.Colis
+				.Include(c => c.Client)
+				.Include(c => c.Conteneur)
+				.Include(c => c.Barcodes)
+				.Where(c => c.Actif)
+				.AsNoTracking(); // Important pour la lecture seule !
+
+			if (clientId.HasValue)
+			{
+				query = query.Where(c => c.ClientId == clientId);
+			}
+
+			if (!string.IsNullOrWhiteSpace(search))
+			{
+				search = search.ToLower();
+				query = query.Where(c => 
+					c.NumeroReference.ToLower().Contains(search) || 
+					c.Designation.ToLower().Contains(search) ||
+					c.Barcodes.Any(b => b.Value.Contains(search))
+				);
+			}
+
+			var totalCount = await query.CountAsync();
+
+			var items = await query
+				.OrderByDescending(c => c.DateArrivee)
+				.Skip((page - 1) * pageSize)
+				.Take(pageSize)
+				// PROJECTION DIRECTE EN DTO (Évite de charger toutes les colonnes inutiles)
+				.Select(c => new ColisListItemDto
+				{
+					Id = c.Id,
+					NumeroReference = c.NumeroReference,
+					Designation = c.Designation,
+					Statut = c.Statut,
+					ClientNomComplet = c.Client.Nom + " " + c.Client.Prenom,
+					ClientTelephonePrincipal = c.Client.TelephonePrincipal,
+					ConteneurNumeroDossier = c.Conteneur != null ? c.Conteneur.NumeroDossier : null,
+					// Pour les codes barres, on prend juste le premier pour la liste, ou on les joint
+					AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)),
+					DestinationFinale = c.DestinationFinale,
+					DateArrivee = c.DateArrivee,
+					NombrePieces = c.NombrePieces,
+					PrixTotal = c.PrixTotal,
+					SommePayee = c.SommePayee
+				})
+				.ToListAsync();
+
+			return new PagedResult<ColisListItemDto>
+			{
+				Items = items,
+				TotalCount = totalCount,
+				PageNumber = page,
+				PageSize = pageSize
+			};
+		}
+		
     }
 }

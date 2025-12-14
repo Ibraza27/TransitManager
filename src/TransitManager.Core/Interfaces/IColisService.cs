@@ -34,5 +34,6 @@ namespace TransitManager.Core.Interfaces
         Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId);
 		Task UpdateInventaireAsync(UpdateInventaireDto dto);
         // --- FIN DE L'AJOUT ---
+		Task<PagedResult<ColisListItemDto>> GetPagedAsync(int page, int pageSize, string? search = null, Guid? clientId = null);
     }
 }

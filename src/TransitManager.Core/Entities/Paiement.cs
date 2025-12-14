@@ -84,13 +84,12 @@ namespace TransitManager.Core.Entities
             Statut = StatutPaiement.Valide;
         }
 
-        private static string GenerateNumeroRecu()
-        {
-            var year = DateTime.Now.ToString("yyyy");
-            var month = DateTime.Now.ToString("MM");
-            var day = DateTime.Now.ToString("dd");
-            var random = new Random().Next(1000, 9999);
-            return $"REC-{year}{month}{day}-{random}";
-        }
+		private static string GenerateNumeroRecu()
+		{
+			var date = DateTime.UtcNow.ToString("yyyyMMdd");
+			var unique = Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper();
+			return $"REC-{date}-{unique}";
+		}
+
     }
 }

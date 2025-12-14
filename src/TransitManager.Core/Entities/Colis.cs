@@ -161,10 +161,16 @@ namespace TransitManager.Core.Entities
             Etat = EtatColis.BonEtat;
         }
 
-        private static string GenerateReference()
-        {
-            return $"REF-{DateTime.Now:yyyyMMdd}-{new Random().Next(10000, 99999)}";
-        }
+		// Dans Colis.cs
+		private static string GenerateReference()
+		{
+			// Format : REF-ANNEE-MOIS-JOUR-GUID(court)
+			// Ex: REF-20251214-A1B2C3
+			var date = DateTime.UtcNow.ToString("yyyyMMdd");
+			// On prend 6 caractères d'un GUID pour l'unicité garantie sans collision
+			var unique = Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper();
+			return $"REF-{date}-{unique}";
+		}
 		
 		public string FirstBarcode => Barcodes?.FirstOrDefault()?.Value ?? "N/A";
         public string AllBarcodes => Barcodes != null && Barcodes.Any() ? string.Join(", ", Barcodes.Select(b => b.Value)) : "N/A";

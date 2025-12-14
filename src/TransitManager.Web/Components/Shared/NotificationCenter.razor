@@ -5,7 +5,8 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IConfiguration Configuration
-@inject IJSRuntime JSRuntime 
+@inject IJSRuntime JSRuntime
+@inject ILocalStorageService LocalStorage 
 @implements IAsyncDisposable
 
 <div class="dropdown">
@@ -131,69 +132,108 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // 1. Initialiser le compteur
         await LoadUnreadCount();
-        
-        // 2. Lancer SignalR
-        // IMPORTANT : On le fait en "fire and forget" pour ne pas bloquer le rendu initial
+        // On lance la connexion sans attendre pour ne pas bloquer le rendu initial
         _ = ConnectSignalR();
     }
 
-    private async Task ConnectSignalR()
+	private async Task ConnectSignalR()
     {
+        if (_hubConnection is not null && _hubConnection.State == HubConnectionState.Connected) return;
+
         try 
         {
             var apiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7243"; 
             var hubUrl = $"{apiBaseUrl}/notificationHub";
 
+            // Récupérer le token JWT stocké (si l'auth cookie échoue, le token prend le relais)
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(hubUrl, options => {
+                    
+                    // 1. Tenter avec les cookies (Credentials)
+                    options.UseDefaultCredentials = true; 
+                    
+                    // 2. Ajouter le Token JWT en secours (C'est souvent ça qui sauve SignalR)
+                    options.AccessTokenProvider = () => Task.FromResult(token);
+
+                    // 3. Bypass SSL pour dev
                     options.HttpMessageHandlerFactory = (handler) => {
                         if (handler is HttpClientHandler clientHandler)
+                        {
                             clientHandler.ServerCertificateCustomValidationCallback = (m, c, ch, e) => true;
+                        }
                         return handler;
                     };
                 })
-                .WithAutomaticReconnect()
+                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5) })
                 .Build();
 
+            // 4. Gestion de la réception du message
             _hubConnection.On<object>("ReceiveNotification", async (obj) =>
             {
-                // RECEPTION DU SIGNAL
+                // On revient sur le thread UI pour mettre à jour l'affichage
                 await InvokeAsync(async () => 
                 {
-                    Console.WriteLine("🔔 SIGNAL REÇU ! Mise à jour UI...");
+                    Console.WriteLine("🔔 SIGNAL REÇU !");
                     
-                    // 1. On incrémente visuellement tout de suite
+                    // Incrémenter le compteur visuel immédiatement
                     _unreadCount++;
                     
-                    // 2. On charge le détail pour le toast
-                    var latest = (await ApiService.GetMyNotificationsAsync()).FirstOrDefault();
-                    if (latest != null && !_activeToasts.Any(t => t.Id == latest.Id))
+                    // Si le menu est ouvert, on recharge toute la liste
+                    if (_isOpen) 
                     {
-                         ShowToast(latest);
+                        await LoadNotifications();
+                    }
+                    else 
+                    {
+                         // Sinon, on charge juste la dernière pour le Toast
+                         // Petit délai pour laisser le temps à la transaction BDD de finir
+                         await Task.Delay(500);
                          
-                         // Si la liste est ouverte, on l'actualise aussi
-                         if (_isOpen)
+                         var latestList = await ApiService.GetMyNotificationsAsync();
+                         var latest = latestList.FirstOrDefault();
+                         
+                         if (latest != null && !_activeToasts.Any(t => t.Id == latest.Id)) 
                          {
-                             _notifications.Insert(0, latest);
+                             ShowToast(latest);
                          }
                     }
                     
-                    // 3. Force le rendu
+                    // Force le rafraîchissement du composant (pastille rouge)
                     StateHasChanged();
                 });
             });
 
+            // 5. Gestion de la fermeture inattendue
+            _hubConnection.Closed += async (error) => 
+            {
+                Console.WriteLine($"⚠️ SignalR fermé : {error?.Message}.");
+                await InvokeAsync(StateHasChanged);
+            };
+
+            _hubConnection.Reconnecting += (error) =>
+            {
+                 Console.WriteLine($"🔄 SignalR tentative de reconnexion...");
+                 return Task.CompletedTask;
+            };
+
+            _hubConnection.Reconnected += (connectionId) =>
+            {
+                 Console.WriteLine($"✅ SignalR reconnecté !");
+                 return Task.CompletedTask;
+            };
+
             await _hubConnection.StartAsync();
-            Console.WriteLine($"✅ [Notification] Connecté au Hub.");
+            Console.WriteLine($"✅ [Notification] Connecté au Hub : {hubUrl}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"❌ [Notification] Erreur Connexion : {ex.Message}");
         }
     }
-
+	
     private async Task LoadUnreadCount()
     {
         _unreadCount = await ApiService.GetUnreadNotificationsCountAsync();
@@ -211,7 +251,7 @@
     private async Task LoadNotifications()
     {
         _isLoading = true;
-        StateHasChanged(); // Affiche le spinner
+        await InvokeAsync(StateHasChanged); // Affiche le spinner
         
         _notifications = (await ApiService.GetMyNotificationsAsync()).ToList();
         
@@ -219,7 +259,7 @@
         _unreadCount = _notifications.Count(n => !n.EstLue);
         
         _isLoading = false;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task MarkAllRead()
@@ -227,7 +267,7 @@
         await ApiService.MarkAllNotificationsAsReadAsync();
         foreach (var n in _notifications) n.EstLue = true;
         _unreadCount = 0;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleClick(Notification notif)
@@ -258,7 +298,7 @@
     private void ShowToast(Notification notif)
     {
         _activeToasts.Add(notif);
-        StateHasChanged();
+        InvokeAsync(StateHasChanged);
         
         var timer = new System.Timers.Timer(5000);
         timer.Elapsed += (s, e) => { 

@@ -28,94 +28,112 @@ namespace TransitManager.Infrastructure.Services
             _authService = authService;
         }
 
-        public async Task CreateAndSendAsync(
-            string title, string message, Guid? userId,
-            CategorieNotification categorie, string? actionUrl = null,
-            Guid? entityId = null, string? entityType = null,
-            PrioriteNotification priorite = PrioriteNotification.Normale)
-        {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+		public async Task CreateAndSendAsync(
+			string title, string message, Guid? userId,
+			CategorieNotification categorie, string? actionUrl = null,
+			Guid? entityId = null, string? entityType = null,
+			PrioriteNotification priorite = PrioriteNotification.Normale)
+		{
+			await using var context = await _contextFactory.CreateDbContextAsync();
 
-            // 1. Identifier l'expéditeur (celui qui fait l'action)
-            var currentUserId = _authService.CurrentUser?.Id;
+			// 1. Identifier l'expéditeur (celui qui fait l'action) pour éviter l'auto-notification
+			var currentUserId = _authService.CurrentUser?.Id;
 
-            // 2. Déterminer les destinataires
-            var recipients = new List<Guid>();
+			// 2. Déterminer les destinataires
+			var recipients = new List<Guid>();
 
-            if (userId.HasValue)
-            {
-                // Cible un utilisateur spécifique
-                recipients.Add(userId.Value);
-            }
-            else
-            {
-                // Cible tous les Admins/Gestionnaires
-                var admins = await context.Utilisateurs
-                    .Where(u => u.Role == RoleUtilisateur.Administrateur || u.Role == RoleUtilisateur.Gestionnaire)
-                    .Select(u => u.Id)
-                    .ToListAsync();
-                recipients.AddRange(admins);
-            }
+			if (userId.HasValue)
+			{
+				// CAS 1 : Notification ciblée (ex: pour un Client spécifique)
+				recipients.Add(userId.Value);
+				
+				// IMPORTANT : On ne filtre PAS l'utilisateur courant ici.
+				// Si on cible explicitement quelqu'un, il doit recevoir la notif.
+			}
+			else
+			{
+				// CAS 2 : Notification Broadcast (pour tous les Admins/Gestionnaires)
+				var admins = await context.Utilisateurs
+					.Where(u => u.Role == RoleUtilisateur.Administrateur || u.Role == RoleUtilisateur.Gestionnaire)
+					.Select(u => u.Id)
+					.ToListAsync();
+				
+				recipients.AddRange(admins);
 
-            // 3. FILTRE CRITIQUE : Retirer l'utilisateur actuel de la liste des destinataires
-            // On ne veut pas s'auto-notifier
-            if (currentUserId.HasValue)
-            {
-                recipients.RemoveAll(id => id == currentUserId.Value);
-            }
+				// FILTRE : On retire l'utilisateur qui a déclenché l'action s'il fait partie des admins
+				// pour éviter qu'il ne reçoive une notif pour sa propre action.
+				if (currentUserId.HasValue)
+				{
+					recipients.RemoveAll(id => id == currentUserId.Value);
+				}
+			}
 
-            // Si plus personne à notifier, on arrête
-            if (!recipients.Any()) return;
+			// Si plus personne à notifier, on arrête
+			if (!recipients.Any()) return;
 
-            // 4. Créer et Sauvegarder
-            var notifsToSend = new List<Notification>();
+			// 3. Créer et Sauvegarder les entités en base
+			var notifsToSend = new List<Notification>();
 
-            foreach (var recipientId in recipients)
-            {
-                var notif = new Notification
-                {
-                    UtilisateurId = recipientId,
-                    Title = title,
-                    Message = message,
-                    Categorie = categorie,
-                    ActionUrl = actionUrl,
-                    RelatedEntityId = entityId,
-                    RelatedEntityType = entityType,
-                    Priorite = priorite,
-                    Icone = GetIconForCategory(categorie),
-                    Couleur = GetColorForCategory(categorie),
-                    DateCreation = DateTime.UtcNow,
-                    EstLue = false
-                };
-                context.Notifications.Add(notif);
-                notifsToSend.Add(notif);
-            }
+			foreach (var recipientId in recipients)
+			{
+				var notif = new Notification
+				{
+					UtilisateurId = recipientId,
+					Title = title,
+					Message = message,
+					Categorie = categorie,
+					ActionUrl = actionUrl,
+					RelatedEntityId = entityId,
+					RelatedEntityType = entityType,
+					Priorite = priorite,
+					Icone = GetIconForCategory(categorie),
+					Couleur = GetColorForCategory(categorie),
+					DateCreation = DateTime.UtcNow,
+					EstLue = false
+				};
+				context.Notifications.Add(notif);
+				notifsToSend.Add(notif);
+			}
 
-            await context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 
-            // 5. Envoyer via SignalR
-            foreach (var notif in notifsToSend)
-            {
-                var notifDto = new
-                {
-                    notif.Id,
-                    notif.Title,
-                    notif.Message,
-                    notif.Icone,
-                    notif.Couleur,
-                    notif.ActionUrl,
-                    notif.DateCreation,
-                    notif.Categorie,
-                    notif.EstLue
-                };
+			// 4. Envoyer via SignalR (Temps réel)
+			foreach (var notif in notifsToSend)
+			{
+				// On crée un objet anonyme pour ne pas envoyer tout le graphe d'objets EF
+				var notifDto = new
+				{
+					notif.Id,
+					notif.Title,
+					notif.Message,
+					notif.Icone,
+					notif.Couleur,
+					notif.ActionUrl,
+					notif.DateCreation,
+					notif.Categorie,
+					notif.EstLue,
+					notif.RelatedEntityId,
+					notif.RelatedEntityType
+				};
 
-                if (notif.UtilisateurId.HasValue)
-                {
-                    await _hubContext.Clients.User(notif.UtilisateurId.Value.ToString())
-                        .SendAsync("ReceiveNotification", notifDto);
-                }
-            }
-        }
+				if (notif.UtilisateurId.HasValue)
+				{
+					try
+					{
+						// Envoi ciblé par User ID
+						await _hubContext.Clients.User(notif.UtilisateurId.Value.ToString())
+							.SendAsync("ReceiveNotification", notifDto);
+						
+						// Log pour débogage (à retirer en prod si trop verbeux)
+						Console.WriteLine($"[NotificationService] SignalR envoyé à {notif.UtilisateurId}");
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine($"[NotificationService] Erreur envoi SignalR : {ex.Message}");
+					}
+				}
+			}
+		}
 
         public async Task<IEnumerable<Notification>> GetUserNotificationsAsync(Guid userId, int count = 20)
         {

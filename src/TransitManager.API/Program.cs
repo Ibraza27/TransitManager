@@ -95,20 +95,27 @@ builder.Services.AddAuthentication(options =>
 {
     Console.WriteLine("[API] Ajout du gestionnaire de Cookie.");
     Console.WriteLine("[API - Cookie] Configuration avancée : SameSite=None, SecurePolicy=Always.");
-    // Nommer le cookie pour le retrouver facilement dans le navigateur
+    
     options.Cookie.Name = "TransitManager.AuthCookie";
-    // Le cookie ne sera pas accessible par JavaScript côté client (sécurité)
     options.Cookie.HttpOnly = true;
-    // Essentiel pour le développement local (ports différents) et les déploiements cross-domain.
-    // Le navigateur enverra le cookie même si l'API et le client n'ont pas la même origine.
-    options.Cookie.SameSite = SameSiteMode.None;
-    // SameSiteMode.None REQUIERT que le cookie soit marqué comme Secure.
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    // On s'assure que le cookie persiste bien comme demandé dans LoginWithCookie
+    
+    // MODIFICATION CRITIQUE ICI
+    // "None" permet l'envoi du cookie même si l'appel vient d'un autre port (Web vers API)
+    options.Cookie.SameSite = SameSiteMode.None; 
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Obligatoire si SameSite=None
+    
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
+    
+    // ... (reste inchangé)
     options.Events.OnRedirectToLogin = context =>
     {
+        // Pour SignalR, on veut une erreur 401, pas une redirection HTML
+        if (context.Request.Path.StartsWithSegments("/notificationHub"))
+        {
+            context.Response.StatusCode = 401;
+            return Task.CompletedTask;
+        }
         Console.WriteLine("[API - Cookie] Événement OnRedirectToLogin déclenché. Remplacement par un statut 401.");
         context.Response.StatusCode = 401; // Unauthorized
         return Task.CompletedTask;
@@ -127,6 +134,23 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            // Si la requête est pour le Hub...
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) &&
+                (path.StartsWithSegments("/notificationHub") || path.StartsWithSegments("/appHub")))
+            {
+                // ... on lit le token depuis l'URL
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 // --- AUTORISATION ---
 Console.WriteLine("[API] Configuration de la politique d'autorisation HYBRIDE...");
@@ -144,15 +168,21 @@ builder.Services.AddAuthorization(options =>
     options.DefaultPolicy = options.GetPolicy("HybridPolicy")!;
 });
 // --- SIGNALR, CORS, etc. ---
-builder.Services.AddSignalR();
+// Augmenter les limites pour éviter les timeouts en dev
+builder.Services.AddSignalR(options => {
+    options.EnableDetailedErrors = true;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyHeader()
+        // REMPLACE "SetIsOriginAllowed(origin => true)" PAR CECI SI POSSIBLE :
+        policy.WithOrigins("https://localhost:7207", "https://100.91.147.96:7207", "http://localhost:5129") // Liste tes URLs Web
+              .AllowAnyHeader()
               .AllowAnyMethod()
-              .SetIsOriginAllowed(origin => true)
-              .AllowCredentials();
+              .AllowCredentials(); // OBLIGATOIRE pour les cookies/auth SignalR
     });
 });
 Console.WriteLine("[API] Fin de la configuration des services.");

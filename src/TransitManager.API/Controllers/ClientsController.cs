@@ -123,5 +123,23 @@ namespace TransitManager.API.Controllers
                 return StatusCode(500, "Une erreur interne est survenue.");
             }
         }
+
+        [HttpGet("paged")]
+        public async Task<ActionResult<PagedResult<Client>>> GetClientsPaged(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? search = null)
+        {
+            try
+            {
+                var result = await _clientService.GetPagedAsync(page, pageSize, search);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la récupération paginée des clients.");
+                return StatusCode(500, "Une erreur interne est survenue.");
+            }
+        }
     }
 }

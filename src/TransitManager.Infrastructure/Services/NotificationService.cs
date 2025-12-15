@@ -9,6 +9,7 @@ using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
 using TransitManager.Infrastructure.Hubs;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -134,6 +135,104 @@ namespace TransitManager.Infrastructure.Services
 				}
 			}
 		}
+
+        public async Task CreateAndSendBatchAsync(IEnumerable<NotificationRequest> requests)
+        {
+            if (requests == null || !requests.Any()) return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var notifsToSend = new List<Notification>();
+            var currentUserId = _authService.CurrentUser?.Id;
+
+            // Pré-chargement des admins si nécessaire
+            List<Guid>? adminIds = null;
+            if (requests.Any(r => r.UserId == null))
+            {
+                adminIds = await context.Utilisateurs
+                    .Where(u => (u.Role == RoleUtilisateur.Administrateur || u.Role == RoleUtilisateur.Gestionnaire) && u.Actif)
+                    .Select(u => u.Id)
+                    .ToListAsync();
+            }
+
+            foreach (var req in requests)
+            {
+                var recipients = new List<Guid>();
+
+                if (req.UserId.HasValue)
+                {
+                    recipients.Add(req.UserId.Value);
+                }
+                else if (adminIds != null)
+                {
+                    recipients.AddRange(adminIds);
+                    // Filter out current user if admin
+                    if (currentUserId.HasValue)
+                    {
+                        recipients.RemoveAll(id => id == currentUserId.Value);
+                    }
+                }
+
+                foreach (var recipientId in recipients)
+                {
+                    var notif = new Notification
+                    {
+                        UtilisateurId = recipientId,
+                        Title = req.Title,
+                        Message = req.Message,
+                        Categorie = req.Categorie,
+                        ActionUrl = req.ActionUrl,
+                        RelatedEntityId = req.EntityId,
+                        RelatedEntityType = req.EntityType,
+                        Priorite = req.Priorite,
+                        Icone = GetIconForCategory(req.Categorie),
+                        Couleur = GetColorForCategory(req.Categorie),
+                        DateCreation = DateTime.UtcNow,
+                        EstLue = false
+                    };
+                    notifsToSend.Add(notif);
+                }
+            }
+
+            if (!notifsToSend.Any()) return;
+
+            // Insertion par lot en base
+            context.Notifications.AddRange(notifsToSend);
+            await context.SaveChangesAsync();
+
+            // Envoi SignalR optimisé (Groupé par Utilisateur)
+            var groupedNotifs = notifsToSend.GroupBy(n => n.UtilisateurId);
+
+            foreach (var group in groupedNotifs)
+            {
+                if (!group.Key.HasValue) continue;
+
+                var userIdStr = group.Key.Value.ToString();
+                
+                foreach (var notif in group)
+                {
+                    var notifDto = new
+                    {
+                        notif.Id,
+                        notif.Title,
+                        notif.Message,
+                        notif.Icone,
+                        notif.Couleur,
+                        notif.ActionUrl,
+                        notif.DateCreation,
+                        notif.Categorie,
+                        notif.EstLue,
+                        notif.RelatedEntityId,
+                        notif.RelatedEntityType
+                    };
+                    
+                    try 
+                    {
+                        await _hubContext.Clients.User(userIdStr).SendAsync("ReceiveNotification", notifDto);
+                    }
+                    catch { /* Ignore SignalR errors in batch */ }
+                }
+            }
+        }
 
         public async Task<IEnumerable<Notification>> GetUserNotificationsAsync(Guid userId, int count = 20)
         {

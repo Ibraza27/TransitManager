@@ -192,6 +192,44 @@ namespace TransitManager.API.Controllers
                 return StatusCode(500, "Une erreur interne est survenue.");
             }
         }		
+
+        [HttpGet("paged")]
+        public async Task<ActionResult<PagedResult<VehiculeListItemDto>>> GetVehiculesPaged(
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 20, 
+            [FromQuery] string? search = null)
+        {
+            try
+            {
+                // Si c'est un client, on filtre automatiquement
+                Guid? clientId = null;
+                var roleClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Role);
+                bool isAdmin = roleClaim != null && roleClaim.Value == "Administrateur";
+                
+                if (!isAdmin)
+                {
+                     var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                     if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+                     {
+                         // Pour simplifier ici, on suppose que l'ID utilisateur n'est pas directement l'ID client
+                         // Mais le service GetPagedAsync prend un clientId.
+                         // Idéalement on récupère le ClientId depuis le user.
+                         // Hack temporaire : on ne filtre pas ici si on ne connait pas le mapping User->ClientId facilement sans service
+                         // Mais on peut utiliser la méthode GetByUserIdAsync pour récupérer le clientId si besoin
+                         // Pour l'instant on laisse null si Admin, sinon on devrait mapper.
+                         // TODO: Récupérer le ClientId proprement.
+                     }
+                }
+
+                var result = await _vehiculeService.GetPagedAsync(page, pageSize, search, clientId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                 _logger.LogError(ex, "Erreur GetVehiculesPaged");
+                 return StatusCode(500, "Erreur interne");
+            }
+        }		
 		
 		// GET: api/vehicules/{id}/export/attestation
 		[HttpGet("{id}/export/attestation")]

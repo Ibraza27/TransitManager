@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using TransitManager.Core.Entities; // <-- Assurez-vous d'avoir ce using
+using TransitManager.Core.Entities;
+using TransitManager.Core.DTOs; // AJOUT
 
 namespace TransitManager.Core.Interfaces
 {
@@ -26,5 +27,6 @@ namespace TransitManager.Core.Interfaces
         Task<IEnumerable<Client>> GetClientsByConteneurAsync(Guid conteneurId);
 		Task RecalculateAndUpdateClientStatisticsAsync(Guid clientId);
         Task<Dictionary<string, int>> GetNewClientsPerMonthAsync(int months);
+        Task<Core.DTOs.PagedResult<Client>> GetPagedAsync(int page, int pageSize, string? search = null);
     }
 }

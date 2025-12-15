@@ -22,17 +22,13 @@ namespace TransitManager.Infrastructure.Repositories
 
     public class ConteneurRepository : GenericRepository<Conteneur>, IConteneurRepository
     {
-        private readonly IDbContextFactory<TransitContext> _contextFactory;
-
-        public ConteneurRepository(IDbContextFactory<TransitContext> contextFactory) : base(contextFactory)
+        public ConteneurRepository(TransitContext context) : base(context)
         {
-            _contextFactory = contextFactory;
         }
 
         public async Task<Conteneur?> GetByNumeroDossierAsync(string numeroDossier)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<Conteneur>()
+            return await _context.Set<Conteneur>()
                 .Include(c => c.Colis).ThenInclude(col => col.Client)
                 .Include(c => c.Vehicules).ThenInclude(v => v.Client)
                 .FirstOrDefaultAsync(c => c.NumeroDossier == numeroDossier && c.Actif);
@@ -40,8 +36,7 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<Conteneur?> GetWithDetailsAsync(Guid id)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<Conteneur>()
+            return await _context.Set<Conteneur>()
                 .Include(c => c.Colis).ThenInclude(col => col.Client)
                 .Include(c => c.Vehicules).ThenInclude(v => v.Client)
                 .FirstOrDefaultAsync(c => c.Id == id && c.Actif);
@@ -49,9 +44,8 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Conteneur>> GetOpenConteneursAsync()
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
             var openStatuses = new[] { StatutConteneur.Reçu, StatutConteneur.EnPreparation };
-            return await context.Set<Conteneur>()
+            return await _context.Set<Conteneur>()
                 .Include(c => c.Colis)
                 .Include(c => c.Vehicules)
                 .Where(c => c.Actif && openStatuses.Contains(c.Statut))
@@ -61,10 +55,9 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Conteneur>> GetByDestinationAsync(string destination)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
             if (string.IsNullOrWhiteSpace(destination))
                 return await GetAllAsync();
-            return await context.Set<Conteneur>()
+            return await _context.Set<Conteneur>()
                 .Include(c => c.Colis)
                 .Where(c => c.Actif && (
                     c.Destination.ToLower().Contains(destination.ToLower()) ||
@@ -76,8 +69,7 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Conteneur>> GetByStatusAsync(StatutConteneur statut)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<Conteneur>()
+            return await _context.Set<Conteneur>()
                 .Include(c => c.Colis)
                 .Where(c => c.Actif && c.Statut == statut)
                 .OrderByDescending(c => c.DateCreation)
@@ -86,8 +78,7 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<string>> GetAllDestinationsAsync()
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var destinations = await context.Set<Conteneur>()
+            var destinations = await _context.Set<Conteneur>()
                 .Where(c => c.Actif)
                 .Select(c => c.Destination)
                 .Distinct()
@@ -98,11 +89,10 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Conteneur>> SearchAsync(string searchTerm)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
             if (string.IsNullOrWhiteSpace(searchTerm))
                 return await GetAllAsync();
             searchTerm = searchTerm.ToLower();
-            return await context.Set<Conteneur>()
+            return await _context.Set<Conteneur>()
                 .Include(c => c.Colis).ThenInclude(col => col.Client)
                 .Include(c => c.Vehicules).ThenInclude(v => v.Client)
                 .Where(c => c.Actif && (

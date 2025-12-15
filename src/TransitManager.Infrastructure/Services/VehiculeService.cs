@@ -7,6 +7,7 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using TransitManager.Core.DTOs; // AJOUT
 using TransitManager.Core.Exceptions;
 
 namespace TransitManager.Infrastructure.Services
@@ -417,6 +418,65 @@ namespace TransitManager.Infrastructure.Services
                 .OrderByDescending(v => v.DateCreation)
                 .AsNoTracking()
                 .ToListAsync();
+        }
+
+        public async Task<Core.DTOs.PagedResult<VehiculeListItemDto>> GetPagedAsync(int page, int pageSize, string? search = null, Guid? clientId = null)
+        {
+             await using var context = await _contextFactory.CreateDbContextAsync();
+             var query = context.Vehicules
+                 .Include(v => v.Client)
+                 .Include(v => v.Conteneur)
+                 .AsNoTracking()
+                 .Where(v => v.Actif);
+
+             if (clientId.HasValue)
+             {
+                 query = query.Where(v => v.ClientId == clientId.Value);
+             }
+
+             if (!string.IsNullOrWhiteSpace(search))
+             {
+                 var term = search.ToLower();
+                 query = query.Where(v => 
+                     EF.Functions.ILike(v.Immatriculation, $"%{term}%") ||
+                     EF.Functions.ILike(v.Marque, $"%{term}%") ||
+                     EF.Functions.ILike(v.Modele, $"%{term}%") ||
+                     (v.Client != null && EF.Functions.ILike(v.Client.NomComplet, $"%{term}%"))
+                 );
+             }
+
+             var totalCount = await query.CountAsync();
+             var items = await query
+                 .OrderByDescending(v => v.DateCreation)
+                 .Skip((page - 1) * pageSize)
+                 .Take(pageSize)
+                 .Select(v => new VehiculeListItemDto
+                 {
+                    Id = v.Id,
+                    Immatriculation = v.Immatriculation,
+                    Marque = v.Marque,
+                    Modele = v.Modele,
+                    Annee = v.Annee,
+                    Statut = v.Statut,
+                    ClientNomComplet = v.Client != null ? v.Client.NomComplet : "N/A",
+                    ClientTelephonePrincipal = v.Client != null ? v.Client.TelephonePrincipal : null,
+                    ConteneurNumeroDossier = v.Conteneur != null ? v.Conteneur.NumeroDossier : null,
+                    Commentaires = v.Commentaires,
+                    DateCreation = v.DateCreation,
+                    DestinationFinale = v.DestinationFinale,
+                    PrixTotal = v.PrixTotal,
+                    SommePayee = v.SommePayee
+                 })
+                 .ToListAsync();
+
+             return new Core.DTOs.PagedResult<VehiculeListItemDto>
+             {
+                 Items = items,
+                 TotalCount = totalCount,
+                 Page = page,
+                 PageSize = pageSize,
+                 TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+             };
         }
     }
 }

@@ -14,6 +14,10 @@ namespace TransitManager.Core.DTOs
         public string AllBarcodes { get; set; } = string.Empty;
         public string DestinationFinale { get; set; } = string.Empty;
         public DateTime DateArrivee { get; set; }
+        
+        public Guid? ConteneurId { get; set; }
+        public string? ConteneurNumero { get; set; }
+        public decimal Volume { get; set; }
 
         // --- AJOUTS POUR LA VUE WEB ---
         public int NombrePieces { get; set; }

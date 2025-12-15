@@ -4,6 +4,7 @@ using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
 using TransitManager.Infrastructure.Repositories;
 using TransitManager.Infrastructure.Services;
+using TransitManager.Infrastructure.Data.Uow;
 using CommunityToolkit.Mvvm.Messaging;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -16,7 +17,8 @@ using Microsoft.AspNetCore.DataProtection;
 using QuestPDF.Infrastructure;
 using System.IO;
 using TransitManager.Infrastructure.Hubs;
-
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 QuestPDF.Settings.License = LicenseType.Community;
@@ -40,14 +42,68 @@ catch (Exception ex)
     throw; // Arrêter l'application si on ne peut pas configurer la sécurité
 }
 // === FIN DE L'AJOUT STRATÉGIQUE ===
+
+// --- OPTIMISATIONS (PHASE 1 & 3) ---
+Console.WriteLine("[API] Configuration des services d'optimisation (Cache, RateLimiting, HealthChecks)...");
+builder.Services.AddMemoryCache(); // Pour le cache des stats interne
+builder.Services.AddHealthChecks(); // Monitoring de base
+builder.Services.AddRateLimiter(options => {
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 1000, 
+                QueueLimit = 2,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+// -----------------------------------
+
 // --- CONFIGURATION DB ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContextFactory<TransitContext>(options =>
     options.UseNpgsql(connectionString)
            .LogTo(Console.WriteLine, LogLevel.Information)
 );
+
+// --- CACHE & SIGNALR (REDIS OPTIONNEL) ---
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+bool useRedis = !string.IsNullOrWhiteSpace(redisConnectionString) && redisConnectionString != "localhost:6379"; 
+
+if (!string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    Console.WriteLine($"[API] ⚡ Configuration de Redis (Cache & SignalR) sur : {redisConnectionString}");
+    
+    // 1. Cache Distribué Redis
+    try 
+    {
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = redisConnectionString;
+            options.InstanceName = "TransitManager_";
+        });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[API] ⚠️ Erreur configuration Cache Redis : {ex.Message}. Fallback sur Mémoire.");
+        builder.Services.AddDistributedMemoryCache();
+        useRedis = false;
+    }
+}
+else
+{
+    Console.WriteLine("[API] ℹ️ Redis non configuré. Utilisation du Cache en Mémoire (DistributedMemoryCache).");
+    builder.Services.AddDistributedMemoryCache(); // Fallback vital
+    useRedis = false;
+}
+
 // --- INJECTION DES DÉPENDANCES ---
-builder.Services.AddTransient<TransitManager.Core.Interfaces.IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
+
+// On remplace toutes les injections de XRepository ou de IDbContextFactory par IUnitOfWork
+builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
 builder.Services.AddTransient<IClientService, ClientService>();
 builder.Services.AddTransient<IColisService, ColisService>();
 builder.Services.AddTransient<IVehiculeService, VehiculeService>();
@@ -60,12 +116,9 @@ builder.Services.AddTransient<IBackupService, BackupService>();
 builder.Services.AddTransient<IPrintingService, PrintingService>();
 builder.Services.AddTransient<IDocumentService, DocumentService>();
 builder.Services.AddTransient<IJwtService, JwtService>();
-builder.Services.AddTransient<IUserService, UserService>(); 
+builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddSingleton<INotificationHubService, NotificationHubService>();
-builder.Services.AddTransient(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-builder.Services.AddTransient<IClientRepository, ClientRepository>();
-builder.Services.AddTransient<IColisRepository, ColisRepository>();
-builder.Services.AddTransient<IConteneurRepository, ConteneurRepository>();
+builder.Services.AddHostedService<MaintenanceService>(); // AJOUT SERVICE MAINTENANCE (Background)
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 builder.Services.AddTransient<IEmailService, EmailService>();
@@ -76,7 +129,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
 		options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true; // <--- AJOUTER CETTE LIGNE
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true; 
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
@@ -95,18 +148,18 @@ builder.Services.AddAuthentication(options =>
 {
     Console.WriteLine("[API] Ajout du gestionnaire de Cookie.");
     Console.WriteLine("[API - Cookie] Configuration avancée : SameSite=None, SecurePolicy=Always.");
-    
+
     options.Cookie.Name = "TransitManager.AuthCookie";
     options.Cookie.HttpOnly = true;
-    
+
     // MODIFICATION CRITIQUE ICI
     // "None" permet l'envoi du cookie même si l'appel vient d'un autre port (Web vers API)
-    options.Cookie.SameSite = SameSiteMode.None; 
+    options.Cookie.SameSite = SameSiteMode.None;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Obligatoire si SameSite=None
-    
+
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
-    
+
     // ... (reste inchangé)
     options.Events.OnRedirectToLogin = context =>
     {
@@ -167,13 +220,33 @@ builder.Services.AddAuthorization(options =>
     // Cela signifie que tout endpoint avec un simple [Authorize] utilisera cette logique.
     options.DefaultPolicy = options.GetPolicy("HybridPolicy")!;
 });
-// --- SIGNALR, CORS, etc. ---
+// --- SIGNALR ---
 // Augmenter les limites pour éviter les timeouts en dev
-builder.Services.AddSignalR(options => {
+var signalRBuilder = builder.Services.AddSignalR(options => {
     options.EnableDetailedErrors = true;
     options.KeepAliveInterval = TimeSpan.FromSeconds(15);
     options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
 });
+
+if (useRedis && !string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    Console.WriteLine("[API] ⚡ SignalR configuré avec Backplane Redis.");
+    try 
+    {
+        signalRBuilder.AddStackExchangeRedis(redisConnectionString, options => {
+            options.Configuration.ChannelPrefix = "TransitManagerSignalR";
+        });
+    }
+    catch(Exception ex)
+    {
+         Console.WriteLine($"[API] ⚠️ Impossible de configurer SignalR avec Redis : {ex.Message}. Mode autonome activé.");
+    }
+}
+else
+{
+    Console.WriteLine("[API] ℹ️ SignalR configuré en mode Autonome (pas de Redis).");
+}
+
 
 // === AJOUTER CETTE LIGNE ICI ===
 builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, TransitManager.API.Hubs.CustomUserIdProvider>();
@@ -207,9 +280,9 @@ Console.WriteLine("[API] Ajout des middlewares d'authentification et d'autorisat
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+// Utilisation explicite de UseEndpoints pour s'assurer que les Hubs sont bien mappés après l'auth
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<AppHub>("/appHub");
 
- 
 Console.WriteLine("[API] Lancement de l'application.");
 app.Run();

@@ -30,29 +30,26 @@ namespace TransitManager.Infrastructure.Repositories
 
     public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
     {
-        private readonly IDbContextFactory<TransitContext> _contextFactory;
+        protected readonly TransitContext _context;
 
-        public GenericRepository(IDbContextFactory<TransitContext> contextFactory)
+        public GenericRepository(TransitContext context)
         {
-            _contextFactory = contextFactory;
+            _context = context;
         }
 
         public virtual async Task<T?> GetByIdAsync(Guid id)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<T>().FindAsync(id);
+            return await _context.Set<T>().FindAsync(id);
         }
 
         public virtual async Task<IEnumerable<T>> GetAllAsync()
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<T>().Where(e => e.Actif).ToListAsync();
+            return await _context.Set<T>().Where(e => e.Actif).ToListAsync();
         }
 
         public virtual async Task<IEnumerable<T>> GetPagedAsync(int pageNumber, int pageSize)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<T>()
+            return await _context.Set<T>()
                 .Where(e => e.Actif)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -61,87 +58,77 @@ namespace TransitManager.Infrastructure.Repositories
 
         public virtual async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<T>().Where(predicate).Where(e => e.Actif).ToListAsync();
+            return await _context.Set<T>().Where(predicate).Where(e => e.Actif).ToListAsync();
         }
 
         public virtual async Task<T?> SingleOrDefaultAsync(Expression<Func<T, bool>> predicate)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<T>().Where(predicate).Where(e => e.Actif).SingleOrDefaultAsync();
+            return await _context.Set<T>().Where(predicate).Where(e => e.Actif).SingleOrDefaultAsync();
         }
 
         public virtual async Task<T> AddAsync(T entity)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            await context.Set<T>().AddAsync(entity);
-            await context.SaveChangesAsync();
+            await _context.Set<T>().AddAsync(entity);
+            await _context.SaveChangesAsync();
             return entity;
         }
 
         public virtual async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            await context.Set<T>().AddRangeAsync(entities);
-            await context.SaveChangesAsync();
+            await _context.Set<T>().AddRangeAsync(entities);
+            await _context.SaveChangesAsync();
             return entities;
         }
 
         public virtual async Task<T> UpdateAsync(T entity)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            context.Set<T>().Update(entity);
-            await context.SaveChangesAsync();
+            _context.Set<T>().Update(entity);
+            await _context.SaveChangesAsync();
             return entity;
         }
 
         public virtual async Task<bool> RemoveAsync(T entity)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
             entity.Actif = false;
-            context.Set<T>().Update(entity);
-            await context.SaveChangesAsync();
+            _context.Set<T>().Update(entity);
+            await _context.SaveChangesAsync();
             return true;
         }
 
         public virtual async Task<bool> RemoveRangeAsync(IEnumerable<T> entities)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
             foreach (var entity in entities)
             {
                 entity.Actif = false;
             }
-            context.Set<T>().UpdateRange(entities);
-            await context.SaveChangesAsync();
+            _context.Set<T>().UpdateRange(entities);
+            await _context.SaveChangesAsync();
             return true;
         }
 
         public virtual async Task<int> CountAsync()
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<T>().CountAsync(e => e.Actif);
+            return await _context.Set<T>().CountAsync(e => e.Actif);
         }
 
         public virtual async Task<int> CountAsync(Expression<Func<T, bool>> predicate)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<T>().Where(predicate).CountAsync(e => e.Actif);
+            return await _context.Set<T>().Where(predicate).CountAsync(e => e.Actif);
         }
 
         public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Set<T>().Where(predicate).AnyAsync(e => e.Actif);
+            return await _context.Set<T>().Where(predicate).AnyAsync(e => e.Actif);
         }
 
         public virtual IQueryable<T> Query()
         {
-            throw new NotSupportedException("Query method is not supported with IDbContextFactory. Use async methods instead.");
+            return _context.Set<T>().Where(e => e.Actif);
         }
 
         public virtual IQueryable<T> QueryNoTracking()
         {
-            throw new NotSupportedException("QueryNoTracking method is not supported with IDbContextFactory. Use async methods instead.");
+            return _context.Set<T>().Where(e => e.Actif).AsNoTracking();
         }
     }
 }

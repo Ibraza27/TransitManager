@@ -9,12 +9,16 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using TransitManager.Infrastructure.Data.Uow;
+using TransitManager.Infrastructure.Repositories;
 
 namespace TransitManager.Infrastructure.Services
 {
     public class ColisService : IColisService
     {
-        private readonly IDbContextFactory<TransitContext> _contextFactory;
+        // Remplacer IDbContextFactory par IUnitOfWorkFactory
+        private readonly IUnitOfWorkFactory _uowFactory;
+
         private readonly INotificationService _notificationService;
         private readonly IConteneurService _conteneurService;
         private readonly IClientService _clientService;
@@ -31,14 +35,14 @@ namespace TransitManager.Infrastructure.Services
         };
 
         public ColisService(
-            IDbContextFactory<TransitContext> contextFactory,
+            IUnitOfWorkFactory uowFactory, // <-- MODIFIÉ
             INotificationService notificationService,
             IConteneurService conteneurService,
             IClientService clientService,
             ITimelineService timelineService,
             IAuthenticationService authService)
         {
-            _contextFactory = contextFactory;
+            _uowFactory = uowFactory; // <-- MODIFIÉ
             _notificationService = notificationService;
             _conteneurService = conteneurService;
             _clientService = clientService;
@@ -48,22 +52,32 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.FindAsync(colisId);
+            using var uow = await _uowFactory.CreateAsync();
+
+            // 1. On récupère le colis
+            var colis = await uow.Colis.GetByIdAsync(colisId);
+
             if (colis != null)
             {
-                var totalPaye = await context.Paiements
-                    .Where(p => p.ColisId == colisId && p.Actif &&
-                               (p.Statut == StatutPaiement.Paye || p.Statut == StatutPaiement.Valide))
-                    .SumAsync(p => p.Montant);
+                // 2. On récupère les paiements via le Repository de l'UoW
+                var paiements = await uow.Paiements.GetByColisAsync(colisId);
+
+                // 3. On calcule la somme (uniquement les paiements valides/payés)
+                var totalPaye = paiements
+                    .Where(p => p.Actif && (p.Statut == StatutPaiement.Paye || p.Statut == StatutPaiement.Valide))
+                    .Sum(p => p.Montant);
+
+                // 4. On met à jour le colis
                 colis.SommePayee = totalPaye;
-                await context.SaveChangesAsync();
+
+                // 5. On sauvegarde
+                await uow.CommitAsync();
             }
         }
 
         public async Task<Colis> CreateAsync(CreateColisDto colisDto)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            using var uow = await _uowFactory.CreateAsync();
             var newColis = new Colis
             {
                 ClientId = colisDto.ClientId,
@@ -92,7 +106,7 @@ namespace TransitManager.Infrastructure.Services
             // Si un conteneur est assigné à la création, on applique déjà la logique de statut
             if (newColis.ConteneurId.HasValue)
             {
-                var conteneur = await context.Conteneurs.FindAsync(newColis.ConteneurId.Value);
+                var conteneur = await uow.Conteneurs.GetByIdAsync(newColis.ConteneurId.Value);
                 if (conteneur != null)
                 {
                     newColis.Statut = GetStatutFromConteneur(conteneur.Statut);
@@ -100,8 +114,8 @@ namespace TransitManager.Infrastructure.Services
                 }
             }
 
-            context.Colis.Add(newColis);
-            await context.SaveChangesAsync();
+            await uow.Colis.AddAsync(newColis);
+            await uow.CommitAsync();
             await _timelineService.AddEventAsync("Colis créé et enregistré", colisId: newColis.Id, statut: newColis.Statut.ToString());
 
             // NOTIFICATION ADMIN
@@ -115,19 +129,19 @@ namespace TransitManager.Infrastructure.Services
                 entityType: "Colis"
             );
 
-			var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == newColis.ClientId);
-			if (clientUser != null)
-			{
-				await _notificationService.CreateAndSendAsync(
-					title: "📦 Nouveau Colis",
-					message: $"Un nouveau colis ({newColis.NumeroReference}) a été ajouté à votre dossier.",
-					userId: clientUser.Id, // Cible le client
-					categorie: CategorieNotification.StatutColis,
-					actionUrl: $"/colis/edit/{newColis.Id}", // Redirige vers le détail
-					entityId: newColis.Id,
-					entityType: "Colis"
-				);
-			}
+            var clientUser = await uow.Utilisateurs.GetByClientIdAsync(newColis.ClientId);
+            if (clientUser != null)
+            {
+                await _notificationService.CreateAndSendAsync(
+                    title: "📦 Nouveau Colis",
+                    message: $"Un nouveau colis ({newColis.NumeroReference}) a été ajouté à votre dossier.",
+                    userId: clientUser.Id, // Cible le client
+                    categorie: CategorieNotification.StatutColis,
+                    actionUrl: $"/colis/edit/{newColis.Id}", // Redirige vers le détail
+                    entityId: newColis.Id,
+                    entityType: "Colis"
+                );
+            }
 
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(newColis.ClientId);
             if (newColis.ConteneurId.HasValue) await _conteneurService.RecalculateStatusAsync(newColis.ConteneurId.Value);
@@ -136,10 +150,10 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<Colis> UpdateAsync(Guid id, UpdateColisDto colisDto)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            using var uow = await _uowFactory.CreateAsync();
             try
             {
-                var colisInDb = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Id == id);
+                var colisInDb = await uow.Colis.GetByIdAsync(id);
                 if (colisInDb == null) throw new InvalidOperationException("Le colis n'existe plus.");
                 var originalClientId = colisInDb.ClientId;
                 var originalConteneurId = colisInDb.ConteneurId;
@@ -189,8 +203,7 @@ namespace TransitManager.Infrastructure.Services
                 else if (colisInDb.ConteneurId.HasValue)
                 {
                     // On charge le conteneur pour connaître son statut actuel
-                    var conteneur = await context.Conteneurs.AsNoTracking()
-                        .FirstOrDefaultAsync(c => c.Id == colisInDb.ConteneurId.Value);
+                    var conteneur = await uow.Conteneurs.GetByIdAsync(colisInDb.ConteneurId.Value);
                     if (conteneur != null)
                     {
                         colisInDb.Statut = GetStatutFromConteneur(conteneur.Statut);
@@ -209,18 +222,18 @@ namespace TransitManager.Infrastructure.Services
                     colisInDb.NumeroPlomb = null;
                 }
 
-                context.Update(colisInDb);
+                await uow.Colis.UpdateAsync(colisInDb);
 
                 // --- 4. Gestion des Codes-Barres (Inchangé) ---
                 var barcodesFromUIValues = colisDto.Barcodes.ToHashSet();
                 var barcodesInDb = colisInDb.Barcodes.ToList();
                 var barcodesToRemove = barcodesInDb.Where(b => !barcodesFromUIValues.Contains(b.Value)).ToList();
-                if (barcodesToRemove.Any()) context.Barcodes.RemoveRange(barcodesToRemove);
+                if (barcodesToRemove.Any()) await uow.Barcodes.RemoveRangeAsync(barcodesToRemove);
                 var barcodesInDbValues = barcodesInDb.Select(b => b.Value).ToHashSet();
                 var barcodeValuesToAdd = barcodesFromUIValues.Where(uiValue => !barcodesInDbValues.Contains(uiValue));
-                foreach (var valueToAdd in barcodeValuesToAdd) context.Barcodes.Add(new Barcode { Value = valueToAdd, ColisId = colisInDb.Id });
+                foreach (var valueToAdd in barcodeValuesToAdd) uow.Barcodes.AddAsync(new Barcode { Value = valueToAdd, ColisId = colisInDb.Id });
 
-                await context.SaveChangesAsync();
+                await uow.CommitAsync();
 
                 // --- 5. Timeline ---
                 if (oldStatus != colisInDb.Statut)
@@ -233,7 +246,7 @@ namespace TransitManager.Infrastructure.Services
 
                     // NOTIFICATION CLIENT
                     // On notifie le client si ce n'est pas un statut interne ou si le user a un compte
-                    var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == colisInDb.ClientId);
+                    var clientUser = await uow.Utilisateurs.GetByClientIdAsync(colisInDb.ClientId);
                     if (clientUser != null)
                     {
                         string emoji = colisInDb.Statut == StatutColis.Livre ? "✅" : "📦";
@@ -265,9 +278,9 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<bool> AssignToConteneurAsync(Guid colisId, Guid conteneurId)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.FindAsync(colisId);
-            var conteneur = await context.Conteneurs.FindAsync(conteneurId);
+            using var uow = await _uowFactory.CreateAsync();
+            var colis = await uow.Colis.GetByIdAsync(colisId);
+            var conteneur = await uow.Conteneurs.GetByIdAsync(conteneurId);
 
             // On autorise l'ajout même si le conteneur est parti, sauf s'il est clos
             var blockedStatuses = new[] { StatutConteneur.Cloture, StatutConteneur.Annule };
@@ -284,7 +297,7 @@ namespace TransitManager.Infrastructure.Services
                 colis.Statut = GetStatutFromConteneur(conteneur.Statut);
             }
 
-            await context.SaveChangesAsync();
+            await uow.CommitAsync();
 
             // Timeline
             if (oldStatus != colis.Statut)
@@ -309,8 +322,8 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<bool> RemoveFromConteneurAsync(Guid colisId)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.FindAsync(colisId);
+            using var uow = await _uowFactory.CreateAsync();
+            var colis = await uow.Colis.GetByIdAsync(colisId);
 
             if (colis == null || !colis.ConteneurId.HasValue) return false;
             var originalConteneurId = colis.ConteneurId.Value;
@@ -324,7 +337,7 @@ namespace TransitManager.Infrastructure.Services
                 colis.Statut = StatutColis.EnAttente;
             }
 
-            await context.SaveChangesAsync();
+            await uow.CommitAsync();
             if (oldStatus != colis.Statut)
             {
                 await _timelineService.AddEventAsync($"Retrait conteneur : {oldStatus} -> {colis.Statut}", colisId: colis.Id, statut: colis.Statut.ToString());
@@ -348,140 +361,131 @@ namespace TransitManager.Infrastructure.Services
             };
         }
 
-		public async Task UpdateInventaireAsync(UpdateInventaireDto dto)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			
-			// On récupère le colis
-			var colis = await context.Colis.FirstOrDefaultAsync(c => c.Id == dto.ColisId);
-			
-			if (colis != null)
-			{
-				// 1. Mise à jour des données
-				colis.InventaireJson = dto.InventaireJson;
-				colis.NombrePieces = dto.TotalPieces;
-				colis.ValeurDeclaree = dto.TotalValeurDeclaree;
-				colis.LieuSignatureInventaire = dto.LieuSignatureInventaire;
-				colis.DateSignatureInventaire = dto.DateSignatureInventaire;
-				colis.SignatureClientInventaire = dto.SignatureClientInventaire;
-				
-				context.Colis.Update(colis);
-				await context.SaveChangesAsync();
-				
-				// 2. Timeline
-				await _timelineService.AddEventAsync("Inventaire mis à jour", colisId: colis.Id);
-				await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
+        public async Task UpdateInventaireAsync(UpdateInventaireDto dto)
+        {
+            using var uow = await _uowFactory.CreateAsync();
 
-				// === AJOUT : NOTIFICATIONS ===
+            // On récupère le colis
+            var colis = await uow.Colis.GetByIdAsync(dto.ColisId);
 
-				// A. Notifier les Administrateurs
-				await _notificationService.CreateAndSendAsync(
-					title: "📋 Inventaire Modifié",
-					message: $"L'inventaire du colis {colis.NumeroReference} a été mis à jour ({colis.NombrePieces} pces).",
-					userId: null, // null = Broadcast aux Admins
-					categorie: CategorieNotification.Inventaire,
-					actionUrl: $"/colis/edit/{colis.Id}",
-					entityId: colis.Id,
-					entityType: "Colis"
-				);
+            if (colis != null)
+            {
+                // 1. Mise à jour des données
+                colis.InventaireJson = dto.InventaireJson;
+                colis.NombrePieces = dto.TotalPieces;
+                colis.ValeurDeclaree = dto.TotalValeurDeclaree;
+                colis.LieuSignatureInventaire = dto.LieuSignatureInventaire;
+                colis.DateSignatureInventaire = dto.DateSignatureInventaire;
+                colis.SignatureClientInventaire = dto.SignatureClientInventaire;
 
-				// B. Notifier le Client (s'il a un compte utilisateur)
-				// On cherche l'utilisateur lié à ce client
-				var clientUser = await context.Utilisateurs
-					.AsNoTracking()
-					.FirstOrDefaultAsync(u => u.ClientId == colis.ClientId);
+                await uow.Colis.UpdateAsync(colis);
+                await uow.CommitAsync();
 
-				if (clientUser != null)
-				{
-					await _notificationService.CreateAndSendAsync(
-						title: "📋 Inventaire Validé",
-						message: $"L'inventaire de votre colis {colis.NumeroReference} a été mis à jour et sauvegardé.",
-						userId: clientUser.Id, // ID du client
-						categorie: CategorieNotification.Inventaire,
-						actionUrl: $"/colis/edit/{colis.Id}",
-						entityId: colis.Id,
-						entityType: "Colis"
-					);
-				}
-				// =============================
-			}
-		}
+                // 2. Timeline
+                await _timelineService.AddEventAsync("Inventaire mis à jour", colisId: colis.Id);
+                await _clientService.RecalculateAndUpdateClientStatisticsAsync(colis.ClientId);
+
+                // === AJOUT : NOTIFICATIONS ===
+
+                // A. Notifier les Administrateurs
+                await _notificationService.CreateAndSendAsync(
+                    title: "📋 Inventaire Modifié",
+                    message: $"L'inventaire du colis {colis.NumeroReference} a été mis à jour ({colis.NombrePieces} pces).",
+                    userId: null, // null = Broadcast aux Admins
+                    categorie: CategorieNotification.Inventaire,
+                    actionUrl: $"/colis/edit/{colis.Id}",
+                    entityId: colis.Id,
+                    entityType: "Colis"
+                );
+
+                // B. Notifier le Client (s'il a un compte utilisateur)
+                // On cherche l'utilisateur lié à ce client
+                var clientUser = await uow.Utilisateurs.GetByClientIdAsync(colis.ClientId);
+
+                if (clientUser != null)
+                {
+                    await _notificationService.CreateAndSendAsync(
+                        title: "📋 Inventaire Validé",
+                        message: $"L'inventaire de votre colis {colis.NumeroReference} a été mis à jour et sauvegardé.",
+                        userId: clientUser.Id, // ID du client
+                        categorie: CategorieNotification.Inventaire,
+                        actionUrl: $"/colis/edit/{colis.Id}",
+                        entityId: colis.Id,
+                        entityType: "Colis"
+                    );
+                }
+                // =============================
+            }
+        }
 
         public async Task<Colis?> GetByIdAsync(Guid id)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis
-                .AsSplitQuery()
-                .IgnoreQueryFilters()
-                .Include(c => c.Client)
-                .Include(c => c.Conteneur)
-                .Include(c => c.Barcodes.Where(b => b.Actif))
-                .Include(c => c.Paiements)
-                .Include(c => c.Documents)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == id);
+            using var uow = await _uowFactory.CreateAsync();
+            // Utilise la méthode spécifique du repo qui inclut les détails (Client, Barcodes...)
+            return await uow.Colis.GetWithDetailsAsync(id);
         }
 
         public async Task<Colis?> GetByBarcodeAsync(string barcode)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).AsNoTracking().FirstOrDefaultAsync(c => c.Barcodes.Any(b => b.Value == barcode));
+            using var uow = await _uowFactory.CreateAsync();
+            return await uow.Colis.GetByBarcodeAsync(barcode);
         }
 
         public async Task<Colis?> GetByReferenceAsync(string reference)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).AsNoTracking().FirstOrDefaultAsync(c => c.NumeroReference == reference);
+            using var uow = await _uowFactory.CreateAsync();
+            return await uow.Colis.GetByReferenceAsync(reference);
         }
 
         public async Task<IEnumerable<Colis>> GetAllAsync()
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).AsNoTracking().OrderByDescending(c => c.DateArrivee).ToListAsync();
+            using var uow = await _uowFactory.CreateAsync();
+            return await uow.Colis.GetAllAsync();
         }
 
         public async Task<IEnumerable<Colis>> GetByClientAsync(Guid clientId)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.ClientId == clientId).AsNoTracking().OrderByDescending(c => c.DateArrivee).ToListAsync();
+            using var uow = await _uowFactory.CreateAsync();
+            return await uow.Colis.GetByClientAsync(clientId);
         }
 
         public async Task<IEnumerable<Colis>> GetByConteneurAsync(Guid conteneurId)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.ConteneurId == conteneurId).AsNoTracking().OrderBy(c => c.Client!.Nom).ThenBy(c => c.DateArrivee).ToListAsync();
+            using var uow = await _uowFactory.CreateAsync();
+            return await uow.Colis.GetByConteneurAsync(conteneurId);
         }
 
         public async Task<IEnumerable<Colis>> GetByStatusAsync(StatutColis statut)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.Include(c => c.Client).Include(c => c.Conteneur).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.Statut == statut).AsNoTracking().OrderByDescending(c => c.DateArrivee).ToListAsync();
+            using var uow = await _uowFactory.CreateAsync();
+            return await uow.Colis.GetByStatusAsync(statut);
         }
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Id == id);
+            using var uow = await _uowFactory.CreateAsync();
+            var colis = await uow.Colis.GetByIdAsync(id);
             if (colis == null) return false;
             var clientId = colis.ClientId;
             colis.Actif = false;
-            foreach (var barcode in colis.Barcodes) barcode.Actif = false;
-            await context.SaveChangesAsync();
+            await uow.Colis.UpdateAsync(colis);
+            await uow.CommitAsync();
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId);
             return true;
         }
 
         public async Task<Colis> ScanAsync(string barcode, string location)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.Include(c => c.Barcodes).FirstOrDefaultAsync(c => c.Barcodes.Any(b => b.Value == barcode));
+            using var uow = await _uowFactory.CreateAsync();
+            var colis = await uow.Colis.GetByBarcodeAsync(barcode);
             if (colis == null) throw new InvalidOperationException($"Colis introuvable avec le code-barres {barcode}");
             var history = string.IsNullOrEmpty(colis.HistoriqueScan) ? new List<object>() : JsonSerializer.Deserialize<List<object>>(colis.HistoriqueScan) ?? new List<object>();
             history.Add(new { Date = DateTime.UtcNow, Location = location, Status = colis.Statut.ToString() });
             colis.HistoriqueScan = JsonSerializer.Serialize(history);
             colis.DateDernierScan = DateTime.UtcNow;
             colis.LocalisationActuelle = location;
-            await context.SaveChangesAsync();
+            await uow.Colis.UpdateAsync(colis);
+            await uow.CommitAsync();
 
             await _timelineService.AddEventAsync("Scan effectué", colisId: colis.Id, location: location);
             return colis;
@@ -489,146 +493,69 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<int> GetCountByStatusAsync(StatutColis statut)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.CountAsync(c => c.Statut == statut && c.Actif);
+            using var uow = await _uowFactory.CreateAsync();
+            return await uow.Colis.GetCountByStatusAsync(statut);
         }
 
         public async Task<IEnumerable<Colis>> GetRecentColisAsync(int count)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.Actif).AsNoTracking().OrderByDescending(c => c.DateArrivee).Take(count).ToListAsync();
+            using var uow = await _uowFactory.CreateAsync();
+            return await uow.Colis.GetRecentAsync(count);
         }
 
         public async Task<IEnumerable<Colis>> GetColisWaitingLongTimeAsync(int days)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            using var uow = await _uowFactory.CreateAsync();
             var dateLimit = DateTime.UtcNow.AddDays(-days);
-            return await context.Colis.Include(c => c.Client).Include(c => c.Barcodes.Where(b => b.Actif)).Where(c => c.Actif && c.Statut == StatutColis.EnAttente && c.DateArrivee < dateLimit).AsNoTracking().OrderBy(c => c.DateArrivee).ToListAsync();
+            return await uow.Colis.GetColisWaitingLongTimeAsync(days);
         }
 
         public async Task<bool> MarkAsDeliveredAsync(Guid colisId, string signature)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var colis = await context.Colis.FindAsync(colisId);
+            using var uow = await _uowFactory.CreateAsync();
+            var colis = await uow.Colis.GetByIdAsync(colisId);
             if (colis == null) return false;
             colis.Statut = StatutColis.Livre;
             colis.DateLivraison = DateTime.UtcNow;
             colis.SignatureReception = signature;
-            await context.SaveChangesAsync();
+            await uow.Colis.UpdateAsync(colis);
+            await uow.CommitAsync();
             await _timelineService.AddEventAsync("Livré au client", colisId: colis.Id, statut: "Livré");
             return true;
         }
 
         public async Task<IEnumerable<Colis>> SearchAsync(string searchTerm)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            using var uow = await _uowFactory.CreateAsync();
             if (string.IsNullOrWhiteSpace(searchTerm)) return await GetAllAsync();
-            var searchTerms = searchTerm.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var query = context.Colis
-                               .Include(c => c.Client)
-                               .Include(c => c.Conteneur)
-                               .Include(c => c.Barcodes.Where(b => b.Actif))
-                               .AsNoTracking();
-            foreach (var term in searchTerms)
-            {
-                query = query.Where(c =>
-                    EF.Functions.ILike(c.NumeroReference, $"%{term}%") ||
-                    EF.Functions.ILike(c.Designation, $"%{term}%") ||
-                    (c.Client != null && EF.Functions.ILike(c.Client.NomComplet, $"%{term}%")) ||
-                    (c.Conteneur != null && EF.Functions.ILike(c.Conteneur.NumeroDossier, $"%{term}%")) ||
-                    (c.Destinataire != null && EF.Functions.ILike(c.Destinataire, $"%{term}%")) ||
-                    c.Barcodes.Any(b => EF.Functions.ILike(b.Value, $"%{term}%"))
-                );
-            }
-            return await query.OrderByDescending(c => c.DateArrivee).ToListAsync();
+            return await uow.Colis.SearchAsync(searchTerm);
         }
 
         public async Task<Dictionary<StatutColis, int>> GetStatisticsByStatusAsync()
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.Colis
-                .Where(c => c.Actif)
-                .GroupBy(c => c.Statut)
-                .ToDictionaryAsync(g => g.Key, g => g.Count());
+            using var uow = await _uowFactory.CreateAsync();
+            return await uow.Colis.GetStatisticsByStatusAsync();
         }
 
         public async Task<IEnumerable<Colis>> GetByUserIdAsync(Guid userId)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            var user = await context.Utilisateurs.FindAsync(userId);
+            using var uow = await _uowFactory.CreateAsync();
+            var user = await uow.Utilisateurs.GetByIdAsync(userId);
             if (user == null || !user.ClientId.HasValue)
             {
                 return Enumerable.Empty<Colis>();
             }
-            return await context.Colis
-                .Include(c => c.Client)
-                .Include(c => c.Conteneur)
-                .Include(c => c.Barcodes.Where(b => b.Actif))
-                .Where(c => c.ClientId == user.ClientId.Value && c.Actif)
-                .OrderByDescending(c => c.DateArrivee)
-                .ToListAsync();
+            return await uow.Colis.GetByClientAsync(user.ClientId.Value);
         }
-		
-		public async Task<PagedResult<ColisListItemDto>> GetPagedAsync(int page, int pageSize, string? search = null, Guid? clientId = null)
-		{
-			await using var context = await _contextFactory.CreateDbContextAsync();
-			
-			var query = context.Colis
-				.Include(c => c.Client)
-				.Include(c => c.Conteneur)
-				.Include(c => c.Barcodes)
-				.Where(c => c.Actif)
-				.AsNoTracking(); // Important pour la lecture seule !
 
-			if (clientId.HasValue)
-			{
-				query = query.Where(c => c.ClientId == clientId);
-			}
+        public async Task<PagedResult<ColisListItemDto>> GetPagedAsync(int page, int pageSize, string? search = null, Guid? clientId = null)
+        {
+            using var uow = await _uowFactory.CreateAsync();
 
-			if (!string.IsNullOrWhiteSpace(search))
-			{
-				search = search.ToLower();
-				query = query.Where(c => 
-					c.NumeroReference.ToLower().Contains(search) || 
-					c.Designation.ToLower().Contains(search) ||
-					c.Barcodes.Any(b => b.Value.Contains(search))
-				);
-			}
+            var query = await uow.Colis.GetPagedAsync(page, pageSize, search, clientId);
 
-			var totalCount = await query.CountAsync();
+            return query;
+        }
 
-			var items = await query
-				.OrderByDescending(c => c.DateArrivee)
-				.Skip((page - 1) * pageSize)
-				.Take(pageSize)
-				// PROJECTION DIRECTE EN DTO (Évite de charger toutes les colonnes inutiles)
-				.Select(c => new ColisListItemDto
-				{
-					Id = c.Id,
-					NumeroReference = c.NumeroReference,
-					Designation = c.Designation,
-					Statut = c.Statut,
-					ClientNomComplet = c.Client.Nom + " " + c.Client.Prenom,
-					ClientTelephonePrincipal = c.Client.TelephonePrincipal,
-					ConteneurNumeroDossier = c.Conteneur != null ? c.Conteneur.NumeroDossier : null,
-					// Pour les codes barres, on prend juste le premier pour la liste, ou on les joint
-					AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)),
-					DestinationFinale = c.DestinationFinale,
-					DateArrivee = c.DateArrivee,
-					NombrePieces = c.NombrePieces,
-					PrixTotal = c.PrixTotal,
-					SommePayee = c.SommePayee
-				})
-				.ToListAsync();
-
-			return new PagedResult<ColisListItemDto>
-			{
-				Items = items,
-				TotalCount = totalCount,
-				PageNumber = page,
-				PageSize = pageSize
-			};
-		}
-		
     }
 }

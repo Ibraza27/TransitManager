@@ -8,6 +8,7 @@ using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
 using TransitManager.Core.Exceptions;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -214,25 +215,29 @@ namespace TransitManager.Infrastructure.Services
             // 4. BOUCLE DE NOTIFICATION CLIENTS
             string descriptionEvent = $"Mise à jour via conteneur {conteneur.NumeroDossier} : {conteneur.Statut}";
 
+            var notificationRequests = new List<NotificationRequest>(); // Liste pour envoi groupé
+
             // Pour les Colis
             foreach (var colis in colisToUpdate)
             {
-                // Timeline
+                // Timeline (reste synchrone pour l'instant)
                 await _timelineService.AddEventAsync(descriptionEvent, colisId: colis.Id, statut: newColisStatus.ToString());
                 
-                // Notif Client
+                // Préparation Notif Client
                 if (colis.Client?.UserAccount != null)
                 {
                     string emoji = newColisStatus == StatutColis.Livre ? "✅" : "📦";
-                    await _notificationService.CreateAndSendAsync(
-                        title: $"{emoji} Suivi Colis",
-                        message: $"Votre colis {colis.NumeroReference} est maintenant : {newColisStatus}",
-                        userId: colis.Client.UserAccount.Id,
-                        categorie: CategorieNotification.StatutColis,
-                        actionUrl: $"/colis/edit/{colis.Id}",
-                        entityId: colis.Id,
-                        entityType: "Colis"
-                    );
+                    notificationRequests.Add(new NotificationRequest
+                    {
+                        Title = $"{emoji} Suivi Colis",
+                        Message = $"Votre colis {colis.NumeroReference} est maintenant : {newColisStatus}",
+                        UserId = colis.Client.UserAccount.Id,
+                        Categorie = CategorieNotification.StatutColis,
+                        ActionUrl = $"/colis/edit/{colis.Id}",
+                        EntityId = colis.Id,
+                        EntityType = "Colis",
+                        Priorite = PrioriteNotification.Normale
+                    });
                 }
             }
 
@@ -242,20 +247,28 @@ namespace TransitManager.Infrastructure.Services
                 // Timeline
                 await _timelineService.AddEventAsync(descriptionEvent, vehiculeId: vehicule.Id, statut: newVehiculeStatus.ToString());
                 
-                // Notif Client
+                // Préparation Notif Client
                 if (vehicule.Client?.UserAccount != null)
                 {
                     string emoji = newVehiculeStatus == StatutVehicule.Livre ? "✅" : "🚗";
-                    await _notificationService.CreateAndSendAsync(
-                        title: $"{emoji} Suivi Véhicule",
-                        message: $"Votre véhicule {vehicule.Marque} ({vehicule.Immatriculation}) est maintenant : {newVehiculeStatus}",
-                        userId: vehicule.Client.UserAccount.Id,
-                        categorie: CategorieNotification.StatutVehicule,
-                        actionUrl: $"/vehicule/edit/{vehicule.Id}",
-                        entityId: vehicule.Id,
-                        entityType: "Vehicule"
-                    );
+                    notificationRequests.Add(new NotificationRequest
+                    {
+                        Title = $"{emoji} Suivi Véhicule",
+                        Message = $"Votre véhicule {vehicule.Marque} ({vehicule.Immatriculation}) est maintenant : {newVehiculeStatus}",
+                        UserId = vehicule.Client.UserAccount.Id,
+                        Categorie = CategorieNotification.StatutVehicule,
+                        ActionUrl = $"/vehicule/edit/{vehicule.Id}",
+                        EntityId = vehicule.Id,
+                        EntityType = "Vehicule",
+                        Priorite = PrioriteNotification.Normale
+                    });
                 }
+            }
+
+            // Envoi groupé des notifications
+            if (notificationRequests.Any())
+            {
+                await _notificationService.CreateAndSendBatchAsync(notificationRequests);
             }
             // === FIN DE LA CORRECTION ===
         }

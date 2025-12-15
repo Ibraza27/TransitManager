@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.Core.Interfaces
 {
@@ -17,7 +18,11 @@ namespace TransitManager.Core.Interfaces
             string? actionUrl = null,
             Guid? entityId = null,
             string? entityType = null,
+
             PrioriteNotification priorite = PrioriteNotification.Normale);
+
+        // Méthode de traitement par lot (Batch Processing)
+        Task CreateAndSendBatchAsync(IEnumerable<NotificationRequest> requests);
 
         Task<IEnumerable<Notification>> GetUserNotificationsAsync(Guid userId, int count = 20);
         Task<int> GetUnreadCountAsync(Guid userId);

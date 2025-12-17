@@ -125,8 +125,8 @@ namespace TransitManager.Infrastructure.Services
                 userId: null, // Broadcast Admin
                 categorie: CategorieNotification.StatutColis,
                 actionUrl: $"/colis/edit/{newColis.Id}", // URL Admin
-                entityId: newColis.Id,
-                entityType: "Colis"
+                relatedEntityId: newColis.Id,
+                relatedEntityType: "Colis"
             );
 
             var clientUser = await uow.Utilisateurs.GetByClientIdAsync(newColis.ClientId);
@@ -134,12 +134,12 @@ namespace TransitManager.Infrastructure.Services
             {
                 await _notificationService.CreateAndSendAsync(
                     title: "📦 Nouveau Colis",
-                    message: $"Un nouveau colis ({newColis.NumeroReference}) a été ajouté à votre dossier.",
-                    userId: clientUser.Id, // Cible le client
+                    message: $"Un nouveau colis ({newColis.Designation}) a été créé pour vous.",
+                    userId: newColis.ClientId,
                     categorie: CategorieNotification.StatutColis,
-                    actionUrl: $"/colis/edit/{newColis.Id}", // Redirige vers le détail
-                    entityId: newColis.Id,
-                    entityType: "Colis"
+                    actionUrl: $"/colis/detail/{newColis.Id}",
+                    relatedEntityId: newColis.Id,
+                    relatedEntityType: "Colis"
                 );
             }
 
@@ -256,8 +256,8 @@ namespace TransitManager.Infrastructure.Services
                             userId: clientUser.Id,
                             categorie: CategorieNotification.StatutColis,
                             actionUrl: $"/colis/edit/{colisInDb.Id}",
-                            entityId: colisInDb.Id,
-                            entityType: "Colis"
+                            relatedEntityId: colisInDb.Id,
+                            relatedEntityType: "Colis"
                         );
                     }
                 }
@@ -394,8 +394,8 @@ namespace TransitManager.Infrastructure.Services
                     userId: null, // null = Broadcast aux Admins
                     categorie: CategorieNotification.Inventaire,
                     actionUrl: $"/colis/edit/{colis.Id}",
-                    entityId: colis.Id,
-                    entityType: "Colis"
+                    relatedEntityId: colis.Id,
+                    relatedEntityType: "Colis"
                 );
 
                 // B. Notifier le Client (s'il a un compte utilisateur)
@@ -410,8 +410,8 @@ namespace TransitManager.Infrastructure.Services
                         userId: clientUser.Id, // ID du client
                         categorie: CategorieNotification.Inventaire,
                         actionUrl: $"/colis/edit/{colis.Id}",
-                        entityId: colis.Id,
-                        entityType: "Colis"
+                        relatedEntityId: colis.Id,
+                        relatedEntityType: "Colis"
                     );
                 }
                 // =============================
@@ -555,6 +555,49 @@ namespace TransitManager.Infrastructure.Services
             var query = await uow.Colis.GetPagedAsync(page, pageSize, search, clientId);
 
             return query;
+        }
+
+
+        public async Task<Dictionary<string, decimal>> GetMonthlyVolumeAsync(int months)
+        {
+             // On ne peut pas utiliser uow directement pour des requêtes custom GroupBy complexes sur DbContext si uow n'expose pas le DbSet directement de manière compatible.
+             // On utilise contextFactory si dispo, sinon uow.
+             // ColisService a uowFactory... Il faut voir si on peut accès au context.
+             // ColisRepository a le context.
+             // Hack : on utilise uow.Colis.GetContext() si possible ? Non.
+             // On va simuler ou ajouter ça au repo idéalement, mais ici on va faire simple.
+             // uowFactory.CreateAsync() -> uow.
+             // Pas d'accès direct au DbContext ici (c'est un UoW pattern).
+             // Il faut ajouter la méthode au Repository ColisRepository.
+             // Pour aller plus vite, on va récupérer tous les colis (si pas trop nombreux) et filtrer en mémoire, C'EST SALE mais direct.
+             // Ou mieux : Ajoutons à IColisRepository.
+             
+             // ... Wait, ColisService construction : public ColisService(IUnitOfWorkFactory uowFactory...)
+             
+             // PLAN B (Lazy) : In-Memory filtering (Ok pour < 10000 colis)
+             using var uow = await _uowFactory.CreateAsync();
+             var allColis = await uow.Colis.GetAllAsync(); // AIE, GetAll retourne tout ?
+             
+             var limitDate = DateTime.UtcNow.AddMonths(-months);
+             var filtered = allColis.Where(c => c.DateCreation >= limitDate && c.Actif);
+             
+             var data = filtered.GroupBy(c => new { c.DateCreation.Year, c.DateCreation.Month })
+                .Select(g => new { 
+                    Year = g.Key.Year, 
+                    Month = g.Key.Month, 
+                    Volume = g.Sum(x => x.Volume) 
+                })
+                .ToList();
+
+            var result = new Dictionary<string, decimal>();
+            for (int i = 0; i < months; i++)
+            {
+                var d = DateTime.UtcNow.AddMonths(-i);
+                var key = d.ToString("MMM yyyy"); 
+                var entry = data.FirstOrDefault(x => x.Year == d.Year && x.Month == d.Month);
+                result[key] = entry?.Volume ?? 0;
+            }
+            return result;
         }
 
     }

@@ -248,6 +248,40 @@ namespace TransitManager.Web.Services
             catch { return null; }
         }
 
+        public async Task<Document?> RequestDocumentAsync(DocumentRequestDto request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/documents/request", request);
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<Document>(_jsonOptions);
+                }
+                return null;
+            }
+            catch { return null; }
+        }
+
+        public async Task<Document?> GetFirstMissingDocumentAsync(Guid clientId)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<Document>($"api/documents/missing/first?clientId={clientId}", _jsonOptions);
+            }
+            catch { return null; }
+        }
+
+        public async Task<int> GetMissingDocumentsCountAsync(Guid clientId)
+        {
+            try
+            {
+                var result = await _httpClient.GetFromJsonAsync<JsonElement>($"api/documents/missing/count?clientId={clientId}");
+                if(result.TryGetProperty("count", out var c)) return c.GetInt32();
+                return 0;
+            }
+            catch { return 0; }
+        }
+
         public async Task<bool> DeleteVehiculeAsync(Guid id)
         {
             try
@@ -976,6 +1010,30 @@ namespace TransitManager.Web.Services
 				return false;
 			}
 		}
+
+
+
+        public async Task<decimal> GetClientBalanceAsync(Guid clientId)
+        {
+             try
+             {
+                 var str = await _httpClient.GetStringAsync($"api/paiements/client/{clientId}/balance");
+                 // Handle simple JSON number or raw string
+                 if (decimal.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var bal)) 
+                     return bal;
+                 return 0;
+             }
+             catch { return 0; }
+        }
+
+        public async Task<AdminDashboardStatsDto?> GetAdminDashboardStatsAsync()
+        {
+             try
+             {
+                 return await _httpClient.GetFromJsonAsync<AdminDashboardStatsDto>("api/dashboard/admin", _jsonOptions);
+             }
+             catch { return null; }
+        }
 
     }
 }

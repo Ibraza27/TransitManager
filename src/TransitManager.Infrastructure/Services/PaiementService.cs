@@ -133,8 +133,8 @@ namespace TransitManager.Infrastructure.Services
 					clientUser.Id,
 					CategorieNotification.Paiement,
 					actionUrl: GetPaiementActionUrl(paiement),
-					entityId: paiement.Id,
-					entityType: "Paiement"
+					relatedEntityId: paiement.Id,
+					relatedEntityType: "Paiement"
 				);
 			}
 
@@ -145,8 +145,8 @@ namespace TransitManager.Infrastructure.Services
 				null, // Admin
 				CategorieNotification.Paiement,
 				actionUrl: GetPaiementActionUrl(paiement), // <--- URL CORRIGÉE
-				entityId: paiement.Id,
-				entityType: "Paiement"
+				relatedEntityId: paiement.Id,
+				relatedEntityType: "Paiement"
 			);
 
 			_messenger.Send(new PaiementUpdatedMessage());
@@ -179,8 +179,8 @@ namespace TransitManager.Infrastructure.Services
 				null, // Admin seulement pour modif
 				CategorieNotification.Paiement,
 				actionUrl: GetPaiementActionUrl(paiement),
-				entityId: paiement.Id,
-				entityType: "Paiement"
+				relatedEntityId: paiement.Id,
+				relatedEntityType: "Paiement"
 			);
 			
             await _timelineService.AddEventAsync(
@@ -450,5 +450,32 @@ namespace TransitManager.Infrastructure.Services
 			return "/finance"; // Fallback
 		}
 		
+		
+        public async Task<Dictionary<string, decimal>> GetMonthlyRevenueHistoryAsync(int months)
+        {
+             await using var context = await _contextFactory.CreateDbContextAsync();
+            var limitDate = DateTime.UtcNow.AddMonths(-months);
+            
+            var data = await context.Paiements
+                .Where(p => p.DatePaiement >= limitDate && p.Statut == StatutPaiement.Paye)
+                .GroupBy(p => new { p.DatePaiement.Year, p.DatePaiement.Month })
+                .Select(g => new { 
+                    Year = g.Key.Year, 
+                    Month = g.Key.Month, 
+                    Total = g.Sum(x => x.Montant) 
+                })
+                .ToListAsync();
+
+            var result = new Dictionary<string, decimal>();
+            for (int i = 0; i < months; i++)
+            {
+                var d = DateTime.UtcNow.AddMonths(-i);
+                var key = d.ToString("MMM yyyy"); 
+                var entry = data.FirstOrDefault(x => x.Year == d.Year && x.Month == d.Month);
+                result[key] = entry?.Total ?? 0;
+            }
+            return result;
+        }
+
     }
 }

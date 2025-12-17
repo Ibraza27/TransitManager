@@ -106,6 +106,17 @@ namespace TransitManager.Core.Entities
         /// </summary>
         public DateTime? DateDernierAcces { get; set; }
         /// <summary>
+        /// Statut de validation du document
+        /// </summary>
+        public StatutDocument Statut { get; set; } = StatutDocument.Valide;
+
+        /// <summary>
+        /// Commentaire de l'admin en cas de rejet ou de demande
+        /// </summary>
+        [StringLength(500)]
+        public string? CommentaireAdmin { get; set; }
+
+        /// <summary>
         /// ID du véhicule associé (si applicable)
         /// </summary>
         public Guid? VehiculeId { get; set; }

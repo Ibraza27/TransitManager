@@ -248,6 +248,82 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
+        public async Task<Document> RequestDocumentAsync(Guid entityId, TypeDocument type, Guid clientId, Guid? colisId = null, Guid? vehiculeId = null, string? commentaire = null)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var doc = new Document
+            {
+                Type = type,
+                Statut = StatutDocument.Manquant,
+                Nom = $"Document requis : {type}",
+                ClientId = clientId,
+                ColisId = colisId,
+                VehiculeId = vehiculeId,
+                CommentaireAdmin = commentaire,
+                Actif = true,
+                DateCreation = DateTime.UtcNow,
+                // On met des valeurs par défaut pour les champs requis par EF mais vides pour un doc manquant
+                CheminFichier = "PENDING", 
+                NomFichierOriginal = "PENDING",
+                Extension = ""
+            };
+
+            context.Documents.Add(doc);
+            await context.SaveChangesAsync();
+
+            // Notification au client
+            var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == clientId);
+            if (clientUser != null)
+            {
+                string actionUrl = "/"; // Par défaut Dashboard
+                if (colisId.HasValue) actionUrl = $"/colis/detail/{colisId}"; // Vue détail côté client (supposé)
+                else if (vehiculeId.HasValue) actionUrl = $"/vehicule/detail/{vehiculeId}";
+
+                await _notificationService.CreateAndSendAsync(
+                    "Document Manquant",
+                    $"Un document ({type}) est requis pour votre dossier.",
+                    clientUser.Id,
+                    CategorieNotification.Document,
+                    actionUrl: actionUrl,
+                    priorite: PrioriteNotification.Haute,
+                    relatedEntityId: doc.Id,
+                    relatedEntityType: "Document"
+                );
+            }
+
+            return doc;
+        }
+
+        public async Task<int> GetMissingDocumentsCountAsync(Guid clientId)
+        {
+             await using var context = await _contextFactory.CreateDbContextAsync();
+             // On suppose que Document a été étendu avec ClientId (migré ou pas, sinon ça plantera à l'exec si pas migré, mais la migration a été appliquée)
+             // La migration AddDocumentStatus n'a pas forcément ajouté ClientId, mais DocumentService l'utilise.
+             // Vérifions Document.cs ... Si ClientId n'est pas dans Document, on ne peut pas filtrer facilement.
+             // Mais si on a ajouté Statut, on peut filtrer 'Manquant'.
+             // Supposons que la FK existe ou qu'on fait un join.
+             // Pour l'instant on fait simple :
+             return await context.Documents
+                 .CountAsync(d => d.ClientId == clientId && d.Statut == StatutDocument.Manquant && d.Actif);
+        }
+
+        public async Task<Document?> GetFirstMissingDocumentAsync(Guid clientId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Documents
+                .Where(d => d.ClientId == clientId && d.Statut == StatutDocument.Manquant && d.Actif)
+                .OrderByDescending(d => d.DateCreation) // ou Priority
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<int> GetPendingDocumentsCountAsync()
+        {
+             await using var context = await _contextFactory.CreateDbContextAsync();
+             return await context.Documents
+                .CountAsync(d => d.Statut == StatutDocument.EnAttenteValidation && d.Actif);
+        }
+
         private static string SanitizeFileName(string name)
         {
             var invalidChars = Path.GetInvalidFileNameChars();

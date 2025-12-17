@@ -1,4 +1,5 @@
 @page "/colis/edit/{Id:guid}"
+@page "/colis/detail/{Id:guid}"
 @page "/colis/create"
 @using System.Text.Json
 @using TransitManager.Core.DTOs
@@ -101,10 +102,14 @@
                     </button>
                 </li>
                 <li class="nav-item">
-					<button class="nav-link @(_activeTab == "suivi" ? "active fw-bold" : "")" @onclick='() => _activeTab = "suivi"'>
-                        <i class="bi bi-chat-left-text me-2"></i>
-                        Suivi & Discussion
-                        @if(_unreadMessagesCount > 0 && _activeTab != "suivi")
+                    <button class="nav-link @(_activeTab == "suivi" ? "active fw-bold" : "")" @onclick='() => _activeTab = "suivi"'>
+                         <i class="bi bi-clock-history me-2"></i>Suivi
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "discussion" ? "active fw-bold" : "")" @onclick='() => _activeTab = "discussion"'>
+                        <i class="bi bi-chat-left-text me-2"></i>Discussion
+                        @if(_unreadMessagesCount > 0 && _activeTab != "discussion")
                         {
                             <span class="badge bg-danger rounded-pill ms-2">@_unreadMessagesCount</span>
                         }
@@ -329,22 +334,28 @@
                     <DocumentManager EntityId="@_colis.Id" EntityType="Colis" />
                 </div>
             }
-            <!-- ONGLET 3 : SUIVI & DISCUSSION -->
+            <!-- ONGLET 3 : SUIVI -->
             @if (!IsNew)
             {
                 <div class="tab-pane fade @(_activeTab == "suivi" ? "show active" : "")">
-                    <div class="row g-4">
-                        <div class="col-lg-5">
-                            <!-- TIMELINE -->
-                            <Timeline EntityId="@_colis.Id" EntityType="Colis" />
+                     <div class="row">
+                        <div class="col-12">
+                             <Timeline EntityId="@_colis.Id" EntityType="Colis" />
                         </div>
-                        <div class="col-lg-7">
-                            <!-- CHAT -->
-							<!-- On passe _activeTab == "suivi" pour dire au chat s'il est affiché -->
+                    </div>
+                </div>
+            }
+             <!-- ONGLET 4 : DISCUSSION -->
+            @if (!IsNew)
+            {
+                <div class="tab-pane fade @(_activeTab == "discussion" ? "show active" : "")">
+                     <div class="row">
+                        <div class="col-12">
+                            <!-- On passe _activeTab == "discussion" pour dire au chat s'il est affiché -->
 							<ChatBox EntityId="@_colis.Id" 
 									 EntityType="Colis" 
 									 OnUnreadCountChanged="UpdateUnreadBadge" 
-									 IsVisible="@(_activeTab == "suivi")" />
+									 IsVisible="@(_activeTab == "discussion")" />
                         </div>
                     </div>
                 </div>

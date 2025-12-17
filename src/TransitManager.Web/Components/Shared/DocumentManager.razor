@@ -4,12 +4,25 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 
+
+    
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthStateProvider
+
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
         <h5 class="mb-0 text-primary"><i class="bi bi-folder2-open me-2"></i>Documents (@_filteredDocuments.Count())</h5>
-        <button class="btn btn-sm btn-outline-primary" @onclick="LoadDocuments" title="Actualiser">
-            🔄 <!-- Émoji Actualiser -->
-        </button>
+        <div class="d-flex gap-2">
+            @if(IsAdmin)
+            {
+                <button class="btn btn-sm btn-outline-danger" @onclick="() => _showRequestModal = true">
+                    <i class="bi bi-plus-circle me-1"></i>Demander Doc
+                </button>
+            }
+            <button class="btn btn-sm btn-outline-primary" @onclick="LoadDocuments" title="Actualiser">
+                🔄
+            </button>
+        </div>
     </div>
     
     <div class="card-body">
@@ -28,8 +41,8 @@
                 <div class="col-md-7">
                     <label class="form-label small fw-bold">Sélectionner un fichier</label>
                     <!-- Liste d'extensions étendue -->
-                    <InputFile OnChange="OnInputFileChange" class="form-control form-control-sm" 
-                               accept=".pdf,.doc,.docx,.txt,.rtf,.odf,.odt,.html,.htm,.aac,.mp3,.wav,.wma,.ogg,.jpg,.jpeg,.png,.gif,.tif,.tiff,.mp4,.avi,.mov,.wmv,.mpeg,.mpg,.zip,.rar,.7z,.xls,.xlsx,.ppt,.pptx" />
+                <InputFile id="docUploadInput" OnChange="OnInputFileChange" class="form-control form-control-sm" 
+                           accept=".pdf,.doc,.docx,.txt,.rtf,.odf,.odt,.html,.htm,.aac,.mp3,.wav,.wma,.ogg,.jpg,.jpeg,.png,.gif,.tif,.tiff,.mp4,.avi,.mov,.wmv,.mpeg,.mpg,.zip,.rar,.7z,.xls,.xlsx,.ppt,.pptx" />
                 </div>
                 <div class="col-md-2">
                     <button class="btn btn-success btn-sm w-100" @onclick="UploadFile" disabled="@(_selectedFile == null || _isUploading)">
@@ -88,31 +101,70 @@
                         </tr>
                     </thead>
                     <tbody>
+
                         @foreach (var doc in _filteredDocuments)
                         {
-                            <tr>
-                                <td><span class="badge bg-secondary fw-normal">@doc.Type</span></td>
+                            <tr class="@GetRowClass(doc.Statut)">
                                 <td>
-                                    <i class="bi @GetIconClass(doc.Extension) me-2"></i>
-                                    <span class="fw-medium" title="@doc.NomFichierOriginal">@doc.Nom</span>
+                                    <span class="badge @GetBadgeClass(doc.Statut) fw-normal">@doc.Type</span>
+                                    @if(doc.Statut == StatutDocument.Manquant)
+                                    {
+                                        <div class="small text-danger fw-bold mt-1">MANQUANT</div>
+                                    }
+                                </td>
+                                <td>
+                                    @if(doc.Statut == StatutDocument.Manquant)
+                                    {
+                                         <span class="text-muted fst-italic">En attente de réception...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi @GetIconClass(doc.Extension) me-2"></i>
+                                        <span class="fw-medium" title="@doc.NomFichierOriginal">@doc.Nom</span>
+                                    }
+                                    @if(!string.IsNullOrEmpty(doc.CommentaireAdmin))
+                                    {
+                                        <div class="small text-warning mt-1"><i class="bi bi-info-circle me-1"></i>@doc.CommentaireAdmin</div>
+                                    }
                                 </td>
                                 <td class="small text-muted">@doc.TailleFormatee</td>
                                 <td class="small text-muted">@doc.DateCreation.ToString("dd/MM/yy HH:mm")</td>
                                 <td class="text-end">
-                                    <!-- Bouton Visualiser (Oeil) -->
-                                    <a href="@GetPreviewUrl(doc.Id)" target="_blank" class="btn btn-sm btn-link text-dark text-decoration-none" title="Visualiser">
-                                        👁️
-                                    </a>
-                                    
-                                    <!-- Bouton Télécharger (Flèche bas) -->
-                                    <button class="btn btn-sm btn-link text-primary text-decoration-none" @onclick="() => DownloadFile(doc)" title="Télécharger">
-                                        ⬇️
-                                    </button>
-                                    
-                                    <!-- Bouton Supprimer (Poubelle) -->
-                                    <button class="btn btn-sm btn-link text-danger text-decoration-none" @onclick="() => DeleteFile(doc)" title="Supprimer">
-                                        🗑️
-                                    </button>
+                                    @if(doc.Statut == StatutDocument.Manquant)
+                                    {
+                                        @if(!IsAdmin) 
+                                        {
+                                             <button class="btn btn-sm btn-danger text-white shadow-sm" @onclick="() => openUploadForMissing(doc)">
+                                                <i class="bi bi-upload me-1"></i>Envoyer
+                                             </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-link text-danger" @onclick="() => DeleteFile(doc)" title="Annuler la demande">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <!-- Bouton Visualiser (Oeil) -->
+                                        <a href="@GetPreviewUrl(doc.Id)" target="_blank" class="btn btn-sm btn-link text-dark text-decoration-none" title="Visualiser">
+                                            👁️
+                                        </a>
+                                        
+                                        <!-- Bouton Télécharger (Flèche bas) -->
+                                        <button class="btn btn-sm btn-link text-primary text-decoration-none" @onclick="() => DownloadFile(doc)" title="Télécharger">
+                                            ⬇️
+                                        </button>
+                                        
+                                        <!-- Bouton Supprimer (Poubelle) -->
+                                        @if(IsAdmin)
+                                        {
+                                            <button class="btn btn-sm btn-link text-danger text-decoration-none" @onclick="() => DeleteFile(doc)" title="Supprimer">
+                                                🗑️
+                                            </button>
+                                        }
+                                    }
                                 </td>
                             </tr>
                         }
@@ -123,9 +175,50 @@
     </div>
 </div>
 
+<!-- Modal Demande Document -->
+@if (_showRequestModal)
+{
+    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Demander un document manquant</h5>
+                    <button type="button" class="btn-close" @onclick="() => _showRequestModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Type de document requis</label>
+                        <select class="form-select" @bind="_requestType">
+                            @foreach (var t in Enum.GetValues<TypeDocument>()) { <option value="@t">@t</option> }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Note pour le client (optionnel)</label>
+                        <textarea class="form-control" rows="3" @bind="_requestComment" placeholder="Ex: Merci de fournir une copie lisible..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => _showRequestModal = false">Annuler</button>
+                    <button type="button" class="btn btn-primary" @onclick="SendDocumentRequest">Envoyer la demande</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@using TransitManager.Core.DTOs
+
 @code {
     [Parameter] public Guid EntityId { get; set; }
     [Parameter] public string EntityType { get; set; } = "Vehicule";
+
+    private bool IsAdmin = false;
+    private Guid CurrentClientId;
+
+    // Request Modal
+    private bool _showRequestModal = false;
+    private TypeDocument _requestType = TypeDocument.Autre;
+    private string _requestComment = "";
 
     private List<Document> _documents = new();
     private bool _isLoading = false;
@@ -161,6 +254,14 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        IsAdmin = user.IsInRole("Administrateur");
+        
+        var profile = await ApiService.GetUserProfileAsync();
+        if(profile != null && profile.ClientId != Guid.Empty) CurrentClientId = profile.ClientId;
+        // Fallback si admin pour pas planter, mais admin n'upload pas en tant que client normalement
+        
         if (EntityId != Guid.Empty) await LoadDocuments();
     }
 
@@ -181,7 +282,13 @@
         if (_selectedFile == null) return;
         _isUploading = true;
 
-        Guid? clientId = EntityType == "Client" ? EntityId : null;
+        // Déterminer le ClientID : Si c'est un client connecté, c'est lui.
+        // Si c'est l'Admin, on essaie de garder le propriétaire de l'entité (compliqué ici sans charger l'entité)
+        // Simplification : On passe null si admin, le backend essaiera de déduire.
+        
+        Guid? clientId = null;
+        if (!IsAdmin && CurrentClientId != Guid.Empty) clientId = CurrentClientId;
+
         Guid? vehiculeId = EntityType == "Vehicule" ? EntityId : null;
         Guid? colisId = EntityType == "Colis" ? EntityId : null;
         Guid? conteneurId = EntityType == "Conteneur" ? EntityId : null;
@@ -190,6 +297,13 @@
         
         if (doc != null)
         {
+            // Auto-Resolve : Si un doc manquant du même type existait, on le supprime (hack UX)
+            var missing = _documents.FirstOrDefault(d => d.Type == _selectedType && d.Statut == StatutDocument.Manquant);
+            if(missing != null)
+            {
+               await ApiService.DeleteDocumentAsync(missing.Id);
+            }
+
             _selectedFile = null; 
             await LoadDocuments();
         }
@@ -199,6 +313,64 @@
         }
         _isUploading = false;
     }
+    
+    private async Task openUploadForMissing(Document missingDoc)
+    {
+        _selectedType = missingDoc.Type;
+        await JSRuntime.InvokeVoidAsync("triggerClick", "docUploadInput");
+    }
+
+    private async Task SendDocumentRequest()
+    {
+        // On doit connaitre le ClientId de l'entité cible... DocumentManager ne l'a pas en paramètre.
+        // Il faudrait le passer en paramètre du composant ou aller le chercher.
+        // Solution rapide : On récupère l'entité via API pour avoir le ClientId.
+        
+        Guid targetClientId = Guid.Empty;
+        if(EntityType == "Colis") {
+             var c = await ApiService.GetColisByIdAsync(EntityId);
+             targetClientId = c?.ClientId ?? Guid.Empty;
+        } else if(EntityType == "Vehicule") {
+             var v = await ApiService.GetVehiculeByIdAsync(EntityId);
+             targetClientId = v?.ClientId ?? Guid.Empty;
+        }
+        
+        if(targetClientId == Guid.Empty) {
+             await JSRuntime.InvokeVoidAsync("alert", "Impossible de trouver le client associé à ce dossier.");
+             return;
+        }
+
+        var req = new DocumentRequestDto {
+            EntityId = EntityId, // Sert à rien dans le DTO pour l'instant sauf si on l'ajoute
+            Type = _requestType,
+            ClientId = targetClientId,
+            ColisId = EntityType == "Colis" ? EntityId : null,
+            VehiculeId = EntityType == "Vehicule" ? EntityId : null,
+            Commentaire = _requestComment
+        };
+
+        var res = await ApiService.RequestDocumentAsync(req);
+        if(res != null) {
+            _showRequestModal = false;
+            await LoadDocuments();
+        } else {
+             await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la demande.");
+        }
+    }
+
+    private string GetRowClass(StatutDocument statut) => statut switch {
+        StatutDocument.Manquant => "table-danger",
+        StatutDocument.EnAttenteValidation => "table-warning",
+        StatutDocument.Rejete => "table-secondary text-decoration-line-through",
+        _ => ""
+    };
+
+    private string GetBadgeClass(StatutDocument statut) => statut switch {
+        StatutDocument.Manquant => "bg-danger",
+        StatutDocument.Valide => "bg-success",
+        StatutDocument.EnAttenteValidation => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
 
     private string GetPreviewUrl(Guid id)
     {

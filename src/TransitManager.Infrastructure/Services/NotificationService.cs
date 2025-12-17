@@ -32,7 +32,7 @@ namespace TransitManager.Infrastructure.Services
 		public async Task CreateAndSendAsync(
 			string title, string message, Guid? userId,
 			CategorieNotification categorie, string? actionUrl = null,
-			Guid? entityId = null, string? entityType = null,
+			Guid? relatedEntityId = null, string? relatedEntityType = null,
 			PrioriteNotification priorite = PrioriteNotification.Normale)
 		{
 			await using var context = await _contextFactory.CreateDbContextAsync();
@@ -84,8 +84,9 @@ namespace TransitManager.Infrastructure.Services
 					Message = message,
 					Categorie = categorie,
 					ActionUrl = actionUrl,
-					RelatedEntityId = entityId,
-					RelatedEntityType = entityType,
+
+					RelatedEntityId = relatedEntityId,
+					RelatedEntityType = relatedEntityType,
 					Priorite = priorite,
 					Icone = GetIconForCategory(categorie),
 					Couleur = GetColorForCategory(categorie),

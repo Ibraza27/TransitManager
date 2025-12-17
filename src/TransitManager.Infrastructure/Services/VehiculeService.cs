@@ -85,8 +85,8 @@ namespace TransitManager.Infrastructure.Services
                         userId: clientUser.Id,
                         categorie: CategorieNotification.StatutVehicule,
                         actionUrl: $"/vehicule/edit/{vehicule.Id}",
-                        entityId: vehicule.Id,
-                        entityType: "Vehicule"
+                        relatedEntityId: vehicule.Id,
+                        relatedEntityType: "Vehicule"
                     );
                 }
             }
@@ -98,8 +98,8 @@ namespace TransitManager.Infrastructure.Services
                 userId: null, // Broadcast Admin
                 categorie: CategorieNotification.StatutVehicule,
                 actionUrl: $"/vehicule/edit/{vehicule.Id}",
-                entityId: vehicule.Id,
-                entityType: "Vehicule"
+                relatedEntityId: vehicule.Id,
+                relatedEntityType: "Vehicule"
             );
 
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(vehicule.ClientId);
@@ -219,8 +219,8 @@ namespace TransitManager.Infrastructure.Services
                         userId: clientUser.Id,
                         categorie: CategorieNotification.StatutVehicule,
                         actionUrl: $"/vehicule/edit/{vehiculeInDb.Id}",
-                        entityId: vehiculeInDb.Id,
-                        entityType: "Vehicule"
+                        relatedEntityId: vehiculeInDb.Id,
+                        relatedEntityType: "Vehicule"
                     );
                 }
             }

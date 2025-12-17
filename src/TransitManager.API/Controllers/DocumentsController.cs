@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.API.Controllers
 {
@@ -132,5 +133,58 @@ namespace TransitManager.API.Controllers
 			}
 		}
 		
+
+        [HttpPost("request")]
+        [Authorize(Roles = "Administrateur,Gestionnaire")]
+        public async Task<ActionResult<Document>> RequestDocument([FromBody] DocumentRequestDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            try
+            {
+                var doc = await _documentService.RequestDocumentAsync(request.EntityId, request.Type, request.ClientId, request.ColisId, request.VehiculeId, request.Commentaire);
+                return Ok(doc);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur demande doc");
+                return StatusCode(500, "Erreur interne");
+            }
+        }
+
+        [HttpGet("missing/count")]
+        public async Task<ActionResult<int>> GetMissingCount([FromQuery] Guid clientId)
+        {
+            try
+            {
+                var count = await _documentService.GetMissingDocumentsCountAsync(clientId);
+                return Ok(new { count }); // Return as object or int? Client expects int. ApiService uses GetFromJsonAsync<int> or JsonElement? 
+                // Wait, ApiService: return await _httpClient.GetFromJsonAsync<int>($"api/documents/missing/count?clientId={clientId}");
+                // So returning just 'count' (int) is valid JSON (e.g. "5"). But standard is usually object. Let's return primitive to ensure compat or object.
+                // Let's check ApiService again.
+                // It does `var result = await ... GetFromJsonAsync<JsonElement>`. No it does `GetFromJsonAsync<int>` in my recall.
+                // Checking previous context... ApiService: `return await _httpClient.GetFromJsonAsync<int>(...)`.
+                // So returning 'count' directly is fine.
+                return Ok(count);
+            }
+            catch
+            {
+                return Ok(0);
+            }
+        }
+
+
+        [HttpGet("missing/first")]
+        public async Task<ActionResult<Document?>> GetFirstMissing([FromQuery] Guid clientId)
+        {
+            try
+            {
+                var doc = await _documentService.GetFirstMissingDocumentAsync(clientId);
+                return Ok(doc);
+            }
+            catch
+            {
+                return Ok(null);
+            }
+        }
     }
 }

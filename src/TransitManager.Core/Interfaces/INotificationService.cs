@@ -16,8 +16,8 @@ namespace TransitManager.Core.Interfaces
             Guid? userId, // Null = Pour les Admins
             CategorieNotification categorie,
             string? actionUrl = null,
-            Guid? entityId = null,
-            string? entityType = null,
+            Guid? relatedEntityId = null,
+            string? relatedEntityType = null,
 
             PrioriteNotification priorite = PrioriteNotification.Normale);
 

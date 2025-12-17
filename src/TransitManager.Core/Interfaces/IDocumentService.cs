@@ -21,5 +21,17 @@ namespace TransitManager.Core.Interfaces
         
         // Suppression (Logique + Physique)
         Task<bool> DeleteDocumentAsync(Guid id);
+
+        // Demande de document (Admin -> Client)
+        Task<Document> RequestDocumentAsync(Guid entityId, TypeDocument type, Guid clientId, Guid? colisId = null, Guid? vehiculeId = null, string? commentaire = null);
+        
+        // Compteur Dashboard Client
+        Task<int> GetMissingDocumentsCountAsync(Guid clientId);
+        
+        // Helper pour redirection UI
+        Task<Document?> GetFirstMissingDocumentAsync(Guid clientId);
+
+        // Stats Admin
+        Task<int> GetPendingDocumentsCountAsync();
     }
 }

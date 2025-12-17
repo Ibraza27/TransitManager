@@ -112,5 +112,19 @@ namespace TransitManager.API.Controllers
                 return StatusCode(500, "Erreur interne");
             }
         }
+        [HttpGet("client/{clientId}/balance")]
+        public async Task<ActionResult<decimal>> GetClientBalance(Guid clientId)
+        {
+            try
+            {
+                var balance = await _paiementService.GetClientBalanceAsync(clientId);
+                return Ok(balance);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur balance client {ClientId}", clientId);
+                return StatusCode(500, "Erreur interne");
+            }
+        }
     }
 }

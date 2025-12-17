@@ -28,5 +28,6 @@ namespace TransitManager.Core.Interfaces
         Task<byte[]> GenerateReceiptAsync(Guid paiementId);
         Task<decimal> GetClientBalanceAsync(Guid clientId);
         Task<bool> RecordPartialPaymentAsync(Guid clientId, decimal montant, TypePaiement type, string? reference = null);
+        Task<Dictionary<string, decimal>> GetMonthlyRevenueHistoryAsync(int months);
     }
 }

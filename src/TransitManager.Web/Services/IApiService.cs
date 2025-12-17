@@ -104,6 +104,11 @@ namespace TransitManager.Web.Services
 		Task MarkNotificationAsReadAsync(Guid id);
 		Task MarkAllNotificationsAsReadAsync();
 		Task<bool> CheckEntityExistsAsync(string entityType, Guid id);
-				
+		
+		Task<Document?> RequestDocumentAsync(DocumentRequestDto request);
+		Task<int> GetMissingDocumentsCountAsync(Guid clientId);
+        Task<decimal> GetClientBalanceAsync(Guid clientId); // NEW
+        Task<Document?> GetFirstMissingDocumentAsync(Guid clientId); // NEW
+        Task<AdminDashboardStatsDto?> GetAdminDashboardStatsAsync();
     }
 }

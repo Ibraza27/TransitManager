@@ -91,13 +91,14 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             var debutUtc = debut.ToUniversalTime();
             var finUtc = fin.ToUniversalTime();
-            return await context.Paiements
-                .Include(p => p.Client)
-                .Include(p => p.Conteneur)
-                .Where(p => p.DatePaiement >= debutUtc && p.DatePaiement < finUtc)
-                .AsNoTracking()
-                .OrderByDescending(p => p.DatePaiement)
-                .ToListAsync();
+            var finInclusive = finUtc.Date.AddDays(1).AddTicks(-1);
+                return await context.Paiements
+                    .Include(p => p.Client)
+                    .Include(p => p.Conteneur)
+                    .Where(p => p.DatePaiement >= debutUtc && p.DatePaiement <= finInclusive)
+                    .AsNoTracking()
+                    .OrderByDescending(p => p.DatePaiement)
+                    .ToListAsync();
         }
 
 		public async Task<Paiement> CreateAsync(Paiement paiement)
@@ -424,8 +425,20 @@ namespace TransitManager.Infrastructure.Services
             decimal totalDu = 0;
             if (client.Colis != null)
             {
-                totalDu = client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal);
+                totalDu += client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal);
             }
+            
+            // Include Vehicles
+			var vehicles = await context.Vehicules
+				.Where(v => v.ClientId == clientId && v.Actif)
+				.AsNoTracking()
+				.ToListAsync();
+				
+			if (vehicles.Any())
+			{
+				totalDu += vehicles.Sum(v => v.PrixTotal);
+			}
+
             var totalPaye = client.Paiements?.Where(p => p.Statut == StatutPaiement.Paye).Sum(p => p.Montant) ?? 0;
             return totalDu - totalPaye;
         }

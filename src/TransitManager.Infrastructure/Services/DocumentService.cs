@@ -298,12 +298,6 @@ namespace TransitManager.Infrastructure.Services
         public async Task<int> GetMissingDocumentsCountAsync(Guid clientId)
         {
              await using var context = await _contextFactory.CreateDbContextAsync();
-             // On suppose que Document a été étendu avec ClientId (migré ou pas, sinon ça plantera à l'exec si pas migré, mais la migration a été appliquée)
-             // La migration AddDocumentStatus n'a pas forcément ajouté ClientId, mais DocumentService l'utilise.
-             // Vérifions Document.cs ... Si ClientId n'est pas dans Document, on ne peut pas filtrer facilement.
-             // Mais si on a ajouté Statut, on peut filtrer 'Manquant'.
-             // Supposons que la FK existe ou qu'on fait un join.
-             // Pour l'instant on fait simple :
              return await context.Documents
                  .CountAsync(d => d.ClientId == clientId && d.Statut == StatutDocument.Manquant && d.Actif);
         }
@@ -315,6 +309,15 @@ namespace TransitManager.Infrastructure.Services
                 .Where(d => d.ClientId == clientId && d.Statut == StatutDocument.Manquant && d.Actif)
                 .OrderByDescending(d => d.DateCreation) // ou Priority
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<Document>> GetMissingDocumentsAsync(Guid clientId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Documents
+                .Where(d => d.ClientId == clientId && d.Statut == StatutDocument.Manquant && d.Actif)
+                .OrderByDescending(d => d.DateCreation)
+                .ToListAsync();
         }
 
         public async Task<int> GetPendingDocumentsCountAsync()

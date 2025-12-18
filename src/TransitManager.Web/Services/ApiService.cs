@@ -10,16 +10,20 @@ using Microsoft.AspNetCore.Http;
 using TransitManager.Core.Enums;
 using Microsoft.AspNetCore.Components.Forms;
 
+using Microsoft.JSInterop;
+
 namespace TransitManager.Web.Services
 {
     public class ApiService : IApiService
     {
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly IJSRuntime _jsRuntime;
 
-        public ApiService(HttpClient httpClient)
+        public ApiService(HttpClient httpClient, IJSRuntime jsRuntime)
         {
             _httpClient = httpClient;
+            _jsRuntime = jsRuntime;
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
@@ -62,6 +66,15 @@ namespace TransitManager.Web.Services
             catch { return null; }
         }
 
+        public async Task<IEnumerable<Client>?> SearchClientsAsync(string term)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<IEnumerable<Client>>($"api/clients/search?term={Uri.EscapeDataString(term)}", _jsonOptions);
+            }
+            catch { return null; }
+        }
+
         public async Task<UserProfileDto?> GetUserProfileAsync()
         {
             try
@@ -69,6 +82,56 @@ namespace TransitManager.Web.Services
                 return await _httpClient.GetFromJsonAsync<UserProfileDto>("api/profile");
             }
             catch { return null; }
+        }
+
+        public async Task<IEnumerable<SelectionItemDto>> GetAllEntitiesAsync(string type)
+        {
+            try
+            {
+                // We'll use a new endpoint or map existing ones.
+                // For simplicity, let's call specific existing endpoints and map them, 
+                // but preferably we should have a unified search endpoint.
+                // Assuming we don't want to create new backend endpoints right now if possible:
+                
+                if (type == "Colis")
+                {
+                   // Create a new endpoint in Backend for this or use existing? 
+                   // Existing `api/colis` returns `IEnumerable<Colis>`.
+                   var items = await _httpClient.GetFromJsonAsync<IEnumerable<Colis>>("api/colis", _jsonOptions);
+                   return items?.Select(c => new SelectionItemDto 
+                   { 
+                       Id = c.Id, 
+                       Reference = c.NumeroReference, 
+                       Description = $"{c.NombrePieces} colis - {c.Designation}", 
+                       Info = c.Statut.ToString() 
+                   }) ?? Enumerable.Empty<SelectionItemDto>();
+                }
+                else if (type == "Vehicule")
+                {
+                   var items = await _httpClient.GetFromJsonAsync<IEnumerable<Vehicule>>("api/vehicules", _jsonOptions);
+                   return items?.Select(v => new SelectionItemDto 
+                   { 
+                       Id = v.Id, 
+                       Reference = $"{v.Marque} {v.Modele}", 
+                       Description = $"Immat: {v.Immatriculation}", 
+                       Info = v.Statut.ToString() 
+                   }) ?? Enumerable.Empty<SelectionItemDto>();
+                }
+                 else if (type == "Conteneur")
+                {
+                   var items = await _httpClient.GetFromJsonAsync<IEnumerable<Conteneur>>("api/conteneurs", _jsonOptions);
+                   return items?.Select(c => new SelectionItemDto 
+                   { 
+                       Id = c.Id, 
+                       Reference = c.NumeroDossier, 
+                       Description = string.IsNullOrEmpty(c.NomCompagnie) ? "Conteneur" : c.NomCompagnie, 
+                       Info = c.Statut.ToString() 
+                   }) ?? Enumerable.Empty<SelectionItemDto>();
+                }
+                
+                return Enumerable.Empty<SelectionItemDto>();
+            }
+            catch { return Enumerable.Empty<SelectionItemDto>(); }
         }
 
         public async Task<bool> UpdateUserProfileAsync(UserProfileDto profile)
@@ -280,6 +343,16 @@ namespace TransitManager.Web.Services
                 return 0;
             }
             catch { return 0; }
+        }
+
+        public async Task<IEnumerable<Document>> GetMissingDocumentsAsync(Guid clientId)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<IEnumerable<Document>>($"api/documents/missing/all?clientId={clientId}", _jsonOptions)
+                       ?? Enumerable.Empty<Document>();
+            }
+            catch { return Enumerable.Empty<Document>(); }
         }
 
         public async Task<bool> DeleteVehiculeAsync(Guid id)
@@ -1033,6 +1106,112 @@ namespace TransitManager.Web.Services
                  return await _httpClient.GetFromJsonAsync<AdminDashboardStatsDto>("api/dashboard/admin", _jsonOptions);
              }
              catch { return null; }
+        }
+
+        // --- FINANCE MODULE IMPL ---
+
+
+        public async Task<ClientFinanceSummaryDto?> GetClientFinanceSummaryAsync(Guid clientId)
+        {
+            var response = await _httpClient.GetAsync($"api/finance/summary/{clientId}");
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<ClientFinanceSummaryDto>(_jsonOptions);
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error {response.StatusCode}: {error}");
+            }
+        }
+
+        public async Task<FinanceStatsDto?> GetFinanceStatsAsync(DateTime? startDate = null, DateTime? endDate = null, Guid? clientId = null)
+        {
+            try
+            {
+                var query = new List<string>();
+                if (startDate.HasValue) query.Add($"start={startDate.Value:yyyy-MM-dd}");
+                if (endDate.HasValue) query.Add($"end={endDate.Value:yyyy-MM-dd}");
+                if (clientId.HasValue) query.Add($"clientId={clientId.Value}");
+                
+                var queryString = query.Any() ? "?" + string.Join("&", query) : "";
+                
+                return await _httpClient.GetFromJsonAsync<FinanceStatsDto>($"api/finance/stats{queryString}", _jsonOptions);
+            }
+            catch { return null; }
+        }
+
+        public async Task<IEnumerable<FinancialTransactionDto>?> GetTransactionsAsync(DateTime? startDate = null, DateTime? endDate = null, Guid? clientId = null)
+        {
+             try
+            {
+                var query = new List<string>();
+                if (startDate.HasValue) query.Add($"start={startDate.Value:yyyy-MM-dd}");
+                if (endDate.HasValue) query.Add($"end={endDate.Value:yyyy-MM-dd}");
+                if (clientId.HasValue) query.Add($"clientId={clientId.Value}");
+                
+                var queryString = query.Any() ? "?" + string.Join("&", query) : "";
+                
+                return await _httpClient.GetFromJsonAsync<IEnumerable<FinancialTransactionDto>>($"api/finance/transactions{queryString}", _jsonOptions);
+            }
+            catch { return null; }
+        }
+
+        public async Task<IEnumerable<FinancialTransactionDto>?> GetClientTransactionsAsync(Guid clientId)
+        {
+             try
+            {
+                return await _httpClient.GetFromJsonAsync<IEnumerable<FinancialTransactionDto>>($"api/finance/client-transactions/{clientId}", _jsonOptions);
+            }
+            catch { return null; }
+        }
+
+
+        public async Task<TransitManager.Core.Entities.Paiement?> CreatePaymentAsync(TransitManager.Core.Entities.Paiement paiement)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/finance/payment", paiement, _jsonOptions);
+                if (response.IsSuccessStatusCode)
+                    return await response.Content.ReadFromJsonAsync<TransitManager.Core.Entities.Paiement>(_jsonOptions);
+                return null;
+            }
+            catch { return null; }
+        }
+
+        public async Task<bool> DownloadReceiptAsync(Guid paiementId, string fileName)
+        {
+             try
+            {
+                var response = await _httpClient.GetAsync($"api/finance/receipt/{paiementId}");
+                if (!response.IsSuccessStatusCode) return false;
+                
+                var content = await response.Content.ReadAsStreamAsync();
+                using var streamRef = new DotNetStreamReference(content);
+                await _jsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+                return true;
+            }
+             catch { return false; }
+        }
+
+        public async Task<bool> ExportTransactionsAsync(DateTime? start, DateTime? end)
+        {
+            try
+            {
+                var query = $"api/finance/export?";
+                if(start.HasValue) query += $"start={start:yyyy-MM-dd}&";
+                if(end.HasValue) query += $"end={end:yyyy-MM-dd}&";
+
+                var response = await _httpClient.GetAsync(query);
+                if (!response.IsSuccessStatusCode) return false;
+
+                var fileName = $"Finance_{DateTime.Now:yyyyMMdd}.xlsx";
+                var content = await response.Content.ReadAsStreamAsync();
+                using var streamRef = new DotNetStreamReference(content);
+                await _jsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+                return true;
+            }
+             catch { return false; }
         }
 
     }

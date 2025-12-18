@@ -141,5 +141,23 @@ namespace TransitManager.API.Controllers
                 return StatusCode(500, "Une erreur interne est survenue.");
             }
         }
+
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<Client>>> Search([FromQuery] string term)
+        {
+            try
+            {
+                // Simple implementation leveraging existing service methods if possible, or direct repository access
+                // Assuming GetPagedAsync handles search, we can use it or add a specific Search method to IClientService
+                // For now, let's reuse GetPagedAsync with a larger page size or add specific method
+                 var result = await _clientService.GetPagedAsync(1, 20, term);
+                 return Ok(result.Items);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la recherche des clients.");
+                return StatusCode(500, "Une erreur interne est survenue.");
+            }
+        }
     }
 }

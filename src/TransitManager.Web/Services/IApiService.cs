@@ -12,6 +12,8 @@ namespace TransitManager.Web.Services
         Task LogoutAsync();
         
         Task<IEnumerable<Client>?> GetClientsAsync();
+        Task<IEnumerable<Client>?> SearchClientsAsync(string term);
+        Task<IEnumerable<SelectionItemDto>> GetAllEntitiesAsync(string type); // <-- NEW
         Task<UserProfileDto?> GetUserProfileAsync();
         Task<bool> UpdateUserProfileAsync(UserProfileDto profile);
         
@@ -107,8 +109,21 @@ namespace TransitManager.Web.Services
 		
 		Task<Document?> RequestDocumentAsync(DocumentRequestDto request);
 		Task<int> GetMissingDocumentsCountAsync(Guid clientId);
+        Task<IEnumerable<Document>> GetMissingDocumentsAsync(Guid clientId); // NEW for Modal
         Task<decimal> GetClientBalanceAsync(Guid clientId); // NEW
         Task<Document?> GetFirstMissingDocumentAsync(Guid clientId); // NEW
         Task<AdminDashboardStatsDto?> GetAdminDashboardStatsAsync();
+
+        // --- Finance Module ---
+        Task<FinanceStatsDto?> GetFinanceStatsAsync(DateTime? startDate = null, DateTime? endDate = null, Guid? clientId = null); // Admin
+        Task<IEnumerable<FinancialTransactionDto>?> GetTransactionsAsync(DateTime? start = null, DateTime? end = null, Guid? clientId = null); // Admin
+        Task<ClientFinanceSummaryDto?> GetClientFinanceSummaryAsync(Guid clientId); // Client
+
+        Task<IEnumerable<FinancialTransactionDto>?> GetClientTransactionsAsync(Guid clientId); // Client
+        
+        // --- Finance Actions ---
+        Task<TransitManager.Core.Entities.Paiement?> CreatePaymentAsync(TransitManager.Core.Entities.Paiement paiement);
+        Task<bool> DownloadReceiptAsync(Guid paiementId, string fileName);
+        Task<bool> ExportTransactionsAsync(DateTime? start, DateTime? end);
     }
 }

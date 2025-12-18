@@ -110,6 +110,7 @@ builder.Services.AddTransient<IVehiculeService, VehiculeService>();
 builder.Services.AddTransient<IConteneurService, ConteneurService>();
 builder.Services.AddTransient<IPaiementService, PaiementService>();
 builder.Services.AddTransient<INotificationService, NotificationService>();
+builder.Services.AddTransient<IFinanceService, FinanceService>();
 builder.Services.AddTransient<IBarcodeService, BarcodeService>();
 builder.Services.AddTransient<IExportService, ExportService>();
 builder.Services.AddTransient<IBackupService, BackupService>();

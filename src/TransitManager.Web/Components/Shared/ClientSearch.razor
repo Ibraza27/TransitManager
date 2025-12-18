@@ -1,0 +1,80 @@
+@using TransitManager.Core.Entities
+@inject IApiService ApiService
+
+<div class="position-relative">
+    <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" placeholder="Rechercher un client (Nom, Tel...)" 
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="SearchClients" />
+        @if(selectedClient != null)
+        {
+             <button class="btn btn-outline-secondary" @onclick="ClearSelection">
+                <i class="bi bi-x"></i>
+             </button>
+        }
+    </div>
+
+    @if (searchResults != null && searchResults.Any())
+    {
+        <div class="list-group position-absolute w-100 shadow-sm" style="z-index: 1000; max-height: 200px; overflow-y: auto;">
+            @foreach (var client in searchResults)
+            {
+                <button type="button" class="list-group-item list-group-item-action" @onclick="() => SelectClient(client)">
+                    <div class="fw-bold">@client.Prenom @client.Nom</div>
+                    <div class="small text-muted">@client.TelephonePrincipal - @client.Email</div>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<Client> OnClientSelected { get; set; }
+
+    private string searchTerm = "";
+    private List<Client>? searchResults;
+    private Client? selectedClient;
+    private System.Timers.Timer? debounceTimer;
+
+    private void SearchClients()
+    {
+        if (debounceTimer == null)
+        {
+            debounceTimer = new System.Timers.Timer(300);
+            debounceTimer.Elapsed += async (s, e) => await InvokeAsync(PerformSearch);
+            debounceTimer.AutoReset = false;
+        }
+        
+        debounceTimer.Stop();
+        debounceTimer.Start();
+    }
+
+    private async Task PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2) 
+        {
+            searchResults = null;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        searchResults = (await ApiService.SearchClientsAsync(searchTerm))?.ToList();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SelectClient(Client client)
+    {
+        selectedClient = client;
+        searchTerm = $"{client.Prenom} {client.Nom}";
+        searchResults = null;
+        await OnClientSelected.InvokeAsync(client);
+    }
+
+    private void ClearSelection()
+    {
+        selectedClient = null;
+        searchTerm = "";
+        searchResults = null;
+        OnClientSelected.InvokeAsync(null);
+    }
+}

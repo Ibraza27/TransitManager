@@ -186,5 +186,19 @@ namespace TransitManager.API.Controllers
                 return Ok(null);
             }
         }
+
+        [HttpGet("missing/all")]
+        public async Task<ActionResult<IEnumerable<Document>>> GetAllMissing([FromQuery] Guid clientId)
+        {
+            try
+            {
+                var docs = await _documentService.GetMissingDocumentsAsync(clientId);
+                return Ok(docs);
+            }
+            catch
+            {
+                return Ok(new List<Document>());
+            }
+        }
     }
 }

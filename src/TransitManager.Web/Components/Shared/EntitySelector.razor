@@ -1,0 +1,119 @@
+@using TransitManager.Core.Entities
+@using TransitManager.Core.DTOs
+@inject IApiService ApiService
+
+@if (Show)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">Sélectionner : @EntityType</h5>
+                    <button type="button" class="btn-close" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Rechercher..." @bind="searchTerm" @bind:event="oninput" />
+                    </div>
+
+                    <div class="list-group overflow-auto" style="max-height: 400px;">
+                        @if (IsLoading)
+                        {
+                            <div class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+                        }
+                        else if (FilteredItems.Any())
+                        {
+                            @foreach (var item in FilteredItems)
+                            {
+                                <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" @onclick="() => Select(item)">
+                                    <div>
+                                        <div class="fw-bold">@item.Reference</div>
+                                        <div class="small text-muted">@item.Description</div>
+                                    </div>
+                                    <span class="badge bg-light text-dark border">@item.Info</span>
+                                </button>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center py-4 text-muted">Aucun résultat</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public string EntityType { get; set; } = "Colis";
+    [Parameter] public EventCallback<SelectionItem> OnSelected { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<SelectionItem> allItems = new();
+    private string searchTerm = "";
+    private bool IsLoading = false;
+
+    public class SelectionItem
+    {
+        public Guid Id { get; set; }
+        public string Reference { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Info { get; set; } = "";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Show && !IsLoading && allItems.Count == 0)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
+        allItems.Clear();
+        
+        try
+        {
+            var items = await ApiService.GetAllEntitiesAsync(EntityType);
+            foreach(var item in items)
+            {
+                allItems.Add(new SelectionItem 
+                { 
+                    Id = item.Id, 
+                    Reference = item.Reference, 
+                    Description = item.Description, 
+                    Info = item.Info 
+                });
+            }
+        }
+        catch(Exception ex)
+        {
+             Console.WriteLine($"EntitySelector Error: {ex.Message}");
+        }
+        
+        IsLoading = false;
+    }
+
+    private IEnumerable<SelectionItem> FilteredItems => 
+        allItems.Where(i => string.IsNullOrEmpty(searchTerm) || 
+                            i.Reference.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) || 
+                            i.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+    private async Task Select(SelectionItem item)
+    {
+        await OnSelected.InvokeAsync(item);
+        await Close();
+    }
+
+    private async Task Close()
+    {
+        Show = false;
+        allItems.Clear();
+        await OnClose.InvokeAsync();
+    }
+}

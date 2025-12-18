@@ -27,6 +27,7 @@ namespace TransitManager.Core.Interfaces
         
         // Compteur Dashboard Client
         Task<int> GetMissingDocumentsCountAsync(Guid clientId);
+        Task<IEnumerable<Document>> GetMissingDocumentsAsync(Guid clientId);
         
         // Helper pour redirection UI
         Task<Document?> GetFirstMissingDocumentAsync(Guid clientId);

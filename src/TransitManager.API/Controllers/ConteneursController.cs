@@ -209,6 +209,7 @@ namespace TransitManager.API.Controllers
                 DateArriveeDestination = conteneur.DateArriveeDestination,
                 DateDedouanement = conteneur.DateDedouanement,
                 DateCloture = conteneur.DateCloture,
+                MissingDocumentsCount = conteneur.Documents.Count(d => d.Statut == Core.Enums.StatutDocument.Manquant)
             };
 
             // Remplissage des listes et calculs

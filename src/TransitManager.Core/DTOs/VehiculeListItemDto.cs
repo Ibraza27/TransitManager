@@ -13,6 +13,7 @@ namespace TransitManager.Core.DTOs
         
         // --- AJOUT : Champ manquant ---
         public int Annee { get; set; } 
+        public bool HasMissingDocuments { get; set; } 
         
         public StatutVehicule Statut { get; set; }
         public string ClientNomComplet { get; set; } = string.Empty;

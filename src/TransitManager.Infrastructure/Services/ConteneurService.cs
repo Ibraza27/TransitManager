@@ -44,6 +44,7 @@ namespace TransitManager.Infrastructure.Services
                 .Include(c => c.Colis).ThenInclude(col => col.Client)
                 .Include(c => c.Colis).ThenInclude(col => col.Barcodes.Where(b => b.Actif))
                 .Include(c => c.Vehicules).ThenInclude(v => v.Client)
+                .Include(c => c.Documents)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
@@ -54,6 +55,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Conteneurs
                 .Include(c => c.Colis)
                 .Include(c => c.Vehicules)
+                .Include(c => c.Documents)
                 .AsNoTracking()
                 .OrderByDescending(c => c.DateCreation)
                 .ToListAsync();
@@ -381,6 +383,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Conteneurs
                 .Include(c => c.Colis)
                 .Include(c => c.Vehicules)
+                .Include(c => c.Documents)
                 .Where(c => c.Actif && (c.Colis.Any(col => col.ClientId == clientId && col.Actif) || c.Vehicules.Any(v => v.ClientId == clientId && v.Actif)))
                 .OrderByDescending(c => c.DateCreation)
                 .AsNoTracking()

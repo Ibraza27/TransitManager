@@ -60,6 +60,7 @@ namespace TransitManager.Core.Entities
         // Navigation properties
         public virtual ICollection<Colis> Colis { get; set; } = new List<Colis>();
         public virtual ICollection<Vehicule> Vehicules { get; set; } = new List<Vehicule>();
+        public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
 
 
         public Conteneur()

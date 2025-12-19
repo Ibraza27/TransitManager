@@ -6,6 +6,7 @@
 @using TransitManager.Web.Components.Shared
 @using System.Security.Claims
 @using System.IO
+@using System.Linq
 @inject IApiService ApiService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
@@ -107,6 +108,10 @@
                 <li class="nav-item">
                     <button class="nav-link @(_activeTab == "documents" ? "active fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
                         <i class="bi bi-folder2-open me-2"></i>Documents & Photos
+                         @if (GetMissingDocumentsCount() > 0)
+                        {
+                            <span class="badge bg-danger rounded-pill ms-2">@GetMissingDocumentsCount()</span>
+                        }
                     </button>
                 </li>
              }
@@ -306,6 +311,7 @@
     <!-- MODALES -->
     <VehicleInspectionModal IsVisible="_showInspection"
                             Type="@_vehicule.Type"
+                            IsReadOnly="@(!IsAdmin)"
                             JsonPoints="@_vehicule.EtatDesLieux"
                             JsonStrokes="@_vehicule.EtatDesLieuxRayures"
                             JsonAccessoires="@_vehicule.AccessoiresJson"
@@ -566,5 +572,10 @@
             _isLoading = false;
             StateHasChanged();
         }
+    }
+    private int GetMissingDocumentsCount()
+    {
+        if (_vehicule.Documents == null) return 0;
+        return _vehicule.Documents.Count(d => d.Statut == StatutDocument.Manquant);
     }
 }

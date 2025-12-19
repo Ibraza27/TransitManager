@@ -11,6 +11,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
 @using TransitManager.Web.Components.Shared
+@using System.Linq
 <PageTitle>@(IsNew ? "Nouveau Colis" : "Détail Colis") - Hippocampe</PageTitle>
 <div class="container mt-4 mb-5">
     <!-- En-tête -->
@@ -98,7 +99,11 @@
              {
                 <li class="nav-item">
                     <button class="nav-link @(_activeTab == "documents" ? "active fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
-                        Documents & Photos
+                        <i class="bi bi-folder2-open me-2"></i>Documents & Photos
+                         @if (GetMissingDocumentsCount() > 0)
+                        {
+                            <span class="badge bg-danger rounded-pill ms-2">@GetMissingDocumentsCount()</span>
+                        }
                     </button>
                 </li>
                 <li class="nav-item">
@@ -727,4 +732,9 @@
         }
     }
 	
+    private int GetMissingDocumentsCount()
+    {
+        if (_colis.Documents == null) return 0;
+        return _colis.Documents.Count(d => d.Statut == StatutDocument.Manquant);
+    }
 }

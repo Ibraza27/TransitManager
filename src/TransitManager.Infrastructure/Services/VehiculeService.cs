@@ -336,6 +336,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Vehicules
                 .Include(v => v.Client)
                 .Include(v => v.Conteneur)
+                .Include(v => v.Documents)
                 .AsNoTracking()
                 .OrderByDescending(v => v.DateCreation)
                 .ToListAsync();
@@ -346,6 +347,7 @@ namespace TransitManager.Infrastructure.Services
             await using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Vehicules
                 .Include(v => v.Client)
+                .Include(v => v.Documents)
                 .Where(v => v.ClientId == clientId)
                 .AsNoTracking()
                 .OrderByDescending(v => v.DateCreation)
@@ -414,6 +416,7 @@ namespace TransitManager.Infrastructure.Services
             return await context.Vehicules
                 .Include(v => v.Client)
                 .Include(v => v.Conteneur)
+                .Include(v => v.Documents)
                 .Where(v => v.ClientId == user.ClientId.Value && v.Actif)
                 .OrderByDescending(v => v.DateCreation)
                 .AsNoTracking()
@@ -426,6 +429,7 @@ namespace TransitManager.Infrastructure.Services
              var query = context.Vehicules
                  .Include(v => v.Client)
                  .Include(v => v.Conteneur)
+                 .Include(v => v.Documents)
                  .AsNoTracking()
                  .Where(v => v.Actif);
 
@@ -465,7 +469,8 @@ namespace TransitManager.Infrastructure.Services
                     DateCreation = v.DateCreation,
                     DestinationFinale = v.DestinationFinale,
                     PrixTotal = v.PrixTotal,
-                    SommePayee = v.SommePayee
+                    SommePayee = v.SommePayee,
+                    HasMissingDocuments = v.Documents.Any(d => d.Statut == StatutDocument.Manquant)
                  })
                  .ToListAsync();
 

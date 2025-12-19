@@ -17,6 +17,7 @@ namespace TransitManager.Core.DTOs
         public string PaysDestination { get; set; } = string.Empty;
         public StatutConteneur Statut { get; set; }
         public string? Commentaires { get; set; }
+        public int MissingDocumentsCount { get; set; }
 
         // Dates
         public DateTime? DateReception { get; set; }

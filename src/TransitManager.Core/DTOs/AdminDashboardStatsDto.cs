@@ -11,6 +11,7 @@ namespace TransitManager.Core.DTOs
         public int DocsAValider { get; set; }
         public int NouveauxClientsMois { get; set; }
         public decimal VolumeMensuel { get; set; } // En m3 ou unité pertinente
+        public int MissingDocumentsCount { get; set; } // AJOUT pour Admin
 
         // Charts Data
         public List<MonthlyMetricDto> RevenueLast6Months { get; set; } = new();

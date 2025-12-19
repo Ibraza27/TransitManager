@@ -93,7 +93,8 @@ namespace TransitManager.API.Controllers
 					// --- AJOUTS CRUCIAUX ---
 					NombrePieces = c.NombrePieces,
 					PrixTotal = c.PrixTotal,
-					SommePayee = c.SommePayee
+					SommePayee = c.SommePayee,
+					HasMissingDocuments = c.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant)
 					// -----------------------
 				});
 				
@@ -225,7 +226,8 @@ namespace TransitManager.API.Controllers
 					DateArrivee = c.DateArrivee,
 					NombrePieces = c.NombrePieces,
 					PrixTotal = c.PrixTotal,
-					SommePayee = c.SommePayee
+					SommePayee = c.SommePayee,
+					HasMissingDocuments = c.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant)
 				});
 
 				return Ok(colisDtos);

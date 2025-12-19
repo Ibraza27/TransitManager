@@ -110,6 +110,7 @@ namespace TransitManager.Web.Services
 		Task<Document?> RequestDocumentAsync(DocumentRequestDto request);
 		Task<int> GetMissingDocumentsCountAsync(Guid clientId);
         Task<IEnumerable<Document>> GetMissingDocumentsAsync(Guid clientId); // NEW for Modal
+        Task<IEnumerable<Document>> GetAllMissingDocumentsAsync(); // NEW for Admin
         Task<decimal> GetClientBalanceAsync(Guid clientId); // NEW
         Task<Document?> GetFirstMissingDocumentAsync(Guid clientId); // NEW
         Task<AdminDashboardStatsDto?> GetAdminDashboardStatsAsync();

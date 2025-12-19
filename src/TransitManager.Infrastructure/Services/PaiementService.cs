@@ -415,32 +415,35 @@ namespace TransitManager.Infrastructure.Services
 
         private async Task<decimal> CalculateClientBalanceAsync(Guid clientId, TransitContext context)
         {
-            var client = await context.Clients
-                .Include(c => c.Colis)
-                .ThenInclude(co => co.Conteneur)
-                .Include(c => c.Paiements)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == clientId);
-            if (client == null) return 0;
-            decimal totalDu = 0;
-            if (client.Colis != null)
-            {
-                totalDu += client.Colis.Where(c => c.Actif).Sum(c => c.PrixTotal);
-            }
+            // Consistent with FinanceService.GetClientSummaryAsync Logic:
+            // Sum of Debts = Sum(Colis.Price - Paid) + Sum(Vehicule.Price - Paid) where Debt > 0
             
-            // Include Vehicles
-			var vehicles = await context.Vehicules
-				.Where(v => v.ClientId == clientId && v.Actif)
-				.AsNoTracking()
-				.ToListAsync();
-				
-			if (vehicles.Any())
-			{
-				totalDu += vehicles.Sum(v => v.PrixTotal);
-			}
+            var colisDebt = await context.Colis
+                .Where(c => c.ClientId == clientId && c.Actif)
+                .SumAsync(c => c.PrixTotal - c.SommePayee);
+                
+            var vehiculeDebt = await context.Vehicules
+                .Where(v => v.ClientId == clientId && v.Actif)
+                .SumAsync(v => v.PrixTotal - v.SommePayee);
+                
+            // Ensure we don't count negative debts (overpayments) against the total positive debt 
+            // if that is the desired behavior for "Restant à Payer".
+            // FinanceService implies filtering items where (Price - Paid) > 0.01m.
+            // Let's replicate strict logic if possible, but EF Core SumAsync(Price - Paid) sums net.
+            // If one item is -10 and another is 100, result 90.
+            // But FinanceService logic: 
+            // var colisImpayes = ... Where(restant > 0.01).Sum().
+            // Ideally we should match exactly.
+            
+            var colisStrictDebt = await context.Colis
+                .Where(c => c.ClientId == clientId && c.Actif && (c.PrixTotal - c.SommePayee) > 0.01m)
+                .SumAsync(c => c.PrixTotal - c.SommePayee);
 
-            var totalPaye = client.Paiements?.Where(p => p.Statut == StatutPaiement.Paye).Sum(p => p.Montant) ?? 0;
-            return totalDu - totalPaye;
+            var vehiculeStrictDebt = await context.Vehicules
+                 .Where(v => v.ClientId == clientId && v.Actif && (v.PrixTotal - v.SommePayee) > 0.01m)
+                 .SumAsync(v => v.PrixTotal - v.SommePayee);
+
+            return colisStrictDebt + vehiculeStrictDebt;
         }
 
         private async Task<string> GenerateUniqueReceiptNumberAsync(TransitContext context)

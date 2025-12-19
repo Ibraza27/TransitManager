@@ -355,6 +355,16 @@ namespace TransitManager.Web.Services
             catch { return Enumerable.Empty<Document>(); }
         }
 
+        public async Task<IEnumerable<Document>> GetAllMissingDocumentsAsync()
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<IEnumerable<Document>>($"api/dashboard/admin/missing-documents", _jsonOptions)
+                       ?? Enumerable.Empty<Document>();
+            }
+            catch { return Enumerable.Empty<Document>(); }
+        }
+
         public async Task<bool> DeleteVehiculeAsync(Guid id)
         {
             try

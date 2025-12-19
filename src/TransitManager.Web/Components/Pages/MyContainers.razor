@@ -4,6 +4,7 @@
 @inject IApiService ApiService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@using System.Linq
 @attribute [Authorize]
 
 <PageTitle>Conteneurs - Hippocampe</PageTitle>
@@ -88,7 +89,7 @@
                     {
                         @foreach (var c in FilteredContainers)
                         {
-                            <tr>
+                            <tr class="@(c.Documents.Any(d => d.Statut == StatutDocument.Manquant) ? "table-danger" : "")">
                                 <td class="ps-4 fw-bold text-primary font-monospace">@c.NumeroDossier</td>
                                 <td>
                                     <span class="badge rounded-pill @GetStatusBadgeClass(c.Statut)">@c.Statut</span>

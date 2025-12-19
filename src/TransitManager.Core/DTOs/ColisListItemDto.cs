@@ -8,6 +8,7 @@ namespace TransitManager.Core.DTOs
         public string NumeroReference { get; set; } = string.Empty;
         public string Designation { get; set; } = string.Empty;
         public StatutColis Statut { get; set; }
+        public bool HasMissingDocuments { get; set; }
         public string ClientNomComplet { get; set; } = string.Empty;
         public string? ClientTelephonePrincipal { get; set; }
         public string? ConteneurNumeroDossier { get; set; }

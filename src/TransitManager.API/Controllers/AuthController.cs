@@ -199,7 +199,7 @@ namespace TransitManager.API.Controllers
 
 		
         // === AJOUTER CETTE MÉTHODE ===
-        [Authorize] // Seuls les utilisateurs connectés peuvent se déconnecter
+        [AllowAnonymous]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {

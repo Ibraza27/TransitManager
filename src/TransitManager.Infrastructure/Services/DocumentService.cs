@@ -75,6 +75,9 @@ namespace TransitManager.Infrastructure.Services
                 ColisId = colisId,
                 VehiculeId = vehiculeId,
                 ConteneurId = conteneurId,
+ 
+                // CORRECTION : On met EnAttenteValidation par défaut pour qu'il apparaisse dans le Dashboard
+                Statut = StatutDocument.EnAttenteValidation,
                 Actif = true
             };
 
@@ -325,6 +328,25 @@ namespace TransitManager.Infrastructure.Services
              await using var context = await _contextFactory.CreateDbContextAsync();
              return await context.Documents
                 .CountAsync(d => d.Statut == StatutDocument.EnAttenteValidation && d.Actif);
+        }
+
+        public async Task<int> GetTotalMissingDocumentsCountAsync()
+        {
+             await using var context = await _contextFactory.CreateDbContextAsync();
+             return await context.Documents
+                 .CountAsync(d => d.Statut == StatutDocument.Manquant && d.Actif);
+        }
+
+        public async Task<IEnumerable<Document>> GetAllMissingDocumentsAsync()
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Documents
+                .Include(d => d.Client)
+                .Include(d => d.Vehicule)
+                .Include(d => d.Colis)
+                .Where(d => d.Statut == StatutDocument.Manquant && d.Actif)
+                .OrderByDescending(d => d.DateCreation)
+                .ToListAsync();
         }
 
         private static string SanitizeFileName(string name)

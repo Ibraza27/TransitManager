@@ -308,6 +308,7 @@
     // Méthode pour la classe CSS de la ligne
     private string GetRowClass(ColisListItemDto colis)
     {
+        if (colis.HasMissingDocuments) return "table-danger";
         return IsColisEnRetard(colis) ? "row-retard" : "";
     }
     private string GetStatusBadgeClass(StatutColis status)

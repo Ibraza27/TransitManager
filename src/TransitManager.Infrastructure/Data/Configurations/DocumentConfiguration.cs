@@ -73,7 +73,7 @@ namespace TransitManager.Infrastructure.Data.Configurations
                 .OnDelete(DeleteBehavior.SetNull);
 
             builder.HasOne(d => d.Conteneur)
-                .WithMany()
+                .WithMany(c => c.Documents)
                 .HasForeignKey(d => d.ConteneurId)
                 .OnDelete(DeleteBehavior.SetNull);
 

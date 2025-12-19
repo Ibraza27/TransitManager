@@ -55,6 +55,7 @@ namespace TransitManager.Infrastructure.Repositories
              return await _context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ
                 .Where(c => c.Actif)
                 .OrderByDescending(c => c.DateArrivee)
@@ -76,6 +77,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ
                 .FirstOrDefaultAsync(c => c.NumeroReference == reference && c.Actif);
         }
@@ -85,6 +87,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ
                 .FirstOrDefaultAsync(c => c.Id == id && c.Actif);
         }
@@ -94,6 +97,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Colis>()
                 .Include(c => c.Client) // Already included, but good to be explicit
                 .Include(c => c.Conteneur)
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ
                 .Where(c => c.ClientId == clientId && c.Actif)
                 .OrderByDescending(c => c.DateArrivee)
@@ -105,6 +109,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur) // Already included, but good to be explicit
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ
                 .Where(c => c.ConteneurId == conteneurId && c.Actif)
                 .OrderBy(c => c.Client!.Nom)
@@ -117,6 +122,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ
                 .Where(c => c.Statut == statut && c.Actif)
                 .OrderByDescending(c => c.DateArrivee)
@@ -127,6 +133,7 @@ namespace TransitManager.Infrastructure.Repositories
         {
             return await _context.Set<Colis>()
                 .Include(c => c.Client)
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ
                 .Where(c => c.ConteneurId == null && c.Actif && c.Statut == StatutColis.EnAttente)
                 .OrderBy(c => c.DateArrivee)
@@ -137,6 +144,7 @@ namespace TransitManager.Infrastructure.Repositories
         {
             return await _context.Set<Colis>()
                 .Include(c => c.Client)
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ
                 .Where(c => c.Actif)
                 .OrderByDescending(c => c.DateArrivee)
@@ -149,6 +157,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Colis>()
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ
                 .Where(c => c.DateArrivee >= startDate && c.DateArrivee <= endDate && c.Actif)
                 .OrderByDescending(c => c.DateArrivee)
@@ -170,6 +179,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+                .Include(c => c.Documents)
                 .Include(c => c.Barcodes)
                 .Where(c => c.Actif && (
                     c.NumeroReference.ToLower().Contains(searchTerm) ||
@@ -187,6 +197,7 @@ namespace TransitManager.Infrastructure.Repositories
             var query = _context.Colis
                 .Include(c => c.Client)
                 .Include(c => c.Conteneur)
+                .Include(c => c.Documents) // AJOUTÉ
                 .Include(c => c.Barcodes) // AJOUTÉ (Important pour le search si on filtrait en mémoire, mais ici c'est en base)
                 .Where(c => c.Actif)
                 .AsQueryable();
@@ -226,6 +237,7 @@ namespace TransitManager.Infrastructure.Repositories
                     ConteneurNumero = c.Conteneur != null ? c.Conteneur.NumeroDossier : null,
                     NombrePieces = c.NombrePieces,
                     Volume = c.Volume,
+                    HasMissingDocuments = c.Documents.Any(d => d.Statut == StatutDocument.Manquant),
                     AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)) // AJOUTÉ
                 })
                 .ToListAsync();

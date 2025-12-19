@@ -149,7 +149,12 @@ namespace TransitManager.Infrastructure.Services
 
         // ... (Méthodes de statistiques inchangées ou simplifiées) ...
         public Task<int> GetTotalCountAsync() => Task.FromResult(0); // À implémenter dans le repo si besoin
-        public Task<int> GetNewClientsCountAsync(DateTime since) => Task.FromResult(0);
+        public async Task<int> GetNewClientsCountAsync(DateTime since)
+        {
+            using var uow = await _uowFactory.CreateAsync();
+            var allClients = await uow.Clients.GetAllAsync();
+            return allClients.Count(c => c.DateCreation >= since && c.Actif);
+        }
         public async Task<IEnumerable<Client>> GetRecentClientsAsync(int count) 
         {
              using var uow = await _uowFactory.CreateAsync();

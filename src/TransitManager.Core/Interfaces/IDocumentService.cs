@@ -34,5 +34,7 @@ namespace TransitManager.Core.Interfaces
 
         // Stats Admin
         Task<int> GetPendingDocumentsCountAsync();
+        Task<int> GetTotalMissingDocumentsCountAsync();
+        Task<IEnumerable<Document>> GetAllMissingDocumentsAsync();
     }
 }

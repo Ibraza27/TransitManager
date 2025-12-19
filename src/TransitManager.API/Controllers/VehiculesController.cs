@@ -82,7 +82,8 @@ namespace TransitManager.API.Controllers
 					
 					// <-- MAPPING FINANCIER AJOUTÉ
 					PrixTotal = v.PrixTotal,
-					SommePayee = v.SommePayee
+					SommePayee = v.SommePayee,
+					HasMissingDocuments = v.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant)
 				});
 
 				return Ok(vehiculeDtos);
@@ -163,7 +164,8 @@ namespace TransitManager.API.Controllers
 					DateCreation = v.DateCreation,
 					DestinationFinale = v.DestinationFinale,
 					PrixTotal = v.PrixTotal,
-					SommePayee = v.SommePayee
+					SommePayee = v.SommePayee,
+					HasMissingDocuments = v.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant)
 				});
 
 				return Ok(dtos);

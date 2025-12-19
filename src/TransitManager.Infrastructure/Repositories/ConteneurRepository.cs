@@ -31,6 +31,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Conteneur>()
                 .Include(c => c.Colis).ThenInclude(col => col.Client)
                 .Include(c => c.Vehicules).ThenInclude(v => v.Client)
+                .Include(c => c.Documents)
                 .FirstOrDefaultAsync(c => c.NumeroDossier == numeroDossier && c.Actif);
         }
 
@@ -39,6 +40,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Conteneur>()
                 .Include(c => c.Colis).ThenInclude(col => col.Client)
                 .Include(c => c.Vehicules).ThenInclude(v => v.Client)
+                .Include(c => c.Documents)
                 .FirstOrDefaultAsync(c => c.Id == id && c.Actif);
         }
 
@@ -48,6 +50,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Conteneur>()
                 .Include(c => c.Colis)
                 .Include(c => c.Vehicules)
+                .Include(c => c.Documents)
                 .Where(c => c.Actif && openStatuses.Contains(c.Statut))
                 .OrderByDescending(c => c.DateReception)
                 .ToListAsync();
@@ -59,6 +62,7 @@ namespace TransitManager.Infrastructure.Repositories
                 return await GetAllAsync();
             return await _context.Set<Conteneur>()
                 .Include(c => c.Colis)
+                .Include(c => c.Documents)
                 .Where(c => c.Actif && (
                     c.Destination.ToLower().Contains(destination.ToLower()) ||
                     c.PaysDestination.ToLower().Contains(destination.ToLower())
@@ -71,6 +75,7 @@ namespace TransitManager.Infrastructure.Repositories
         {
             return await _context.Set<Conteneur>()
                 .Include(c => c.Colis)
+                .Include(c => c.Documents)
                 .Where(c => c.Actif && c.Statut == statut)
                 .OrderByDescending(c => c.DateCreation)
                 .ToListAsync();
@@ -95,6 +100,7 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Conteneur>()
                 .Include(c => c.Colis).ThenInclude(col => col.Client)
                 .Include(c => c.Vehicules).ThenInclude(v => v.Client)
+                .Include(c => c.Documents)
                 .Where(c => c.Actif && (
                     c.NumeroDossier.ToLower().Contains(searchTerm) ||
                     c.Destination.ToLower().Contains(searchTerm) ||

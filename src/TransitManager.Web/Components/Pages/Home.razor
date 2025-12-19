@@ -22,6 +22,9 @@
                     <p class="text-muted">Bienvenue, @AuthContext.User.Identity?.Name</p>
                 </div>
                 <div class="d-flex align-items-center gap-3">
+                     <button class="btn btn-outline-primary btn-sm" @onclick="LoadData">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Actualiser
+                    </button>
                      <span class="badge bg-light text-dark border p-2">
                         <i class="bi bi-clock me-1"></i> @DateTime.Now.ToString("dd MMMM yyyy")
                     </span>
@@ -53,14 +56,14 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- KPI Documents -->
+                        <!-- KPI Documents (Documents Manquants) -->
                         <div class="col-md-3">
-                            <div class="card shadow-sm border-0 h-100 bg-warning text-dark">
+                            <div class="card shadow-sm border-0 h-100 bg-danger text-white" style="cursor: pointer; transition: transform 0.2s;" @onclick="ShowMissingDocsAdmin" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
                                 <div class="card-body">
-                                    <h6 class="text-uppercase opacity-75">Docs à Valider</h6>
-                                    <h2 class="display-6 fw-bold mb-0">@adminStats?.DocsAValider</h2>
-                                    <div class="mt-2 text-dark-50 small">
-                                        <i class="bi bi-file-earmark-check"></i> En attente
+                                    <h6 class="text-uppercase opacity-75">Documents Manquants</h6>
+                                    <h2 class="display-6 fw-bold mb-0">@adminStats?.MissingDocumentsCount</h2>
+                                    <div class="mt-2 text-white-50 small">
+                                        <i class="bi bi-file-earmark-x"></i> Action requise
                                     </div>
                                 </div>
                             </div>
@@ -163,7 +166,7 @@
                                     <a href="colis/create" class="list-group-item list-group-item-action py-3">
                                         <i class="bi bi-plus-circle me-2 text-success"></i> Nouveau Colis
                                     </a>
-                                    <a href="vehicules/create" class="list-group-item list-group-item-action py-3">
+                                    <a href="vehicule/create" class="list-group-item list-group-item-action py-3">
                                         <i class="bi bi-car-front me-2 text-info"></i> Nouveau Véhicule
                                     </a>
                                 </div>
@@ -171,6 +174,54 @@
                         </div>
                     </div>
                 </AuthorizeView>
+
+                @if(showAdminMissingDocsModal)
+                {
+                    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index: 1055;" tabindex="-1">
+                        <div class="modal-dialog modal-dialog-centered modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Documents Manquants (Global)</h5>
+                                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAdminMissingDocsModal"></button>
+                                </div>
+                                <div class="modal-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        @foreach(var doc in adminMissingDocsList)
+                                        {
+                                            string link = "#";
+                                            if(doc.ColisId.HasValue) link = $"colis/detail/{doc.ColisId}";
+                                            else if(doc.VehiculeId.HasValue) link = $"vehicule/detail/{doc.VehiculeId}";
+                                            
+                                            <a href="@link" class="list-group-item list-group-item-action p-3">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <div>
+                                                        <h6 class="mb-1 fw-bold text-danger">@doc.Type</h6>
+                                                        <small class="text-muted"><i class="bi bi-person me-1"></i>Client: <strong>@doc.Client?.NomComplet</strong></small>
+                                                    </div>
+                                                    <small class="text-danger fw-bold">Manquant</small>
+                                                </div>
+                                                <p class="mb-1 text-muted small mt-1">@doc.CommentaireAdmin</p>
+                                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                                    <small class="text-primary badge bg-light border">
+                                                        @(doc.ColisId.HasValue ? $"Colis: {doc.Colis?.NumeroReference}" : (doc.VehiculeId.HasValue ? $"Véhicule: {doc.Vehicule?.Immatriculation}" : "Dossier"))
+                                                    </small>
+                                                    <small class="text-muted">@doc.DateCreation.ToString("dd/MM/yyyy")</small>
+                                                </div>
+                                            </a>
+                                        }
+                                        @if(!adminMissingDocsList.Any())
+                                        {
+                                            <div class="p-4 text-center text-muted">Aucun document manquant.</div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" @onclick="CloseAdminMissingDocsModal">Fermer</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
 
                 <AuthorizeView Roles="Client" Context="ClientCtx">
                     <!-- DASHBOARD CLIENT -->
@@ -408,7 +459,12 @@
     
     // Missing Docs Modal
     private bool showMissingDocsModal = false;
+
     private IEnumerable<Document> missingDocsList = new List<Document>();
+
+    // Admin Missing Docs Modal
+    private bool showAdminMissingDocsModal = false;
+    private IEnumerable<Document> adminMissingDocsList = new List<Document>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -456,6 +512,12 @@
         }
     }
 
+    private async Task LoadData()
+    {
+        isLoading = true;
+        await OnInitializedAsync();
+    }
+
     private void OpenRegularizeModal()
     {
         if(missingDocsList.Count() == 1)
@@ -474,9 +536,28 @@
     
     private void CloseRegularizeModal() => showMissingDocsModal = false;
 
+    private async Task ShowMissingDocsAdmin()
+    {
+        adminMissingDocsList = await ApiService.GetAllMissingDocumentsAsync();
+        
+        if (adminMissingDocsList.Count() == 1)
+        {
+             var doc = adminMissingDocsList.First();
+             if(doc.ColisId.HasValue) nav.NavigateTo($"colis/detail/{doc.ColisId}");
+             else if(doc.VehiculeId.HasValue) nav.NavigateTo($"vehicule/detail/{doc.VehiculeId}");
+             else showAdminMissingDocsModal = true;
+        }
+        else if (adminMissingDocsList.Any())
+        {
+            showAdminMissingDocsModal = true;
+        }
+    }
+
+    private void CloseAdminMissingDocsModal() => showAdminMissingDocsModal = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (adminStats != null)
+        if (adminStats != null && !isLoading)
         {
             // Initialiser les Charts via JS
             // On utilise un petit délai pour être sûr que le rendu DOM est fini si besoin (normalement OnAfterRender suffit)

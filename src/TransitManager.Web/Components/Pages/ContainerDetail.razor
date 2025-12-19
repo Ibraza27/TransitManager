@@ -100,6 +100,10 @@
                 <li class="nav-item">
                     <button class="nav-link @(_activeTab == "documents" ? "active fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
                         <i class="bi bi-folder2-open me-2"></i>Documents
+                         @if (_dto.MissingDocumentsCount > 0)
+                        {
+                            <span class="badge bg-danger rounded-pill ms-2">@_dto.MissingDocumentsCount</span>
+                        }
                     </button>
                 </li>
             }

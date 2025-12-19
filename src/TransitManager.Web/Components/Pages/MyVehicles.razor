@@ -100,7 +100,7 @@
                     {
                         @foreach (var v in FilteredVehicles)
                         {
-                            <tr>
+                            <tr class="@(v.HasMissingDocuments ? "table-danger" : "")">
                                 <td class="ps-4 fw-bold font-monospace text-primary">@v.Immatriculation</td>
                                 <td>
                                     <div class="fw-bold">@v.ClientNomComplet</div>
@@ -124,8 +124,8 @@
                                 </td>
 
                                 <!-- NOUVELLE COLONNE : Commentaire (tronqué si trop long) -->
-                                <td style="max-width: 150px;" class="text-truncate" title="@v.Commentaires">
-                                    <small class="text-muted">@v.Commentaires</small>
+                                <td style="max-width: 150px;" class="text-truncate text-uppercase text-danger fw-bold" title="@v.Commentaires">
+                                    <small>@v.Commentaires</small>
                                 </td>
 
                                 <!-- Finances -->

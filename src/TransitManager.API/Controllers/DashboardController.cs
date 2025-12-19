@@ -4,6 +4,7 @@ using System.Linq;
 using TransitManager.Core.DTOs;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
+using TransitManager.Core.Entities;
 
 namespace TransitManager.API.Controllers
 {
@@ -39,6 +40,8 @@ namespace TransitManager.API.Controllers
             stats.ColisEnTransit = await _colisService.GetCountByStatusAsync(StatutColis.EnTransit); 
             
             stats.DocsAValider = await _documentService.GetPendingDocumentsCountAsync();
+            stats.MissingDocumentsCount = await _documentService.GetTotalMissingDocumentsCountAsync();
+            
             
             // Clients créés depuis le début du mois courant
             var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
@@ -60,6 +63,13 @@ namespace TransitManager.API.Controllers
             stats.StatusDistribution = statusStats.ToDictionary(k => k.Key.ToString(), v => v.Value);
 
             return Ok(stats);
+        }
+
+        [HttpGet("admin/missing-documents")]
+        public async Task<ActionResult<IEnumerable<Document>>> GetAdminMissingDocuments()
+        {
+            var docs = await _documentService.GetAllMissingDocumentsAsync();
+            return Ok(docs);
         }
     }
 }

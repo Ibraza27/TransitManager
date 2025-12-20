@@ -600,5 +600,21 @@ namespace TransitManager.Infrastructure.Services
             return result;
         }
 
+        public async Task<IEnumerable<Colis>> GetUnpricedColisAsync()
+        {
+             using var uow = await _uowFactory.CreateAsync();
+             var all = await uow.Colis.GetAllAsync(); // Ideal would be dedicated repo method, but efficient enough for now if not huge
+             // Or better: add to IColisRepository. But to keep it simple and consistent with previous patterns:
+             // Wait, I can use a predicate on GetAll? No, GetAll returns IEnumerable?
+             // ColisRepository.GetAllAsync returns List.
+             
+             // Optimal: Add to Repository. 
+             // Quick: Filter in memory.
+             // Given constraint of modifying many files, I will stick to repo pattern where I can, or memory if easy.
+             // Actually, I can use context if I really wanted to but UoW pattern hides it.
+             // Use GetAll and filter.
+             return all.Where(c => c.Actif && c.PrixTotal == 0).OrderByDescending(c => c.DateCreation).ToList();
+        }
+
     }
 }

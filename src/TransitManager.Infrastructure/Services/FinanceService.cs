@@ -70,9 +70,11 @@ namespace TransitManager.Infrastructure.Services
                 var colisDette = await colisQuery.SumAsync(c => c.PrixTotal - c.SommePayee);
                 var vehiculeDette = await vehiculeQuery.SumAsync(v => v.PrixTotal - v.SommePayee);
 
-                // 3. Paiements en retard
-                var colisEnRetard = await colisQuery
-                     .CountAsync(c => c.Statut == StatutColis.Livre && (c.PrixTotal - c.SommePayee) > 0);
+                // 3. Articles sans prix (Cotation Requise)
+                // Remplace "Paiements en retard" par "Articles sans prix"
+                var unpricedColis = await colisQuery.CountAsync(c => c.PrixTotal == 0);
+                var unpricedVehicules = await vehiculeQuery.CountAsync(v => v.PrixTotal == 0);
+                var unpricedCount = unpricedColis + unpricedVehicules;
 
                 // 4. Graphique
                 // If filter is applied, graph should perhaps show that range? 
@@ -109,7 +111,7 @@ namespace TransitManager.Infrastructure.Services
                     ChiffreAffairesAnnuel = caAnnuel,
                     TotalEncaisse = totalEncaisse,
                     TotalRestantDu = colisDette + vehiculeDette,
-                    NombrePaiementsRetard = colisEnRetard,
+                    NombrePaiementsRetard = unpricedCount, // Mapped to Unpriced Items
                     RevenueChartData = chartData
                 };
             }

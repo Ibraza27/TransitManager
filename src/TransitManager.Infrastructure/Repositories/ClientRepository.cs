@@ -43,17 +43,37 @@ namespace TransitManager.Infrastructure.Repositories
             return await _context.Set<Client>()
                 .Include(c => c.Colis)
                     .ThenInclude(col => col.Conteneur)
+                .Include(c => c.Vehicules)
                 .Include(c => c.Paiements)
+                .Include(c => c.UserAccount)
                 .FirstOrDefaultAsync(c => c.Id == id && c.Actif);
         }
 
         public async Task<IEnumerable<Client>> GetActiveClientsAsync()
         {
-            return await _context.Set<Client>()
+            var clients = await _context.Set<Client>()
+                .Include(c => c.Colis)
+                .Include(c => c.Vehicules)
                 .Where(c => c.Actif)
                 .OrderBy(c => c.Nom)
                 .ThenBy(c => c.Prenom)
                 .ToListAsync();
+
+            // Recalcul des impayés à la volée pour garantir la cohérence
+            foreach (var client in clients)
+            {
+                var impayesColis = client.Colis
+                    .Where(c => c.Actif)
+                    .Sum(c => c.PrixTotal - c.SommePayee); // Utilisation directe du calcul si RestantAPayer n'est pas mappé
+
+                var impayesVehicules = client.Vehicules
+                    .Where(v => v.Actif)
+                    .Sum(v => v.PrixTotal - v.SommePayee);
+
+                client.Impayes = impayesColis + impayesVehicules;
+            }
+
+            return clients;
         }
 
         public async Task<IEnumerable<Client>> SearchAsync(string searchTerm)

@@ -79,10 +79,11 @@
                         </div>
                     </div>
                      <div class="col-md-3">
-                        <div class="card shadow-sm border-0 bg-warning text-dark h-100">
+                        <div class="card shadow-sm border-0 bg-warning text-dark h-100" style="cursor: pointer; transition: transform 0.2s;" @onclick="ShowUnpricedItemsModal" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
                             <div class="card-body text-center">
                                 <h2 class="display-6 fw-bold">@adminStats.NombrePaiementsRetard</h2>
-                                <p class="mb-0 text-muted">Dossiers en retard</p>
+                                <p class="mb-0 text-muted">Articles sans Prix</p>
+                                <small class="text-danger fw-bold">(Action Requise)</small>
                             </div>
                         </div>
                     </div>
@@ -294,6 +295,66 @@
     </AuthorizeView>
 </div>
 
+<!-- MODAL UNPRICED ITEMS -->
+@if (_showUnpricedItemsModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">⚠️ Articles sans Prix (Cotation Requise)</h5>
+                    <button type="button" class="btn-close" @onclick="() => _showUnpricedItemsModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    @if (_unpricedItems == null)
+                    {
+                        <div class="text-center p-3"><div class="spinner-border text-dark"></div></div>
+                    }
+                    else if (!_unpricedItems.Any())
+                    {
+                        <p class="text-center text-muted py-3">Aucun article sans prix.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Référence</th>
+                                        <th>Client</th>
+                                        <th>Date Création</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in _unpricedItems)
+                                    {
+                                        <tr>
+                                            <td><span class="badge @(item.Type == "Colis" ? "bg-primary" : "bg-success")">@item.Type</span></td>
+                                            <td>
+                                                <strong>@item.Reference</strong><br/>
+                                                <small class="text-muted">@item.Description</small>
+                                            </td>
+                                            <td>@item.ClientName</td>
+                                            <td>@item.DateCreation.ToLocalTime().ToShortDateString()</td>
+                                            <td>
+                                                <a href="@(item.Type == "Colis" ? $"/colis/edit/{item.Id}" : $"/vehicule/edit/{item.Id}")" class="btn btn-sm btn-outline-warning text-dark fw-bold">
+                                                    <i class="bi bi-pencil"></i> Fixer Prix
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <!-- MODAL NOUVEAU PAIEMENT -->
 @if (showPaymentModal)
 {
@@ -384,6 +445,24 @@
     private bool loadError = false;
     private string? errorMessage = null;
     private bool showEntitySelector = false;
+
+    // Unpriced Items Modal
+    private bool _showUnpricedItemsModal = false;
+    private List<DashboardEntityDto> _unpricedItems;
+
+    private async Task ShowUnpricedItemsModal()
+    {
+        _showUnpricedItemsModal = true;
+        try 
+        {
+            _unpricedItems = await ApiService.GetUnpricedItemsAsync();
+        }
+        catch(Exception ex)
+        {
+             Console.WriteLine($"Error loading unpriced items: {ex.Message}");
+            _unpricedItems = new List<DashboardEntityDto>();
+        }
+    }
 
     // New Payment Form
     private Paiement newPaiement = new Paiement();

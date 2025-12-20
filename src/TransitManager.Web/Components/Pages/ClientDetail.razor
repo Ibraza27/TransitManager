@@ -57,7 +57,7 @@
                 <div class="col-md-3">
                     <div class="card bg-danger text-white shadow-sm h-100">
                         <div class="card-body text-center">
-                            <h3 class="mb-0">@_client.Impayes.ToString("C0")</h3>
+                            <h3 class="mb-0">@((CalculateImpayesColis() + CalculateImpayesVehicules()).ToString("C0"))</h3>
                             <small class="text-uppercase fw-bold text-white-50">TOTAL IMPAYÉS</small>
                         </div>
                     </div>

@@ -20,5 +20,7 @@ namespace TransitManager.Core.Interfaces
         Task RecalculateAndUpdateVehiculeStatisticsAsync(Guid vehiculeId);
 		Task<IEnumerable<Vehicule>> GetByUserIdAsync(Guid userId);
         Task<Core.DTOs.PagedResult<Core.DTOs.VehiculeListItemDto>> GetPagedAsync(int page, int pageSize, string? search = null, Guid? clientId = null);
+        Task<IEnumerable<Vehicule>> GetDelayedVehiculesAsync(int days);
+        Task<IEnumerable<Vehicule>> GetUnpricedVehiculesAsync();
     }
 }

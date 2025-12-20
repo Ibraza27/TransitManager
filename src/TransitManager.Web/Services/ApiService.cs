@@ -1224,5 +1224,19 @@ namespace TransitManager.Web.Services
              catch { return false; }
         }
 
+        public async Task<List<Client>> GetNewClientsListAsync()
+        {
+            return await _httpClient.GetFromJsonAsync<List<Client>>("api/dashboard/admin/new-clients");
+        }
+
+        public async Task<List<DashboardEntityDto>> GetDelayedItemsAsync()
+        {
+            return await _httpClient.GetFromJsonAsync<List<DashboardEntityDto>>("api/dashboard/admin/delayed-items");
+        }
+
+        public async Task<List<DashboardEntityDto>> GetUnpricedItemsAsync()
+        {
+            return await _httpClient.GetFromJsonAsync<List<DashboardEntityDto>>("api/dashboard/admin/unpriced-items");
+        }
     }
 }

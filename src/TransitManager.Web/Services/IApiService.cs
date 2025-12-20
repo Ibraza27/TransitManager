@@ -126,5 +126,8 @@ namespace TransitManager.Web.Services
         Task<TransitManager.Core.Entities.Paiement?> CreatePaymentAsync(TransitManager.Core.Entities.Paiement paiement);
         Task<bool> DownloadReceiptAsync(Guid paiementId, string fileName);
         Task<bool> ExportTransactionsAsync(DateTime? start, DateTime? end);
+        Task<List<Client>> GetNewClientsListAsync();
+        Task<List<DashboardEntityDto>> GetDelayedItemsAsync();
+        Task<List<DashboardEntityDto>> GetUnpricedItemsAsync();
     }
 }

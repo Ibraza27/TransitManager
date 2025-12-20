@@ -483,5 +483,41 @@ namespace TransitManager.Infrastructure.Services
                  TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
              };
         }
+
+        public async Task<IEnumerable<Vehicule>> GetDelayedVehiculesAsync(int days)
+        {
+             await using var context = await _contextFactory.CreateDbContextAsync();
+             var dateLimit = DateTime.UtcNow.AddDays(-days);
+             
+             // Logic: Created > days ago, ConteneurId is null (Unassigned), Status is NOT delivered/finished
+             // Assuming anything active and not in a container is "En Attente" or similar initial state.
+             // We exclude finished states: Livre, Retourne (statutsCritiques usually imply finished or specific flow, check definition)
+             // Actually, "En Transit", "Arrive" etc depend on container usually.
+             // If ConteneurId is null, status should be EnAttente or similar.
+             // We iterate to find those waiting allocation.
+             
+             return await context.Vehicules
+                 .Include(v => v.Client)
+                 .Where(v => v.Actif && 
+                             v.ConteneurId == null && 
+                             v.DateCreation < dateLimit &&
+                             v.Statut != StatutVehicule.Livre && // Not delivered
+                             v.Statut != StatutVehicule.Retourne // Not returned
+                             )
+                 .OrderBy(v => v.DateCreation)
+                 .AsNoTracking()
+                 .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Vehicule>> GetUnpricedVehiculesAsync()
+        {
+             await using var context = await _contextFactory.CreateDbContextAsync();
+             return await context.Vehicules
+                 .Include(v => v.Client)
+                 .Where(v => v.Actif && v.PrixTotal == 0) // Price is 0
+                 .OrderByDescending(v => v.DateCreation)
+                 .AsNoTracking()
+                 .ToListAsync();
+        }
     }
 }

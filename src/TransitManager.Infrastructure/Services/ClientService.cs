@@ -155,6 +155,16 @@ namespace TransitManager.Infrastructure.Services
             var allClients = await uow.Clients.GetAllAsync();
             return allClients.Count(c => c.DateCreation >= since && c.Actif);
         }
+
+        public async Task<IEnumerable<Client>> GetNewClientsListAsync(DateTime since)
+        {
+             using var uow = await _uowFactory.CreateAsync();
+             var allClients = await uow.Clients.GetAllAsync();
+             return allClients
+                .Where(c => (c.DateCreation >= since || c.DateInscription >= since) && c.Actif)
+                .OrderByDescending(c => c.DateCreation > c.DateInscription ? c.DateCreation : c.DateInscription)
+                .ToList();
+        }
         public async Task<IEnumerable<Client>> GetRecentClientsAsync(int count) 
         {
              using var uow = await _uowFactory.CreateAsync();

@@ -36,5 +36,6 @@ namespace TransitManager.Core.Interfaces
         // --- FIN DE L'AJOUT ---
 		Task<PagedResult<ColisListItemDto>> GetPagedAsync(int page, int pageSize, string? search = null, Guid? clientId = null);
         Task<Dictionary<string, decimal>> GetMonthlyVolumeAsync(int months);
+        Task<IEnumerable<Colis>> GetUnpricedColisAsync();
     }
 }

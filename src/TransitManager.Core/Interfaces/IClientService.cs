@@ -20,6 +20,7 @@ namespace TransitManager.Core.Interfaces
         Task<bool> DeleteAsync(Guid id);
         Task<int> GetTotalCountAsync();
         Task<int> GetNewClientsCountAsync(DateTime since);
+        Task<IEnumerable<Client>> GetNewClientsListAsync(DateTime since);
         Task<IEnumerable<Client>> GetRecentClientsAsync(int count);
         Task<IEnumerable<Client>> GetClientsWithUnpaidBalanceAsync();
         Task<decimal> GetTotalUnpaidBalanceAsync();

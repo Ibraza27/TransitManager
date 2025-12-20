@@ -45,13 +45,14 @@
                     <!-- DASHBOARD ADMIN -->
                     <div class="row g-4 mb-4">
                         <!-- KPI Colis -->
+                        <!-- KPI Retard > 5j (Clickable) -->
                         <div class="col-md-3">
-                            <div class="card shadow-sm border-0 h-100 bg-primary text-white">
+                            <div class="card shadow-sm border-0 h-100 bg-warning text-dark" style="cursor: pointer; transition: transform 0.2s;" @onclick="ShowDelayedItemsModal" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
                                 <div class="card-body">
-                                    <h6 class="text-uppercase opacity-75">Colis en Transit</h6>
+                                    <h6 class="text-uppercase opacity-75">Retard > 5j</h6>
                                     <h2 class="display-6 fw-bold mb-0">@adminStats?.ColisEnTransit</h2>
-                                    <div class="mt-2 text-white-50 small">
-                                        <i class="bi bi-box-seam"></i> Actuellement actifs
+                                    <div class="mt-2 text-dark small">
+                                        <i class="bi bi-clock-history"></i> Non affectés
                                     </div>
                                 </div>
                             </div>
@@ -69,8 +70,9 @@
                             </div>
                         </div>
                         <!-- KPI Clients -->
+                        <!-- KPI Clients (Clickable) -->
                         <div class="col-md-3">
-                            <div class="card shadow-sm border-0 h-100 bg-info text-white">
+                            <div class="card shadow-sm border-0 h-100 bg-info text-white" style="cursor: pointer; transition: transform 0.2s;" @onclick="ShowNewClientsModal" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
                                 <div class="card-body">
                                     <h6 class="text-uppercase opacity-75">Nouveaux Clients</h6>
                                     <h2 class="display-6 fw-bold mb-0">@adminStats?.NouveauxClientsMois</h2>
@@ -345,11 +347,11 @@
             <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Documents Manquants</h5>
-                            <button type="button" class="btn-close btn-close-white" @onclick="CloseRegularizeModal"></button>
-                        </div>
-                        <div class="modal-body p-0">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Documents Manquants</h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseRegularizeModal"></button>
+                    </div>
+                    <div class="modal-body p-0">
                             <div class="list-group list-group-flush">
                                 @foreach(var doc in missingDocsList)
                                 {
@@ -372,6 +374,78 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" @onclick="CloseRegularizeModal">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if(_showDelayedItemsModal)
+        {
+            <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title">📦 Éléments en Retard (> 5 jours)</h5>
+                            <button type="button" class="btn-close" @onclick="() => _showDelayedItemsModal = false"></button>
+                        </div>
+                        <div class="modal-body p-0">
+                            @if(_delayedItems == null)
+                            {
+                                <div class="p-4 text-center"><div class="spinner-border text-warning"></div></div>
+                            }
+                            else
+                            {
+                                <div class="list-group list-group-flush">
+                                    @foreach(var item in _delayedItems)
+                                    {
+                                         var link = item.Type == "Colis" ? $"colis/detail/{item.Id}" : $"vehicule/detail/{item.Id}";
+                                         <a href="@link" class="list-group-item list-group-item-action p-3">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1 fw-bold">@item.Reference - @item.Description</h6>
+                                                <small class="text-danger fw-bold">@item.DaysDelay j</small>
+                                            </div>
+                                            <p class="mb-1 text-muted small">@item.ClientName</p>
+                                            <small class="text-muted">@item.Type • Créé le @item.DateCreation.ToString("dd/MM/yyyy")</small>
+                                         </a>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if(_showNewClientsModal)
+        {
+            <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-info text-white">
+                            <h5 class="modal-title">👥 Nouveaux Clients (Ce mois)</h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="() => _showNewClientsModal = false"></button>
+                        </div>
+                         <div class="modal-body p-0">
+                            @if(_newClientsList == null)
+                            {
+                                <div class="p-4 text-center"><div class="spinner-border text-info"></div></div>
+                            }
+                            else
+                            {
+                                <div class="list-group list-group-flush">
+                                    @foreach(var client in _newClientsList)
+                                    {
+                                         <a href="client/edit/@client.Id" class="list-group-item list-group-item-action p-3">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1 fw-bold">@client.NomComplet</h6>
+                                                <small class="text-muted">@client.DateCreation.ToString("dd/MM")</small>
+                                            </div>
+                                            <p class="mb-1 text-muted small">@client.Email • @client.TelephonePrincipal</p>
+                                         </a>
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -612,6 +686,38 @@
             };
 
              await JS.InvokeVoidAsync("renderChart", "statusChart", "doughnut", ctxStatus, new { responsive = true });
+        }
+    }
+    private bool _showDelayedItemsModal = false;
+    private List<DashboardEntityDto> _delayedItems;
+    private bool _showNewClientsModal = false;
+    private List<Client> _newClientsList;
+
+    private async Task ShowDelayedItemsModal()
+    {
+        _showDelayedItemsModal = true;
+        try
+        {
+            _delayedItems = await ApiService.GetDelayedItemsAsync();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error loading delayed items: {ex.Message}");
+            _delayedItems = new List<DashboardEntityDto>(); // Empty list to stop spinner
+        }
+    }
+
+    private async Task ShowNewClientsModal()
+    {
+        _showNewClientsModal = true;
+        try
+        {
+            _newClientsList = await ApiService.GetNewClientsListAsync();
+        }
+        catch(Exception ex)
+        {
+             Console.WriteLine($"Error loading new clients: {ex.Message}");
+            _newClientsList = new List<Client>(); 
         }
     }
 }

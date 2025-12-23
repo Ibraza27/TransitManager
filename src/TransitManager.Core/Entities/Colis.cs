@@ -77,7 +77,11 @@ namespace TransitManager.Core.Entities
 
         public decimal Volume { get => _volume; set => SetProperty(ref _volume, value); } // AJOUTÉ
 
-        public decimal ValeurDeclaree { get => _valeurDeclaree; set => SetProperty(ref _valeurDeclaree, value); }
+        public decimal ValeurDeclaree { get => _valeurDeclaree; set { if (SetProperty(ref _valeurDeclaree, value)) OnPropertyChanged(nameof(ValeurDouane)); } }
+        
+        // --- NOUVEAU CALCUL ---
+        public decimal ValeurDouane => ValeurDeclaree * 0.20m;
+
         public bool EstFragile { get => _estFragile; set => SetProperty(ref _estFragile, value); }
         public bool ManipulationSpeciale { get => _manipulationSpeciale; set => SetProperty(ref _manipulationSpeciale, value); }
         

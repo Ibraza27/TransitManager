@@ -7,6 +7,7 @@ namespace TransitManager.API.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize] // <--- SÉCURITÉ AJOUTÉE (Fix V7)
     public class UtilitiesController : ControllerBase
     {
         private readonly IBarcodeService _barcodeService;

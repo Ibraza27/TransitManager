@@ -1238,7 +1238,7 @@ namespace TransitManager.Infrastructure.Services
 							column.Item().Text("HIPPOCAMPE IMPORT-EXPORT").Bold().FontSize(14).FontColor(Colors.Blue.Darken2);
 							column.Item().Text("7 Rue Pascal, 33370 Tresses").FontSize(9);
 							column.Item().Text("Tél: 06 99 56 93 58").FontSize(9);
-							column.Item().Text("bordeaux@h-import-export.com").FontSize(9);
+							column.Item().Text("contact@hippocampeimportexport.com").FontSize(9);
 						});
 
 						// DROITE : Info Client Propriétaire
@@ -1516,7 +1516,7 @@ namespace TransitManager.Infrastructure.Services
                             column.Item().Text("HIPPOCAMPE IMPORT-EXPORT").Bold().FontSize(14).FontColor(Colors.Blue.Darken2);
                             column.Item().Text("7 Rue Pascal, 33370 Tresses").FontSize(9);
                             column.Item().Text("Tél: 06 99 56 93 58").FontSize(9);
-                            column.Item().Text("bordeaux@h-import-export.com").FontSize(9);
+                            column.Item().Text("contact@hippocampeimportexport.com").FontSize(9);
                         });
 						
 						// DROITE : Propriétaire

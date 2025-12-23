@@ -92,7 +92,8 @@ namespace TransitManager.Web.Controllers
 
 
 		[HttpPost("/account/resend-confirmation")]
-        [IgnoreAntiforgeryToken] // <--- MODIFICATION CRITIQUE : On désactive la sécurité temporairement pour tester
+		[HttpPost("/account/resend-confirmation")]
+        [ValidateAntiForgeryToken] // <--- SÉCURITÉ RÉACTIVÉE (Fix V6)
         public async Task<IActionResult> ResendConfirmation([FromForm] string email)
         {
             Console.WriteLine($"🌐 [WEB] CLIC REÇU : Demande de renvoi pour '{email}'");

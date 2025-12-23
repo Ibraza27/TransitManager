@@ -27,7 +27,7 @@ namespace TransitManager.Web.Services
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
-                ReferenceHandler = ReferenceHandler.Preserve
+                ReferenceHandler = ReferenceHandler.IgnoreCycles
 				
             };
 			_jsonOptions.Converters.Add(new JsonStringEnumConverter());
@@ -616,16 +616,30 @@ namespace TransitManager.Web.Services
 			catch { return null; }
 		}
 
-		public async Task<bool> CreateUserAsync(Utilisateur user, string password)
+		public async Task<(bool Success, string Message)> CreateUserAsync(Utilisateur user, string password)
 		{
 			try
 			{
-				// On doit envelopper l'utilisateur et le mot de passe comme attendu par l'API
+				// Sanitize the user object to avoid sending unnecessary data but satisfy validation
+				user.Audits = new List<AuditLog>(); // Must not be null
+				user.Client = null; 
+				user.MotDePasseHash = "temp_hash_to_pass_validation"; // Required by model, will be overwritten by server
+
 				var request = new { User = user, Password = password };
 				var response = await _httpClient.PostAsJsonAsync("api/users", request, _jsonOptions);
-				return response.IsSuccessStatusCode;
+				
+				if (response.IsSuccessStatusCode)
+				{
+					return (true, string.Empty);
+				}
+				
+				var errorMsg = await response.Content.ReadAsStringAsync();
+				return (false, $"Erreur API ({response.StatusCode}): {errorMsg}");
 			}
-			catch { return false; }
+			catch (Exception ex) 
+			{ 
+				return (false, $"Exception: {ex.Message}"); 
+			}
 		}
 
 		public async Task<bool> UpdateUserAsync(Guid id, Utilisateur user)

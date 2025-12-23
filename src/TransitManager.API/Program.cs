@@ -20,7 +20,11 @@ using TransitManager.Infrastructure.Hubs;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 
+Directory.SetCurrentDirectory(AppContext.BaseDirectory); // Fix for Windows Service pathing
 var builder = WebApplication.CreateBuilder(args);
+// --- CONFIGURATION SERVICE WINDOWS ---
+builder.Host.UseWindowsService();
+// -------------------------------------
 QuestPDF.Settings.License = LicenseType.Community;
 // --- LOG AU DÉMARRAGE ---
 Console.WriteLine("[API] Démarrage de la configuration des services...");
@@ -259,7 +263,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll", policy =>
     {
         // REMPLACE "SetIsOriginAllowed(origin => true)" PAR CECI SI POSSIBLE :
-        policy.WithOrigins("https://localhost:7207", "https://100.91.147.96:7207", "http://localhost:5129") // Liste tes URLs Web
+        policy.WithOrigins("https://localhost:7207", "https://100.91.147.96:7207", "http://localhost:5129", "https://hippocampetransitmanager.com") // Liste tes URLs Web
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // OBLIGATOIRE pour les cookies/auth SignalR

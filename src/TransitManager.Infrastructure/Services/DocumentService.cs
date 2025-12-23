@@ -51,10 +51,45 @@ namespace TransitManager.Infrastructure.Services
             var targetDirectory = Path.Combine(_storageRootPath, subFolder, entityIdFolder);
             if (!Directory.Exists(targetDirectory)) Directory.CreateDirectory(targetDirectory);
 
+            // --- SÉCURITÉ : Validation du type de fichier (Fix V3) ---
+            var allowedExtensions = new Dictionary<string, List<byte[]>>
+            {
+                { ".pdf", new List<byte[]> { new byte[] { 0x25, 0x50, 0x44, 0x46 } } },
+                { ".jpg", new List<byte[]> { new byte[] { 0xFF, 0xD8, 0xFF } } },
+                { ".jpeg", new List<byte[]> { new byte[] { 0xFF, 0xD8, 0xFF } } },
+                { ".png", new List<byte[]> { new byte[] { 0x89, 0x50, 0x4E, 0x47 } } },
+                { ".docx", new List<byte[]> { new byte[] { 0x50, 0x4B, 0x03, 0x04 } } },
+                { ".xlsx", new List<byte[]> { new byte[] { 0x50, 0x4B, 0x03, 0x04 } } }
+            };
+
+            var ext = Path.GetExtension(fileName).ToLower();
+            if (!allowedExtensions.ContainsKey(ext))
+            {
+                throw new InvalidOperationException($"Type de fichier non autorisé : {ext}");
+            }
+
+            // Vérification Magic Bytes
+            if (fileStream.CanSeek)
+            {
+                fileStream.Position = 0;
+                var buffer = new byte[4];
+                await fileStream.ReadAsync(buffer, 0, 4);
+                fileStream.Position = 0; // Reset pour copie
+
+                var signatures = allowedExtensions[ext];
+                bool isMatch = signatures.Any(sig => 
+                    buffer.Take(sig.Length).SequenceEqual(sig));
+
+                if (!isMatch)
+                {
+                    throw new InvalidOperationException($"Le contenu du fichier ne correspond pas à son extension ({ext}).");
+                }
+            }
+            // ---------------------------------------------------------
+
             var uniqueFileName = $"{Guid.NewGuid()}_{SanitizeFileName(fileName)}";
             var fullPath = Path.Combine(targetDirectory, uniqueFileName);
 
-            if (fileStream.CanSeek) fileStream.Position = 0;
             using (var fileOutput = new FileStream(fullPath, FileMode.Create))
             {
                 await fileStream.CopyToAsync(fileOutput);

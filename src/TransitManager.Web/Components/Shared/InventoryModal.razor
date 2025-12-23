@@ -60,7 +60,9 @@
                                                 <input type="date" class="form-control form-control-sm" @bind="_newItem.Date" />
                                             </div>
                                             <div class="col-md-1">
-                                                <button class="btn btn-sm btn-success w-100 fw-bold" @onclick="AddItem" disabled="@string.IsNullOrWhiteSpace(_newItem.Designation)" title="Ajouter">➕</button>
+                                                <button class="btn btn-sm @(_editingItem != null ? "btn-warning" : "btn-success") w-100 fw-bold" @onclick="AddItem" disabled="@string.IsNullOrWhiteSpace(_newItem.Designation)" title="@(_editingItem != null ? "Modifier" : "Ajouter")">
+                                                    @(_editingItem != null ? "💾" : "➕")
+                                                </button>
                                             </div>
                                         </div>
                                         @if(_newItem.Quantite > 0)
@@ -250,19 +252,47 @@
         }
     }
 
+    private InventaireItem? _editingItem; // Track item being edited
+
     private void AddItem()
     {
-        _items.Add(new InventaireItem { Designation = _newItem.Designation, Quantite = _newItem.Quantite, Valeur = _newItem.Valeur, Date = _newItem.Date });
+        if (_editingItem != null)
+        {
+            // UPDATE existing item
+            _editingItem.Designation = _newItem.Designation;
+            _editingItem.Quantite = _newItem.Quantite;
+            _editingItem.Valeur = _newItem.Valeur;
+            _editingItem.Date = _newItem.Date;
+            
+            _editingItem = null; // Exit edit mode
+        }
+        else
+        {
+            // CREATE new item
+            _items.Add(new InventaireItem { Designation = _newItem.Designation, Quantite = _newItem.Quantite, Valeur = _newItem.Valeur, Date = _newItem.Date });
+        }
+        
+        // Reset form
         _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
     }
 
     private void EditItem(InventaireItem item)
     {
+        _editingItem = item; // Mark as editing
+        // Load into form
         _newItem = new InventaireItem { Designation = item.Designation, Quantite = item.Quantite, Valeur = item.Valeur, Date = item.Date };
-        _items.Remove(item);
+        // DO NOT remove from list
     }
 
-    private void RemoveItem(InventaireItem item) => _items.Remove(item);
+    private void RemoveItem(InventaireItem item) 
+    {
+        _items.Remove(item);
+        if (_editingItem == item) 
+        {
+            _editingItem = null;
+            _newItem = new InventaireItem { Date = DateTime.Now, Quantite = 1 };
+        }
+    }
 
     private async Task ClearCanvas() => await JSRuntime.InvokeVoidAsync("signaturePad.clear", "sig-canvas-inventory");
 

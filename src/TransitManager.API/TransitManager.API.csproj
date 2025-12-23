@@ -1,4 +1,4 @@
-
+﻿
 
 	
 	
@@ -94,6 +94,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>bc219a5b-da76-4297-bc93-5739c0707d7b</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -137,6 +138,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />

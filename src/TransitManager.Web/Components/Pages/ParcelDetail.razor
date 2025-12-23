@@ -291,6 +291,12 @@
                                 </div>
                                 
                                 <div class="mb-3">
+                                    <label class="form-label text-info fw-bold">Valeur Douane (20%)</label>
+                                    <input type="text" class="form-control bg-light text-info fw-bold" value="@_colis.ValeurDouane.ToString("C2")" disabled />
+                                    <div class="form-text small">Calculée automatiquement : 20% de la valeur déclarée.</div>
+                                </div>
+                                
+                                <div class="mb-3">
                                     <label class="form-label">Volume (m³)</label>
                                     <input type="number" class="form-control" @bind="_colis.Volume" disabled="@(!IsAdmin)" />
                                 </div>

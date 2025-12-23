@@ -65,7 +65,7 @@ namespace TransitManager.Web.Services
 		
 		Task<IEnumerable<Utilisateur>?> GetUsersAsync();
 		Task<Utilisateur?> GetUserByIdAsync(Guid id);
-		Task<bool> CreateUserAsync(Utilisateur user, string password);
+		Task<(bool Success, string Message)> CreateUserAsync(Utilisateur user, string password);
 		Task<bool> UpdateUserAsync(Guid id, Utilisateur user);
 		Task<bool> DeleteUserAsync(Guid id);
 		Task<string?> ResetPasswordAsync(Guid userId);

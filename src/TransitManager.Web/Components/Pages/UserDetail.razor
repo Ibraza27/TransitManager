@@ -100,12 +100,12 @@
                             <div class="col-12"><hr class="text-muted"/></div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Prénom</label>
-                                <input type="text" class="form-control" @bind="_user.Prenom" />
+                                <label class="form-label">Prénom <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" @bind="_user.Prenom" required />
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Nom</label>
-                                <input type="text" class="form-control" @bind="_user.Nom" />
+                                <label class="form-label">Nom <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" @bind="_user.Nom" required />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email</label>
@@ -385,9 +385,12 @@
 
     private async Task SaveUser()
     {
-        if (string.IsNullOrWhiteSpace(_user.NomUtilisateur) || string.IsNullOrWhiteSpace(_user.Email))
+        if (string.IsNullOrWhiteSpace(_user.NomUtilisateur) || 
+            string.IsNullOrWhiteSpace(_user.Email) || 
+            string.IsNullOrWhiteSpace(_user.Nom) || 
+            string.IsNullOrWhiteSpace(_user.Prenom))
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Champs obligatoires manquants.");
+            await JSRuntime.InvokeVoidAsync("alert", "Veuillez remplir les champs obligatoires (Nom, Prénom, Email, Username).");
             return;
         }
 
@@ -401,7 +404,14 @@
                     await JSRuntime.InvokeVoidAsync("alert", "Un mot de passe est requis pour la création.");
                     return;
                 }
-                success = await ApiService.CreateUserAsync(_user, _newPassword);
+                var (isCreated, errorMsg) = await ApiService.CreateUserAsync(_user, _newPassword);
+                success = isCreated;
+                
+                if (!success)
+                {
+                     await JSRuntime.InvokeVoidAsync("alert", $"Erreur lors de la création : {errorMsg}");
+                     return;
+                }
             }
             else
             {

@@ -29,20 +29,9 @@ namespace TransitManager.API.Authorization
                 return Task.CompletedTask;
             }
 
-            // --- CAS 2: L'utilisateur n'est PAS authentifié, on vérifie la clé secrète (pour Mobile/WPF) ---
-            var httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext != null)
-            {
-                var secretHeader = httpContext.Request.Headers["X-Internal-Secret"].FirstOrDefault();
-                var expectedSecret = _configuration["InternalSecret"];
-
-                if (!string.IsNullOrEmpty(secretHeader) && secretHeader == expectedSecret)
-                {
-                    Console.WriteLine("🔑 [HybridAuth] SUCCÈS - Autorisation via en-tête de clé secrète interne.");
-                    context.Succeed(requirement);
-                    return Task.CompletedTask;
-                }
-            }
+            // --- CAS 2: L'utilisateur n'est PAS authentifié ---
+            // Le bypass via "X-Internal-Secret" a été supprimé pour des raisons de sécurité (Audit V2).
+            // Si l'utilisateur n'est pas authentifié via Cookie/JWT, l'accès est refusé.
 
             // --- ÉCHEC ---
             // Si aucune des conditions n'est remplie, l'autorisation échoue implicitement.

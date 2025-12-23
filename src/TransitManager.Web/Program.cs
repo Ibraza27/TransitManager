@@ -8,6 +8,8 @@ using System.IO;
 using TransitManager.Web.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseWindowsService(); // Enable running as a Windows Service
+Directory.SetCurrentDirectory(AppContext.BaseDirectory); // Fix for Windows Service pathing to find appsettings.json
 // === DÉBUT DE L'AJOUT STRATÉGIQUE ===
 Console.WriteLine("[WEB] Configuration du partage de clés de protection des données...");
 try
@@ -71,6 +73,7 @@ builder.Services.AddHttpClient("API", client =>
     client.BaseAddress = new Uri(apiBaseUrl);
 })
 .AddHttpMessageHandler<CookieHandler>() // <--- C'EST LA LIGNE MANQUANTE QUI CORRIGE LE 401
+// REVERT: SSL Strict Mode disabled to fix "SSL connection could not be established" in Dev.
 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 {
     ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
@@ -82,6 +85,7 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 })
 .AddHttpMessageHandler<CookieHandler>()
 // AJOUT : On ignore les erreurs de certificat SSL ici aussi
+// REVERT: SSL Strict Mode disabled to fix "SSL connection could not be established" in Dev.
 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 {
     ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true

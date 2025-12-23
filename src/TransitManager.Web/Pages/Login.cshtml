@@ -177,10 +177,17 @@
                                 <strong>Compte verrouillé</strong><br/>
                                 Réessayez dans <span id="countdown">calcul...</span>
                             </div>
+                            <!-- CORRECTION XSS : Utilisation d'un attribut data- caché au lieu d'injection directe -->
+                            <input type="hidden" id="lockoutUntil" value="@until" />
                             <script>
                                 (function() {
-                                    var untilStr = "@until";
+                                    var untilStr = document.getElementById('lockoutUntil').value;
+                                    // Basic sanitization check to ensure it's a date or empty
+                                    if(!untilStr) return;
+
                                     var unlockTime = new Date(untilStr).getTime();
+                                    if(isNaN(unlockTime)) return;
+                                    
                                     var timer = setInterval(function() {
                                         var now = new Date().getTime();
                                         var distance = unlockTime - now;

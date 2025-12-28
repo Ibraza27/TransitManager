@@ -1,0 +1,46 @@
+@page "/audit"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Administrateur")]
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0 text-primary fw-bold"><i class="bi bi-shield-check me-2"></i>Audit et Sécurité</h2>
+            <p class="text-muted mb-0">Journal des activités et traçabilité du système.</p>
+        </div>
+        <div>
+             <button class="btn btn-outline-secondary" disabled>
+                 <i class="bi bi-download me-1"></i> Exporter
+             </button>
+        </div>
+    </div>
+
+    <!-- Info Box explaining the purpose -->
+    <div class="alert alert-info shadow-sm border-0">
+        <h5 class="alert-heading"><i class="bi bi-info-circle me-2"></i>À propos de l'Audit</h5>
+        <p class="mb-0">
+            Cette section permet aux administrateurs de consulter l'historique détaillé des actions effectuées sur la plateforme.
+            Vous y trouverez :
+        </p>
+        <ul class="mt-2 mb-0">
+            <li>Les connexions et déconnexions des utilisateurs.</li>
+            <li>Les créations, modifications et suppressions de fiches (Clients, Colis, Véhicules).</li>
+            <li>Les changements de statuts critiques.</li>
+            <li>Les accès aux données sensibles.</li>
+        </ul>
+    </div>
+
+    <!-- Placeholder for future implementation -->
+    <div class="card shadow-sm border-0 mt-4 text-center py-5">
+        <div class="card-body">
+            <div class="mb-3">
+                <i class="bi bi-cone-striped text-warning" style="font-size: 3rem;"></i>
+            </div>
+            <h4 class="text-muted">Module en cours de développement</h4>
+            <p class="text-secondary max-w-600 mx-auto">
+                La fonctionnalité de journalisation complète est en cours d'intégration.
+                Les données sont actuellement collectées en arrière-plan et seront bientôt visibles ici.
+            </p>
+        </div>
+    </div>
+</div>

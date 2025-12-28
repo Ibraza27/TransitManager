@@ -190,6 +190,8 @@ namespace TransitManager.Core.Entities
                 ".jpg" or ".jpeg" or ".png" or ".gif" => "FileImage",
                 ".zip" or ".rar" or ".7z" => "FolderZip",
                 ".txt" => "FileDocument",
+                ".mp4" or ".mov" or ".avi" or ".mkv" => "FileVideo",
+                ".mp3" or ".wav" or ".m4a" => "FileMusic",
                 _ => "File"
             };
         }

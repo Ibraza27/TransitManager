@@ -53,6 +53,15 @@ namespace TransitManager.Core.Entities
         [Required]
         [StringLength(200)]
         public string DestinationFinale { get => _destinationFinale; set => SetProperty(ref _destinationFinale, value); }
+        
+        private string? _adresseFrance;
+        private string? _adresseDestination;
+        
+        [StringLength(500)]
+        public string? AdresseFrance { get => _adresseFrance; set => SetProperty(ref _adresseFrance, value); }
+        
+        [StringLength(500)]
+        public string? AdresseDestination { get => _adresseDestination; set => SetProperty(ref _adresseDestination, value); }
 
         public decimal ValeurDeclaree { get => _valeurDeclaree; set => SetProperty(ref _valeurDeclaree, value); }
 
@@ -63,6 +72,10 @@ namespace TransitManager.Core.Entities
         public string? TelephoneDestinataire { get => _telephoneDestinataire; set => SetProperty(ref _telephoneDestinataire, value); }
 
         public TypeVehicule Type { get => _type; set => SetProperty(ref _type, value); }
+        
+        private Motorisation _motorisation;
+        public Motorisation Motorisation { get => _motorisation; set => SetProperty(ref _motorisation, value); }
+
         public string? Commentaires { get => _commentaires; set => SetProperty(ref _commentaires, value); }
         
         public decimal PrixTotal
@@ -78,6 +91,12 @@ namespace TransitManager.Core.Entities
         }
 
         public decimal RestantAPayer => PrixTotal - SommePayee;
+        
+        // Dimensions pour calcul de prix
+        public int? DimensionsLongueurCm { get; set; }
+        public int? DimensionsLargeurCm { get; set; }
+        public int? DimensionsHauteurCm { get; set; }
+        public bool IsPriceCalculated { get; set; }
         
         public string? EtatDesLieux { get; set; }
         public string? EtatDesLieuxRayures { get; set; }

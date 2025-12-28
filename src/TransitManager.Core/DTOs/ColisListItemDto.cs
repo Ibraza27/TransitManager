@@ -24,6 +24,7 @@ namespace TransitManager.Core.DTOs
         public int NombrePieces { get; set; }
         public decimal PrixTotal { get; set; }
         public decimal SommePayee { get; set; }
+        public bool IsExcludedFromExport { get; set; }
         
         // Propriété calculée simple (le calcul réel se fera lors du mapping)
         public decimal RestantAPayer => PrixTotal - SommePayee;

@@ -94,7 +94,8 @@ namespace TransitManager.API.Controllers
 					NombrePieces = c.NombrePieces,
 					PrixTotal = c.PrixTotal,
 					SommePayee = c.SommePayee,
-					HasMissingDocuments = c.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant)
+					HasMissingDocuments = c.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant),
+					IsExcludedFromExport = c.IsExcludedFromExport
 					// -----------------------
 				});
 				
@@ -180,6 +181,22 @@ namespace TransitManager.API.Controllers
                 return StatusCode(500, "Une erreur interne est survenue.");
             }
         }
+        
+        [HttpPost("{id}/toggle-export")]
+        public async Task<IActionResult> ToggleExportExclusion(Guid id, [FromBody] bool isExcluded)
+        {
+            try
+            {
+                var success = await _colisService.SetExportExclusionAsync(id, isExcluded);
+                if (!success) return NotFound();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors du changement d'exclusion export pour {ColisId}", id);
+                return StatusCode(500, "Erreur interne");
+            }
+        }
 		
 		// GET: api/colis/mine
 		[HttpGet("mine")]
@@ -227,7 +244,8 @@ namespace TransitManager.API.Controllers
 					NombrePieces = c.NombrePieces,
 					PrixTotal = c.PrixTotal,
 					SommePayee = c.SommePayee,
-					HasMissingDocuments = c.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant)
+					HasMissingDocuments = c.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant),
+					IsExcludedFromExport = c.IsExcludedFromExport
 				});
 
 				return Ok(colisDtos);
@@ -241,7 +259,7 @@ namespace TransitManager.API.Controllers
 		
 		
 		[HttpGet("{id}/export/ticket")]
-        public async Task<IActionResult> ExportTicket(Guid id)
+        public async Task<IActionResult> ExportTicket(Guid id, [FromQuery] string format = "thermal")
         {
             try
             {
@@ -249,7 +267,7 @@ namespace TransitManager.API.Controllers
                 if (colis == null) return NotFound();
 
                 // Appel de la méthode existante du service d'export (celle utilisée par WPF)
-                var pdfData = await _exportService.GenerateColisTicketPdfAsync(colis);
+                var pdfData = await _exportService.GenerateColisTicketPdfAsync(colis, format);
                 
                 var safeRef = colis.NumeroReference.Replace("/", "-");
                 return File(pdfData, "application/pdf", $"Ticket_{safeRef}.pdf");

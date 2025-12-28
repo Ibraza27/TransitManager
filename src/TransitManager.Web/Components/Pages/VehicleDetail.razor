@@ -6,7 +6,6 @@
 @using TransitManager.Web.Components.Shared
 @using System.Security.Claims
 @using System.IO
-@using System.Linq
 @inject IApiService ApiService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
@@ -62,7 +61,7 @@
                     <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" @onclick="ToggleExportMenu"></div>
                 }
             </div>
-            <button class="btn btn-primary" @onclick="SaveVehicle" disabled="@(!CanEditGlobal)">
+            <button class="btn btn-primary" @onclick="() => SaveVehicle()" disabled="@(!CanEditGlobal)">
                 <i class="bi bi-save me-2"></i> Enregistrer
             </button>
             <a href="/my-vehicles" class="btn btn-outline-dark">Retour</a>
@@ -141,7 +140,7 @@
                                     </div>
                                     <div class="col-12">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="sameRecipient" @bind="_sameAsClient" @onclick="ToggleSameAsClient" disabled="@(!CanEditFields)">
+                                            <input class="form-check-input" type="checkbox" id="sameRecipient" checked="@_sameAsClient" @onchange="OnSameAsClientCheckedChanged" disabled="@(!CanEditFields)">
                                             <label class="form-check-label" for="sameRecipient">Destinataire identique au propriétaire</label>
                                         </div>
                                     </div>
@@ -152,6 +151,34 @@
                                     <div class="col-md-6">
                                         <label class="form-label">Tél Destinataire</label>
                                         <input type="text" class="form-control" @bind="_vehicule.TelephoneDestinataire" disabled="@(_sameAsClient || !CanEditFields)" />
+                                    </div>
+
+                                    <!-- ADRESSE FRANCE -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label mb-0">Adresse en France</label>
+                                            @if (CanEditFields)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="CopyAddressFrance" title="Copier l'adresse du profil">
+                                                    <i class="bi bi-box-arrow-in-down me-1"></i>Copier du profil
+                                                </button>
+                                            }
+                                        </div>
+                                        <textarea class="form-control" rows="3" style="field-sizing: content; min-height: 80px;" @bind="_vehicule.AdresseFrance" disabled="@(!CanEditFields)"></textarea>
+                                    </div>
+
+                                    <!-- ADRESSE DESTINATION -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label mb-0">@DestinationLabel</label>
+                                            @if (CanEditFields)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="CopyAddressDestination" title="Copier l'adresse du profil">
+                                                    <i class="bi bi-box-arrow-in-down me-1"></i>Copier du profil
+                                                </button>
+                                            }
+                                        </div>
+                                        <textarea class="form-control" rows="3" style="field-sizing: content; min-height: 80px;" @bind="_vehicule.AdresseDestination" disabled="@(!CanEditFields)"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -187,9 +214,15 @@
                                             @foreach(var t in Enum.GetValues<TypeVehicule>()) {<option value="@t">@t</option>}
                                         </select>
                                     </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Motorisation</label>
+                                        <select class="form-select" @bind="_vehicule.Motorisation" disabled="@(!CanEditFields)">
+                                            @foreach(var m in Enum.GetValues<Core.Enums.Motorisation>()) {<option value="@m">@m</option>}
+                                        </select>
+                                    </div>
                                      <div class="col-md-3">
                                         <label class="form-label">Destination *</label>
-                                        <input type="text" class="form-control" @bind="_vehicule.DestinationFinale" disabled="@(!CanEditFields)" />
+                                        <input type="text" class="form-control" value="@_vehicule.DestinationFinale" @oninput="OnDestinationChanged" disabled="@(!CanEditFields)" />
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label">Commentaires</label>
@@ -204,7 +237,7 @@
                         <div class="card shadow-sm border-info mb-4">
                             <div class="card-body text-center">
                                 <h5 class="text-info mb-3"><i class="bi bi-clipboard-check me-2"></i>État des Lieux</h5>
-                                @if(!string.IsNullOrEmpty(_vehicule.SignatureClient))
+                                @if(!string.IsNullOrEmpty(_vehicule.SignatureAgent))
                                 {
                                     <div class="alert alert-success py-2 small mb-2"><i class="bi bi-check-circle me-1"></i> Signé le @_vehicule.DateEtatDesLieux?.ToShortDateString()</div>
                                 }
@@ -253,9 +286,26 @@
                                     <label class="form-label">Valeur Déclarée (€)</label>
                                     <input type="number" class="form-control" @bind="_vehicule.ValeurDeclaree" disabled="@(!CanEditFields)" />
                                 </div>
+                                @if(IsAdmin || IsNew || (_vehicule.Statut == Core.Enums.StatutVehicule.EnAttente && _vehicule.PrixTotal <= 0) || _vehicule.IsPriceCalculated) 
+                                {
+                                    <div class="mb-3">
+                                         <button class="btn btn-sm btn-outline-primary w-100" @onclick="() => _showPriceProposal = true">
+                                             <i class="bi bi-calculator me-1"></i> 
+                                             @(_vehicule.IsPriceCalculated || (_vehicule.PrixTotal > 0 && !IsAdmin) ? "Voir détail proposition" : "Obtenir une proposition")
+                                         </button>
+                                    </div>
+                                }
                                 <div class="mb-3">
                                     <label class="form-label fw-bold text-primary">PRIX TOTAL (€)</label>
-                                    <input type="number" class="form-control fw-bold text-primary" @bind="_vehicule.PrixTotal" disabled="@(!IsAdmin)" />
+                                    <div class="input-group">
+                                        <input type="number" class="form-control fw-bold text-primary" @bind="_vehicule.PrixTotal" disabled="@(!IsAdmin)" />
+                                        @if(_vehicule.IsPriceCalculated)
+                                        {
+                                            <span class="input-group-text bg-primary text-white" title="Prix calculé automatiquement">
+                                                <i class="bi bi-calculator-fill"></i> Calculé
+                                            </span>
+                                        }
+                                    </div>
                                 </div>
                                 <div class="d-flex justify-content-between small mb-2">
                                      <span>Payé :</span>
@@ -265,6 +315,9 @@
                                      <span>Reste :</span>
                                      <span class="text-danger">@_vehicule.RestantAPayer.ToString("C2")</span>
                                  </div>
+                                    <div class="mt-2 text-muted small fst-italic text-center">
+                                        Moyens de paiement acceptés : Espèces, CB, Virement, Paiement en ligne
+                                    </div>
                             </div>
                         </div>
                     </div>
@@ -311,7 +364,8 @@
     <!-- MODALES -->
     <VehicleInspectionModal IsVisible="_showInspection"
                             Type="@_vehicule.Type"
-                            IsReadOnly="@(!IsAdmin)"
+                            IsReadOnly="@(_vehicule.Statut == Core.Enums.StatutVehicule.Livre || _vehicule.Statut == Core.Enums.StatutVehicule.Retourne)"
+                            IsAdmin="@IsAdmin"
                             JsonPoints="@_vehicule.EtatDesLieux"
                             JsonStrokes="@_vehicule.EtatDesLieuxRayures"
                             JsonAccessoires="@_vehicule.AccessoiresJson"
@@ -329,11 +383,19 @@
                   TotalAmount="@_vehicule.PrixTotal"
                   OnPaymentsChanged="UpdatePaidAmount"
                   OnClose="() => _showPayments = false" />
+    <PriceProposalModal IsVisible="_showPriceProposal"
+                        IsReadOnly="@(_vehicule.PrixTotal > 0 && !IsAdmin)"
+                        InitialLength="@_vehicule.DimensionsLongueurCm"
+                        InitialWidth="@_vehicule.DimensionsLargeurCm"
+                        InitialHeight="@_vehicule.DimensionsHauteurCm"
+                        OnPriceConfirmed="@(args => UpdatePrice(args))"
+                        OnClose="() => _showPriceProposal = false" />
 </div>
 
 @code {
     [Parameter] public Guid? Id { get; set; }
     private Vehicule _vehicule = new() { Statut = StatutVehicule.EnAttente };
+
     private bool _isLoading = true;
     private bool IsNew => Id == null;
     private bool IsAdmin = false;
@@ -343,10 +405,24 @@
     private bool _sameAsClient = false;
     private bool _showInspection = false;
     private bool _showPayments = false;
+    private bool _showPriceProposal = false; 
     private bool _isExportMenuOpen = false;
 
-    // Gestion du badge notification
     private int _unreadMessagesCount = 0;
+
+    private async Task UpdatePrice((decimal Price, int L, int W, int H) result)
+    {
+        _vehicule.PrixTotal = result.Price;
+        _vehicule.DimensionsLongueurCm = result.L;
+        _vehicule.DimensionsLargeurCm = result.W;
+        _vehicule.DimensionsHauteurCm = result.H;
+        _vehicule.IsPriceCalculated = true; 
+        _showPriceProposal = false;
+
+        // Auto-save to persist changes
+        await SaveVehicle(false);
+        StateHasChanged();
+    }
     
     private async Task UpdateUnreadBadge(int count)
     {
@@ -396,31 +472,93 @@
                     _vehicule.ClientId = profile.ClientId;
                     _clientNameDisplay = $"{profile.Nom} {profile.Prenom}";
                     _sameAsClient = true;
-                    ToggleSameAsClient();
+                    await OnSameAsClientCheckedChanged(null);
                 }
             }
         }
         _isLoading = false;
     }
 
-    private void OnClientChanged(ChangeEventArgs e)
+    private async Task OnClientChanged(ChangeEventArgs e)
     {
         if (Guid.TryParse(e.Value?.ToString(), out Guid cid))
         {
             _vehicule.ClientId = cid;
             var c = _clients.FirstOrDefault(cl => cl.Id == cid);
             if(c != null) _clientNameDisplay = c.NomComplet;
-            if (_sameAsClient) ToggleSameAsClient();
+            if (_sameAsClient) await OnSameAsClientCheckedChanged(null);
         }
     }
 
-    private void ToggleSameAsClient()
+    private async Task OnSameAsClientCheckedChanged(ChangeEventArgs? e)
     {
+        if(e != null)
+        {
+             _sameAsClient = (bool)e.Value!;
+        }
+
         if (_sameAsClient)
         {
-            var name = IsAdmin ? _clients.FirstOrDefault(c => c.Id == _vehicule.ClientId)?.NomComplet : _clientNameDisplay;
-            _vehicule.Destinataire = name;
-            // Note: Pour le téléphone, il faudrait charger l'objet client complet si pas admin
+            Client? c = null;
+            if(IsAdmin)
+            {
+               c = _clients.FirstOrDefault(cl => cl.Id == _vehicule.ClientId);
+               // If not found in memory list (should be there), fetch it
+               if(c == null) c = await ApiService.GetClientByIdAsync(_vehicule.ClientId);
+            }
+            else
+            {
+               // For Client view, fetch profile
+               c = await ApiService.GetClientByIdAsync(_vehicule.ClientId);
+            }
+
+            if(c != null)
+            {
+                _vehicule.Destinataire = c.NomComplet;
+                _vehicule.TelephoneDestinataire = c.TelephonePrincipal;
+            }
+        }
+    }
+
+    private async Task CopyAddressFrance()
+    {
+        Client? client = null;
+        if(IsAdmin) client = _clients.FirstOrDefault(c => c.Id == _vehicule.ClientId);
+        
+        if(client == null)
+        {
+             client = await ApiService.GetClientByIdAsync(_vehicule.ClientId);
+        }
+        
+        if (client != null)
+        {
+             // Pas de nom
+             _vehicule.AdresseFrance = $"{client.AdressePrincipale}\n{client.CodePostal} {client.Ville} {client.Pays}".Trim();
+        }
+    }
+
+    private async Task CopyAddressDestination()
+    {
+        Client? client = null;
+        if(IsAdmin) client = _clients.FirstOrDefault(c => c.Id == _vehicule.ClientId);
+        
+        if(client == null)
+        {
+             client = await ApiService.GetClientByIdAsync(_vehicule.ClientId);
+        }
+        
+        if (client != null)
+        {
+            if (!string.IsNullOrWhiteSpace(client.AdresseLivraison))
+            {
+                 // Pas de nom
+                 _vehicule.AdresseDestination = $"{client.AdresseLivraison}".Trim();
+            }
+            else
+            {
+                 // Pas de nom
+                 _vehicule.AdresseDestination = $"{client.AdressePrincipale}\n{client.CodePostal} {client.Ville} {client.Pays}".Trim();
+            }
         }
     }
 
@@ -478,7 +616,7 @@
         _showInspection = false;
     }
 
-    private async Task SaveVehicle()
+    private async Task SaveVehicle(bool redirect = true)
     {
         if (string.IsNullOrWhiteSpace(_vehicule.Immatriculation) || string.IsNullOrWhiteSpace(_vehicule.Marque))
         {
@@ -501,6 +639,8 @@
             DestinationFinale = _vehicule.DestinationFinale,
             Destinataire = _vehicule.Destinataire,
             TelephoneDestinataire = _vehicule.TelephoneDestinataire,
+            AdresseFrance = _vehicule.AdresseFrance,
+            AdresseDestination = _vehicule.AdresseDestination,
             Commentaires = _vehicule.Commentaires,
             ValeurDeclaree = _vehicule.ValeurDeclaree,
             PrixTotal = _vehicule.PrixTotal,
@@ -513,7 +653,14 @@
             SignatureAgent = _vehicule.SignatureAgent,
             SignatureClient = _vehicule.SignatureClient,
             LieuEtatDesLieux = _vehicule.LieuEtatDesLieux,
-            DateEtatDesLieux = _vehicule.DateEtatDesLieux
+            DateEtatDesLieux = _vehicule.DateEtatDesLieux,
+            Motorisation = _vehicule.Motorisation,
+            
+            // Dimensions
+            DimensionsLongueurCm = _vehicule.DimensionsLongueurCm,
+            DimensionsLargeurCm = _vehicule.DimensionsLargeurCm,
+            DimensionsHauteurCm = _vehicule.DimensionsHauteurCm,
+            IsPriceCalculated = _vehicule.IsPriceCalculated
         };
 
         bool success;
@@ -526,8 +673,15 @@
         {
             success = await ApiService.UpdateVehiculeAsync(toSend.Id, toSend);
         }
-        if (success) Navigation.NavigateTo("/my-vehicles");
-        else await JSRuntime.InvokeVoidAsync("alert", "Erreur sauvegarde");
+        
+        if (success)
+        {
+             if(redirect) Navigation.NavigateTo("/my-vehicles");
+        }
+        else 
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Erreur sauvegarde");
+        }
     }
 
     private string GetStatusBadgeClass(StatutVehicule s) => s switch
@@ -578,4 +732,12 @@
         if (_vehicule.Documents == null) return 0;
         return _vehicule.Documents.Count(d => d.Statut == StatutDocument.Manquant);
     }
+    
+    private void OnDestinationChanged(ChangeEventArgs e)
+    {
+        _vehicule.DestinationFinale = e.Value?.ToString();
+        StateHasChanged();
+    }
+
+    private string DestinationLabel => string.IsNullOrWhiteSpace(_vehicule.DestinationFinale) ? "Adresse Destination" : $"Adresse {_vehicule.DestinationFinale}";
 }

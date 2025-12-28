@@ -282,6 +282,7 @@
                                                 <th class="text-end">Payé</th>
                                                 <th class="text-end">Restant</th>
                                                 <th class="text-center">Statut</th>
+                                                <th class="text-center" title="Cocher pour exclure de l'export PDF">Exclure</th>
                                                 <th class="text-end pe-3">Actions</th>
                                             </tr>
                                         </thead>
@@ -307,7 +308,11 @@
                                                              <span class="text-success"><i class="bi bi-check-all"></i></span>
                                                          }
                                                     </td>
-                                                    <td class="text-center"><span class="badge bg-secondary">@c.Statut</span></td>                                                                                 
+                                                    <td class="text-center"><span class="badge bg-secondary">@c.Statut</span></td>
+                                                    <td class="text-center">
+                                                         <input type="checkbox" class="form-check-input" checked="@c.IsExcludedFromExport" 
+                                                                @onchange="@(async (args) => await ToggleExportExclusion(c, args.Value))" />
+                                                    </td>
                                                     <td class="text-end pe-3">
                                                         <div class="d-flex justify-content-end gap-2">
                                                             <a href="colis/edit/@c.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
@@ -534,6 +539,16 @@
         {
             await ApiService.UnassignVehiculesFromConteneurListAsync(_conteneur.Id, new List<Guid> { v.Id });
             await LoadData();
+        }
+    }
+
+    private async Task ToggleExportExclusion(ColisListItemDto c, object? isChecked)
+    {
+        if (isChecked is bool value)
+        {
+            c.IsExcludedFromExport = value;
+            var success = await ApiService.ToggleColisExportExclusionAsync(c.Id, value);
+            if(success) await LoadData(); // Recharger pour mettre à jour le récapitulatif
         }
     }
 	

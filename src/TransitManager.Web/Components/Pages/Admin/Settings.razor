@@ -1,0 +1,66 @@
+@page "/admin/settings"
+@using Microsoft.AspNetCore.Authorization
+@using TransitManager.Infrastructure.Services
+@attribute [Authorize(Roles = "Administrateur")]
+@inject ISettingsService SettingsService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Paramètres - Hippocampe</PageTitle>
+
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="bi bi-gear-fill me-2"></i>Paramètres Globaux</h2>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white fw-bold">Tarification</div>
+        <div class="card-body">
+            @if (_isLoading)
+            {
+                <div class="text-center py-3"><div class="spinner-border text-primary"></div></div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <label class="form-label">Prix au mètre cube (€/m³)</label>
+                    <input type="number" step="0.01" class="form-control" @bind="_pricePerM3" />
+                    <div class="form-text">Ce tarif est utilisé pour le calcul automatique du prix des véhicules.</div>
+                </div>
+                <button class="btn btn-primary" @onclick="SaveSettings" disabled="@_isSaving">
+                    @if (_isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    <i class="bi bi-save me-2"></i> Enregistrer
+                </button>
+            }
+            @if (_isSaved)
+            {
+                <div class="alert alert-success mt-3 mb-0">Paramètres enregistrés avec succès.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private bool _isSaved = false;
+    private decimal _pricePerM3 = 150;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var priceStr = await SettingsService.GetSettingAsync("PricePerCubicMeter", "150");
+        if (decimal.TryParse(priceStr, out var p)) _pricePerM3 = p;
+        _isLoading = false;
+    }
+
+    private async Task SaveSettings()
+    {
+        _isSaving = true;
+        _isSaved = false;
+        await SettingsService.UpdateSettingAsync("PricePerCubicMeter", _pricePerM3.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        // Simulate delay for feedback
+        await Task.Delay(500);
+        _isSaving = false;
+        _isSaved = true;
+    }
+}

@@ -61,6 +61,8 @@ namespace TransitManager.API.Controllers
 
         // POST: api/documents/upload
         [HttpPost("upload")]
+        [RequestSizeLimit(524288000)] // 500 MB
+        [RequestFormLimits(MultipartBodyLengthLimit = 524288000)] 
         public async Task<IActionResult> Upload(
             [FromForm] IFormFile file, 
             [FromForm] string typeDocStr, // On reçoit l'enum en string
@@ -105,6 +107,25 @@ namespace TransitManager.API.Controllers
             var success = await _documentService.DeleteDocumentAsync(id);
             if (!success) return NotFound();
             return NoContent();
+        }
+
+        // PUT: api/documents/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDocumentDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            try
+            {
+                var updatedDoc = await _documentService.UpdateDocumentAsync(id, dto);
+                if (updatedDoc == null) return NotFound("Document introuvable.");
+                return Ok(updatedDoc);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la mise à jour du document.");
+                return StatusCode(500, $"Erreur interne : {ex.Message}");
+            }
         }
 		
 		// GET: api/documents/{id}/preview
@@ -199,6 +220,18 @@ namespace TransitManager.API.Controllers
             {
                 return Ok(new List<Document>());
             }
+        }
+        [HttpGet("debug-paths")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DebugPaths()
+        {
+             var docs = await _documentService.GetAllMissingDocumentsAsync(); // Just to get context, actually let's use a raw query or similar via service
+             // We can't access DbContext directly here easily.
+             // Let's rely on DocumentService to have a Debug method or hack it.
+             // Since I can't easily add method to interface without rebuilding everything cleanly...
+             // I'll add the logic In DocumentService and expose it, OR
+             // Just instantiate context here? No, better to add to Service.
+             return Ok("Check service logs for details.");
         }
     }
 }

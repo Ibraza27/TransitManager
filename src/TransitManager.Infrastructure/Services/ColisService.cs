@@ -96,7 +96,9 @@ namespace TransitManager.Infrastructure.Services
                 InstructionsSpeciales = colisDto.InstructionsSpeciales,
                 Type = colisDto.Type,
                 TypeEnvoi = colisDto.TypeEnvoi,
-                ConteneurId = colisDto.ConteneurId
+                ConteneurId = colisDto.ConteneurId,
+                AdresseFrance = colisDto.AdresseFrance,
+                AdresseDestination = colisDto.AdresseDestination
             };
             foreach (var barcodeValue in colisDto.Barcodes)
             {
@@ -180,6 +182,8 @@ namespace TransitManager.Infrastructure.Services
                 colisInDb.TelephoneDestinataire = colisDto.TelephoneDestinataire;
                 colisInDb.LivraisonADomicile = colisDto.LivraisonADomicile;
                 colisInDb.AdresseLivraison = colisDto.AdresseLivraison;
+                colisInDb.AdresseFrance = colisDto.AdresseFrance;
+                colisInDb.AdresseDestination = colisDto.AdresseDestination;
                 colisInDb.EstFragile = colisDto.EstFragile;
                 colisInDb.ManipulationSpeciale = colisDto.ManipulationSpeciale;
                 colisInDb.InstructionsSpeciales = colisDto.InstructionsSpeciales;
@@ -614,6 +618,18 @@ namespace TransitManager.Infrastructure.Services
              // Actually, I can use context if I really wanted to but UoW pattern hides it.
              // Use GetAll and filter.
              return all.Where(c => c.Actif && c.PrixTotal == 0).OrderByDescending(c => c.DateCreation).ToList();
+        }
+
+        public async Task<bool> SetExportExclusionAsync(Guid id, bool isExcluded)
+        {
+            using var uow = await _uowFactory.CreateAsync();
+            var colis = await uow.Colis.GetByIdAsync(id);
+            if (colis == null) return false;
+
+            colis.IsExcludedFromExport = isExcluded;
+            await uow.Colis.UpdateAsync(colis);
+            await uow.CommitAsync();
+            return true;
         }
 
     }

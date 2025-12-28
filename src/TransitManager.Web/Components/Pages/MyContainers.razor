@@ -74,7 +74,11 @@
                         <th>Destination</th>
                         <th>Plomb</th>
                         <th>Compagnie</th>
-                        <th>Transitaire</th>
+                        <AuthorizeView Roles="Administrateur">
+                            <Authorized>
+                                <th>Transitaire</th>
+                            </Authorized>
+                        </AuthorizeView>
                         <th class="text-center">Réception</th>
                         <th class="text-center">Chargement</th>
                         <th class="text-center">Départ</th>
@@ -100,7 +104,11 @@
                                 </td>
                                 <td class="font-monospace small">@(c.NumeroPlomb ?? "-")</td>
                                 <td>@(c.NomCompagnie ?? "-")</td>
-                                <td>@(c.NomTransitaire ?? "-")</td>
+                                <AuthorizeView Roles="Administrateur">
+                                    <Authorized>
+                                        <td>@(c.NomTransitaire ?? "-")</td>
+                                    </Authorized>
+                                </AuthorizeView>
                                 
                                 <!-- Dates -->
                                 <td class="text-center small">@(c.DateReception?.ToString("dd/MM/yyyy") ?? "-")</td>
@@ -116,6 +124,17 @@
                                 <td class="text-end pe-4">
 									<div class="d-flex justify-content-end gap-2">
 										
+										<!-- Tracking Dropdown -->
+										<div class="btn-group">
+											<button type="button" class="btn btn-outline-info btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+												🚢 Suivi
+											</button>
+											<ul class="dropdown-menu">
+												<li><a class="dropdown-item" href="https://www.cma-cgm.fr/ebusiness/tracking" target="_blank">CMA CGM</a></li>
+												<li><a class="dropdown-item" href="https://www.msc.com/fr/track-a-shipment" target="_blank">MSC</a></li>
+											</ul>
+										</div>
+
 										<!-- AJOUT : Restriction Admin pour le bouton Modifier -->
 										<AuthorizeView Roles="Administrateur">
 											<Authorized>

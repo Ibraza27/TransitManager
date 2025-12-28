@@ -22,6 +22,20 @@ namespace TransitManager.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("TransitManager.Core.Entities.AppSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("AppSettings");
+                });
+
             modelBuilder.Entity("TransitManager.Core.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -273,6 +287,14 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("AdresseDestination")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("AdresseFrance")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("AdresseLivraison")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -342,6 +364,9 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.Property<string>("InventaireJson")
                         .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsExcludedFromExport")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LieuSignatureInventaire")
                         .HasMaxLength(100)
@@ -1198,7 +1223,7 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 12, 15, 21, 10, 39, 343, DateTimeKind.Utc).AddTicks(6270),
+                            DateCreation = new DateTime(2025, 12, 27, 18, 30, 41, 614, DateTimeKind.Utc).AddTicks(7408),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             EmailConfirme = false,
@@ -1228,6 +1253,14 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.Property<bool>("Actif")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("AdresseDestination")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("AdresseFrance")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<int>("Annee")
                         .HasColumnType("integer");
@@ -1262,6 +1295,15 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int?>("DimensionsHauteurCm")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DimensionsLargeurCm")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DimensionsLongueurCm")
+                        .HasColumnType("integer");
+
                     b.Property<string>("EtatDesLieux")
                         .HasColumnType("text");
 
@@ -1272,6 +1314,9 @@ namespace TransitManager.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsPriceCalculated")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("Kilometrage")
                         .HasColumnType("integer");
@@ -1292,6 +1337,9 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.Property<string>("ModifiePar")
                         .HasColumnType("text");
+
+                    b.Property<int>("Motorisation")
+                        .HasColumnType("integer");
 
                     b.Property<string>("NumeroPlomb")
                         .HasMaxLength(50)
@@ -1399,7 +1447,7 @@ namespace TransitManager.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("TransitManager.Core.Entities.Conteneur", "Conteneur")
-                        .WithMany()
+                        .WithMany("Documents")
                         .HasForeignKey("ConteneurId")
                         .OnDelete(DeleteBehavior.SetNull);
 
@@ -1587,6 +1635,8 @@ namespace TransitManager.Infrastructure.Migrations
             modelBuilder.Entity("TransitManager.Core.Entities.Conteneur", b =>
                 {
                     b.Navigation("Colis");
+
+                    b.Navigation("Documents");
 
                     b.Navigation("Vehicules");
                 });

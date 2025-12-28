@@ -8,6 +8,9 @@ namespace TransitManager.Core.Enums
         Bus,
         Van,
         Scooter,
-        Quad
+        Quad,
+        Bateau,
+        JetSki,
+        Pickup
     }
 }

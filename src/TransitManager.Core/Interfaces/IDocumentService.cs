@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.Core.Interfaces
 {
@@ -21,6 +22,9 @@ namespace TransitManager.Core.Interfaces
         
         // Suppression (Logique + Physique)
         Task<bool> DeleteDocumentAsync(Guid id);
+
+        // Mise à jour (Nom + Type + Renommage physique)
+        Task<Document?> UpdateDocumentAsync(Guid id, UpdateDocumentDto dto);
 
         // Demande de document (Admin -> Client)
         Task<Document> RequestDocumentAsync(Guid entityId, TypeDocument type, Guid clientId, Guid? colisId = null, Guid? vehiculeId = null, string? commentaire = null);

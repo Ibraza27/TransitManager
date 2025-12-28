@@ -33,6 +33,7 @@ namespace TransitManager.Core.Interfaces
         // --- DÉBUT DE L'AJOUT ---
         Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId);
 		Task UpdateInventaireAsync(UpdateInventaireDto dto);
+        Task<bool> SetExportExclusionAsync(Guid id, bool isExcluded);
         // --- FIN DE L'AJOUT ---
 		Task<PagedResult<ColisListItemDto>> GetPagedAsync(int page, int pageSize, string? search = null, Guid? clientId = null);
         Task<Dictionary<string, decimal>> GetMonthlyVolumeAsync(int months);

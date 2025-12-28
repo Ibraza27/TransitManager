@@ -229,7 +229,8 @@ namespace TransitManager.API.Controllers
                     DateArrivee = c.DateArrivee,
                     NombrePieces = c.NombrePieces,
                     PrixTotal = c.PrixTotal,
-                    SommePayee = c.SommePayee
+                    SommePayee = c.SommePayee,
+                    IsExcludedFromExport = c.IsExcludedFromExport
                 });
             }
 

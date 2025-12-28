@@ -133,8 +133,23 @@
                                         <input type="date" class="form-control" @bind="_dateSignature" disabled="@IsReadOnly">
                                     </div>
                                 </div>
-
                                 <div class="col-12">
+                                     <!-- Decharge Juridique (AJOUT URGENT) -->
+                                     @if(!IsReadOnly)
+                                     {
+                                         <div class="form-check bg-white p-3 border rounded mb-3 shadow-sm mx-1">
+                                             <input class="form-check-input" type="checkbox" id="legalDisclaimer" @bind="_isDisclaimed">
+                                             <label class="form-check-label small text-muted" for="legalDisclaimer" style="line-height: 1.2;">
+                                                 <strong>Je certifie que mes effets personnels m'appartiennent.</strong><br/>
+                                                 Important : en tant que responsable du chargement de mes effets personnels dans les cartons, je certifie l'exactitude de
+                                                 ma liste et que mes colis ne contiennent aucun produit dangereux au sens du code IMDG qui peut comprendre des produits tels que :
+                                                 <span class="fw-bold text-danger">ARTICLES EXPLOSIFS, GAZ COMPRIMÉ, RECHARGE DE GAZ, AÉROSOLS, PRODUITS CORROSIFS, PRODUITS TOXIQUES OU MATIÈRES RADIOACTIVES.</span><br/>
+                                                 La non observation de cette règle de sécurité engagera ma responsabilité civile et pénale en cas de litige.
+                                                 L'entreprise ne peut pas être tenue responsable en cas de dommage ou de l'état des colis des commandes internet.
+                                             </label>
+                                         </div>
+                                     }
+
                                     <div class="card">
                                         <div class="card-header bg-light fw-bold text-center">Signature du Client (Validation Inventaire)</div>
                                         <div class="card-body p-0 position-relative" style="height: 250px; background-color: #fff;">
@@ -147,9 +162,18 @@
                                             }
                                             else if (!IsReadOnly)
                                             {
-                                                <canvas id="sig-canvas-inventory" style="width:100%; height:100%; cursor:crosshair;"></canvas>
+                                                <!-- On masque le canvas si pas checké pour forcer la lecture ? Non, on laisse signer mais on bloque la validation. -->
+                                                <div style="@(_isDisclaimed ? "" : "pointer-events:none; opacity:0.5;")" class="h-100 w-100">
+                                                     <canvas id="sig-canvas-inventory" style="width:100%; height:100%; cursor:crosshair;"></canvas>
+                                                </div>
+                                                @if(!_isDisclaimed)
+                                                {
+                                                     <div class="position-absolute top-50 start-50 translate-middle text-center w-75">
+                                                         <span class="badge bg-warning text-dark shadow p-2"><i class="bi bi-exclamation-triangle me-2"></i>Veuillez cocher la case ci-dessus<br/>pour activer la signature</span>
+                                                     </div>
+                                                }
                                                 <div class="position-absolute bottom-0 end-0 m-2">
-                                                    <button class="btn btn-sm btn-light border" @onclick="ClearCanvas">Effacer</button>
+                                                    <button class="btn btn-sm btn-light border" @onclick="ClearCanvas" disabled="@(!_isDisclaimed)">Effacer</button>
                                                 </div>
                                             }
                                             else { <div class="d-flex h-100 align-items-center justify-content-center text-muted">Non signé</div> }
@@ -168,7 +192,7 @@
                     <button type="button" class="btn btn-secondary" @onclick="Close">Annuler</button>
                     @if (!IsReadOnly)
                     {
-                        <button type="button" class="btn btn-primary px-4" @onclick="SaveAndClose">
+                        <button type="button" class="btn btn-primary px-4" @onclick="SaveAndClose" disabled="@(!_isDisclaimed)">
                             <i class="bi bi-check-lg me-2"></i>Valider et Enregistrer
                         </button>
                     }
@@ -201,6 +225,8 @@
     private List<InventaireItem> _items = new();
     private InventaireItem _newItem = new() { Date = DateTime.Now, Quantite = 1 };
     
+    private bool _isDisclaimed = false; // Validation Checkbox state
+
     private string? _signatureBase64;
     private string? _lieu;
     private DateTime _dateSignature;
@@ -236,6 +262,9 @@
             
             // Si la date est null, on met aujourd'hui
             _dateSignature = Date ?? DateTime.Now;
+            
+            // Reset disclaimer
+            _isDisclaimed = false;
         }
     }
 

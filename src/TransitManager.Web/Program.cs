@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using System.IO;
 using TransitManager.Web.Auth;
+using TransitManager.Infrastructure.Services;
+using TransitManager.Infrastructure.Data;
+using TransitManager.Core.Interfaces; // Assuming IVehiculeService is here, let's check
+using Microsoft.EntityFrameworkCore; // Might be needed for other things
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseWindowsService(); // Enable running as a Windows Service
@@ -59,6 +63,15 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor(); // Indispensable pour le CookieHandler
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
+builder.Services.AddScoped<CustomAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
+
+// Register DbContext for SettingsService (and generic usage)
+builder.Services.AddDbContextFactory<TransitContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Settings Service (Direct DB Access)
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 // === DÉBUT DE LA MODIFICATION HTTPCLIENT ===
 // 1. Enregistrer notre handler personnalisé
 builder.Services.AddTransient<CookieHandler>();
@@ -82,6 +95,8 @@ builder.Services.AddHttpClient("API", client =>
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
      client.BaseAddress = new Uri(apiBaseUrl);
+     // Timeout global augmenté pour permettre l'upload de gros fichiers (vidéos)
+     client.Timeout = TimeSpan.FromMinutes(10);
 })
 .AddHttpMessageHandler<CookieHandler>()
 // AJOUT : On ignore les erreurs de certificat SSL ici aussi

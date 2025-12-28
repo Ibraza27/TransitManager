@@ -1,5 +1,6 @@
 @using System.Text.Json
 @using TransitManager.Core.Entities
+@using TransitManager.Core.Enums
 @inject IJSRuntime JSRuntime
 @if (IsVisible)
 {
@@ -37,8 +38,8 @@
                             <!-- Barre d'outils -->
                             <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded border">
 
-                                <!-- Outils d'édition (Visible seulement si Admin et Mode Édition activé) -->
-                                @if (_isEditingSchema && !IsReadOnly)
+                                <!-- Outils d'édition (Visible seulement si CanEditContent et Mode Édition activé) -->
+                                @if (_isEditingSchema && CanEditContent)
                                 {
                                     <div class="btn-group">
                                         <button class='btn btn-outline-primary @(_currentTool == "pen" ? "active" : "")' @onclick='() => SetTool("pen")' title="Crayon">
@@ -65,7 +66,7 @@
                                     <button class="btn btn-outline-dark" @onclick="ZoomOut">➖ Zoomer</button>
                                 </div>
                                 <!-- Bouton Action Droite -->
-                                @if (!IsReadOnly)
+                                @if (CanEditContent)
                                 {
                                     @if (_isEditingSchema)
                                     {
@@ -95,23 +96,23 @@
                                         <div class="card-header fw-bold">Inventaire Accessoires</div>
                                         <div class="card-body">
                                             <div class="form-check form-switch mb-3">
-                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.CarteGrise" disabled="@IsReadOnly">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.CarteGrise" disabled="@(!CanEditContent)">
                                                 <label class="form-check-label">Carte Grise Originale</label>
                                             </div>
                                             <div class="form-check form-switch mb-3">
-                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.Antenne" disabled="@IsReadOnly">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.Antenne" disabled="@(!CanEditContent)">
                                                 <label class="form-check-label">Antenne</label>
                                             </div>
                                             <div class="form-check form-switch mb-3">
-                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.Radio" disabled="@IsReadOnly">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.Radio" disabled="@(!CanEditContent)">
                                                 <label class="form-check-label">Radio / Façade</label>
                                             </div>
                                             <div class="form-check form-switch mb-3">
-                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.RoueSecours" disabled="@IsReadOnly">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.RoueSecours" disabled="@(!CanEditContent)">
                                                 <label class="form-check-label">Roue de secours / Galette</label>
                                             </div>
                                             <div class="form-check form-switch mb-3">
-                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.Cric" disabled="@IsReadOnly">
+                                                <input class="form-check-input" type="checkbox" @bind="_accessoires.Cric" disabled="@(!CanEditContent)">
                                                 <label class="form-check-label">Cric / Manivelle</label>
                                             </div>
                                         </div>
@@ -124,18 +125,18 @@
                                             <div class="mb-3 row align-items-center">
                                                 <label class="col-sm-6 col-form-label">Nombre de Clés</label>
                                                 <div class="col-sm-6">
-                                                    <input type="number" class="form-control" @bind="_accessoires.NombreClefs" min="0" max="10" disabled="@IsReadOnly">
+                                                    <input type="number" class="form-control" @bind="_accessoires.NombreClefs" min="0" max="10" disabled="@(!CanEditContent)">
                                                 </div>
                                             </div>
                                             <div class="mb-3 row align-items-center">
                                                 <label class="col-sm-6 col-form-label">Enjoliveurs (0-4)</label>
                                                 <div class="col-sm-6">
-                                                    <input type="number" class="form-control" @bind="_accessoires.NombreEnjoliveurs" min="0" max="4" disabled="@IsReadOnly">
+                                                    <input type="number" class="form-control" @bind="_accessoires.NombreEnjoliveurs" min="0" max="4" disabled="@(!CanEditContent)">
                                                 </div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">Autres Observations</label>
-                                                <textarea class="form-control" rows="3" @bind="_accessoires.AutresObservations" placeholder="Rayures, impacts non visibles sur schéma..." disabled="@IsReadOnly"></textarea>
+                                                <textarea class="form-control" rows="3" @bind="_accessoires.AutresObservations" placeholder="Rayures, impacts non visibles sur schéma..." disabled="@(!CanEditContent)"></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -148,11 +149,38 @@
 
                             <div class="row g-3 p-2">
                                 <div class="col-12 mb-3">
+                                    <div class="alert alert-warning border-danger">
+                                        <p class="mb-2"><strong>Je certifie que mes effets personnels m'appartiennent.</strong></p>
+                                        <p class="mb-2 small">
+                                            Important : en tant que responsable du chargement de mes effets personnels dans le conteneur et/ou véhicule, je certifie l'exactitude de ma liste et que mes colis ne contiennent aucun produit dangereux au sens du code IMDG qui peut comprendre des produits tels que : 
+                                            ARTICLES EXPLOSIFS, GAZ COMPRIMÉ, RECHARGE DE GAZ, AÉROSOLS, PRODUITS CORROSIFS, PRODUITS TOXIQUES OU MATIÈRES RADIOACTIVES.
+                                        </p>
+                                        <p class="mb-2 small fw-bold text-danger">
+                                            La non observation de cette règle de sécurité engagera ma responsabilité civile et pénale en cas de litige.
+                                            L'entreprise ne peut pas être tenue responsable en cas de dommage causé par la surcharge de votre véhicule.
+                                        </p>
+                                        
+                                        @if (!IsReadOnly && string.IsNullOrEmpty(_signatureClientBase64))
+                                        {
+                                            <div class="form-check mt-3">
+                                                <input class="form-check-input" type="checkbox" id="disclaimerCheck" 
+                                                       checked="@_disclaimerAccepted" 
+                                                       @onchange="OnDisclaimerChanged">
+                                                <label class="form-check-label fw-bold" for="disclaimerCheck">
+                                                    Je reconnais avoir lu et accepté les conditions ci-dessus.
+                                                </label>
+                                            </div>
+
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="col-12 mb-3">
                                     <div class="input-group">
                                         <span class="input-group-text">Fait à</span>
-                                        <input type="text" class="form-control" @bind="_lieu" placeholder="Ville..." disabled="@IsReadOnly">
+                                        <input type="text" class="form-control" @bind="_lieu" placeholder="Ville..." disabled="@(!CanEditContent)">
                                         <span class="input-group-text">Le</span>
-                                        <input type="date" class="form-control" @bind="_dateSignature" disabled="@IsReadOnly">
+                                        <input type="date" class="form-control" @bind="_dateSignature" disabled="@(!CanEditContent)">
                                     </div>
                                 </div>
                                 <!-- Agent -->
@@ -163,11 +191,11 @@
                                             @if (!string.IsNullOrEmpty(_signatureAgentBase64))
                                             {
                                                 <img src="@_signatureAgentBase64" style="width:100%; height:100%; object-fit:contain;" />
-                                                @if(!IsReadOnly) {
+                                                @if(CanSignAgent) {
                                                     <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" @onclick='() => ClearSignature("agent")'>Re-signer</button>
                                                 }
                                             }
-                                            else if (!IsReadOnly)
+                                            else if (CanSignAgent)
                                             {
                                                 <canvas id="sig-canvas-agent" style="width:100%; height:100%; cursor:crosshair;"></canvas>
                                                 <div class="position-absolute bottom-0 end-0 m-2">
@@ -186,16 +214,19 @@
                                             @if (!string.IsNullOrEmpty(_signatureClientBase64))
                                             {
                                                 <img src="@_signatureClientBase64" style="width:100%; height:100%; object-fit:contain;" />
-                                                @if(!IsReadOnly) {
+                                                @if(IsClientEditable || IsAdmin) {
                                                     <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" @onclick='() => ClearSignature("client")'>Re-signer</button>
                                                 }
                                             }
-                                            else if (!IsReadOnly)
+                                            else if ((!IsReadOnly || IsAdmin) && _disclaimerAccepted)
                                             {
                                                 <canvas id="sig-canvas-client" style="width:100%; height:100%; cursor:crosshair;"></canvas>
                                                 <div class="position-absolute bottom-0 end-0 m-2">
                                                     <button class="btn btn-sm btn-light border" @onclick='() => ClearCanvas("sig-canvas-client")'>Effacer</button>
                                                 </div>
+                                            }
+                                            else if (!_disclaimerAccepted && (!IsReadOnly || IsAdmin)) {
+                                                 <div class="d-flex h-100 align-items-center justify-content-center text-danger fw-bold text-center p-3">Veuillez accepter la décharge pour signer.</div>
                                             }
                                             else { <div class="d-flex h-100 align-items-center justify-content-center text-muted">Non signé</div> }
                                         </div>
@@ -222,6 +253,7 @@
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public Core.Enums.TypeVehicule Type { get; set; }
     [Parameter] public bool IsReadOnly { get; set; } = false;
+    [Parameter] public bool IsAdmin { get; set; } = false;
 
     [Parameter] public string? JsonPoints { get; set; }
     [Parameter] public string? JsonStrokes { get; set; }
@@ -272,23 +304,45 @@
     private string? _lieu;
     private DateTime _dateSignature;
 
-    protected override void OnParametersSet()
+    // --- Disclaimer ---
+    private bool _disclaimerAccepted = false;
+    // Logic: Client can edit if Modal isn't GlobalReadOnly AND Client hasn't signed yet.
+    // If GlobalReadOnly is true (Archived), then NO EDIT.
+    // If GlobalReadOnly is false (Active), then Client can edit IF not signed.
+    private bool IsClientEditable => !IsReadOnly && string.IsNullOrEmpty(_signatureClientBase64);
+    
+    // Admin can edit if not ReadOnly (Delivered/Returned), even if Client Signed.
+    // Client can edit if not ReadOnly and not Signed.
+    private bool CanEditContent => !IsReadOnly && (IsAdmin || string.IsNullOrEmpty(_signatureClientBase64));
+
+    private bool CanSignAgent => !IsReadOnly && IsAdmin; // Only Admin can sign as Agent
+
+    private TypeVehicule? _previousType;
+
+    protected override async Task OnParametersSetAsync()
     {
         if (IsVisible)
         {
+            if (_previousType != Type)
+            {
+                _previousType = Type;
+                _isCanvasInitialized = false; // Force re-init image
+            }
+             
             // Reset UI
-            _activeTab = "schema";
-            _isEditingSchema = false;
+            // Only reset these if not already set (preserve state during re-renders)
+             if(_activeTab == "") _activeTab = "schema";
 
             // Chargement Données
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            try { _damagePoints = !string.IsNullOrEmpty(JsonPoints) ? JsonSerializer.Deserialize<List<SerializablePoint>>(JsonPoints, options) ?? new() : new(); } catch { _damagePoints = new(); }
-            try { _strokes = !string.IsNullOrEmpty(JsonStrokes) ? JsonSerializer.Deserialize<List<List<SerializablePoint>>>(JsonStrokes, options) ?? new() : new(); } catch { _strokes = new(); }
-            try { _accessoires = !string.IsNullOrEmpty(JsonAccessoires) ? JsonSerializer.Deserialize<VehiculeAccessoires>(JsonAccessoires, options) ?? new() : new(); } catch { _accessoires = new(); }
-            _signatureAgentBase64 = SignatureAgent;
-            _signatureClientBase64 = SignatureClient;
-            _lieu = string.IsNullOrEmpty(Lieu) ? "Tresses" : Lieu;
-            _dateSignature = DateSignature ?? DateTime.Now;
+            if(_damagePoints.Count == 0 && !string.IsNullOrEmpty(JsonPoints)) try { _damagePoints = JsonSerializer.Deserialize<List<SerializablePoint>>(JsonPoints, options) ?? new(); } catch { _damagePoints = new(); }
+            if(_strokes.Count == 0 && !string.IsNullOrEmpty(JsonStrokes)) try { _strokes = JsonSerializer.Deserialize<List<List<SerializablePoint>>>(JsonStrokes, options) ?? new(); } catch { _strokes = new(); }
+            if(_accessoires.NombreClefs == 1 && !string.IsNullOrEmpty(JsonAccessoires)) try { _accessoires = JsonSerializer.Deserialize<VehiculeAccessoires>(JsonAccessoires, options) ?? new(); } catch { _accessoires = new(); }
+            
+            if(_signatureAgentBase64 == null) _signatureAgentBase64 = SignatureAgent;
+            if(_signatureClientBase64 == null) _signatureClientBase64 = SignatureClient;
+            if(_lieu == null) _lieu = string.IsNullOrEmpty(Lieu) ? "Tresses" : Lieu;
+            if(_dateSignature == default) _dateSignature = DateSignature ?? DateTime.Now;
         }
     }
 
@@ -444,11 +498,30 @@
         Core.Enums.TypeVehicule.Camion => "images/plans/camion_plan.png",
         Core.Enums.TypeVehicule.Quad => "images/plans/quad_plan.png",
         Core.Enums.TypeVehicule.Van => "images/plans/van_plan.png",
-        _ => "images/plans/vehicule_plan.png"
+        Core.Enums.TypeVehicule.Scooter => "images/plans/scooter_plan.png",
+        Core.Enums.TypeVehicule.Bateau => "images/plans/bateau_plan.png",
+        Core.Enums.TypeVehicule.JetSki => "images/plans/jet_ski_plan.png",
+        Core.Enums.TypeVehicule.Pickup => "images/plans/pickup_plan.png",
+        _ => "images/plans/vehicule_plan.png" // Default Voiture
     };
 
     private string GetSvgPoints(List<SerializablePoint> points)
     {
         return string.Join(" ", points.Select(p => $"{p.X.ToString(System.Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)}"));
     }
+
+    private async Task OnDisclaimerChanged(ChangeEventArgs e)
+    {
+        _disclaimerAccepted = (bool)(e.Value ?? false);
+        if (_disclaimerAccepted && !IsReadOnly)
+        {
+            await Task.Delay(100); // Wait for DOM update
+            if (string.IsNullOrEmpty(_signatureClientBase64)) 
+            {
+                await JSRuntime.InvokeVoidAsync("signaturePad.init", "sig-canvas-client");
+            }
+        }
+    }
+
+
 }

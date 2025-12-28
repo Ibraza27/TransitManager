@@ -9,6 +9,7 @@ using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -54,12 +55,34 @@ namespace TransitManager.Infrastructure.Services
             // --- SÉCURITÉ : Validation du type de fichier (Fix V3) ---
             var allowedExtensions = new Dictionary<string, List<byte[]>>
             {
-                { ".pdf", new List<byte[]> { new byte[] { 0x25, 0x50, 0x44, 0x46 } } },
+                {".pdf", new List<byte[]> { new byte[] { 0x25, 0x50, 0x44, 0x46 } } },
                 { ".jpg", new List<byte[]> { new byte[] { 0xFF, 0xD8, 0xFF } } },
                 { ".jpeg", new List<byte[]> { new byte[] { 0xFF, 0xD8, 0xFF } } },
                 { ".png", new List<byte[]> { new byte[] { 0x89, 0x50, 0x4E, 0x47 } } },
                 { ".docx", new List<byte[]> { new byte[] { 0x50, 0x4B, 0x03, 0x04 } } },
-                { ".xlsx", new List<byte[]> { new byte[] { 0x50, 0x4B, 0x03, 0x04 } } }
+                { ".xlsx", new List<byte[]> { new byte[] { 0x50, 0x4B, 0x03, 0x04 } } },
+                // Vidéo / Audio
+                { ".mov", new List<byte[]> { 
+                    new byte[] { 0x00, 0x00, 0x00, 0x14, 0x66, 0x74, 0x79, 0x70 }, // ftypqt
+                    new byte[] { 0x6D, 0x6F, 0x6F, 0x76 }, // moov (si pas au début, risque d'échec check magic bytes simple - à affiner si besoin)
+                    new byte[] { 0x66, 0x72, 0x65, 0x65 } // free
+                } }, 
+                { ".mp4", new List<byte[]> { 
+                    new byte[] { 0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70 },
+                    new byte[] { 0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70 },
+                    new byte[] { 0x00, 0x00, 0x00, 0x1C, 0x66, 0x74, 0x79, 0x70 },
+                    new byte[] { 0x00, 0x00, 0x00, 0x14, 0x66, 0x74, 0x79, 0x70 } // mp42/isom variants
+                } },
+                { ".mp3", new List<byte[]> { 
+                    new byte[] { 0x49, 0x44, 0x33 }, // ID3
+                    new byte[] { 0xFF, 0xFB }, // MPEG-1 Layer 3 (approx)
+                    new byte[] { 0xFF, 0xF3 }, // MPEG-1 Layer 3 (approx)
+                    new byte[] { 0xFF, 0xF2 } 
+                } },
+                { ".avi", new List<byte[]> { new byte[] { 0x52, 0x49, 0x46, 0x46 } } }, // RIFF
+                { ".wav", new List<byte[]> { new byte[] { 0x52, 0x49, 0x46, 0x46 } } }, // RIFF
+                { ".mkv", new List<byte[]> { new byte[] { 0x1A, 0x45, 0xDF, 0xA3 } } }, // Matroska
+                { ".m4a", new List<byte[]> { new byte[] { 0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x4D, 0x34, 0x41 } } } // M4A start
             };
 
             var ext = Path.GetExtension(fileName).ToLower();
@@ -72,17 +95,43 @@ namespace TransitManager.Infrastructure.Services
             if (fileStream.CanSeek)
             {
                 fileStream.Position = 0;
-                var buffer = new byte[4];
-                await fileStream.ReadAsync(buffer, 0, 4);
+                // Lecture de 32 octets pour avoir assez de contexte (notamment pour ftyp)
+                var buffer = new byte[32]; 
+                await fileStream.ReadAsync(buffer, 0, 32);
                 fileStream.Position = 0; // Reset pour copie
 
-                var signatures = allowedExtensions[ext];
-                bool isMatch = signatures.Any(sig => 
-                    buffer.Take(sig.Length).SequenceEqual(sig));
+                bool isMatch = false;
+
+                // Logique spécifique pour MP4, MOV, M4A (Conteneurs ISO Base Media)
+                // Structure typique : [4 bytes size] [4 bytes 'ftyp'] ...
+                if (ext == ".mp4" || ext == ".mov" || ext == ".m4a")
+                {
+                    // Vérifier si 'ftyp' (0x66 0x74 0x79 0x70) est présent à l'offset 4
+                    var ftyp = new byte[] { 0x66, 0x74, 0x79, 0x70 };
+                    if (buffer.Skip(4).Take(4).SequenceEqual(ftyp))
+                    {
+                        isMatch = true;
+                    }
+                    // Fallback : vérifier 'moov' (0x6D 0x6F 0x6F 0x76) au début ou à l'offset 4 (moins standard mais possible)
+                    else if (buffer.Take(4).SequenceEqual(new byte[] { 0x6D, 0x6F, 0x6F, 0x76 })) isMatch = true; 
+                }
+                
+                // Si pas matché par logique spécifique, on utilise les signatures standard
+                if (!isMatch && allowedExtensions.ContainsKey(ext))
+                {
+                    var signatures = allowedExtensions[ext];
+                    // On vérifie si LE DÉBUT du buffer correspond à une signature
+                    isMatch = signatures.Any(sig => 
+                        buffer.Length >= sig.Length && buffer.Take(sig.Length).SequenceEqual(sig));
+                }
 
                 if (!isMatch)
                 {
-                    throw new InvalidOperationException($"Le contenu du fichier ne correspond pas à son extension ({ext}).");
+                    // Pour le debug, on peut logger les bytes (optionnel, supprimer en prod)
+                    var hex = BitConverter.ToString(buffer.Take(8).ToArray());
+                    Console.WriteLine($"[MagicBytes] Echec pour {fileName} ({ext}). Header: {hex}");
+                    
+                    throw new InvalidOperationException($"Le contenu du fichier ne correspond pas à son extension ({ext}). (Header: {hex})");
                 }
             }
             // ---------------------------------------------------------
@@ -93,6 +142,22 @@ namespace TransitManager.Infrastructure.Services
             using (var fileOutput = new FileStream(fullPath, FileMode.Create))
             {
                 await fileStream.CopyToAsync(fileOutput);
+            }
+
+            // Déterminer le propriétaire (Client) si non fourni
+            if (!clientId.HasValue)
+            {
+                if (colisId.HasValue) 
+                {
+                    var c = await context.Colis.FindAsync(colisId);
+                    clientId = c?.ClientId;
+                }
+                else if (vehiculeId.HasValue) 
+                {
+                    var v = await context.Vehicules.FindAsync(vehiculeId);
+                    clientId = v?.ClientId;
+                }
+                // Pour conteneur, pas forcément de Client unique, donc on laisse null ou on gère autrement
             }
 
             var document = new Document
@@ -106,7 +171,7 @@ namespace TransitManager.Infrastructure.Services
                 TailleFichier = new FileInfo(fullPath).Length,
                 DateCreation = DateTime.UtcNow,
                 EstConfidentiel = estConfidentiel,
-                ClientId = clientId,
+                ClientId = clientId, // Utilisation du ClientId déduit ou fourni
                 ColisId = colisId,
                 VehiculeId = vehiculeId,
                 ConteneurId = conteneurId,
@@ -124,19 +189,12 @@ namespace TransitManager.Infrastructure.Services
             await _timelineService.AddEventAsync(desc, colisId: colisId, vehiculeId: vehiculeId, conteneurId: conteneurId);
             // ----------------------
 
-            // Déterminer le propriétaire (Client) pour le notifier
-            Guid? ownerClientId = clientId;
-            if (!ownerClientId.HasValue && colisId.HasValue) {
-                var c = await context.Colis.FindAsync(colisId);
-                ownerClientId = c?.ClientId;
-            }
-            // (Pareil pour Vehicule...)
-
             // URL de redirection vers l'entité parente
             string actionUrl = "";
             if (colisId.HasValue) actionUrl = $"/colis/edit/{colisId}";
             else if (vehiculeId.HasValue) actionUrl = $"/vehicule/edit/{vehiculeId}";
             else if (conteneurId.HasValue) actionUrl = $"/conteneur/detail/{conteneurId}";
+
 
             // Notifier Admin
             await _notificationService.CreateAndSendAsync(
@@ -146,6 +204,8 @@ namespace TransitManager.Infrastructure.Services
                 CategorieNotification.Document,
                 actionUrl: actionUrl
             );
+
+            var ownerClientId = clientId;
 
             // Notifier Client (si le doc n'est pas confidentiel)
             if (!estConfidentiel && ownerClientId.HasValue)
@@ -205,10 +265,12 @@ namespace TransitManager.Infrastructure.Services
             if (doc == null) return null;
 
             var fullPath = Path.Combine(_storageRootPath, doc.CheminFichier);
+            Console.WriteLine($"[DEBUG] GetFileStreamAsync: ID={id}, Path={fullPath}, Exists={File.Exists(fullPath)}");
 
             if (!File.Exists(fullPath))
             {
                 // Gestion d'erreur si le fichier physique a disparu
+                Console.WriteLine($"[ERROR] File not found at {fullPath}");
                 return null;
             }
 
@@ -284,6 +346,95 @@ namespace TransitManager.Infrastructure.Services
             }
 
             return true;
+        }
+
+        public async Task<Document?> UpdateDocumentAsync(Guid id, UpdateDocumentDto dto)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var doc = await context.Documents.FindAsync(id);
+
+            if (doc == null) return null;
+
+            // 1. Mise à jour du Type
+            var oldType = doc.Type;
+            doc.Type = dto.Type;
+
+            // 2. LOGIQUE MÉTIER : Si on change le type pour un type qui était "Manquant", on supprime l'alerte
+            if (doc.Type != oldType)
+            {
+                // Chercher si un document "Manquant" de ce nouveau type existe pour la même entité
+                var missingDocs = context.Documents.Where(d => 
+                    d.Statut == StatutDocument.Manquant && 
+                    d.Type == doc.Type &&
+                    d.Actif &&
+                    (d.ClientId == doc.ClientId || (d.ColisId != null && d.ColisId == doc.ColisId) || (d.VehiculeId != null && d.VehiculeId == doc.VehiculeId))
+                );
+                
+                context.Documents.RemoveRange(missingDocs);
+            }
+
+            // 3. Mise à jour du Nom (Renommage Physique)
+            // L'utilisateur envoie le nom SANS extension (ex: "Mon Fichier"). On doit rajouter l'extension.
+            if (!string.IsNullOrWhiteSpace(dto.Nom))
+            {
+                // Si l'utilisateur n'a pas mis l'extension, on la rajoute pour stocker un nom complet correct
+                string newNameWithExt = dto.Nom;
+                if (!newNameWithExt.EndsWith(doc.Extension, StringComparison.OrdinalIgnoreCase))
+                {
+                    newNameWithExt += doc.Extension;
+                }
+
+                if (!newNameWithExt.Equals(doc.Nom, StringComparison.OrdinalIgnoreCase))
+                {
+                    var oldPath = Path.Combine(_storageRootPath, doc.CheminFichier);
+                    var directory = Path.GetDirectoryName(oldPath); // Use full path to verify existence? No, use oldPath logic
+                    // But wait, the previous fix used Path.GetDirectoryName(doc.CheminFichier) !! 
+                    // Let's stick to what works.
+                    
+                    // On recalcule le repertoire parent relatif de la même manière que le fix précédent
+                    var relativeDir = Path.GetDirectoryName(doc.CheminFichier) ?? "";
+                    var fullOldPath = Path.Combine(_storageRootPath, doc.CheminFichier);
+
+                    if (File.Exists(fullOldPath))
+                    {
+                         // Use just the NAME part for the sanitized filename to avoid double extension if we want.
+                         // Standard logic: GUID_SanitizedName.ext
+                         // dto.Nom might be "File" or "File.pdf".
+                         // SanitizeFileName("File") -> "File". Result: GUID_File.pdf
+                         // SanitizeFileName("File.pdf") -> "File_pdf". Result: GUID_File_pdf.pdf (Ugly)
+                         
+                         // We prefer to sanitize just the name-without-extension part.
+                         string namePart = Path.GetFileNameWithoutExtension(newNameWithExt);
+                         var sanitizedNewName = SanitizeFileName(namePart);
+                         
+                         var newFileName = $"{Guid.NewGuid()}_{sanitizedNewName}{doc.Extension}";
+                         var newPath = Path.Combine(_storageRootPath, relativeDir, newFileName);
+                         
+                         try
+                         {
+                             // Ensure directory exists (it should)
+                             var targetDir = Path.GetDirectoryName(newPath);
+                             if (targetDir != null && !Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
+
+                             File.Move(fullOldPath, newPath);
+                             
+                             // Update DB
+                             doc.CheminFichier = Path.Combine(relativeDir, newFileName);
+                         }
+                         catch (Exception ex)
+                         {
+                             // Log and abort rename, but maybe allow other updates? No, rename is critical.
+                             Console.WriteLine($"[ERROR] Rename failed: {ex.Message}");
+                             throw new IOException($"Erreur lors du renommage physique: {ex.Message}", ex);
+                         }
+                    }
+                }
+                
+                doc.Nom = newNameWithExt;
+            }
+
+            await context.SaveChangesAsync();
+            return doc;
         }
 
         public async Task<Document> RequestDocumentAsync(Guid entityId, TypeDocument type, Guid clientId, Guid? colisId = null, Guid? vehiculeId = null, string? commentaire = null)

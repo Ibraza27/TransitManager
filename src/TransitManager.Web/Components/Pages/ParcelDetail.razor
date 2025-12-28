@@ -54,8 +54,13 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <button class="dropdown-item" @onclick="ExportTicket">
-                            🏷️ Étiquette / Ticket
+                        <button class="dropdown-item" @onclick='() => ExportTicket("thermal")'>
+                            🏷️ Étiquette (Thermique)
+                        </button>
+                    </li>
+                    <li>
+                        <button class="dropdown-item" @onclick='() => ExportTicket("a4")'>
+                            🖨️ Étiquette (Format A4)
                         </button>
                     </li>
                 </ul>
@@ -167,7 +172,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Destination Finale <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" @bind="_colis.DestinationFinale" disabled="@(!CanEditFields)" />
+                                        <input type="text" class="form-control" value="@_colis.DestinationFinale" @oninput="OnDestinationChanged" disabled="@(!CanEditFields)" />
                                     </div>
                                      <div class="col-12">
                                         <label class="form-label">Code-barres</label>
@@ -190,7 +195,7 @@
                             <div class="card-body">
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="sameRecipient" 
-                                           @bind="_sameAsClient" @onclick="ToggleSameAsClient" disabled="@(!CanEditFields)">
+                                           checked="@_sameAsClient" @onchange="OnSameAsClientCheckedChanged" disabled="@(!CanEditFields)">
                                     <label class="form-check-label" for="sameRecipient">Destinataire identique au propriétaire</label>
                                 </div>
                                 <div class="row g-3">
@@ -202,6 +207,34 @@
                                         <label class="form-label">Téléphone Destinataire</label>
                                         <input type="text" class="form-control" @bind="_colis.TelephoneDestinataire" disabled="@(_sameAsClient || !CanEditFields)" />
                                     </div>
+                                    
+                                    <!-- ADRESSE FRANCE -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label mb-0">Adresse en France</label>
+                                            @if (CanEditFields)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="CopyAddressFrance" title="Copier l'adresse du profil">
+                                                    <i class="bi bi-box-arrow-in-down me-1"></i>Copier du profil
+                                                </button>
+                                            }
+                                        </div>
+                                        <textarea class="form-control" rows="3" style="field-sizing: content; min-height: 80px;" @bind="_colis.AdresseFrance" disabled="@(!CanEditFields)"></textarea>
+                                    </div>
+
+                                    <!-- ADRESSE DESTINATION -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label mb-0">@DestinationLabel</label>
+                                            @if (CanEditFields)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="CopyAddressDestination" title="Copier l'adresse du profil">
+                                                    <i class="bi bi-box-arrow-in-down me-1"></i>Copier du profil
+                                                </button>
+                                            }
+                                        </div>
+                                        <textarea class="form-control" rows="3" style="field-sizing: content; min-height: 80px;" @bind="_colis.AdresseDestination" disabled="@(!CanEditFields)"></textarea>
+                                    </div>
                                 </div>
                                 <hr />
                                 <div class="form-check mb-3">
@@ -209,8 +242,21 @@
                                     <label class="form-check-label" for="homeDelivery">Livraison à domicile</label>
                                 </div>
                                  <div class="mb-3">
-                                    <label class="form-label">Adresse de Livraison</label>
-                                    <textarea class="form-control" rows="2" @bind="_colis.AdresseLivraison" disabled="@(!_colis.LivraisonADomicile || !CanEditFields)"></textarea>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label mb-0">Adresse de Livraison</label>
+                                        @if (CanEditFields && _colis.LivraisonADomicile)
+                                         {
+                                             <button type="button" class="btn btn-sm btn-outline-primary" @onclick="CopyAddressDelivery" title="Copier l'adresse du profil pour l'étiquette">
+                                                 <i class="bi bi-box-arrow-in-down me-1"></i>Copier du profil
+                                             </button>
+                                         }
+                                    </div>
+                                    <textarea class="form-control" rows="2" @bind="_colis.AdresseLivraison" disabled="@(!_colis.LivraisonADomicile || !CanEditFields)" placeholder="Limité à 2 lignes"></textarea>
+                                    @if(_colis.LivraisonADomicile)
+                                    {
+                                        <div class="form-text text-warning"><i class="bi bi-exclamation-circle me-1"></i>Idéalement max 2 lignes pour l'étiquette.</div>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -333,6 +379,10 @@
                                      <span>Reste :</span>
                                      <span class="text-danger">@_colis.RestantAPayer.ToString("C2")</span>
                                  </div>
+                                 <div class="mt-2 text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Moyens de paiement acceptés : Espèces, CB, Virement, Paiement en ligne
+                                 </div>
                             </div>
                         </div>
                     </div>
@@ -413,6 +463,7 @@
     
     // Admin Search
     private string _clientSearch = "";
+    private List<Client> _clients = new(); // Used for direct lookup
     private List<Client> _filteredClients = new();
     private List<Conteneur> _containers = new();
     // Logic Permissions
@@ -462,7 +513,7 @@
                     _clientNameDisplay = $"{profile.Nom} {profile.Prenom}";
                     await GenerateBarcode();
                     _sameAsClient = true;
-                    ToggleSameAsClient(); 
+                    ApplySameAsClient(); 
                 }
             }
         }
@@ -475,11 +526,13 @@
         {
             _filteredClients.Clear(); return;
         }
-        var allClients = await ApiService.GetClientsAsync();
-        if (allClients != null)
+        if (string.IsNullOrEmpty(_clientSearch) || _clientSearch.Length < 2) 
         {
-            _filteredClients = allClients.Where(c => c.NomComplet.Contains(_clientSearch, StringComparison.OrdinalIgnoreCase)).Take(5).ToList();
+            _filteredClients.Clear(); return;
         }
+        if (!_clients.Any()) _clients = (await ApiService.GetClientsAsync())?.ToList() ?? new();
+
+        _filteredClients = _clients.Where(c => c.NomComplet.Contains(_clientSearch, StringComparison.OrdinalIgnoreCase)).Take(5).ToList();
     }
     private void SelectClient(Client client)
     {
@@ -489,23 +542,110 @@
         _clientSearch = "";
         
         // Si "Identique" est coché, on met à jour le destinataire immédiatement
-        if (_sameAsClient) ToggleSameAsClient();
+        if (_sameAsClient) ApplySameAsClient();
     }
     private async Task GenerateBarcode()
     {
         var code = await ApiService.GenerateBarcodeAsync();
         if (!string.IsNullOrEmpty(code)) _firstBarcode = code;
     }
-    private void ToggleSameAsClient()
+    private void OnSameAsClientCheckedChanged(ChangeEventArgs e)
     {
-        if (_sameAsClient)
+        _sameAsClient = (bool)(e.Value ?? false);
+        if (_sameAsClient) ApplySameAsClient();
+    }
+
+    private void ApplySameAsClient()
+    {
+        _colis.Destinataire = _clientNameDisplay;
+            
+        // Si on a l'objet Client chargé, on l'utilise pour le téléphone
+        if (_colis.Client != null)
         {
-            _colis.Destinataire = _clientNameDisplay;
-            // Si on avait le client complet, on mettrait aussi le téléphone
+            _colis.TelephoneDestinataire = _colis.Client.TelephonePrincipal;
+        }
+        // Sinon, si on est admin et qu'on a sélectionné un client via la liste
+        else if (IsAdmin && _colis.ClientId != Guid.Empty && _clients.Any())
+        {
+             var localClient = _clients.FirstOrDefault(c => c.Id == _colis.ClientId);
+             if (localClient != null)
+             {
+                  _colis.TelephoneDestinataire = localClient.TelephonePrincipal;
+             }
         }
     }
     
     // Gestion Modals
+    private async Task CopyAddressFrance()
+    {
+        Client? client = null;
+        if(_colis.Client != null) client = _colis.Client;
+        else if(IsAdmin) client = _clients.FirstOrDefault(c => c.Id == _colis.ClientId); // Accessing _clients might need to be ensured? ParcelDetail doesn't have _clients list like VehicleDetail unless I missed it.
+        // Wait, ParcelDetail only loads filtered clients for search.
+        
+        if(client == null)
+        {
+             // Try fetching
+             client = await ApiService.GetClientByIdAsync(_colis.ClientId);
+        }
+        
+        if (client != null)
+        {
+            // Modification : Seulement Adresse, CP, Ville, Pays (Pas de nom)
+            _colis.AdresseFrance = $"{client.AdressePrincipale}\n{client.CodePostal} {client.Ville} {client.Pays}".Trim();
+        }
+    }
+
+    private async Task CopyAddressDestination()
+    {
+        Client? client = null;
+        if(_colis.Client != null) client = _colis.Client;
+        
+        if(client == null)
+        {
+             client = await ApiService.GetClientByIdAsync(_colis.ClientId);
+        }
+        
+        if (client != null)
+        {
+            // Prefer Delivery Address if available, else Principal
+            if (!string.IsNullOrWhiteSpace(client.AdresseLivraison))
+            {
+                 // Pas de nom
+                 _colis.AdresseDestination = $"{client.AdresseLivraison}".Trim();
+            }
+            else
+            {
+                // Pas de nom
+                _colis.AdresseDestination = $"{client.AdressePrincipale}\n{client.CodePostal} {client.Ville} {client.Pays}".Trim();
+            }
+    }
+        }
+
+    private async Task CopyAddressDelivery()
+    {
+        Client? client = null;
+        if(_colis.Client != null) client = _colis.Client;
+        if(client == null) client = await ApiService.GetClientByIdAsync(_colis.ClientId);
+        
+        if (client != null)
+        {
+             // Logique "Etiquette" : On veut l'adresse exacte pour la livraison
+             if (!string.IsNullOrWhiteSpace(client.AdresseLivraison))
+            {
+                 _colis.AdresseLivraison = $"{client.AdresseLivraison}".Trim();
+            }
+            else
+            {
+                _colis.AdresseLivraison = $"{client.AdressePrincipale}\n{client.CodePostal} {client.Ville} {client.Pays}".Trim();
+            }
+        }
+    }
+
+
+    // Gestion Modals
+
+
     private void ShowInventory() => _showInventory = true;
 	
 	private async Task SaveInventory(InventoryModal.InventoryResult result)
@@ -596,6 +736,8 @@
                 TelephoneDestinataire = _colis.TelephoneDestinataire,
                 LivraisonADomicile = _colis.LivraisonADomicile,
                 AdresseLivraison = _colis.AdresseLivraison,
+                AdresseFrance = _colis.AdresseFrance,
+                AdresseDestination = _colis.AdresseDestination,
                 InventaireJson = _colis.InventaireJson,
                 Volume = IsAdmin ? _colis.Volume : 0,
                 PrixTotal = IsAdmin ? _colis.PrixTotal : 0,
@@ -622,6 +764,8 @@
                 TelephoneDestinataire = _colis.TelephoneDestinataire,
                 LivraisonADomicile = _colis.LivraisonADomicile,
                 AdresseLivraison = _colis.AdresseLivraison,
+                AdresseFrance = _colis.AdresseFrance,
+                AdresseDestination = _colis.AdresseDestination,
                 InventaireJson = _colis.InventaireJson,
                 Volume = _colis.Volume,
                 PrixTotal = _colis.PrixTotal,
@@ -656,7 +800,16 @@
 			_ => "bg-secondary"
 		};
 	}
-	
+
+    private string DestinationLabel => string.IsNullOrWhiteSpace(_colis.DestinationFinale) ? "Adresse Destination" : $"Adresse {_colis.DestinationFinale}";
+    
+    private void OnDestinationChanged(ChangeEventArgs e)
+    {
+        _colis.DestinationFinale = e.Value?.ToString();
+        // Force l'actualisation pour le label dynamique
+        StateHasChanged();
+    }
+
     private bool _isExportMenuOpen = false;
     private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
 	private async Task ExportPdf(bool includeFinancials, bool includePhotos)
@@ -702,7 +855,7 @@
         await InvokeAsync(StateHasChanged);
     }
 	
-	private async Task ExportTicket()
+    private async Task ExportTicket(string format = "thermal")
     {
         _isExportMenuOpen = false;
         _isLoading = true;
@@ -710,12 +863,12 @@
 
         try
         {
-            var pdfData = await ApiService.ExportTicketPdfAsync(_colis.Id);
+            var pdfData = await ApiService.ExportTicketPdfAsync(_colis.Id, format);
 
             if (pdfData != null && pdfData.Length > 0)
             {
                 var safeRef = _colis.NumeroReference.Replace("/", "-");
-                var fileName = $"Ticket_{safeRef}.pdf";
+                var fileName = $"Ticket_{safeRef}_{format.ToUpper()}.pdf";
 
                 using var stream = new MemoryStream(pdfData);
                 using var streamRef = new DotNetStreamReference(stream);

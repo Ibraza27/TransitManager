@@ -30,6 +30,7 @@ namespace TransitManager.Infrastructure.Data
         public DbSet<Message> Messages { get; set; } = null!;
         public DbSet<TrackingEvent> TrackingEvents { get; set; } = null!;
 		public DbSet<Notification> Notifications { get; set; } = null!; 
+        public DbSet<AppSetting> AppSettings { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

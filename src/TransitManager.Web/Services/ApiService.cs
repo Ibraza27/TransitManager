@@ -182,6 +182,17 @@ namespace TransitManager.Web.Services
             catch { return false; }
         }
 
+        public async Task<bool> ToggleColisExportExclusionAsync(Guid id, bool isExcluded)
+        {
+            try
+            {
+                // On passe la valeur booléenne directement
+                var response = await _httpClient.PostAsJsonAsync($"api/colis/{id}/toggle-export", isExcluded);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
         public async Task<string?> GenerateBarcodeAsync()
         {
             try
@@ -810,8 +821,10 @@ namespace TransitManager.Web.Services
 			{
 				using var content = new MultipartFormDataContent();
 				
-				// Configuration importante pour les gros fichiers (ici max 10 Mo)
-				var fileContent = new StreamContent(file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024));
+				// Configuration importante pour les gros fichiers (ici max 500 Mo)
+				const long maxFileSize = 500L * 1024 * 1024;
+				using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
+				var fileContent = new StreamContent(stream);
 				fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
 				
 				content.Add(fileContent, "file", file.Name);
@@ -822,18 +835,28 @@ namespace TransitManager.Web.Services
 				if (colisId.HasValue) content.Add(new StringContent(colisId.Value.ToString()), "colisId");
 				if (conteneurId.HasValue) content.Add(new StringContent(conteneurId.Value.ToString()), "conteneurId");
 
+				// Timeout géré globalement dans Program.cs 
+
 				var response = await _httpClient.PostAsync("api/documents/upload", content);
 				
 				if (response.IsSuccessStatusCode)
 				{
+					if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
 					return await response.Content.ReadFromJsonAsync<Document>(_jsonOptions);
 				}
-				return null;
+				else
+				{
+					var error = await response.Content.ReadAsStringAsync();
+					Console.WriteLine($"[ApiService] Upload Error {response.StatusCode}: {error}");
+					// On pourrait throw une exception ici pour l'afficher à l'utilisateur
+                    throw new Exception($"Erreur serveur: {response.StatusCode} - {error}");
+				}
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Erreur Upload: {ex.Message}");
-				return null;
+				Console.WriteLine($"[ApiService] Exception Upload: {ex.Message}");
+				// Re-throw pour que le composant puisse afficher l'erreur
+				throw; 
 			}
 		}
 
@@ -859,6 +882,24 @@ namespace TransitManager.Web.Services
 				return response.IsSuccessStatusCode;
 			}
 			catch { return false; }
+		}
+
+		public async Task<Document?> UpdateDocumentAsync(Guid id, UpdateDocumentDto dto)
+		{
+			try
+			{
+				var response = await _httpClient.PutAsJsonAsync($"api/documents/{id}", dto, _jsonOptions);
+				if (response.IsSuccessStatusCode)
+				{
+					return await response.Content.ReadFromJsonAsync<Document>(_jsonOptions);
+				}
+				return null;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Erreur UpdateDocument: {ex.Message}");
+				return null;
+			}
 		}
 		
 		public async Task<byte[]> ExportVehiculePdfAsync(Guid id, bool includeFinancials, bool includePhotos)
@@ -1017,11 +1058,11 @@ namespace TransitManager.Web.Services
             }
         }
 		
-		public async Task<byte[]> ExportTicketPdfAsync(Guid id)
+		public async Task<byte[]> ExportTicketPdfAsync(Guid id, string format = "thermal")
         {
             try
             {
-                var response = await _httpClient.GetAsync($"api/colis/{id}/export/ticket");
+                var response = await _httpClient.GetAsync($"api/colis/{id}/export/ticket?format={format}");
                 if (!response.IsSuccessStatusCode) return Array.Empty<byte>();
                 return await response.Content.ReadAsByteArrayAsync();
             }

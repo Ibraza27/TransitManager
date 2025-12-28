@@ -23,6 +23,7 @@ namespace TransitManager.Web.Services
         Task<bool> CreateColisAsync(CreateColisDto dto);
         Task<bool> UpdateColisAsync(Guid id, UpdateColisDto dto);
         Task<string?> GenerateBarcodeAsync();
+        Task<bool> ToggleColisExportExclusionAsync(Guid id, bool isExcluded);
 
         // --- Gestion des Conteneurs ---
         Task<IEnumerable<Conteneur>?> GetConteneursAsync();
@@ -80,6 +81,7 @@ namespace TransitManager.Web.Services
 		Task<Document?> UploadDocumentAsync(IBrowserFile file, TypeDocument type, Guid? clientId, Guid? vehiculeId, Guid? colisId, Guid? conteneurId);
 		Task<byte[]> DownloadDocumentAsync(Guid id); // Retourne les bytes pour le téléchargement JS
 		Task<bool> DeleteDocumentAsync(Guid id);
+        Task<Document?> UpdateDocumentAsync(Guid id, UpdateDocumentDto dto);
 		
 		Task<byte[]> ExportVehiculePdfAsync(Guid id, bool includeFinancials, bool includePhotos);
 		Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials, bool includePhotos);
@@ -98,7 +100,7 @@ namespace TransitManager.Web.Services
         // --- Timeline ---
         Task<IEnumerable<TimelineDto>> GetTimelineAsync(Guid? colisId, Guid? vehiculeId);
 		
-		Task<byte[]> ExportTicketPdfAsync(Guid id);
+		Task<byte[]> ExportTicketPdfAsync(Guid id, string format = "thermal");
 		
         // --- Notifications ---
 		Task<IEnumerable<Notification>> GetMyNotificationsAsync();

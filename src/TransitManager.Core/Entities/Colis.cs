@@ -75,12 +75,21 @@ namespace TransitManager.Core.Entities
 			set => SetProperty(ref _designation, value?.ToUpper()); 
 		}
 
+        private string? _adresseFrance;
+        private string? _adresseDestination;
+
         public decimal Volume { get => _volume; set => SetProperty(ref _volume, value); } // AJOUTÉ
 
         public decimal ValeurDeclaree { get => _valeurDeclaree; set { if (SetProperty(ref _valeurDeclaree, value)) OnPropertyChanged(nameof(ValeurDouane)); } }
         
         // --- NOUVEAU CALCUL ---
         public decimal ValeurDouane => ValeurDeclaree * 0.20m;
+        
+        [StringLength(500)]
+        public string? AdresseFrance { get => _adresseFrance; set => SetProperty(ref _adresseFrance, value); }
+        
+        [StringLength(500)]
+        public string? AdresseDestination { get => _adresseDestination; set => SetProperty(ref _adresseDestination, value); }
 
         public bool EstFragile { get => _estFragile; set => SetProperty(ref _estFragile, value); }
         public bool ManipulationSpeciale { get => _manipulationSpeciale; set => SetProperty(ref _manipulationSpeciale, value); }
@@ -136,6 +145,9 @@ namespace TransitManager.Core.Entities
         public string? NumeroPlomb { get => _numeroPlomb; set => SetProperty(ref _numeroPlomb, value); }
 		
 		public string? InventaireJson { get => _inventaireJson; set => SetProperty(ref _inventaireJson, value); }
+		
+		private bool _isExcludedFromExport;
+		public bool IsExcludedFromExport { get => _isExcludedFromExport; set => SetProperty(ref _isExcludedFromExport, value); }
         
         public virtual Client? Client { get; set; }
         public virtual Conteneur? Conteneur { get; set; }

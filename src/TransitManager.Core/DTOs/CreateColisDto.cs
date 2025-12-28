@@ -26,5 +26,8 @@ namespace TransitManager.Core.DTOs
 
         // --- AJOUTER CETTE LIGNE ---
         public string? InventaireJson { get; set; }
+        
+        public string? AdresseFrance { get; set; }
+        public string? AdresseDestination { get; set; }
     }
 }

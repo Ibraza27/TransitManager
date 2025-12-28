@@ -754,7 +754,7 @@ namespace TransitManager.Infrastructure.Services
         }
 
 
-		public async Task<byte[]> GenerateColisTicketPdfAsync(Colis colis)
+		public async Task<byte[]> GenerateColisTicketPdfAsync(Colis colis, string format = "thermal")
         {
             // On récupère la valeur du code-barres
             var firstBarcode = colis.Barcodes.FirstOrDefault()?.Value ?? colis.NumeroReference;
@@ -779,20 +779,59 @@ namespace TransitManager.Infrastructure.Services
             {
                 return PdfDocument.Create(container =>
                 {
-                    // CORRECTION : 1 Étiquette = 1 Page de 100x75mm
-                    // Cela évite les erreurs de calcul de hauteur "75mm + 75mm > 150mm"
-                    for (int i = 0; i < colis.NombrePieces; i++)
+                    if (format.ToLower().Trim() == "a4")
                     {
-                        container.Page(page =>
+                        // Format A4: 2 Étiquettes par page
+                        for (int i = 0; i < colis.NombrePieces; i += 2)
                         {
-                            // Taille standard étiquette (Largeur x Hauteur)
-                            page.Size(100, 75, Unit.Millimetre);
-                            page.Margin(2, Unit.Millimetre); // Petite marge
-                            page.PageColor(Colors.White);
-                            page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
-                            
-                            page.Content().Element(cont => ComposeTicket(cont, colis, barcodeImage, firstBarcode, i + 1));
-                        });
+                            container.Page(page =>
+                            {
+                                page.Size(PageSizes.A4);
+                                page.Margin(1, Unit.Centimetre);
+                                page.PageColor(Colors.White);
+                                page.DefaultTextStyle(x => x.FontSize(12).FontFamily("Arial"));
+                                
+                                page.Content().Column(col =>
+                                {
+                                    // Ticket 1 (Haut)
+                                    // On utilise Scale pour agrandir
+                                    col.Item().Height(13.8f, Unit.Centimetre)
+                                       .Padding(5, Unit.Millimetre) 
+                                       .AlignCenter()
+                                       .AlignMiddle()
+                                       .Scale(1.9f)
+                                       .Element(c => ComposeTicket(c, colis, barcodeImage, firstBarcode, i + 1));
+
+                                    // Ticket 2 (Bas) - s'il existe
+                                    if (i + 1 < colis.NombrePieces)
+                                    {
+                                        col.Item().Height(13.8f, Unit.Centimetre)
+                                            .BorderTop(1)
+                                            .Padding(5, Unit.Millimetre)
+                                            .AlignCenter()
+                                            .AlignMiddle()
+                                            .Scale(1.9f)
+                                            .Element(c => ComposeTicket(c, colis, barcodeImage, firstBarcode, i + 2));
+                                    }
+                                });
+                            });
+                        }
+                    }
+                    else
+                    {
+                        // Format Thermique Standard (1 étiquette par page)
+                        for (int i = 0; i < colis.NombrePieces; i++)
+                        {
+                            container.Page(page =>
+                            {
+                                page.Size(100, 75, Unit.Millimetre);
+                                page.Margin(2, Unit.Millimetre);
+                                page.PageColor(Colors.White);
+                                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
+                                
+                                page.Content().Element(cont => ComposeTicket(cont, colis, barcodeImage, firstBarcode, i + 1));
+                            });
+                        }
                     }
                 }).GeneratePdf();
             });
@@ -836,13 +875,20 @@ namespace TransitManager.Infrastructure.Services
 
                         c.Item().Text(text =>
                         {
+                            // "Dest: " prefix removed per request/simplification? kept for clarity but label updated? 
+                            // User asked: "remplacé (destination final) par la saissi dans destination final." implied for PDF Ticket too?
+                            // For Ticket, space is tight. "Dest: [VALUE]" is good. 
+                            // Using standard logic. 
                             text.Span("Dest: ").FontSize(10).SemiBold();
                             text.Span(colis.DestinationFinale).FontSize(14).ExtraBold(); 
                         });
                         
+                        // "Adresse de Livraison (Si différent)" -> "Adresse de Livraison" in Razor. Here purely data.
                         if (!string.IsNullOrWhiteSpace(colis.AdresseLivraison))
                         {
                             // Coupe proprement si trop long pour ne pas casser la mise en page
+                            // Max 2 lines is enforced by limiting char count or height. 
+                            // We can use MaxLines specific to QuestPDF if needed, but text wrapping handles it.
                             c.Item().Text(colis.AdresseLivraison).FontSize(9).Italic(); 
                         }
                     });
@@ -872,17 +918,21 @@ namespace TransitManager.Infrastructure.Services
                 // 1. Chemin de l'image
                 var logoPath = Path.Combine(AppContext.BaseDirectory, "Resources", "logo.jpg");
                 // 2. Préparation des données pour le récapitulatif (LINQ)
-                // On récupère tous les clients distincts qui ont soit un colis, soit un véhicule dans ce conteneur
-                var clientsIds = conteneur.Colis.Select(c => c.ClientId)
+                // On récupère tous les clients distincts qui ont soit un colis non exclu, soit un véhicule dans ce conteneur
+                // MODIFICATION : Filtrage des colis exclus
+                var visibleColis = conteneur.Colis.Where(c => !c.IsExcludedFromExport).ToList();
+
+                var clientsIds = visibleColis.Select(c => c.ClientId)
                     .Union(conteneur.Vehicules.Select(v => v.ClientId))
                     .Distinct()
                     .ToList();
                 var statsClients = clientsIds.Select(clientId =>
                 {
                     // On cherche l'objet client (soit dans colis, soit dans véhicules)
-                    var clientInfo = conteneur.Colis.FirstOrDefault(c => c.ClientId == clientId)?.Client
+                    var clientInfo = visibleColis.FirstOrDefault(c => c.ClientId == clientId)?.Client
                                   ?? conteneur.Vehicules.FirstOrDefault(v => v.ClientId == clientId)?.Client;
-                    var colisClient = conteneur.Colis.Where(c => c.ClientId == clientId).ToList();
+                    // On ne prend en compte que les colis NON exclus pour les stats
+                    var colisClient = visibleColis.Where(c => c.ClientId == clientId).ToList();
                     var vehiculesClient = conteneur.Vehicules.Where(v => v.ClientId == clientId).ToList();
                     return new
                     {
@@ -1043,9 +1093,12 @@ namespace TransitManager.Infrastructure.Services
                             });
                         }
                         // C. LISTE DÉTAILLÉE DES COLIS (Existante, mais améliorée)
-                        if (conteneur.Colis.Any())
+                        // MODIFICATION : Utilisation de la liste filtrée (visibleColis est local à Generate... pas ici. On refiltre)
+                        var visibleColisList = conteneur.Colis.Where(c => !c.IsExcludedFromExport).ToList();
+
+                        if (visibleColisList.Any())
                         {
-                            column.Item().PaddingTop(10).Text($"DÉTAILS DES COLIS ({conteneur.Colis.Count})").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
+                            column.Item().PaddingTop(10).Text($"DÉTAILS DES COLIS ({visibleColisList.Count})").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
 
                             column.Item().Table(table =>
                             {
@@ -1079,7 +1132,7 @@ namespace TransitManager.Infrastructure.Services
                                         header.Cell().Element(HeaderStyle).AlignRight().Text("Dû");
                                     }
                                 });
-                                foreach (var item in conteneur.Colis)
+                                foreach (var item in visibleColisList)
                                 {
                                     // Ligne Colis
                                     table.Cell().Element(c => CellStyle(c, true)).Text(item.NumeroReference).SemiBold();
@@ -1271,26 +1324,40 @@ namespace TransitManager.Infrastructure.Services
 						
 						// --- POUR RAPPEL, LE DÉBUT DU BLOC EST : ---
 						bool destinataireDifferent = colis.Destinataire?.Trim().ToLower() != colis.Client?.NomComplet?.Trim().ToLower();
+						// A. LOGISTIQUE : EXPÉDITEUR & DESTINATAIRE (Modifié)
 						column.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Row(row =>
 						{
-							// ... Code Destinataire ...
-							 row.RelativeItem().Column(c =>
+                            // COLONNE GAUCHE : ADRESSE FRANCE
+							row.RelativeItem().Column(c =>
 							{
-								c.Item().Text("DESTINATAIRE & LIVRAISON").FontSize(9).SemiBold().Underline();
-								if (destinataireDifferent)
-								{
-									c.Item().Text(colis.Destinataire ?? "Même que propriétaire").Bold();
-									c.Item().Text(colis.TelephoneDestinataire ?? "-");
-									if(!string.IsNullOrWhiteSpace(colis.AdresseLivraison)) c.Item().Text(colis.AdresseLivraison).FontSize(9);
-								}
-								else c.Item().Text("Identique au propriétaire").Italic();
+								c.Item().Text("ADRESSE EN FRANCE").FontSize(9).SemiBold().Underline();
+                                if (!string.IsNullOrWhiteSpace(colis.AdresseFrance))
+                                    c.Item().Text(colis.AdresseFrance).FontSize(9);
+                                else if (colis.Client != null)
+                                    c.Item().Text($"{colis.Client.NomComplet}\n{colis.Client.AdressePrincipale}\n{colis.Client.CodePostal} {colis.Client.Ville}").FontSize(9);
+                                else
+                                    c.Item().Text("Adresse non renseignée").Italic();
 							});
-							// ... Code Destination ...
-							 row.RelativeItem().AlignRight().Column(c =>
+
+                            // COLONNE DROITE : ADRESSE DESTINATION
+							row.RelativeItem().PaddingLeft(10).Column(c =>
 							{
-								c.Item().Text("DESTINATION FINALE").FontSize(9).SemiBold().Underline();
-								c.Item().Text(colis.DestinationFinale).FontSize(14).Bold().FontColor(Colors.Blue.Darken2);
-								c.Item().Text($"Type: {colis.Type} | {colis.TypeEnvoi}");
+								string dest = string.IsNullOrWhiteSpace(colis.DestinationFinale) ? "DESTINATION" : colis.DestinationFinale.ToUpper();
+								c.Item().Text($"ADRESSE {dest}").FontSize(9).SemiBold().Underline();
+                                 if (!string.IsNullOrWhiteSpace(colis.AdresseDestination))
+                                    c.Item().Text(colis.AdresseDestination).FontSize(10).Bold();
+                                else
+								    c.Item().Text(colis.DestinationFinale).FontSize(14).Bold().FontColor(Colors.Blue.Darken2);
+
+                                // Si Destinataire différent
+                                bool destDiff = colis.Destinataire?.Trim().ToLower() != colis.Client?.NomComplet?.Trim().ToLower();
+                                if (destDiff && !string.IsNullOrWhiteSpace(colis.Destinataire))
+                                {
+                                    c.Item().PaddingTop(5).Text("Réceptionnaire :").FontSize(8).SemiBold();
+                                    c.Item().Text($"{colis.Destinataire} ({colis.TelephoneDestinataire})").FontSize(9);
+                                }
+                                
+                                c.Item().PaddingTop(5).Text($"Type: {colis.Type} | {colis.TypeEnvoi}");
 							});
 						});
 						
@@ -1553,6 +1620,7 @@ namespace TransitManager.Infrastructure.Services
                                 c.Item().Text($"Immat: {vehicule.Immatriculation}").Bold();
                                 c.Item().Text($"Marque: {vehicule.Marque}");
                                 c.Item().Text($"Modèle: {vehicule.Modele}");
+                                c.Item().Text($"Motorisation: {vehicule.Motorisation}");
                                 c.Item().Text($"Année: {vehicule.Annee}  |  Km: {vehicule.Kilometrage:N0}");
                             });
 
@@ -1560,11 +1628,17 @@ namespace TransitManager.Infrastructure.Services
                             {
                                 c.Item().Text("LOGISTIQUE").FontSize(9).SemiBold().Underline();
                                 c.Item().Text($"Statut: {vehicule.Statut}");
-                                c.Item().Text($"Destination: {vehicule.DestinationFinale}");
+                                
+                                c.Item().PaddingTop(5).Text("Adresse en France :").FontSize(8).SemiBold();
+                                c.Item().Text(!string.IsNullOrWhiteSpace(vehicule.AdresseFrance) ? vehicule.AdresseFrance : "France").FontSize(9);
+
+                                string destLabel = string.IsNullOrWhiteSpace(vehicule.DestinationFinale) ? "Destination" : vehicule.DestinationFinale;
+                                c.Item().PaddingTop(5).Text($"Adresse {destLabel} :").FontSize(8).SemiBold();
+                                c.Item().Text(!string.IsNullOrWhiteSpace(vehicule.AdresseDestination) ? vehicule.AdresseDestination : vehicule.DestinationFinale).FontSize(10).Bold();
+
                                 if (destDiff)
                                 {
-                                    c.Item().Text($"Destinataire: {vehicule.Destinataire}").FontSize(9);
-                                    c.Item().Text($"Tél: {vehicule.TelephoneDestinataire}").FontSize(9);
+                                     c.Item().PaddingTop(5).Text($"Réceptionnaire: {vehicule.Destinataire}").FontSize(9);
                                 }
                             });
                         });
@@ -1653,7 +1727,7 @@ namespace TransitManager.Infrastructure.Services
                             });
 
                             c.Item().PaddingTop(2).Text("La non observation de cette règle de sécurité engagera ma responsabilité civile et pénale en cas de litige.").FontSize(8);
-                            c.Item().PaddingTop(2).Text("L'entreprise ne peut pas être tenue responsable en cas de dommage causé par la surcharge de votre véhicule.").FontSize(8);
+                            c.Item().PaddingTop(2).Text("L'entreprise ne peut pas être tenue responsable en cas de dommage causé par la surcharge de votre véhicule.").FontSize(8).Bold().FontColor(Colors.Red.Medium);
                         });
 						
                         // D. SIGNATURES
@@ -1927,6 +2001,7 @@ namespace TransitManager.Infrastructure.Services
 
 							AddRow("Marque :", vehicule.Marque);
 							AddRow("Modèle :", vehicule.Modele);
+                            AddRow("Motorisation :", vehicule.Motorisation.ToString());
 							AddRow("Immatriculation :", vehicule.Immatriculation);
 							AddRow("Valeur :", $"{vehicule.ValeurDeclaree:N0} €");
 							AddRow("N° de téléphone :", vehicule.Client?.TelephonePrincipal ?? "");
@@ -1936,30 +2011,28 @@ namespace TransitManager.Infrastructure.Services
 						column.Item().Height(15);
 
 						// TABLEAU 2 : ADRESSE UNIQUE (Fusionnée)
+						// TABLEAU 2 : ADRESSES DÉPART / ARRIVÉE
 						column.Item().Table(table =>
 						{
 							table.ColumnsDefinition(columns =>
 							{
-								columns.ConstantColumn(150);
+								columns.RelativeColumn();
 								columns.RelativeColumn();
 							});
 							
-							static IContainer CellStyle(IContainer c) => c.Border(1).BorderColor(Colors.Black).Padding(5).AlignMiddle();
+							static IContainer HeaderCell(IContainer c) => c.Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(5);
+							static IContainer CellStyle(IContainer c) => c.Border(1).BorderColor(Colors.Black).Padding(5);
 
-							// Construction de l'adresse complète
-							string adresseComplete = vehicule.Client?.AdressePrincipale ?? "";
-							if (!string.IsNullOrEmpty(vehicule.Client?.CodePostal) || !string.IsNullOrEmpty(vehicule.Client?.Ville))
-							{
-								adresseComplete += $", {vehicule.Client?.CodePostal} {vehicule.Client?.Ville}";
-							}
-							if (!string.IsNullOrEmpty(vehicule.Client?.Pays))
-							{
-								adresseComplete += $", {vehicule.Client?.Pays}";
-							}
+                            var destLabel = !string.IsNullOrWhiteSpace(vehicule.DestinationFinale) ? $"ADRESSE {vehicule.DestinationFinale.ToUpper()}" : "ADRESSE DESTINATION";
 
-							// Une seule ligne "Adresse :"
-							table.Cell().Element(CellStyle).Height(40).Text("Adresse :");
-							table.Cell().Element(CellStyle).Text(adresseComplete);
+                            table.Cell().Element(HeaderCell).Text("ADRESSE EN FRANCE").Bold().FontSize(9);
+                            table.Cell().Element(HeaderCell).Text(destLabel).Bold().FontSize(9);
+
+                            string adrFrance = vehicule.AdresseFrance ?? "";
+                            string adrDest = vehicule.AdresseDestination ?? "";
+
+							table.Cell().Element(CellStyle).Height(40).Text(adrFrance).FontSize(9);
+							table.Cell().Element(CellStyle).Height(40).Text(adrDest).FontSize(9);
 						});
 
 						column.Item().Height(15);

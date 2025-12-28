@@ -139,13 +139,23 @@ namespace TransitManager.Infrastructure.Services
             vehiculeInDb.Destinataire = vehicule.Destinataire;
             vehiculeInDb.TelephoneDestinataire = vehicule.TelephoneDestinataire;
             vehiculeInDb.Type = vehicule.Type;
+            vehiculeInDb.Motorisation = vehicule.Motorisation; // Added
+            vehiculeInDb.AdresseFrance = vehicule.AdresseFrance;
+            vehiculeInDb.AdresseDestination = vehicule.AdresseDestination;
             vehiculeInDb.Commentaires = vehicule.Commentaires;
             vehiculeInDb.ConteneurId = vehicule.ConteneurId;
 
             // Protection financière
-            if (vehicule.PrixTotal > 0) vehiculeInDb.PrixTotal = vehicule.PrixTotal;
-            if (vehicule.ValeurDeclaree > 0) vehiculeInDb.ValeurDeclaree = vehicule.ValeurDeclaree;
+            vehiculeInDb.PrixTotal = vehicule.PrixTotal;
+            // Also allow ValeurDeclaree updates always
+            vehiculeInDb.ValeurDeclaree = vehicule.ValeurDeclaree;
             vehiculeInDb.SommePayee = vehicule.SommePayee;
+
+            // Dimensions
+            vehiculeInDb.DimensionsLongueurCm = vehicule.DimensionsLongueurCm;
+            vehiculeInDb.DimensionsLargeurCm = vehicule.DimensionsLargeurCm;
+            vehiculeInDb.DimensionsHauteurCm = vehicule.DimensionsHauteurCm;
+            vehiculeInDb.IsPriceCalculated = vehicule.IsPriceCalculated;
 
             // État des lieux
             vehiculeInDb.EtatDesLieux = vehicule.EtatDesLieux;

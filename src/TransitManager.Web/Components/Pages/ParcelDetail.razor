@@ -1,18 +1,23 @@
 @page "/colis/edit/{Id:guid}"
 @page "/colis/detail/{Id:guid}"
 @page "/colis/create"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
 @using System.Text.Json
-@using TransitManager.Core.DTOs
-@using TransitManager.Core.Entities
 @using TransitManager.Core.Enums
+@using TransitManager.Core.Interfaces
 @using System.Security.Claims
-@inject IApiService ApiService
+@using TransitManager.Web.Components.Shared
+@using System.Linq
+
+@inject TransitManager.Web.Services.IApiService ApiService
+@inject TransitManager.Infrastructure.Services.ISettingsService SettingsService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
-@using TransitManager.Web.Components.Shared
-@using System.Linq
+
 <PageTitle>@(IsNew ? "Nouveau Colis" : "Détail Colis") - Hippocampe</PageTitle>
+
 <div class="container mt-4 mb-5">
     <!-- En-tête -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
@@ -70,9 +75,16 @@
                          @onclick="ToggleExportMenu"></div>
                 }
             </div>
+
              <!-- Boutons actions -->
-            <button class="btn btn-outline-secondary" @onclick="ShowInventory">
+            <button class="btn @(GetInventoryItemCount() == 0 ? "btn-outline-danger position-relative" : "btn-outline-secondary")" @onclick="ShowInventory">
                 <i class="bi bi-clipboard-list me-2"></i>Inventaire
+                @if(GetInventoryItemCount() == 0)
+                {
+                    <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle">
+                        <span class="visually-hidden">Vide</span>
+                    </span>
+                }
             </button>
             
             @if (!IsNew)
@@ -81,12 +93,13 @@
                     <i class="bi bi-cash-coin me-2"></i>Paiements
                 </button>
             }
-            <button class="btn btn-primary" @onclick="SaveParcel" disabled="@(!CanEditGlobal)">
+            <button class="btn btn-primary" @onclick="CheckInventoryAndSave" disabled="@(!CanEditGlobal)">
                 <i class="bi bi-save me-2"></i>Enregistrer
             </button>
             <a href="/my-parcels" class="btn btn-outline-dark">Retour</a>
         </div>
     </div>
+
     @if (_isLoading)
     {
         <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
@@ -126,7 +139,22 @@
                     </button>
                 </li>
              }
+            @if(!IsNew)
+            {
+                 <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "sav" ? "active fw-bold" : "")" @onclick='() => _activeTab = "sav"'>
+                        <i class="bi bi-shield-check me-2"></i>SAV / Signalement
+                         @if (_receptionControl != null)
+                        {
+                            <span class="badge rounded-pill ms-2 @(_receptionControl.Status == ReceptionStatus.ReceivedFull ? "bg-success" : "bg-danger")">
+                                @(_receptionControl.Status == ReceptionStatus.ReceivedFull ? "OK" : "!")
+                            </span>
+                        }
+                    </button>
+                </li>
+            }
         </ul>
+
         <div class="tab-content">
             
             <!-- ONGLET 1 : INFOS & FINANCES -->
@@ -163,11 +191,18 @@
                                         }
                                         else
                                         {
-                                            <input type="text" class="form-control" value="@_clientNameDisplay" disabled />
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" value="@_clientNameDisplay" disabled />
+                                                <button class="btn btn-outline-secondary" type="button" @onclick="SearchClientByPhone">
+                                                    <i class="bi bi-telephone-inbound"></i>
+                                                </button>
+                                            </div>
+                                            <!-- NEW: Recherche inversée par téléphone pour admin/employé si besoin -->
                                         }
                                     </div>
+
                                     <div class="col-md-6">
-                                        <label class="form-label">Désignation <span class="text-danger">*</span></label>
+                                        <label class="form-label">Désignation <span class="text-danger">*</span> <small class="text-muted fst-italic ms-1">(Description générale : Déménagement, Effets personnels...)</small></label>
                                         <input type="text" class="form-control" @bind="_colis.Designation" disabled="@(!CanEditFields)" />
                                     </div>
                                     <div class="col-md-6">
@@ -189,6 +224,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <!-- Carte Destinataire -->
                         <div class="card shadow-sm border-0 mb-4">
                             <div class="card-header bg-white py-3"><h5 class="mb-0 text-primary"><i class="bi bi-geo-alt me-2"></i>Destinataire</h5></div>
@@ -236,6 +272,7 @@
                                         <textarea class="form-control" rows="3" style="field-sizing: content; min-height: 80px;" @bind="_colis.AdresseDestination" disabled="@(!CanEditFields)"></textarea>
                                     </div>
                                 </div>
+
                                 <hr />
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="homeDelivery" @bind="_colis.LivraisonADomicile" disabled="@(!CanEditFields)">
@@ -274,8 +311,15 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Option d'envoi</label>
-                                        <select class="form-select" @bind="_colis.TypeEnvoi" disabled="@(!CanEditFields)">
-                                            @foreach (var type in Enum.GetValues<TypeEnvoi>()) { <option value="@type">@type</option> }
+                                        <select class="form-select" value="@_colis.TypeEnvoi" @onchange="OnTypeEnvoiChanged" disabled="@(!CanEditFields)">
+                                            @foreach (var type in Enum.GetValues<TypeEnvoi>()) 
+                                            { 
+                                                // Exclure Express et Economique
+                                                if (type != TypeEnvoi.Express && type != TypeEnvoi.Economique)
+                                                {
+                                                    <option value="@type">@type</option>
+                                                }
+                                            }
                                         </select>
                                     </div>
                                     <div class="col-12 mt-3">
@@ -296,6 +340,7 @@
                             </div>
                         </div>
                     </div>
+
                     <!-- COLONNE DROITE : ADMIN & FINANCES -->
                     <div class="col-lg-4">
                         <!-- Statut -->
@@ -321,55 +366,54 @@
                                 }
                             </div>
                         </div>
+
                         <!-- Finances -->
                         <div class="card shadow-sm border-0 border-top border-3 border-success">
                             <div class="card-header bg-white py-3"><h5 class="mb-0 text-success"><i class="bi bi-currency-euro me-2"></i>Finances</h5></div>
                             <div class="card-body">
-                                <div class="mb-3">
+                                <div class="mb-3" style="cursor: pointer;" @onclick="ShowComputedFieldInfo">
                                     <label class="form-label">Nombre de pièces</label>
-                                    <input type="number" class="form-control" value="@_colis.NombrePieces" disabled />
+                                    <input type="number" class="form-control" value="@_colis.NombrePieces" readonly />
                                 </div>
                                 
-                                <div class="mb-3">
+                                <div class="mb-3" style="cursor: pointer;" @onclick="ShowComputedFieldInfo">
                                     <label class="form-label">Valeur Déclarée (€)</label>
-                                    <input type="number" class="form-control" @bind="_colis.ValeurDeclaree" disabled />
+                                    <input type="number" class="form-control" @bind="_colis.ValeurDeclaree" readonly />
                                     <div class="form-text small">Calculée via l'inventaire</div>
                                 </div>
                                 
-                                <div class="mb-3">
+                                <div class="mb-3" style="cursor: pointer;" @onclick="ShowComputedFieldInfo">
                                     <label class="form-label text-info fw-bold">Valeur Douane (20%)</label>
-                                    <input type="text" class="form-control bg-light text-info fw-bold" value="@_colis.ValeurDouane.ToString("C2")" disabled />
+                                    <input type="text" class="form-control bg-light text-info fw-bold" value="@_colis.ValeurDouane.ToString("C2")" readonly />
                                     <div class="form-text small">Calculée automatiquement : 20% de la valeur déclarée.</div>
                                 </div>
                                 
                                 <div class="mb-3">
                                     <label class="form-label">Volume (m³)</label>
-                                    <input type="number" class="form-control" @bind="_colis.Volume" disabled="@(!IsAdmin)" />
+                                    <input type="number" class="form-control" value="@_colis.Volume.ToString(System.Globalization.CultureInfo.InvariantCulture)" @onchange="OnVolumeChanged" disabled="@(!CanEditFields)" step="any" />
+                                    <div class="form-text text-muted small">Mettre le volume total pour obtenir le prix total.</div>
                                 </div>
                                 
                                 <hr class="text-muted" />
                                 
-                                @if (IsAdmin)
+
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-primary">PRIX TOTAL (HORS DOUANE) (€)</label>
+                                    <input type="number" class="form-control form-control-lg fw-bold text-primary" value="@_colis.PrixTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)" @onchange="OnTotalPriceChanged" disabled="@(!IsAdmin)" step="any" />
+                                    <div class="form-text text-muted small">Lié à l'option d'envoi.</div>
+                                </div>
+
+                                @if(_colis.TypeEnvoi == TypeEnvoi.AvecDedouanement)
                                 {
-                                    <!-- Calculateur Rapide (Informatif) -->
-                                     <div class="bg-light p-2 rounded mb-3 border">
-                                        <label class="form-label small fw-bold text-muted">Calculateur de prix</label>
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text">Prix/m³</span>
-                                            <!-- On ne lie plus à CalculatePrice, juste un binding simple -->
-                                            <input type="number" class="form-control" @bind="_pricePerM3" @bind:event="oninput" placeholder="0.00" />
-                                        </div>
-                                        <div class="text-end mt-1">
-                                            <small class="text-muted">
-                                                Prix estimé : <strong>@((_colis.Volume * _pricePerM3).ToString("C2"))</strong>
-                                            </small>
-                                        </div>
+                                     <div class="mb-3 bg-primary p-2 rounded text-white">
+                                        <label class="form-label fw-bold mb-0">TOTAL + DOUANE (€)</label>
+                                        <div class="fs-4 fw-bold">@((_colis.PrixTotal + _colis.ValeurDouane).ToString("C2"))</div>
+                                        <div class="small fst-italic">Prix total (@_colis.PrixTotal.ToString("C0")) + Douane (@_colis.ValeurDouane.ToString("C0"))</div>
                                     </div>
                                 }
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold text-primary">PRIX TOTAL (€)</label>
-                                    <input type="number" class="form-control form-control-lg fw-bold text-primary" @bind="_colis.PrixTotal" disabled="@(!IsAdmin)" />
-                                </div>
+                                
+
                                 
                                  <div class="d-flex justify-content-between small mb-2">
                                      <span>Payé :</span>
@@ -388,6 +432,7 @@
                     </div>
                 </div>
             </div>
+
             <!-- ONGLET 2 : DOCUMENTS (Nouveau) -->
             @if (!IsNew)
             {
@@ -395,6 +440,7 @@
                     <DocumentManager EntityId="@_colis.Id" EntityType="Colis" />
                 </div>
             }
+
             <!-- ONGLET 3 : SUIVI -->
             @if (!IsNew)
             {
@@ -406,6 +452,7 @@
                     </div>
                 </div>
             }
+
              <!-- ONGLET 4 : DISCUSSION -->
             @if (!IsNew)
             {
@@ -421,7 +468,105 @@
                     </div>
                 </div>
             }
-        </div>
+            <!-- ONGLET 5 : SAV -->
+            @if (!IsNew)
+            {
+                <div class="tab-pane fade @(_activeTab == "sav" ? "show active" : "")">
+                    <!-- Galerie Photos SAV -->
+                    <SavPhotoGallery @ref="_savGallery" EntityId="@_colis.Id" EntityType="Colis" />
+
+                    @if (_receptionControl == null)
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-box-seam fs-1 text-muted mb-3 d-block"></i>
+                            <h4 class="fw-bold mb-3">Réception du Colis</h4>
+                            <p class="text-muted mb-4" style="max-width: 500px; margin: 0 auto;">
+                                Avez-vous bien reçu ce colis ? Signalez-nous la bonne réception ou un éventuel problème (manquant, casse) pour nous aider à améliorer notre service.
+                            </p>
+                            <button class="btn btn-primary px-5 py-3 rounded-pill shadow-sm" @onclick="() => _showSavWizard = true">
+                                <i class="bi bi-ui-checks me-2"></i>Faire l'état des lieux
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-primary">Rapport de Réception</h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge @(_receptionControl.Status == ReceptionStatus.ReceivedFull ? "bg-success" : "bg-danger") fs-6">
+                                        @(_receptionControl.Status == ReceptionStatus.ReceivedFull ? "Conforme" : "Problème Signalé")
+                                    </span>
+                                    @if(IsAdmin)
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="DeleteSavReport" title="Supprimer le rapport">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-4">
+                                     <div class="col-md-6">
+                                         <h6 class="fw-bold text-muted text-uppercase small">Évaluations</h6>
+                                         <div class="d-flex flex-column gap-2 mb-3">
+                                             <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                                                 <span>Service Global</span>
+                                                 <span class="fw-bold text-primary">@_receptionControl.RateService/10</span>
+                                             </div>
+                                             <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                                                 <span>État Colis</span>
+                                                  <span class="fw-bold text-primary">@_receptionControl.RateCondition/10</span>
+                                             </div>
+                                         </div>
+                                         @if (!string.IsNullOrEmpty(_receptionControl.GlobalComment))
+                                         {
+                                             <div class="alert alert-light border">
+                                                 <i class="bi bi-chat-quote me-2 text-primary"></i>
+                                                 <span class="fst-italic">"@_receptionControl.GlobalComment"</span>
+                                             </div>
+                                         }
+                                     </div>
+                                     <div class="col-md-6">
+                                         @if (_receptionControl.Issues.Any())
+                                         {
+                                             <h6 class="fw-bold text-danger text-uppercase small">Problèmes Signalés</h6>
+                                             <ul class="list-group list-group-flush">
+                                                 @foreach(var issue in _receptionControl.Issues)
+                                                 {
+                                                     <li class="list-group-item px-0">
+                                                         <div class="fw-bold text-danger"><i class="bi bi-exclamation-circle me-2"></i>@GetTranslatedIssueType(issue.Type)</div>
+                                                         @if (!string.IsNullOrEmpty(issue.InventoryItemName))
+                                                         {
+                                                             <div class="small"><strong>Article:</strong> @issue.InventoryItemName</div>
+                                                         }
+                                                         <div class="small text-muted">@issue.Description</div>
+                                                     </li>
+                                                 }
+                                             </ul>
+                                         }
+                                         else
+                                         {
+                                             <div class="alert alert-success d-flex align-items-center">
+                                                 <i class="bi bi-check-circle-fill fs-4 me-3"></i>
+                                                 <div>
+                                                     <strong>Aucun problème signalé.</strong>
+                                                     <div class="small">Le client a confirmé la réception conforme.</div>
+                                                 </div>
+                                             </div>
+                                         }
+                                     </div>
+                                </div>
+                                <div class="text-end mt-4 text-muted small">
+                                    Soumis le @_receptionControl.CreationDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+</div>
     }
     
     <!-- MODALS -->
@@ -440,7 +585,72 @@
                   TotalAmount="@_colis.PrixTotal"
                   OnPaymentsChanged="UpdatePaidAmount"
                   OnClose="() => _showPayments = false" />
+                  
+    @if (!IsNew)
+    {
+        <SavWizard Show="_showSavWizard"
+                   ShowChanged="@((v) => { _showSavWizard = v; if(!v) ReloadSav(); })"
+                   EntityType="Colis"
+                   EntityId="@_colis.Id"
+                   ClientId="@_colis.ClientId"
+                   InventoryItems="@(TryParseInventory())" />
+    }
+    
+    <!-- Modal Warning: Computed Fields -->
+    @if(_showComputedInfo)
+    {
+         <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Champ Calculé</h5>
+                        <button type="button" class="btn-close" @onclick="() => _showComputedInfo = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        Ce champ est calculé automatiquement à partir de l'inventaire.
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => _showComputedInfo = false">Fermer</button>
+                        <button type="button" class="btn btn-primary" @onclick="() => { _showComputedInfo = false; ShowInventory(); }">Ouvrir l'Inventaire</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Modal Warning: Empty Inventory -->
+    @if(_showEmptyInventoryWarning)
+    {
+         <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Inventaire Vide</h5>
+                    </div>
+                    <div class="modal-body">
+                        L'inventaire est vide. Pour l'étude de votre dossier, il est recommandé de le remplir.
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="ConfirmSaveWithEmptyInventory">Enregistrer et Quitter</button>
+                        <button type="button" class="btn btn-primary" @onclick="() => { _showEmptyInventoryWarning = false; ShowInventory(); }">Remplir l'Inventaire</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
+
+
+
+
+
+
+
+
+
+
+
+
 @code {
     [Parameter] public Guid? Id { get; set; }
     private Colis _colis = new() { DateArrivee = DateTime.UtcNow, Statut = StatutColis.EnAttente };
@@ -459,28 +669,62 @@
     private bool _sameAsClient = false;
     private bool _showInventory = false;
     private bool _showPayments = false;
+    private bool _showSavWizard = false;
+    private ReceptionControl? _receptionControl;
     private decimal _pricePerM3 = 0;
+    private decimal _defaultRate = 0; // Stockage du taux par défaut
+    private bool _isExportMenuOpen = false;
+    
+    // UI Warnings
+    private bool _showComputedInfo = false;
+    private bool _showEmptyInventoryWarning = false;
     
     // Admin Search
     private string _clientSearch = "";
     private List<Client> _clients = new(); // Used for direct lookup
     private List<Client> _filteredClients = new();
     private List<Conteneur> _containers = new();
+    
+    private int _unreadMessagesCount = 0;
+    private SavPhotoGallery _savGallery;
+
     // Logic Permissions
     private bool CanEditGlobal => IsAdmin || (IsNew || _colis.Statut == StatutColis.EnAttente);
     private bool CanEditFields => IsAdmin || (CanEditGlobal); 
+    
+    private string DestinationLabel => string.IsNullOrWhiteSpace(_colis.DestinationFinale) 
+    ? "Adresse Destination" 
+    : $"Adresse à {_colis.DestinationFinale}";
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         
+        // 1. Fetch Default Rate (Directement depuis le service pour éviter le cache HTTP)
+        var rateStr = await SettingsService.GetSettingAsync("PricePerCubicMeter");
+        Console.WriteLine($"[DEBUG] Rate Fetched: '{rateStr}'");
+        if (decimal.TryParse(rateStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var r))
+        {
+            _defaultRate = r;
+            Console.WriteLine($"[DEBUG] _defaultRate parsed: {_defaultRate}");
+        }
+        else
+        {
+            Console.WriteLine($"[DEBUG] Failed to parse rate, using fallback 150");
+            _defaultRate = 150;
+        }
+
+
         IsAdmin = user.IsInRole("Administrateur");
         var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim != null) Guid.TryParse(userIdClaim.Value, out CurrentUserId);
+        
         if (IsAdmin)
         {
              _containers = (await ApiService.GetConteneursAsync())?.ToList() ?? new();
         }
+        
         if (!IsNew)
         {
             var dto = await ApiService.GetColisByIdAsync(Id.Value);
@@ -489,59 +733,86 @@
                 _colis = dto;
                 _clientNameDisplay = _colis.Client?.NomComplet ?? "Inconnu";
                 _firstBarcode = _colis.Barcodes.FirstOrDefault()?.Value ?? "";
-                // Vérification automatique de la case à cocher "Destinataire identique"
+                
                 if (_colis.Client != null)
                 {
                     var destNom = _colis.Destinataire?.Trim().ToLower() ?? "";
                     var clientNom = _colis.Client.NomComplet.Trim().ToLower();
-                    // Pour être sûr, on vérifie que le nom n'est pas vide
                     if (!string.IsNullOrEmpty(destNom) && destNom == clientNom)
                     {
                         _sameAsClient = true;
                     }
                 }
+                
+                _receptionControl = await ApiService.GetReceptionControlAsync("Colis", Id.Value);
+                if(_savGallery != null) await _savGallery.ReloadAsync(); 
+
+                // --- LOGIC TARIFAIRE (APRES CHARGEMENT) ---
+                 // Si Modif, on tente de déduire le taux historique
+                 if (_colis.Volume > 0 && _colis.PrixTotal > 0)
+                 {
+                      _pricePerM3 = Math.Round(_colis.PrixTotal / _colis.Volume, 2);
+                 }
+                 else
+                 {
+                     _pricePerM3 = 0; 
+                 }
+                 // ------------------------------------------
             }
         }
         else
         {
+            // --- LOGIC TARIFAIRE (NOUVEAU) ---
+            if (_pricePerM3 == 0) _pricePerM3 = _defaultRate;
+            
             if (!IsAdmin)
             {
-                var profile = await ApiService.GetUserProfileAsync();
+                UserProfileDto? profile = await ApiService.GetUserProfileAsync();
                 if (profile != null)
                 {
                     _colis.ClientId = profile.ClientId;
                     _clientNameDisplay = $"{profile.Nom} {profile.Prenom}";
+                    _colis.Destinataire = _clientNameDisplay; // Auto-fill Client Name
+                    _colis.TelephoneDestinataire = profile.Telephone; // Auto-fill Phone
                     await GenerateBarcode();
                     _sameAsClient = true;
-                    ApplySameAsClient(); 
+                    // ApplySameAsClient(); // Removed as we set it manually above matches. 
                 }
             }
         }
         
         _isLoading = false;
     }
+    
+    private void ToggleExportMenu()
+    {
+        _isExportMenuOpen = !_isExportMenuOpen;
+        StateHasChanged();
+    }
+    
+    // --- METHODES COPIESES ---
     private async Task FilterClients(KeyboardEventArgs e)
     {
         if (string.IsNullOrEmpty(_clientSearch) || _clientSearch.Length < 2) 
         {
             _filteredClients.Clear(); return;
         }
-        if (string.IsNullOrEmpty(_clientSearch) || _clientSearch.Length < 2) 
-        {
-            _filteredClients.Clear(); return;
-        }
         if (!_clients.Any()) _clients = (await ApiService.GetClientsAsync())?.ToList() ?? new();
 
-        _filteredClients = _clients.Where(c => c.NomComplet.Contains(_clientSearch, StringComparison.OrdinalIgnoreCase)).Take(5).ToList();
+        _filteredClients = _clients.Where(c => 
+            c.NomComplet.Contains(_clientSearch, StringComparison.OrdinalIgnoreCase) ||
+            (c.TelephonePrincipal != null && c.TelephonePrincipal.Contains(_clientSearch)) ||
+            (c.Email != null && c.Email.Contains(_clientSearch, StringComparison.OrdinalIgnoreCase))
+        ).Take(10).ToList();
     }
     private void SelectClient(Client client)
     {
         _colis.ClientId = client.Id;
+        _colis.Client = client; // Fix pour avoir le num tel
         _clientNameDisplay = client.NomComplet;
         _filteredClients.Clear();
         _clientSearch = "";
         
-        // Si "Identique" est coché, on met à jour le destinataire immédiatement
         if (_sameAsClient) ApplySameAsClient();
     }
     private async Task GenerateBarcode()
@@ -554,17 +825,13 @@
         _sameAsClient = (bool)(e.Value ?? false);
         if (_sameAsClient) ApplySameAsClient();
     }
-
     private void ApplySameAsClient()
     {
         _colis.Destinataire = _clientNameDisplay;
-            
-        // Si on a l'objet Client chargé, on l'utilise pour le téléphone
         if (_colis.Client != null)
         {
             _colis.TelephoneDestinataire = _colis.Client.TelephonePrincipal;
         }
-        // Sinon, si on est admin et qu'on a sélectionné un client via la liste
         else if (IsAdmin && _colis.ClientId != Guid.Empty && _clients.Any())
         {
              var localClient = _clients.FirstOrDefault(c => c.Id == _colis.ClientId);
@@ -575,150 +842,111 @@
         }
     }
     
-    // Gestion Modals
-    private async Task CopyAddressFrance()
+    private void OnRateChanged(ChangeEventArgs e)
+     {
+         if (decimal.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var newRate))
+         {
+             _pricePerM3 = newRate;
+             if (_colis.Volume > 0)
+             {
+                 _colis.PrixTotal = Math.Round(_colis.Volume * _pricePerM3, 2);
+             }
+         }
+     }
+
+     private void OnVolumeChanged(ChangeEventArgs e)
+     {
+         var val = e.Value?.ToString(); 
+         // Remplacement manuel pour supporter la virgule si le navigateur envoie '1,5'
+         if (!string.IsNullOrEmpty(val)) val = val.Replace(",", ".");
+         
+         if (decimal.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var vol))
+         {
+             _colis.Volume = vol;
+             Console.WriteLine($"[DEBUG] Volume Set to: {_colis.Volume}");
+
+             if (_pricePerM3 == 0 && _defaultRate > 0) _pricePerM3 = _defaultRate;
+             
+             if (_pricePerM3 > 0)
+             {
+                 _colis.PrixTotal = Math.Round(vol * _pricePerM3, 2);
+             }
+         }
+     }
+
+     private void OnTotalPriceChanged(ChangeEventArgs e)
+     {
+          var val = e.Value?.ToString(); 
+         if (!string.IsNullOrEmpty(val)) val = val.Replace(",", ".");
+         
+         if (decimal.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var total))
+         {
+             _colis.PrixTotal = total;
+              if (_pricePerM3 == 0 && _defaultRate > 0) _pricePerM3 = _defaultRate;
+             
+             if (_pricePerM3 > 0)
+             {
+                 _colis.Volume = Math.Round(total / _pricePerM3, 3);
+             }
+         }
+     }
+     
+    private int GetInventoryItemCount()
     {
-        Client? client = null;
-        if(_colis.Client != null) client = _colis.Client;
-        else if(IsAdmin) client = _clients.FirstOrDefault(c => c.Id == _colis.ClientId); // Accessing _clients might need to be ensured? ParcelDetail doesn't have _clients list like VehicleDetail unless I missed it.
-        // Wait, ParcelDetail only loads filtered clients for search.
-        
-        if(client == null)
-        {
-             // Try fetching
-             client = await ApiService.GetClientByIdAsync(_colis.ClientId);
-        }
-        
-        if (client != null)
-        {
-            // Modification : Seulement Adresse, CP, Ville, Pays (Pas de nom)
-            _colis.AdresseFrance = $"{client.AdressePrincipale}\n{client.CodePostal} {client.Ville} {client.Pays}".Trim();
-        }
+        var items = TryParseInventory();
+        return items.Count;
     }
-
-    private async Task CopyAddressDestination()
+    
+    private List<TransitManager.Core.Entities.InventaireItem> TryParseInventory()
     {
-        Client? client = null;
-        if(_colis.Client != null) client = _colis.Client;
-        
-        if(client == null)
-        {
-             client = await ApiService.GetClientByIdAsync(_colis.ClientId);
-        }
-        
-        if (client != null)
-        {
-            // Prefer Delivery Address if available, else Principal
-            if (!string.IsNullOrWhiteSpace(client.AdresseLivraison))
-            {
-                 // Pas de nom
-                 _colis.AdresseDestination = $"{client.AdresseLivraison}".Trim();
-            }
-            else
-            {
-                // Pas de nom
-                _colis.AdresseDestination = $"{client.AdressePrincipale}\n{client.CodePostal} {client.Ville} {client.Pays}".Trim();
-            }
-    }
-        }
-
-    private async Task CopyAddressDelivery()
-    {
-        Client? client = null;
-        if(_colis.Client != null) client = _colis.Client;
-        if(client == null) client = await ApiService.GetClientByIdAsync(_colis.ClientId);
-        
-        if (client != null)
-        {
-             // Logique "Etiquette" : On veut l'adresse exacte pour la livraison
-             if (!string.IsNullOrWhiteSpace(client.AdresseLivraison))
-            {
-                 _colis.AdresseLivraison = $"{client.AdresseLivraison}".Trim();
-            }
-            else
-            {
-                _colis.AdresseLivraison = $"{client.AdressePrincipale}\n{client.CodePostal} {client.Ville} {client.Pays}".Trim();
-            }
-        }
-    }
-
-
-    // Gestion Modals
-
-
-    private void ShowInventory() => _showInventory = true;
-	
-	private async Task SaveInventory(InventoryModal.InventoryResult result)
-    {
-        // 1. Mise à jour locale (pour affichage immédiat)
-        _colis.InventaireJson = result.Json;
-        _colis.SignatureClientInventaire = result.Signature;
-        _colis.LieuSignatureInventaire = result.Lieu;
-        _colis.DateSignatureInventaire = result.Date;
-        
-        // Fermeture de la modale uniquement
-        _showInventory = false;
-        // 2. Calculs locaux
-        int newPieces = 0;
-        decimal newValeur = 0;
-        if (!string.IsNullOrEmpty(result.Json))
-        {
-            try
-            {
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-                var items = JsonSerializer.Deserialize<List<InventaireItem>>(result.Json, options);
-                if (items != null && items.Any())
-                {
-                    newPieces = items.Sum(i => i.Quantite);
-                    newValeur = items.Sum(i => i.Valeur); 
-                }
-                
-                _colis.NombrePieces = newPieces;
-                _colis.ValeurDeclaree = newValeur;
-            }
-            catch { }
-        }
-        // 3. Sauvegarde via l'API dédiée (SANS REDIRECTION)
+        if (string.IsNullOrEmpty(_colis.InventaireJson)) return new List<TransitManager.Core.Entities.InventaireItem>();
         try
         {
-            var dto = new UpdateInventaireDto
-            {
-                ColisId = _colis.Id,
-                InventaireJson = _colis.InventaireJson,
-                TotalPieces = newPieces,
-                TotalValeurDeclaree = newValeur,
-                // Ajout des signatures
-                LieuSignatureInventaire = _colis.LieuSignatureInventaire,
-                DateSignatureInventaire = _colis.DateSignatureInventaire,
-                SignatureClientInventaire = _colis.SignatureClientInventaire
-            };
-            var success = await ApiService.UpdateInventaireAsync(dto);
-            
-            if (success)
-            {
-                // Feedback discret (optionnel) ou rien
-                StateHasChanged(); // Rafraîchir la vue pour afficher les nouvelles valeurs (pièces, prix)
-            }
-            else
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la sauvegarde de l'inventaire.");
-            }
+            return JsonSerializer.Deserialize<List<TransitManager.Core.Entities.InventaireItem>>(_colis.InventaireJson) ?? new List<TransitManager.Core.Entities.InventaireItem>();
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Erreur SaveInventory: {ex.Message}");
-        }
+        catch { return new List<TransitManager.Core.Entities.InventaireItem>(); }    
     }
+    
+    private void ShowInventory() => _showInventory = true;
     private void ShowPayments() => _showPayments = true;
-    private void UpdatePaidAmount(decimal totalPaid)
+    
+    private void SaveInventory(InventoryModal.InventoryResult result)
     {
-        _colis.SommePayee = totalPaid;
-    }
-    private async Task SaveParcel()
-    {
-        var barcodesList = new List<string>();
-        if(!string.IsNullOrEmpty(_firstBarcode)) barcodesList.Add(_firstBarcode);
+        _colis.InventaireJson = result.Json;
+        _colis.LieuSignatureInventaire = result.Lieu;
+        _colis.DateSignatureInventaire = result.Date;
+        _colis.SignatureClientInventaire = result.Signature;
         
+        var items = TryParseInventory();
+        _colis.NombrePieces = items.Sum(i => i.Quantite);
+        _colis.ValeurDeclaree = items.Sum(i => i.Valeur);
+        
+        _showInventory = false;
+        StateHasChanged(); // Force update UI Computed Fields
+    }
+    
+    private void ShowComputedFieldInfo() { _showComputedInfo = true; }
+    
+    private async Task CheckInventoryAndSave()
+    {
+        if (GetInventoryItemCount() == 0)
+        {
+            _showEmptyInventoryWarning = true;
+        }
+        else
+        {
+            await SaveColis();
+        }
+    }
+    
+    private async Task ConfirmSaveWithEmptyInventory()
+    {
+        _showEmptyInventoryWarning = false;
+        await SaveColis();
+    }
+
+    private async Task SaveColis()
+    {
         if (IsNew)
         {
             var createDto = new CreateColisDto
@@ -726,9 +954,12 @@
                 ClientId = _colis.ClientId,
                 Designation = _colis.Designation,
                 DestinationFinale = _colis.DestinationFinale,
-                Barcodes = barcodesList,
+                Barcodes = new List<string> { _firstBarcode },
+                NombrePieces = _colis.NombrePieces,
+                ValeurDeclaree = _colis.ValeurDeclaree,
                 Type = _colis.Type,
                 TypeEnvoi = _colis.TypeEnvoi,
+                FraisDouane = _colis.TypeEnvoi == TypeEnvoi.AvecDedouanement ? _colis.ValeurDouane : 0,
                 EstFragile = _colis.EstFragile,
                 ManipulationSpeciale = _colis.ManipulationSpeciale,
                 InstructionsSpeciales = _colis.InstructionsSpeciales,
@@ -739,8 +970,12 @@
                 AdresseFrance = _colis.AdresseFrance,
                 AdresseDestination = _colis.AdresseDestination,
                 InventaireJson = _colis.InventaireJson,
-                Volume = IsAdmin ? _colis.Volume : 0,
-                PrixTotal = IsAdmin ? _colis.PrixTotal : 0,
+                LieuSignatureInventaire = _colis.LieuSignatureInventaire,
+                DateSignatureInventaire = _colis.DateSignatureInventaire,
+                SignatureClientInventaire = _colis.SignatureClientInventaire,
+                // FIXED: Allow everyone to save Volume/Price
+                Volume = _colis.Volume,
+                PrixTotal = _colis.PrixTotal,
                 ConteneurId = IsAdmin ? _colis.ConteneurId : null
             };
             await ApiService.CreateColisAsync(createDto);
@@ -757,6 +992,7 @@
                 Statut = _colis.Statut,
                 Type = _colis.Type,
                 TypeEnvoi = _colis.TypeEnvoi,
+                FraisDouane = _colis.TypeEnvoi == TypeEnvoi.AvecDedouanement ? _colis.ValeurDouane : 0,
                 EstFragile = _colis.EstFragile,
                 ManipulationSpeciale = _colis.ManipulationSpeciale,
                 InstructionsSpeciales = _colis.InstructionsSpeciales,
@@ -779,121 +1015,183 @@
             {
                 updateDto.Barcodes.Add(_firstBarcode);
             }
+            
             await ApiService.UpdateColisAsync(_colis.Id, updateDto);
         }
-        
         Navigation.NavigateTo("/my-parcels");
     }
-	
-	private string GetStatusBadgeClass(StatutColis status)
-	{
-		return status switch
-		{
-			StatutColis.EnAttente => "bg-warning text-dark",
-			StatutColis.Affecte => "bg-info text-dark",
-			StatutColis.EnTransit => "bg-primary",
-			StatutColis.Arrive => "bg-info",
-			StatutColis.EnDedouanement => "bg-secondary",
-			StatutColis.Livre => "bg-success",
-			StatutColis.Probleme => "bg-danger",
-			StatutColis.Perdu => "bg-dark",
-			_ => "bg-secondary"
-		};
-	}
+    
+    private void UpdatePaidAmount(decimal amount)
+    {
+        _colis.SommePayee = amount; // Mise à jour locale pour affichage immédiat
+        StateHasChanged();
+    }
+    
+    // Address Copies
+    private async Task CopyAddressFrance()
+    {
+        await LoadProfileAndCopy((p) => _colis.AdresseFrance = $"{p.Adresse}".ToUpper());
+    }
+    private async Task CopyAddressDestination()
+    {
+        await LoadProfileAndCopy((p) => _colis.AdresseDestination = $"{p.Ville}, {p.Pays}".ToUpper());
+    }
 
-    private string DestinationLabel => string.IsNullOrWhiteSpace(_colis.DestinationFinale) ? "Adresse Destination" : $"Adresse {_colis.DestinationFinale}";
+    
+
+    
+    private void OnTypeEnvoiChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<TypeEnvoi>(e.Value?.ToString(), out var type))
+        {
+            _colis.TypeEnvoi = type;
+            
+            // Logic: Update the FraisDouane property in memory to reflect the potential change
+            if (type == TypeEnvoi.AvecDedouanement)
+            {
+                 _colis.FraisDouane = _colis.ValeurDouane;
+            }
+            else
+            {
+                 _colis.FraisDouane = 0;
+            }
+
+            // Force refresh of computed properties for UI
+            StateHasChanged();
+        }
+    }
+
+    private void OnFraisDouaneChanged(ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var frais))
+        {
+            _colis.FraisDouane = frais;
+        }
+    }
+
+    private async Task SearchClientByPhone()
+    {
+       // Déclenche simplement l'affichage du dropdown s'il y a du contenu précédent ou focus
+       // Ici on pourrait implémenter une logique plus complexe si besoin
+       await JSRuntime.InvokeVoidAsync("console.log", "Search by phone requested");
+    }
+
+    private async Task CopyAddressDelivery()
+    {
+        await LoadProfileAndCopy((p) => {
+            _colis.AdresseLivraison = $"{p.Adresse}, {p.Ville} {p.CodePostal}".ToUpper();
+        });
+    }
+    
+    private async Task LoadProfileAndCopy(Action<UserProfileDto> copyAction)
+    {
+        var profile = await ApiService.GetUserProfileAsync();
+        if (profile != null)
+        {
+            copyAction(profile);
+            StateHasChanged();
+        }
+    }
+    
+    private string GetStatusBadgeClass(StatutColis statut)
+    {
+        return statut switch
+        {
+            StatutColis.EnAttente => "bg-warning text-dark",
+            StatutColis.Affecte => "bg-info text-dark",
+            StatutColis.EnTransit => "bg-primary",
+            StatutColis.Arrive => "bg-info",
+            StatutColis.EnDedouanement => "bg-secondary",
+            StatutColis.Livre => "bg-success",
+            StatutColis.Probleme => "bg-danger",
+            StatutColis.Perdu => "bg-dark",
+            StatutColis.Retourne => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
     
     private void OnDestinationChanged(ChangeEventArgs e)
     {
-        _colis.DestinationFinale = e.Value?.ToString();
-        // Force l'actualisation pour le label dynamique
-        StateHasChanged();
+        _colis.DestinationFinale = e.Value?.ToString() ?? "";
     }
-
-    private bool _isExportMenuOpen = false;
-    private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
-	private async Task ExportPdf(bool includeFinancials, bool includePhotos)
-    {
-        _isExportMenuOpen = false;
-        _isLoading = true;
-        StateHasChanged();
-        try
-        {
-            // Appel avec les deux booléens
-            var pdfData = await ApiService.ExportColisPdfAsync(_colis.Id, includeFinancials, includePhotos);
-            if (pdfData != null && pdfData.Length > 0)
-            {
-                var safeRef = _colis.NumeroReference.Replace("/", "-");
-                var fileName = $"Colis_{safeRef}.pdf";
-                using var stream = new MemoryStream(pdfData);
-                using var streamRef = new DotNetStreamReference(stream);
-                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
-            }
-            else
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Erreur: Fichier vide reçu.");
-            }
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
-		
-    }
-	
-	private int _unreadMessagesCount = 0;
     
-    private async Task UpdateUnreadBadge(int count)
+    private async Task DeleteSavReport()
+    {
+        if (_receptionControl != null)
+        {
+            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Êtes-vous sûr de vouloir supprimer ce rapport SAV ?");
+            if (confirmed)
+            {
+                bool success = await ApiService.DeleteControlAsync(_receptionControl.Id);
+                if (success)
+                {
+                    _receptionControl = null;
+                    StateHasChanged();
+                }
+            }
+        }
+    }
+    
+    private async Task ReloadSav()
+    {
+         if (!IsNew && Id.HasValue)
+         {
+             _receptionControl = await ApiService.GetReceptionControlAsync("Colis", Id.Value);
+             if(_savGallery != null) await _savGallery.ReloadAsync();
+             StateHasChanged();
+         }
+    }
+    
+    private void UpdateUnreadBadge(int count)
     {
         _unreadMessagesCount = count;
-        // CORRECTION : On utilise InvokeAsync pour revenir sur le thread UI
-        await InvokeAsync(StateHasChanged);
-    }
-	
-    private async Task ExportTicket(string format = "thermal")
-    {
-        _isExportMenuOpen = false;
-        _isLoading = true;
         StateHasChanged();
-
-        try
+    }
+    
+    private string GetTranslatedIssueType(IssueType type)
+    {
+        return type switch
         {
-            var pdfData = await ApiService.ExportTicketPdfAsync(_colis.Id, format);
-
-            if (pdfData != null && pdfData.Length > 0)
-            {
-                var safeRef = _colis.NumeroReference.Replace("/", "-");
-                var fileName = $"Ticket_{safeRef}_{format.ToUpper()}.pdf";
-
-                using var stream = new MemoryStream(pdfData);
-                using var streamRef = new DotNetStreamReference(stream);
-
-                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
-            }
-            else
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Erreur: Fichier vide reçu.");
-            }
-        }
-        catch (Exception ex)
+            IssueType.MissingItem => "Objet Manquant",
+            IssueType.Damage => "Objet/Emballage Abîmé",
+            IssueType.Other => "Autre Problème",
+            _ => type.ToString()
+        };
+    }
+    
+    private async Task ExportPdf(bool includeFinancials, bool includePhotos)
+    {
+        if (Id.HasValue)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
+            var pdfBytes = await ApiService.ExportColisPdfAsync(Id.Value, includeFinancials, includePhotos);
+            var title = includePhotos ? "dossier_complet" : (includeFinancials ? "recu_financier" : "fiche_colis");
+            var fileName = $"colis_{_colis.NumeroReference}_{title}.pdf";
+            
+            using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
+            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
         }
     }
-	
+    
+    private async Task ExportTicket(string format)
+    {
+        if (Id.HasValue)
+        {
+            var pdfBytes = await ApiService.ExportTicketPdfAsync(Id.Value, format);
+            var fileName = $"ticket_{_colis.NumeroReference}.pdf";
+            
+            using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
+            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        }
+    }
+    
     private int GetMissingDocumentsCount()
     {
-        if (_colis.Documents == null) return 0;
-        return _colis.Documents.Count(d => d.Statut == StatutDocument.Manquant);
+        return 0; 
     }
+
 }
+
+
+
+
+

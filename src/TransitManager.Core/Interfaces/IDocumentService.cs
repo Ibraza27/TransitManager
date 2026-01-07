@@ -40,5 +40,8 @@ namespace TransitManager.Core.Interfaces
         Task<int> GetPendingDocumentsCountAsync();
         Task<int> GetTotalMissingDocumentsCountAsync();
         Task<IEnumerable<Document>> GetAllMissingDocumentsAsync();
+        
+        // Documents Financiers
+        Task<IEnumerable<Document>> GetFinancialDocumentsAsync(int? year, int? month, TypeDocument? type, Guid? clientId = null);
     }
 }

@@ -41,6 +41,25 @@ namespace TransitManager.API.Controllers
             }
         }
 
+        [HttpGet("financial")]
+        public async Task<ActionResult<IEnumerable<Document>>> GetFinancial(
+            [FromQuery] int? year, 
+            [FromQuery] int? month, 
+            [FromQuery] TypeDocument? type,
+            [FromQuery] Guid? clientId)
+        {
+            try
+            {
+                var docs = await _documentService.GetFinancialDocumentsAsync(year, month, type, clientId);
+                return Ok(docs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la récupération des documents financiers.");
+                return StatusCode(500, "Erreur interne.");
+            }
+        }
+
         // GET: api/documents/{id}/download
         [HttpGet("{id}/download")]
         public async Task<IActionResult> Download(Guid id)
@@ -50,7 +69,19 @@ namespace TransitManager.API.Controllers
                 var result = await _documentService.GetFileStreamAsync(id);
                 if (result == null) return NotFound("Fichier introuvable.");
 
-                return File(result.Value.FileStream, result.Value.ContentType, result.Value.FileName);
+                var fileName = !string.IsNullOrWhiteSpace(result.Value.FileName) ? result.Value.FileName : "document.bin";
+                // Nettoyer le nom de fichier des caractères invalides pour le header
+                var safeFileName = new string(fileName.Where(c => !Path.GetInvalidFileNameChars().Contains(c)).ToArray()).Replace(" ", "_");
+                
+                // IMPORTANT: Forcer le téléchargement avec Content-Disposition: attachment
+                var contentDisposition = new System.Net.Mime.ContentDisposition
+                {
+                    FileName = safeFileName,
+                    DispositionType = System.Net.Mime.DispositionTypeNames.Attachment
+                };
+                Response.Headers.Append("Content-Disposition", contentDisposition.ToString());
+
+                return File(result.Value.FileStream, result.Value.ContentType, fileName);
             }
             catch (Exception ex)
             {
@@ -74,7 +105,7 @@ namespace TransitManager.API.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("Aucun fichier fourni.");
 
-            if (!Enum.TryParse<TypeDocument>(typeDocStr, out var typeDoc))
+            if (!Enum.TryParse<TypeDocument>(typeDocStr, true, out var typeDoc))
                 typeDoc = TypeDocument.Autre;
 
             try
@@ -130,18 +161,18 @@ namespace TransitManager.API.Controllers
 		
 		// GET: api/documents/{id}/preview
 		[HttpGet("{id}/preview")]
-		public async Task<IActionResult> Preview(Guid id)
+		public async Task<IActionResult> Preview(Guid id, [FromQuery] bool forceDownload = false)
 		{
 			try
 			{
 				var result = await _documentService.GetFileStreamAsync(id);
 				if (result == null) return NotFound("Fichier introuvable.");
 
-				// "inline" dit au navigateur : essaie d'afficher ça (PDF, Image) au lieu de télécharger
+				// "inline" pour afficher, "attachment" pour télécharger
 				var contentDisposition = new System.Net.Mime.ContentDisposition
 				{
 					FileName = result.Value.FileName,
-					Inline = true 
+					Inline = !forceDownload 
 				};
 				Response.Headers.Append("Content-Disposition", contentDisposition.ToString());
 

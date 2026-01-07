@@ -237,8 +237,13 @@ namespace TransitManager.Infrastructure.Repositories
                     ConteneurNumero = c.Conteneur != null ? c.Conteneur.NumeroDossier : null,
                     NombrePieces = c.NombrePieces,
                     Volume = c.Volume,
+                    PrixTotal = c.PrixTotal, // AJOUT
+                    FraisDouane = c.FraisDouane, // AJOUT
+                    TypeEnvoi = c.TypeEnvoi, // AJOUT
+                    SommePayee = c.SommePayee, // AJOUT
                     HasMissingDocuments = c.Documents.Any(d => d.Statut == StatutDocument.Manquant),
-                    AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value)) // AJOUTÉ
+                    ClientTelephonePrincipal = c.Client != null ? c.Client.TelephonePrincipal : null, // AJOUT POUR RECHERCHE
+                    AllBarcodes = string.Join(", ", c.Barcodes.Select(b => b.Value))
                 })
                 .ToListAsync();
 

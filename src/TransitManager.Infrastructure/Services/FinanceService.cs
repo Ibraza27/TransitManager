@@ -67,7 +67,7 @@ namespace TransitManager.Infrastructure.Services
                     vehiculeQuery = vehiculeQuery.Where(v => v.ClientId == clientId.Value);
                 }
 
-                var colisDette = await colisQuery.SumAsync(c => c.PrixTotal - c.SommePayee);
+                var colisDette = await colisQuery.SumAsync(c => (c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal) - c.SommePayee);
                 var vehiculeDette = await vehiculeQuery.SumAsync(v => v.PrixTotal - v.SommePayee);
 
                 // 3. Articles sans prix (Cotation Requise)
@@ -177,15 +177,16 @@ namespace TransitManager.Infrastructure.Services
                 var unpaidItems = new List<UnpaidItemDto>();
 
                 var colisImpayes = await context.Colis
-                    .Where(c => c.ClientId == clientId && c.Actif && (c.PrixTotal - c.SommePayee) > 0.01m)
+                    .Where(c => c.ClientId == clientId && c.Actif && 
+                        ((c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal) - c.SommePayee) > 0.01m)
                     .Select(c => new UnpaidItemDto
                     {
                         EntityId = c.Id,
                         EntityType = "Colis",
                         Reference = c.NumeroReference,
                         Description = c.Designation,
-                        MontantTotal = c.PrixTotal,
-                        RestantAPayer = c.PrixTotal - c.SommePayee,
+                        MontantTotal = c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal,
+                        RestantAPayer = (c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal) - c.SommePayee,
                         DateCreation = c.DateCreation
                     })
                     .ToListAsync();

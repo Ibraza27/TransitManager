@@ -219,6 +219,20 @@
                 });
             });
 
+            _hubConnection.On<Guid>("NotificationDeleted", async (id) =>
+            {
+                await InvokeAsync(() =>
+                {
+                    var notif = _notifications.FirstOrDefault(n => n.Id == id);
+                    if (notif != null)
+                    {
+                        _notifications.Remove(notif);
+                        if (!notif.EstLue) _unreadCount--;
+                        StateHasChanged();
+                    }
+                });
+            });
+
             _hubConnection.Closed += async (error) => 
             {
                 _isConnected = false;

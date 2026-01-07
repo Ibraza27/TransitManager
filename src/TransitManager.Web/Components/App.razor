@@ -210,9 +210,13 @@
             ctx: null,
             img: null,
             
-            // Données
+            // Données (Nouveaux / Editables)
             points: [],
             strokes: [],
+            
+            // Données (Origine / ReadOnly)
+            originalPoints: [],
+            originalStrokes: [],
             
             // Viewport
             scale: 1,
@@ -226,16 +230,27 @@
             lastTouchDist: 0,
 
             // Outils
-            currentTool: 'hand', // Par défaut en mode "Main" pour éviter de dessiner par erreur
+            currentTool: 'hand', 
             isDrawing: false,
             currentStroke: [],
             readOnly: false,
 
-            init: function (canvasId, imageUrl, jsonPoints, jsonStrokes, isReadOnly) {
+            init: function (canvasId, imageUrl, jsonPoints, jsonStrokes, originalJsonPoints, originalJsonStrokes, isReadOnly) {
                 this.canvas = document.getElementById(canvasId);
                 if (!this.canvas) return;
                 this.ctx = this.canvas.getContext('2d');
-                this.readOnly = isReadOnly;
+                // Handle overloading: if originalJsonPoints is boolean, it's global readOnly (old signature)
+                if (typeof originalJsonPoints === 'boolean') {
+                    this.readOnly = originalJsonPoints;
+                    this.originalPoints = [];
+                    this.originalStrokes = [];
+                } else {
+                    this.readOnly = isReadOnly;
+                    try {
+                        this.originalPoints = originalJsonPoints ? JSON.parse(originalJsonPoints) : [];
+                        this.originalStrokes = originalJsonStrokes ? JSON.parse(originalJsonStrokes) : [];
+                    } catch (e) { console.error("Error parsing originals", e); this.originalPoints=[]; this.originalStrokes=[]; }
+                }
 
                 // Reset Viewport
                 this.scale = 1;
@@ -260,7 +275,7 @@
                 this.setupEvents();
                 
                 // Outil par défaut
-                this.setTool(isReadOnly ? 'hand' : 'pen');
+                this.setTool(this.readOnly ? 'hand' : 'pen');
             },
 
             fitToScreen: function() {
@@ -313,18 +328,35 @@
 
                 if (this.img) this.ctx.drawImage(this.img, 0, 0);
 
-                // Rayures
+                // --- DESSIN ORIGINAUX (Orange - ReadOnly) ---
                 this.ctx.lineCap = 'round';
                 this.ctx.lineJoin = 'round';
-                // L'épaisseur du trait reste visible peu importe le zoom
                 this.ctx.lineWidth = 5 / this.scale; 
 
+                // Rayures
+                this.originalStrokes.forEach(stroke => this.drawStrokePath(stroke, 'orange'));
+
+                // Points
+                var pointRadius = 8 / this.scale; 
+                this.ctx.fillStyle = 'rgba(255, 165, 0, 0.6)'; // Orange
+                this.ctx.strokeStyle = 'darkorange';
+                this.ctx.lineWidth = 2 / this.scale;
+
+                this.originalPoints.forEach(p => {
+                    var x = p.X * this.img.width;
+                    var y = p.Y * this.img.height;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, pointRadius, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                    this.ctx.stroke();
+                });
+
+                // --- DESSIN NOUVEAUX (Red - Editable) ---
+                this.ctx.lineWidth = 5 / this.scale; 
                 this.strokes.forEach(stroke => this.drawStrokePath(stroke, 'red'));
                 if (this.currentStroke.length > 0) this.drawStrokePath(this.currentStroke, 'red');
 
                 // Points
-                // Le rayon du point reste visible peu importe le zoom
-                var pointRadius = 8 / this.scale; 
                 this.ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
                 this.ctx.strokeStyle = 'red';
                 this.ctx.lineWidth = 2 / this.scale;

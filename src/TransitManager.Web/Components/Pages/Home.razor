@@ -191,8 +191,8 @@
                                         @foreach(var doc in adminMissingDocsList)
                                         {
                                             string link = "#";
-                                            if(doc.ColisId.HasValue) link = $"colis/detail/{doc.ColisId}";
-                                            else if(doc.VehiculeId.HasValue) link = $"vehicule/detail/{doc.VehiculeId}";
+                                            if(doc.ColisId.HasValue) link = $"colis/detail/{doc.ColisId}?tab=docs";
+                                            else if(doc.VehiculeId.HasValue) link = $"vehicule/detail/{doc.VehiculeId}?tab=docs";
                                             
                                             <a href="@link" class="list-group-item list-group-item-action p-3">
                                                 <div class="d-flex w-100 justify-content-between">
@@ -356,8 +356,8 @@
                                 @foreach(var doc in missingDocsList)
                                 {
                                     string link = "#";
-                                    if(doc.ColisId.HasValue) link = $"colis/detail/{doc.ColisId}";
-                                    else if(doc.VehiculeId.HasValue) link = $"vehicule/detail/{doc.VehiculeId}";
+                                    if(doc.ColisId.HasValue) link = $"colis/detail/{doc.ColisId}?tab=docs";
+                                    else if(doc.VehiculeId.HasValue) link = $"vehicule/detail/{doc.VehiculeId}?tab=docs";
                                     
                                     <a href="@link" class="list-group-item list-group-item-action p-3">
                                         <div class="d-flex w-100 justify-content-between">
@@ -598,8 +598,8 @@
         {
             // Direct redirect if only 1
             var doc = missingDocsList.First();
-            if(doc.ColisId.HasValue) nav.NavigateTo($"colis/detail/{doc.ColisId}");
-            else if(doc.VehiculeId.HasValue) nav.NavigateTo($"vehicule/detail/{doc.VehiculeId}");
+            if(doc.ColisId.HasValue) nav.NavigateTo($"colis/detail/{doc.ColisId}?tab=docs");
+            else if(doc.VehiculeId.HasValue) nav.NavigateTo($"vehicule/detail/{doc.VehiculeId}?tab=docs");
             else showMissingDocsModal = true;
         }
         else
@@ -617,8 +617,8 @@
         if (adminMissingDocsList.Count() == 1)
         {
              var doc = adminMissingDocsList.First();
-             if(doc.ColisId.HasValue) nav.NavigateTo($"colis/detail/{doc.ColisId}");
-             else if(doc.VehiculeId.HasValue) nav.NavigateTo($"vehicule/detail/{doc.VehiculeId}");
+             if(doc.ColisId.HasValue) nav.NavigateTo($"colis/detail/{doc.ColisId}?tab=docs");
+             else if(doc.VehiculeId.HasValue) nav.NavigateTo($"vehicule/detail/{doc.VehiculeId}?tab=docs");
              else showAdminMissingDocsModal = true;
         }
         else if (adminMissingDocsList.Any())

@@ -75,6 +75,15 @@
     </div>
 
     <!-- Tableau -->
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <div class="text-muted mt-2">Chargement des véhicules...</div>
+        </div>
+    }
+    else
+    {
     <div class="card shadow-sm border-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -197,11 +206,13 @@
             </table>
         </div>
     </div>
+    }
 
 </div>
 
 @code {
     private IEnumerable<VehiculeListItemDto> _allVehicles = new List<VehiculeListItemDto>();
+    private bool _isLoading = true;
     private List<string> _containers = new();
     private string SearchTerm { get; set; } = "";
     private StatutVehicule? SelectedStatus { get; set; }
@@ -221,8 +232,9 @@
             _allVehicles = result;
             // Met à jour la liste pour l'autocomplete
             _containers = _allVehicles.Select(v => v.ConteneurNumeroDossier).Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList()!;
-            StateHasChanged();
         }
+        _isLoading = false;
+        StateHasChanged();
     }
 
     private IEnumerable<VehiculeListItemDto> FilteredVehicles

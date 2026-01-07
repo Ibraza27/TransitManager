@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Components.Forms;
 using TransitManager.Core.DTOs;
+using TransitManager.Core.DTOs;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
-using static TransitManager.Web.Services.ApiService;
+
 
 namespace TransitManager.Web.Services
 {
@@ -94,8 +95,9 @@ namespace TransitManager.Web.Services
 		
         // --- Messagerie ---
         Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId);
-        Task<bool> SendMessageAsync(CreateMessageDto dto);
+        Task<Guid?> SendMessageAsync(CreateMessageDto dto);
         Task MarkMessagesAsReadAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId); // Avec les 3 paramètres
+        Task DeleteMessageAsync(Guid messageId); // NEW
 
         // --- Timeline ---
         Task<IEnumerable<TimelineDto>> GetTimelineAsync(Guid? colisId, Guid? vehiculeId);
@@ -116,6 +118,8 @@ namespace TransitManager.Web.Services
         Task<decimal> GetClientBalanceAsync(Guid clientId); // NEW
         Task<Document?> GetFirstMissingDocumentAsync(Guid clientId); // NEW
         Task<AdminDashboardStatsDto?> GetAdminDashboardStatsAsync();
+        
+        Task<IEnumerable<Document>> GetFinancialDocumentsAsync(int? year, int? month, TypeDocument? type, Guid? clientId = null); // NEW
 
         // --- Finance Module ---
         Task<FinanceStatsDto?> GetFinanceStatsAsync(DateTime? startDate = null, DateTime? endDate = null, Guid? clientId = null); // Admin
@@ -131,5 +135,13 @@ namespace TransitManager.Web.Services
         Task<List<Client>> GetNewClientsListAsync();
         Task<List<DashboardEntityDto>> GetDelayedItemsAsync();
         Task<List<DashboardEntityDto>> GetUnpricedItemsAsync();
+
+        // --- SAV / Reception ---
+        Task<ReceptionControl?> GetReceptionControlAsync(string entityType, Guid entityId);
+        Task<ReceptionControl?> CreateReceptionControlAsync(ReceptionControl control);
+        Task<List<ReceptionControl>> GetRecentReceptionControlsAsync(int count);
+        Task<ReceptionStatsDto?> GetReceptionStatsAsync(DateTime? start = null, DateTime? end = null);
+        Task<bool> DeleteControlAsync(Guid id);
+        Task<string> GetSettingAsync(string key);
     }
 }

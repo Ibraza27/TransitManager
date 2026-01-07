@@ -1,0 +1,114 @@
+@using TransitManager.Core.Entities
+@using TransitManager.Core.Enums
+@using TransitManager.Web.Services
+@inject IApiService ApiService
+@inject IJSRuntime JS
+
+@if (_isLoading)
+{
+    <div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+}
+else if (_photos.Any())
+{
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-images me-2"></i>Photos SAV</h6>
+            <span class="badge bg-secondary">@_photos.Count</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-2">
+                @foreach (var photo in _photos)
+                {
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="position-relative ratio ratio-1x1 border rounded overflow-hidden" style="cursor: pointer;" @onclick="() => ViewPhoto(photo)">
+                            <img src="api/documents/@photo.Id/preview" class="object-fit-cover w-100 h-100" alt="@photo.Nom" />
+                            <div class="position-absolute bottom-0 start-0 w-100 bg-dark bg-opacity-50 text-white p-1 small text-truncate">
+                                @photo.Nom
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+else if (ShowEmptyState)
+{
+    <div class="alert alert-light border text-center text-muted small">
+        <i class="bi bi-camera me-2"></i>Aucune photo SAV associée.
+    </div>
+}
+
+@if (_viewingPhoto != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.85); z-index: 2000;">
+        <div class="modal-dialog modal-fullscreen m-0">
+             <div class="modal-content bg-transparent border-0 h-100 shadow-none">
+                 <div class="modal-header border-0 p-3 bg-dark bg-opacity-75">
+                     <h5 class="modal-title text-white text-truncate me-3">@_viewingPhoto.Nom</h5>
+                     <div class="d-flex gap-2">
+                         <a href="api/documents/@_viewingPhoto.Id/preview?forceDownload=true" target="_blank" class="btn btn-sm btn-outline-light" title="Télécharger">
+                             <i class="bi bi-download"></i>
+                         </a>
+                         <button type="button" class="btn-close btn-close-white" @onclick="ClosePhotoViewer"></button>
+                     </div>
+                 </div>
+                 <div class="modal-body p-0 d-flex justify-content-center align-items-center" @onclick="ClosePhotoViewer">
+                     <img src="api/documents/@_viewingPhoto.Id/preview" 
+                          class="img-fluid" 
+                          style="max-height: 90vh; max-width: 90vw; object-fit: contain; box-shadow: 0 0 20px rgba(0,0,0,0.5);" 
+                          @onclick:stopPropagation="true" />
+                 </div>
+             </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid EntityId { get; set; }
+    [Parameter] public string EntityType { get; set; } = "Colis"; // Colis or Vehicule
+    [Parameter] public bool ShowEmptyState { get; set; } = false;
+
+    private List<Document> _photos = new();
+    private bool _isLoading = true;
+    private Document? _viewingPhoto;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadPhotos();
+    }
+
+    public async Task ReloadAsync()
+    {
+        await LoadPhotos();
+    }
+
+    private async Task LoadPhotos()
+    {
+        _isLoading = true;
+        try
+        {
+            var docs = await ApiService.GetDocumentsByEntityAsync(EntityType, EntityId);
+            // Filter for SAV type only (Reverted as per user request)
+            _photos = docs.Where(d => d.Type == TypeDocument.SAV).OrderByDescending(d => d.DateCreation).ToList();
+        }
+        catch
+        {
+            _photos = new List<Document>();
+        }
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private void ViewPhoto(Document photo)
+    {
+       _viewingPhoto = photo;
+       StateHasChanged();
+    }
+    
+    private void ClosePhotoViewer()
+    {
+        _viewingPhoto = null;
+        StateHasChanged();
+    }
+}

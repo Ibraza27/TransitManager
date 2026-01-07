@@ -22,12 +22,14 @@ namespace TransitManager.Infrastructure.Data.Configurations
             builder.Property(c => c.Designation).IsRequired().HasMaxLength(500);
             builder.Property(c => c.NumeroPlomb).HasMaxLength(50); // NOUVELLE LIGNE
 			
-			builder.Property(c => c.InventaireJson).HasColumnType("jsonb");
+            builder.Property(c => c.InventaireJson).HasColumnType("jsonb");
 
-            builder.Property(c => c.Volume).HasPrecision(18, 3).HasDefaultValue(0); // AJOUTÉ
-            // ===== FIN DE LA SECTION MODIFIÉE =====
+            // Precision augmentée pour accepter les petits volumes (ex: 0.001)
+            builder.Property(c => c.Volume).HasPrecision(18, 5).HasDefaultValue(0); 
 
             builder.Property(c => c.ValeurDeclaree).HasPrecision(18, 2).HasDefaultValue(0);
+            builder.Property(c => c.PrixTotal).HasPrecision(18, 2).HasDefaultValue(0);
+            builder.Property(c => c.SommePayee).HasPrecision(18, 2).HasDefaultValue(0);
             builder.Property(c => c.InstructionsSpeciales).HasMaxLength(1000);
             builder.Property(c => c.Photos).HasColumnType("text");
             builder.Property(c => c.LocalisationActuelle).HasMaxLength(200);

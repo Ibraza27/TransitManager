@@ -653,6 +653,26 @@
 
 @code {
     [Parameter] public Guid? Id { get; set; }
+    
+    [SupplyParameterFromQuery]
+    public string? Tab { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Action { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Tab))
+        {
+            _activeTab = Tab.ToLower();
+        }
+
+        if (!string.IsNullOrEmpty(Action))
+        {
+            if (Action.ToLower() == "inventory") _showInventory = true;
+            if (Action.ToLower() == "payment") _showPayments = true;
+        }
+    }
     private Colis _colis = new() { DateArrivee = DateTime.UtcNow, Statut = StatutColis.EnAttente };
     private bool _isLoading = true;
     private bool IsNew => Id == null;

@@ -13,6 +13,8 @@ using TransitManager.Core.DTOs;
 
 namespace TransitManager.Infrastructure.Services
 {
+
+
     public class NotificationService : INotificationService
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
@@ -307,6 +309,63 @@ namespace TransitManager.Infrastructure.Services
         {
             // On redirige vers la nouvelle méthode plus complète
             await CreateAndSendAsync(title, message, null, CategorieNotification.Systeme, null, null, null, priorite);
+        }
+
+        public async Task NotifySavSubmissionAsync(ReceptionControl control, string clientName)
+        {
+            var subject = control.VehiculeId.HasValue ? "Véhicule" : "Colis";
+            var status = control.Status == ReceptionStatus.ReceivedFull ? "Conforme" : "PROBLÈME SIGNALÉ";
+            var category = control.VehiculeId.HasValue ? CategorieNotification.StatutVehicule : CategorieNotification.StatutColis;
+            
+            var url = control.VehiculeId.HasValue 
+                ? $"/vehicule/detail/{control.VehiculeId}?tab=sav" 
+                : $"/colis/detail/{control.ColisId}?tab=sav";
+
+            await CreateAndSendAsync(
+                title: $"Retour SAV {subject} ({status})",
+                message: $"Client: {clientName}. Note: {control.RateRecommendation}/10. {control.GlobalComment}",
+                userId: null, // Broadcast to Admins
+                categorie: category,
+                actionUrl: url,
+                relatedEntityId: control.Id,
+                relatedEntityType: "ReceptionControl"
+            );
+        }
+
+        public async Task DeleteByEntityAsync(Guid entityId, CategorieNotification categorie)
+        {
+            Console.WriteLine($"[NotificationService] DeleteByEntityAsync requested for EntityId: {entityId}, Category: {categorie}");
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            
+            var query = context.Notifications.Where(n => n.RelatedEntityId == entityId);
+            
+            // Optimisation : Si on veut être puriste sur le type (optionnel car Guid est unique)
+            // if (!string.IsNullOrEmpty(relatedEntityType)) query = query.Where(n => n.RelatedEntityType == relatedEntityType);
+
+            var notificationsToDelete = await query.ToListAsync();
+            Console.WriteLine($"[NotificationService] Found {notificationsToDelete.Count} notifications to delete for EntityId {entityId}");
+
+            if (notificationsToDelete.Any())
+            {
+                context.Notifications.RemoveRange(notificationsToDelete);
+                await context.SaveChangesAsync();
+                Console.WriteLine($"[NotificationService] Deleted {notificationsToDelete.Count} notifications from DB.");
+
+                // On informe les clients via SignalR pour qu'ils mettent à jour leur liste instantanément
+                foreach (var notif in notificationsToDelete)
+                {
+                    if (notif.UtilisateurId.HasValue)
+                    {
+                        var userIdStr = notif.UtilisateurId.Value.ToString();
+                        try 
+                        {
+                            await _hubContext.Clients.User(userIdStr).SendAsync("NotificationDeleted", notif.Id);
+                            Console.WriteLine($"[NotificationService] SignalR event 'NotificationDeleted' sent to user {userIdStr} for NotifId {notif.Id}");
+                        }
+                        catch { /* Ignore SignalR errors */ }
+                    }
+                }
+            }
         }
     }
 }

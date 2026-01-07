@@ -1,6 +1,6 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">TRANSIT MANAGER</a>
+        <a class="navbar-brand text-truncate" style="font-size: 0.9rem;" href="">TRANSIT MANAGER</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -28,11 +28,15 @@
 
         <AuthorizeView>
             <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="profile">
-                        <span class="bi bi-person-circle" aria-hidden="true"></span> Mon Profil
-                    </NavLink>
-                </div>
+                <AuthorizeView Roles="Client">
+                    <Authorized Context="ClientAuth">
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="profile">
+                                <span class="bi bi-person-circle" aria-hidden="true"></span> Mon Profil
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="my-parcels">
@@ -75,9 +79,14 @@
                         <span class="bi bi-shield-check me-2" aria-hidden="true"></span> Audit
                     </NavLink>
                 </div>
-                 <div class="nav-item px-3">
+                <div class="nav-item px-3">
                     <NavLink class="nav-link" href="admin/settings">
                         <span class="bi bi-gear-fill me-2" aria-hidden="true"></span> Paramètres
+                    </NavLink>
+                </div>
+                 <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/sav">
+                        <span class="bi bi-shield-check me-2" aria-hidden="true"></span> SAV / Qualité
                     </NavLink>
                 </div>
             </Authorized>

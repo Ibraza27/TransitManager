@@ -83,13 +83,20 @@ namespace TransitManager.API.Controllers
 
         [HttpGet("export")]
         [Authorize(Roles = "Administrateur")]
-        public async Task<IActionResult> ExportTransactions([FromQuery] DateTime? start, [FromQuery] DateTime? end)
+        public async Task<IActionResult> ExportTransactions([FromQuery] DateTime? start, [FromQuery] DateTime? end, [FromQuery] Guid? clientId)
         {
              try
              {
                  var s = start ?? DateTime.MinValue;
                  var e = end ?? DateTime.MaxValue;
                  var paiements = await _paiementService.GetByPeriodAsync(s, e);
+                 
+                 // Apply Client Filtering if requested
+                 if (clientId.HasValue)
+                 {
+                    paiements = paiements.Where(p => p.ClientId == clientId.Value).ToList();
+                 }
+
                  var excelBytes = await _exportService.ExportFinancialReportAsync(s, e, paiements);
                  return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"FinanceReport_{DateTime.Now:yyyyMMdd}.xlsx");
              }

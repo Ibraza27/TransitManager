@@ -285,8 +285,8 @@ namespace TransitManager.Infrastructure.Services
                                     column.Item().Text($"N° {DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}").FontSize(12);
                                     column.Item().Text($"Date: {DateTime.Now:dd/MM/yyyy}").FontSize(10);
                                 });
-                                row.ConstantItem(150).Text("TRANSIT MANAGER\n123 Rue du Commerce\n75001 Paris\nTél: 01 23 45 67 89")
-                                    .FontSize(10).AlignRight();
+                                row.ConstantItem(180).Text("HIPPOCAMPE IMPORT-EXPORT\n7 Rue Pascal\n33370 Tresses\nTél: 06 99 56 93 58\ncontact@hippocampeimportexport.com")
+                                    .FontSize(9).AlignRight();
                             });
                         }
 
@@ -367,55 +367,165 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<byte[]> GenerateReceiptPdfAsync(Paiement paiement)
         {
+            // Tenter de récupérer le logo
+             string logoPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images", "logo.jpg");
+             // Fallback dev environment (si BaseDirectory est dans bin/Debug/...)
+             if (!File.Exists(logoPath))
+             {
+                 var devPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.jpg"); // Web project root?
+                 if (File.Exists(devPath)) logoPath = devPath;
+                 else 
+                 {
+                     // Try relative to solution for standard dev layout
+                     devPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../TransitManager.Web/wwwroot/images/logo.jpg"));
+                     if (File.Exists(devPath)) logoPath = devPath;
+                 }
+             }
+
             return await Task.Run(() =>
             {
                 var document = PdfDocument.Create(container =>
                 {
                     container.Page(page =>
                     {
-                        page.Size(PageSizes.A5.Landscape());
+                        page.Size(PageSizes.A4); // A4 pour plus d'espace (ou A5 Landscape si préféré, mais A4 plus standard pour les factures)
                         page.Margin(1.5f, Unit.Centimetre);
-                        page.Content().Column(column =>
+                        page.PageColor(Colors.White);
+                        
+                        page.Header().Element(ComposeHeader);
+                        page.Content().Element(ComposeContent);
+                        page.Footer().Element(ComposeFooter);
+
+                        void ComposeHeader(IContainer container)
                         {
-                            column.Spacing(10);
-                            // En-tête
-                            column.Item().AlignCenter().Text("REÇU DE PAIEMENT").FontSize(18).SemiBold();
-                            column.Item().AlignCenter().Text($"N° {paiement.NumeroRecu}").FontSize(12);
-                            // Informations
-                            column.Item().Border(1).Padding(10).Column(col =>
+                            container.Row(row =>
                             {
-                                col.Item().Row(row =>
+                                // LOGO
+                                if (File.Exists(logoPath))
                                 {
-                                    row.RelativeItem().Text($"Date: {paiement.DatePaiement:dd/MM/yyyy HH:mm}");
-                                    row.RelativeItem().AlignRight().Text($"Montant: {paiement.Montant:C}").FontSize(14).SemiBold();
-                                });
-                                col.Item().Text($"Client: {paiement.Client?.NomComplet ?? "N/A"}");
-                                col.Item().Text($"Mode de paiement: {GetPaymentTypeLabel(paiement.ModePaiement)}");
-
-                                if (!string.IsNullOrEmpty(paiement.Reference))
-                                    col.Item().Text($"Référence: {paiement.Reference}");
-
-                                if (!string.IsNullOrEmpty(paiement.Description))
-                                    col.Item().Text($"Description: {paiement.Description}");
-                            });
-                            // Signature
-                            column.Item().PaddingTop(20).Row(row =>
-                            {
-                                row.RelativeItem().Column(col =>
+                                    row.ConstantItem(100).Image(logoPath);
+                                }
+                                else
                                 {
-                                    col.Item().Text("Signature du client:");
-                                    col.Item().Height(40).Border(1);
-                                });
-
-                                row.ConstantItem(50);
+                                    row.ConstantItem(100).Text("LOGO").FontSize(20).Bold().FontColor(Colors.Grey.Lighten2);
+                                }
 
                                 row.RelativeItem().Column(col =>
                                 {
-                                    col.Item().Text("Cachet et signature:");
-                                    col.Item().Height(40).Border(1);
+                                    col.Item().AlignRight().Text("HIPPOCAMPE IMPORT-EXPORT").FontSize(18).SemiBold().FontColor(Colors.Blue.Darken2);
+                                    col.Item().AlignRight().Text("7 Rue Pascal").FontSize(10);
+                                    col.Item().AlignRight().Text("33370 Tresses, France").FontSize(10);
+                                    col.Item().AlignRight().Text("Tél: 06 99 56 93 58").FontSize(10);
+                                    col.Item().AlignRight().Text("Email: contact@hippocampeimportexport.com").FontSize(10);
                                 });
                             });
-                        });
+                        }
+
+                        void ComposeContent(IContainer container)
+                        {
+                            container.PaddingVertical(20).Column(column =>
+                            {
+                                column.Spacing(20);
+
+                                column.Item().Row(row => 
+                                {
+                                    row.RelativeItem().Column(c => 
+                                    {
+                                        c.Item().Text("REÇU DE PAIEMENT").FontSize(20).Bold().FontColor(Colors.Black);
+                                        c.Item().Text($"N° {paiement.NumeroRecu}").FontSize(12).FontColor(Colors.Grey.Darken1);
+                                        c.Item().Text($"Date: {paiement.DatePaiement:dd/MM/yyyy HH:mm}").FontSize(10);
+
+                                        if (paiement.Colis != null)
+                                        {
+                                            c.Item().PaddingTop(5).Text($"Concerne le Colis : {paiement.Colis.NumeroReference}").FontSize(10).SemiBold();
+                                            c.Item().Text($"{paiement.Colis.Designation}").FontSize(9).Italic();
+                                        }
+                                        else if (paiement.Vehicule != null)
+                                        {
+                                            c.Item().PaddingTop(5).Text($"Concerne le Véhicule : {paiement.Vehicule.Marque} {paiement.Vehicule.Modele}").FontSize(10).SemiBold();
+                                            c.Item().Text($"Immatriculation : {paiement.Vehicule.Immatriculation}").FontSize(9).Italic();
+                                        }
+                                        else if (paiement.Conteneur != null)
+                                        {
+                                            c.Item().PaddingTop(5).Text($"Concerne le Conteneur : {paiement.Conteneur.NumeroDossier}").FontSize(10).SemiBold();
+                                        }
+                                    });
+                                    
+                                    // Info Client Box
+                                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Column(c => 
+                                    {
+                                        c.Item().Text("Reçu de :").FontSize(10).SemiBold().FontColor(Colors.Grey.Darken2);
+                                        c.Item().Text(paiement.Client?.NomComplet ?? "Client Inconnu").FontSize(12).Bold();
+                                        if(!string.IsNullOrEmpty(paiement.Client?.TelephonePrincipal))
+                                            c.Item().Text(paiement.Client.TelephonePrincipal).FontSize(10);
+                                        if(!string.IsNullOrEmpty(paiement.Client?.Email))
+                                            c.Item().Text(paiement.Client.Email).FontSize(10);
+                                    });
+                                });
+
+                                // Détails du paiement
+                                column.Item().Table(table =>
+                                {
+                                    table.ColumnsDefinition(columns =>
+                                    {
+                                        columns.RelativeColumn(3); // Description
+                                        columns.RelativeColumn(2); // Référence
+                                        columns.RelativeColumn(2); // Mode
+                                        columns.RelativeColumn(2); // Montant
+                                    });
+
+                                    table.Header(header =>
+                                    {
+                                        header.Cell().Element(CellStyle).Text("Description").SemiBold();
+                                        header.Cell().Element(CellStyle).Text("Référence").SemiBold();
+                                        header.Cell().Element(CellStyle).Text("Mode").SemiBold();
+                                        header.Cell().Element(CellStyle).AlignRight().Text("Montant").SemiBold();
+                                        
+                                        IContainer CellStyle(IContainer container) => container.DefaultTextStyle(x => x.SemiBold()).PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Black);
+                                    });
+
+                                    // Ligne unique pour le paiement (ou boucle si détails futurs)
+                                    table.Cell().Element(CellStyle).Text(paiement.Description ?? "Paiement");
+                                    table.Cell().Element(CellStyle).Text(paiement.Reference ?? "-");
+                                    table.Cell().Element(CellStyle).Text(GetPaymentTypeLabel(paiement.ModePaiement));
+                                    table.Cell().Element(CellStyle).AlignRight().Text($"{paiement.Montant:C}").Bold();
+
+                                    IContainer CellStyle(IContainer container) => container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(5);
+                                });
+
+                                // Total
+                                column.Item().AlignRight().Text(t => 
+                                {
+                                    t.Span("Total Payé: ").FontSize(14);
+                                    t.Span($"{paiement.Montant:C}").FontSize(16).Bold().FontColor(Colors.Green.Darken2);
+                                });
+
+                                // Signatures
+                                column.Item().PaddingTop(30).Row(row =>
+                                {
+                                    row.RelativeItem().Column(c => 
+                                    {
+                                        c.Item().Text("Signature du Client:").FontSize(10);
+                                        c.Item().Height(50).BorderBottom(1).BorderColor(Colors.Black);
+                                    });
+                                    row.ConstantItem(50);
+                                    row.RelativeItem().Column(c => 
+                                    {
+                                        c.Item().Text("Cachet de l'Entreprise:").FontSize(10);
+                                        c.Item().Height(50).BorderBottom(1).BorderColor(Colors.Black);
+                                    });
+                                });
+                            });
+                        }
+
+                        void ComposeFooter(IContainer container)
+                        {
+                            container.AlignCenter().Column(c => 
+                            {
+                                c.Item().Text("Merci de votre confiance !").FontSize(10).Italic();
+                                c.Item().Text($"Généré le {DateTime.Now:dd/MM/yyyy HH:mm}").FontSize(8).FontColor(Colors.Grey.Medium);
+                            });
+                        }
                     });
                 });
                 return document.GeneratePdf();
@@ -434,11 +544,22 @@ namespace TransitManager.Infrastructure.Services
             {
                 using var workbook = new XLWorkbook();
                 var worksheet = workbook.Worksheets.Add("Rapport Financier");
+                
+                // Détection Client Unique pour le titre
+                var firstClientId = paiements.FirstOrDefault()?.ClientId;
+                bool singleClient = firstClientId.HasValue && paiements.All(p => p.ClientId == firstClientId);
+                string clientName = singleClient ? (paiements.First().Client?.NomComplet ?? "Client") : null;
+
                 // Titre
-                worksheet.Cell(1, 1).Value = $"RAPPORT FINANCIER - Du {startDate:dd/MM/yyyy} au {endDate:dd/MM/yyyy}";
+                string titre = $"RAPPORT FINANCIER - Du {startDate:dd/MM/yyyy} au {endDate:dd/MM/yyyy}";
+                if (clientName != null) titre += $" - CLIENT : {clientName.ToUpper()}";
+
+                worksheet.Cell(1, 1).Value = titre;
                 worksheet.Range(1, 1, 1, 8).Merge().Style.Font.Bold = true;
-                worksheet.Range(1, 1, 1, 8).Style.Font.FontSize = 16;
+                worksheet.Range(1, 1, 1, 8).Style.Font.FontSize = 14; 
                 worksheet.Range(1, 1, 1, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Range(1, 1, 1, 8).Style.Fill.BackgroundColor = XLColor.LightGray;
+
                 // En-têtes
                 var row = 3;
                 worksheet.Cell(row, 1).Value = "Date";
@@ -468,16 +589,25 @@ namespace TransitManager.Infrastructure.Services
                     worksheet.Cell(row, 8).Value = paiement.Statut.ToString();
                     if (paiement.Statut == StatutPaiement.Paye)
                         total += paiement.Montant;
+                    
+                    // Style conditionnel
+                    if (paiement.Statut == StatutPaiement.Annule) worksheet.Row(row).Style.Font.FontColor = XLColor.Red;
+
                     row++;
                 }
                 // Total
-                worksheet.Cell(row + 1, 6).Value = "TOTAL:";
-                worksheet.Cell(row + 1, 6).Style.Font.Bold = true;
-                worksheet.Cell(row + 1, 7).Value = total;
-                worksheet.Cell(row + 1, 7).Style.Font.Bold = true;
+                var totalRow = row + 1;
+                worksheet.Cell(totalRow, 6).Value = "TOTAL GÉNÉRAL:";
+                worksheet.Cell(totalRow, 6).Style.Font.Bold = true;
+                worksheet.Cell(totalRow, 7).Value = total;
+                worksheet.Cell(totalRow, 7).Style.Font.Bold = true;
+                worksheet.Cell(totalRow, 7).Style.Font.FontSize = 12;
+                worksheet.Cell(totalRow, 7).Style.Fill.BackgroundColor = XLColor.LightYellow;
+
                 // Formatage
-                worksheet.Range(4, 7, row + 1, 7).Style.NumberFormat.Format = "#,##0.00 €";
+                worksheet.Range(4, 7, totalRow, 7).Style.NumberFormat.Format = "#,##0.00 €";
                 worksheet.Columns().AdjustToContents();
+                
                 using var stream = new MemoryStream();
                 workbook.SaveAs(stream);
                 return stream.ToArray();

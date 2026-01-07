@@ -93,6 +93,8 @@ namespace TransitManager.API.Controllers
 					// --- AJOUTS CRUCIAUX ---
 					NombrePieces = c.NombrePieces,
 					PrixTotal = c.PrixTotal,
+					FraisDouane = c.FraisDouane, // AJOUT
+					TypeEnvoi = c.TypeEnvoi, // AJOUT
 					SommePayee = c.SommePayee,
 					HasMissingDocuments = c.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant),
 					IsExcludedFromExport = c.IsExcludedFromExport
@@ -111,7 +113,7 @@ namespace TransitManager.API.Controllers
 		
 
         // --- AJOUT : GET api/colis/{id} ---
-        [HttpGet("{id}")]
+        [HttpGet("{id:guid}")]
         public async Task<ActionResult<Colis>> GetColisById(Guid id)
         {
             try
@@ -243,6 +245,8 @@ namespace TransitManager.API.Controllers
 					DateArrivee = c.DateArrivee,
 					NombrePieces = c.NombrePieces,
 					PrixTotal = c.PrixTotal,
+					FraisDouane = c.FraisDouane, // ADJUST
+					TypeEnvoi = c.TypeEnvoi, // ADJUST
 					SommePayee = c.SommePayee,
 					HasMissingDocuments = c.Documents.Any(d => d.Statut == TransitManager.Core.Enums.StatutDocument.Manquant),
 					IsExcludedFromExport = c.IsExcludedFromExport

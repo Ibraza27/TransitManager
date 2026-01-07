@@ -49,6 +49,8 @@ namespace TransitManager.Infrastructure.Services
             return await context.Paiements
                 .Include(p => p.Client)
                 .Include(p => p.Conteneur)
+                .Include(p => p.Colis)
+                .Include(p => p.Vehicule)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
@@ -435,9 +437,11 @@ namespace TransitManager.Infrastructure.Services
             // var colisImpayes = ... Where(restant > 0.01).Sum().
             // Ideally we should match exactly.
             
-            var colisStrictDebt = await context.Colis
-                .Where(c => c.ClientId == clientId && c.Actif && (c.PrixTotal - c.SommePayee) > 0.01m)
-                .SumAsync(c => c.PrixTotal - c.SommePayee);
+            // Re-implementing with exact filter to be safe and match original intent (Strict Positive Debt including Customs)
+             var colisStrictDebt = await context.Colis
+                .Where(c => c.ClientId == clientId && c.Actif && 
+                      ((c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal) - c.SommePayee) > 0.01m)
+                .SumAsync(c => (c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal) - c.SommePayee);
 
             var vehiculeStrictDebt = await context.Vehicules
                  .Where(v => v.ClientId == clientId && v.Actif && (v.PrixTotal - v.SommePayee) > 0.01m)

@@ -1,0 +1,130 @@
+@using System.Text.Json
+@inject IJSRuntime JSRuntime
+
+<div class="card shadow-sm border-0">
+@if (!IsReadOnly)
+    {
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Indiquez les nouveaux dommages</h6>
+        <div class="d-flex gap-2">
+            <div class="btn-group btn-group-sm">
+                <button class='btn btn-outline-primary @(_currentTool == "pen" ? "active" : "")' @onclick='() => SetTool("pen")' title="Crayon">
+                    ✏️ Dessiner
+                </button>
+                <button class='btn btn-outline-danger @(_currentTool == "eraser" ? "active" : "")' @onclick='() => SetTool("eraser")' title="Gomme">
+                    🧼 Gommer
+                </button>
+                <button class='btn btn-outline-secondary @(_currentTool == "hand" ? "active" : "")' @onclick='() => SetTool("hand")' title="Déplacer">
+                    ✋ Déplacer
+                </button>
+            </div>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-dark" @onclick="ZoomIn">➕</button>
+                <button class="btn btn-outline-dark" @onclick="ZoomOut">➖</button>
+            </div>
+        </div>
+    </div>
+    }
+    
+    <div class="card-body p-0 bg-dark position-relative rounded-bottom overflow-hidden" style="height: 50vh;">
+        <canvas id="sav-schema-canvas" style="width:100%; height:100%; cursor: crosshair; touch-action: none;"></canvas>
+    </div>
+    <div class="card-footer bg-light p-2 small text-muted d-flex justify-content-between">
+        <span><span class="text-secondary fw-bold">Orange</span> : Dommages initiaux (Fixe)</span>
+        <span><span class="text-danger fw-bold">Rouge</span> : Nouveaux dommages (Ajoutés)</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? OriginalPointsJson { get; set; }
+    [Parameter] public string? OriginalStrokesJson { get; set; }
+    
+    [Parameter] public string? ImageUrl { get; set; }
+
+    // Two-way binding for results
+    [Parameter] public string PointsJson { get; set; } // Current/New Points
+    [Parameter] public EventCallback<string> PointsJsonChanged { get; set; }
+
+    [Parameter] public string StrokesJson { get; set; } // Current/New Strokes
+    [Parameter] public EventCallback<string> StrokesJsonChanged { get; set; }
+
+    private string _currentTool = "pen";
+    private bool _initialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitCanvas();
+        }
+    }
+
+    private async Task InitCanvas()
+    {
+        // init(canvasId, imageUrl, jsonPoints, jsonStrokes, originalJsonPoints, originalJsonStrokes, isReadOnly)
+        // Ensure we pass non-null strings or empty arrays
+        var pJson = string.IsNullOrEmpty(PointsJson) ? "[]" : PointsJson;
+        var sJson = string.IsNullOrEmpty(StrokesJson) ? "[]" : StrokesJson;
+        var opJson = string.IsNullOrEmpty(OriginalPointsJson) ? "[]" : OriginalPointsJson;
+        var osJson = string.IsNullOrEmpty(OriginalStrokesJson) ? "[]" : OriginalStrokesJson;
+
+        await JSRuntime.InvokeVoidAsync("vehicleSchemaEditor.init", 
+            "sav-schema-canvas", 
+            ImageUrl ?? "images/plans/vehicule_plan.png", 
+            pJson, 
+            sJson,
+            opJson,
+            osJson,
+            IsReadOnly
+        );
+        _initialized = true;
+    }
+
+    [Parameter] public bool IsReadOnly { get; set; } = false;
+
+    private async Task SetTool(string tool)
+    {
+        _currentTool = tool;
+        await JSRuntime.InvokeVoidAsync("vehicleSchemaEditor.setTool", tool);
+    }
+
+    private async Task ZoomIn() => await JSRuntime.InvokeVoidAsync("vehicleSchemaEditor.zoom", 1);
+    private async Task ZoomOut() => await JSRuntime.InvokeVoidAsync("vehicleSchemaEditor.zoom", -1);
+
+    // Provide a public method for the parent to call BEFORE submitting
+    public async Task<bool> SaveDataAsync()
+    {
+        if (!_initialized) return false;
+        try
+        {
+            var jsonResult = await JSRuntime.InvokeAsync<string>("vehicleSchemaEditor.getData");
+             // Parse to extract points/strokes
+            var data = JsonSerializer.Deserialize<SchemaData>(jsonResult);
+            if (data != null)
+            {
+                if (PointsJson != data.Points)
+                {
+                    PointsJson = data.Points;
+                    await PointsJsonChanged.InvokeAsync(PointsJson);
+                }
+                if (StrokesJson != data.Strokes)
+                {
+                    StrokesJson = data.Strokes;
+                    await StrokesJsonChanged.InvokeAsync(StrokesJson);
+                }
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving schema data: {ex.Message}");
+        }
+        return false;
+    }
+
+    class SchemaData
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("points")] public string Points { get; set; } = "";
+        [System.Text.Json.Serialization.JsonPropertyName("strokes")] public string Strokes { get; set; } = "";
+    }
+}

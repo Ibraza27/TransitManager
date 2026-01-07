@@ -34,5 +34,10 @@ namespace TransitManager.Core.Interfaces
         
         // Événement pour le WPF (optionnel si tu utilises SignalR partout, mais gardons-le pour la sécurité)
         event EventHandler<NotificationEventArgs>? NotificationReceived;
+        // SAV
+        Task NotifySavSubmissionAsync(ReceptionControl control, string clientName);
+
+        // NOUVEAU : Supprimer les notifications liées à une entité
+        Task DeleteByEntityAsync(Guid entityId, CategorieNotification categorie);
     }
 }

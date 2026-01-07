@@ -134,15 +134,16 @@ namespace TransitManager.Web.Controllers
         public async Task<IActionResult> Logout()
         {
             Console.WriteLine("🛂 [AccountController] === DÉBUT Logout POST ===");
-            
-            // Appelle l'API pour invalider la session côté API (si nécessaire à l'avenir)
-            // Pour l'instant, le plus important est de supprimer le cookie du navigateur.
-            
-            // Supprime le cookie d'authentification du navigateur.
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            
-            Console.WriteLine("🛂 [AccountController] ✅ Cookie de déconnexion envoyé au navigateur. Redirection vers /login.");
-            
+            Console.WriteLine("🛂 [AccountController] ✅ Cookie de déconnexion envoyé. Redirection /login.");
+            return Redirect("/login");
+        }
+
+        [HttpGet("/account/logout")]
+        public async Task<IActionResult> LogoutGet()
+        {
+            Console.WriteLine("🛂 [AccountController] === DÉBUT Logout GET ===");
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Redirect("/login");
         }		
 

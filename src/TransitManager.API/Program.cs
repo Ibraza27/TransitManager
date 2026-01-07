@@ -129,6 +129,7 @@ builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 builder.Services.AddTransient<IEmailService, EmailService>();
 builder.Services.AddTransient<IMessageService, MessageService>();
 builder.Services.AddTransient<ITimelineService, TimelineService>();
+builder.Services.AddTransient<IReceptionService, ReceptionService>(); // Module SAV
 // --- SERVICES WEB API ---
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

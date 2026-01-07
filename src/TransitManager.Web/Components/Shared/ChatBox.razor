@@ -91,15 +91,20 @@
                                     </div>
                                 }
                                 
-                                <div class="message-meta">
                                     <span>@msg.DateEnvoi.ToLocalTime().ToString("HH:mm")</span>
                                     @if(msg.EstMoi)
                                     {
                                         <span class="status-icon @(msg.IsRead ? "text-info" : "text-muted") ms-1 fw-bold">@(msg.IsRead ? "✓✓" : "✓")</span>
                                     }
+                                    @if(_isAdmin)
+                                    {
+                                        <button class="btn btn-link p-0 text-danger ms-2 border-0 align-baseline" title="Supprimer" @onclick="() => ConfirmDelete(msg.Id)">
+                                            <i class="bi bi-trash fx-6"></i>
+                                        </button>
+                                    }
                                 </div>
                             </div>
-                        </div>
+
                     }
                 </div>
             }
@@ -438,6 +443,16 @@
                 _typingTimer.Start();
             });
 
+            _hubConnection.On<Guid>("MessageDeleted", async (id) =>
+            {
+                var msg = _messages.FirstOrDefault(m => m.Id == id);
+                if (msg != null)
+                {
+                    _messages.Remove(msg);
+                    await InvokeAsync(StateHasChanged);
+                }
+            });
+
             Console.WriteLine($"🚀 [Chat] Connexion au groupe {EntityId}...");
             await _hubConnection.StartAsync();
             await _hubConnection.InvokeAsync("JoinGroup", EntityId.ToString());
@@ -486,9 +501,29 @@
             DocumentId = docId
         };
 
-        var success = await ApiService.SendMessageAsync(dto);
-        if (!success) { _messages.Remove(tempMsg); _newMessageText = textToSend; await JSRuntime.InvokeVoidAsync("alert", "Échec envoi"); }
+        var resultId = await ApiService.SendMessageAsync(dto);
+        if (resultId.HasValue) 
+        { 
+            // Update the temporary message with the real ID from server
+            if (resultId.Value != Guid.Empty) tempMsg.Id = resultId.Value;
+        }
+        else 
+        { 
+            _messages.Remove(tempMsg); 
+            _newMessageText = textToSend; 
+            await JSRuntime.InvokeVoidAsync("alert", "Échec envoi"); 
+        }
         _isSending = false;
+    }
+
+    private async Task ConfirmDelete(Guid messageId)
+    {
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Voulez-vous vraiment supprimer ce message ?");
+        if (confirmed)
+        {
+            await ApiService.DeleteMessageAsync(messageId);
+            // La suppression locale se fera via SignalR pour tout le monde, y compris moi
+        }
     }
 
     private void OnFileSelected(InputFileChangeEventArgs e) { if (e.File.Size > 10 * 1024 * 1024) { JSRuntime.InvokeVoidAsync("alert", "Trop gros"); return; } _selectedFile = e.File; }

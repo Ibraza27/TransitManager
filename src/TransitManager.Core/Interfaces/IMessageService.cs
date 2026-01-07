@@ -16,5 +16,7 @@ namespace TransitManager.Core.Interfaces
         
         // Marquer comme lu
         Task MarkAsReadAsync(Guid? colisId, Guid? vehiculeId, Guid? conteneurId, Guid userId);
+
+        Task DeleteMessageAsync(Guid messageId);
     }
 }

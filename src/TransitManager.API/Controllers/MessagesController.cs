@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TransitManager.Core.DTOs;
 using TransitManager.Core.Interfaces;
+using TransitManager.Core.Entities;
 
 namespace TransitManager.API.Controllers
 {
@@ -44,8 +45,8 @@ namespace TransitManager.API.Controllers
             
             try 
             {
-                await _messageService.SendMessageAsync(dto, userId);
-                return Ok(new { Message = "Message envoyé" });
+                var param = await _messageService.SendMessageAsync(dto, userId);
+                return Ok(new { Message = "Message envoyé", Id = param.Id });
             }
             catch (Exception ex)
             {
@@ -54,13 +55,21 @@ namespace TransitManager.API.Controllers
         }
 
         // POST: api/messages/mark-read
+        // POST: api/messages/mark-read
         [HttpPost("mark-read")]
-        public async Task<IActionResult> MarkAsRead([FromBody] MarkReadDto request)
+        public async Task<IActionResult> MarkAsRead([FromQuery] Guid? colisId, [FromQuery] Guid? vehiculeId, [FromQuery] Guid? conteneurId)
         {
             var userId = GetCurrentUserId();
-            // AJOUT DU PARAMÈTRE conteneurId
-            await _messageService.MarkAsReadAsync(request.ColisId, request.VehiculeId, request.ConteneurId, userId);
+            await _messageService.MarkAsReadAsync(colisId, vehiculeId, conteneurId, userId);
             return Ok();
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrateur,SuperAdmin,Gestionnaire")]
+        public async Task<IActionResult> DeleteMessage(Guid id)
+        {
+            await _messageService.DeleteMessageAsync(id);
+            return NoContent();
         }
 
         private Guid GetCurrentUserId()

@@ -89,6 +89,7 @@
     [Parameter] public int? InitialHeight { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<(decimal Price, int L, int W, int H)> OnPriceConfirmed { get; set; }
+    [Parameter] public decimal? InitialPrice { get; set; }
 
     private int _lengthCm;
     private int _widthCm;
@@ -102,21 +103,47 @@
     {
         if (IsVisible)
         {
-            var pInfo = await SettingsService.GetSettingAsync("PricePerCubicMeter", "150");
-            if(decimal.TryParse(pInfo, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var p)) 
-            {
-               _pricePerM3 = p; 
-            }
-
             // Initialize from parameters
             if (InitialLength.HasValue && InitialLength > 0) _lengthCm = InitialLength.Value;
             if (InitialWidth.HasValue && InitialWidth > 0) _widthCm = InitialWidth.Value;
             if (InitialHeight.HasValue && InitialHeight > 0) _heightCm = InitialHeight.Value;
 
+            // Determine Volume first
+            double currentVolume = 0;
+            if (_lengthCm > 0 && _widthCm > 0 && _heightCm > 0)
+            {
+                currentVolume = (_lengthCm * _widthCm * _heightCm) / 1_000_000.0;
+            }
+
+            // Logic: If we already have a Price AND a Volume, we imply the Rate from them (Snapshot).
+            // Otherwise, we fetch the current Global Rate.
+            bool rateRestored = false;
+            
+            if (InitialPrice.HasValue && InitialPrice > 0 && currentVolume > 0)
+            {
+                // Reverse engineering the rate used
+                try 
+                {
+                     _pricePerM3 = (decimal)(InitialPrice.Value / (decimal)currentVolume);
+                     _pricePerM3 = Math.Round(_pricePerM3, 2); // Round to sensible precision
+                     rateRestored = true;
+                }
+                catch {}
+            }
+
+            if (!rateRestored)
+            {
+                var pInfo = await SettingsService.GetSettingAsync("PricePerCubicMeter", "150");
+                if(decimal.TryParse(pInfo, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var p)) 
+                {
+                    _pricePerM3 = p; 
+                }
+            }
+
             if (IsReadOnly || (InitialLength > 0 && InitialWidth > 0 && InitialHeight > 0))
             {
                 CalculatePrice();
-                _disclaimerAccepted = true; // Show as accepted if already calculated/saved
+                _disclaimerAccepted = true; 
             }
         }
     }

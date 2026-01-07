@@ -191,10 +191,19 @@ namespace TransitManager.Infrastructure.Services
 
             // URL de redirection vers l'entité parente
             string actionUrl = "";
-            if (colisId.HasValue) actionUrl = $"/colis/edit/{colisId}";
-            else if (vehiculeId.HasValue) actionUrl = $"/vehicule/edit/{vehiculeId}";
-            else if (conteneurId.HasValue) actionUrl = $"/conteneur/detail/{conteneurId}";
-
+            
+            // LOGIQUE DEEP LINKING DOCUMENTS FINANCIERS
+            var financialTypes = new[] { TypeDocument.Facture, TypeDocument.Recu, TypeDocument.Devis, TypeDocument.Contrat };
+            if (financialTypes.Contains(typeDoc))
+            {
+                 actionUrl = "/finance?tab=documents";
+            }
+            else
+            {
+                if (colisId.HasValue) actionUrl = $"/colis/edit/{colisId}?tab=docs";
+                else if (vehiculeId.HasValue) actionUrl = $"/vehicule/edit/{vehiculeId}?tab=docs";
+                else if (conteneurId.HasValue) actionUrl = $"/conteneur/detail/{conteneurId}?tab=docs";
+            }
 
             // Notifier Admin
             await _notificationService.CreateAndSendAsync(
@@ -294,10 +303,10 @@ namespace TransitManager.Infrastructure.Services
                     File.Delete(fullPath);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // On loggue l'erreur mais on continue la suppression logique
                 // Idéalement injecter ILogger ici
+                Console.WriteLine($"[DocumentService] Error deleting file: {ex.Message}");
             }
 
             // 2. Suppression Logique (ou physique en base si on préfère)
@@ -314,11 +323,14 @@ namespace TransitManager.Infrastructure.Services
             }
             // (Pareil pour Vehicule...)
 
+            // CLEANUP : On supprime la notification "Nouveau Document" qui était liée à ce fichier
+            await _notificationService.DeleteByEntityAsync(id, CategorieNotification.Document);
+
             // URL de redirection vers l'entité parente
             string actionUrl = "";
-            if (doc.ColisId.HasValue) actionUrl = $"/colis/edit/{doc.ColisId}";
-            else if (doc.VehiculeId.HasValue) actionUrl = $"/vehicule/edit/{doc.VehiculeId}";
-            else if (doc.ConteneurId.HasValue) actionUrl = $"/conteneur/detail/{doc.ConteneurId}";
+            if (doc.ColisId.HasValue) actionUrl = $"/colis/edit/{doc.ColisId}?tab=docs";
+            else if (doc.VehiculeId.HasValue) actionUrl = $"/vehicule/edit/{doc.VehiculeId}?tab=docs";
+            else if (doc.ConteneurId.HasValue) actionUrl = $"/conteneur/detail/{doc.ConteneurId}?tab=docs";
 
             // Notifier Admin
             await _notificationService.CreateAndSendAsync(
@@ -466,8 +478,8 @@ namespace TransitManager.Infrastructure.Services
             if (clientUser != null)
             {
                 string actionUrl = "/"; // Par défaut Dashboard
-                if (colisId.HasValue) actionUrl = $"/colis/detail/{colisId}"; // Vue détail côté client (supposé)
-                else if (vehiculeId.HasValue) actionUrl = $"/vehicule/detail/{vehiculeId}";
+                if (colisId.HasValue) actionUrl = $"/colis/detail/{colisId}?tab=docs"; // Vue détail côté client (supposé)
+                else if (vehiculeId.HasValue) actionUrl = $"/vehicule/detail/{vehiculeId}?tab=docs";
 
                 await _notificationService.CreateAndSendAsync(
                     "Document Manquant",
@@ -533,6 +545,40 @@ namespace TransitManager.Infrastructure.Services
                 .Where(d => d.Statut == StatutDocument.Manquant && d.Actif)
                 .OrderByDescending(d => d.DateCreation)
                 .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Document>> GetFinancialDocumentsAsync(int? year, int? month, TypeDocument? type, Guid? clientId = null)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var query = context.Documents.Include(d => d.Client).AsQueryable();
+
+            if (clientId.HasValue)
+                query = query.Where(d => d.ClientId == clientId.Value);
+
+            if (year.HasValue)
+                query = query.Where(d => d.DateCreation.Year == year.Value);
+
+            if (month.HasValue)
+                query = query.Where(d => d.DateCreation.Month == month.Value);
+
+            if (type.HasValue)
+            {
+                query = query.Where(d => d.Type == type.Value);
+            }
+            else
+            {
+                var financialTypes = new[] 
+                { 
+                    TypeDocument.Facture, 
+                    TypeDocument.Recu, 
+                    TypeDocument.Devis, 
+                    TypeDocument.Contrat,
+                    TypeDocument.BordereauExpedition
+                };
+                query = query.Where(d => financialTypes.Contains(d.Type));
+            }
+
+            return await query.OrderByDescending(d => d.DateCreation).ToListAsync();
         }
 
         private static string SanitizeFileName(string name)

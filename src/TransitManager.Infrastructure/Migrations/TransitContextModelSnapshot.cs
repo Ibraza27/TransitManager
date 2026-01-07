@@ -355,6 +355,10 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<decimal>("FraisDouane")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("HistoriqueScan")
                         .HasColumnType("jsonb");
 
@@ -405,8 +409,10 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal>("PrixTotal")
+                        .ValueGeneratedOnAdd()
                         .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -420,8 +426,10 @@ namespace TransitManager.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal>("SommePayee")
+                        .ValueGeneratedOnAdd()
                         .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("Statut")
                         .IsRequired()
@@ -1020,6 +1028,156 @@ namespace TransitManager.Infrastructure.Migrations
                     b.ToTable("Paiements", (string)null);
                 });
 
+            modelBuilder.Entity("TransitManager.Core.Entities.ReceptionControl", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Actif")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ColisId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CommentCommunication")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentCondition")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentRecommendation")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentService")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentTimeframe")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreePar")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("DateCreation")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DateModification")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GlobalComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("IsValidated")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ModifiePar")
+                        .HasColumnType("text");
+
+                    b.Property<int>("RateCommunication")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RateCondition")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RateRecommendation")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RateService")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RateTimeframe")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("SavSchemaPointsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SavSchemaStrokesJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("VehiculeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("ColisId");
+
+                    b.HasIndex("VehiculeId");
+
+                    b.ToTable("ReceptionControls");
+                });
+
+            modelBuilder.Entity("TransitManager.Core.Entities.ReceptionIssue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Actif")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CreePar")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("DateCreation")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DateModification")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("DeclaredValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InventoryItemName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModifiePar")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PhotoIds")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ReceptionControlId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("X")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Y")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceptionControlId");
+
+                    b.ToTable("ReceptionIssues");
+                });
+
             modelBuilder.Entity("TransitManager.Core.Entities.TrackingEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1223,7 +1381,7 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2025, 12, 27, 18, 30, 41, 614, DateTimeKind.Utc).AddTicks(7408),
+                            DateCreation = new DateTime(2026, 1, 5, 18, 38, 41, 324, DateTimeKind.Utc).AddTicks(4440),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             EmailConfirme = false,
@@ -1560,6 +1718,40 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Navigation("Vehicule");
                 });
 
+            modelBuilder.Entity("TransitManager.Core.Entities.ReceptionControl", b =>
+                {
+                    b.HasOne("TransitManager.Core.Entities.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TransitManager.Core.Entities.Colis", "Colis")
+                        .WithMany()
+                        .HasForeignKey("ColisId");
+
+                    b.HasOne("TransitManager.Core.Entities.Vehicule", "Vehicule")
+                        .WithMany()
+                        .HasForeignKey("VehiculeId");
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Colis");
+
+                    b.Navigation("Vehicule");
+                });
+
+            modelBuilder.Entity("TransitManager.Core.Entities.ReceptionIssue", b =>
+                {
+                    b.HasOne("TransitManager.Core.Entities.ReceptionControl", "ReceptionControl")
+                        .WithMany("Issues")
+                        .HasForeignKey("ReceptionControlId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReceptionControl");
+                });
+
             modelBuilder.Entity("TransitManager.Core.Entities.TrackingEvent", b =>
                 {
                     b.HasOne("TransitManager.Core.Entities.Colis", "Colis")
@@ -1639,6 +1831,11 @@ namespace TransitManager.Infrastructure.Migrations
                     b.Navigation("Documents");
 
                     b.Navigation("Vehicules");
+                });
+
+            modelBuilder.Entity("TransitManager.Core.Entities.ReceptionControl", b =>
+                {
+                    b.Navigation("Issues");
                 });
 
             modelBuilder.Entity("TransitManager.Core.Entities.Utilisateur", b =>

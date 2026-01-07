@@ -13,6 +13,7 @@ namespace TransitManager.Core.DTOs
         public decimal Volume { get; set; }
         public decimal ValeurDeclaree { get; set; }
         public decimal PrixTotal { get; set; }
+        public decimal FraisDouane { get; set; } // AJOUT
         public string? Destinataire { get; set; }
         public string? TelephoneDestinataire { get; set; }
         public bool LivraisonADomicile { get; set; }
@@ -26,6 +27,9 @@ namespace TransitManager.Core.DTOs
 
         // --- AJOUTER CETTE LIGNE ---
         public string? InventaireJson { get; set; }
+        public string? LieuSignatureInventaire { get; set; }
+        public DateTime? DateSignatureInventaire { get; set; }
+        public string? SignatureClientInventaire { get; set; }
         
         public string? AdresseFrance { get; set; }
         public string? AdresseDestination { get; set; }

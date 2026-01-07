@@ -41,7 +41,7 @@
                 <div class="col-md-7">
                     <label class="form-label small fw-bold">Sélectionner un fichier</label>
                     <!-- Liste d'extensions étendue -->
-                <InputFile id="docUploadInput" OnChange="OnInputFileChange" class="form-control form-control-sm" 
+                <InputFile id="@_uploadInputId" OnChange="OnInputFileChange" class="form-control form-control-sm" 
                            accept=".pdf,.doc,.docx,.txt,.rtf,.odf,.odt,.html,.htm,.aac,.mp3,.wav,.wma,.ogg,.jpg,.jpeg,.png,.gif,.tif,.tiff,.mp4,.avi,.mov,.wmv,.mpeg,.mpg,.zip,.rar,.7z,.xls,.xlsx,.ppt,.pptx" />
                 </div>
                 <div class="col-md-2">
@@ -134,9 +134,10 @@
                                     {
                                         @if(!IsAdmin) 
                                         {
-                                             <button class="btn btn-sm btn-danger text-white shadow-sm" @onclick="() => openUploadForMissing(doc)">
+                                             <!-- MODIFICATION MOBILE : Label au lieu de Button pour déclenchement natif -->
+                                             <label class="btn btn-sm btn-danger text-white shadow-sm" for="@_uploadInputId" @onclick="() => SetMissingType(doc)">
                                                 <i class="bi bi-upload me-1"></i>Envoyer
-                                             </button>
+                                             </label>
                                         }
                                         else
                                         {
@@ -252,6 +253,7 @@
 
 @using TransitManager.Core.DTOs
 @using System.IO
+@using System
 
 @code {
     [Parameter] public Guid EntityId { get; set; }
@@ -259,6 +261,7 @@
 
     private bool IsAdmin = false;
     private Guid? CurrentClientId; // Changed to nullable
+    private string _uploadInputId = $"doc-upload-{Guid.NewGuid():N}"; // UNIQUE ID
 
     // Request Modal
     private bool _showRequestModal = false;
@@ -375,10 +378,9 @@
         }
     }
     
-    private async Task openUploadForMissing(Document missingDoc)
+    private void SetMissingType(Document missingDoc)
     {
-        _selectedType = missingDoc.Type;
-        await JSRuntime.InvokeVoidAsync("triggerClick", "docUploadInput");
+       _selectedType = missingDoc.Type;
     }
 
     private async Task SendDocumentRequest()

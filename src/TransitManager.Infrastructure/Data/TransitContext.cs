@@ -31,6 +31,8 @@ namespace TransitManager.Infrastructure.Data
         public DbSet<TrackingEvent> TrackingEvents { get; set; } = null!;
 		public DbSet<Notification> Notifications { get; set; } = null!; 
         public DbSet<AppSetting> AppSettings { get; set; } = null!;
+        public DbSet<ReceptionControl> ReceptionControls { get; set; } = null!;
+        public DbSet<ReceptionIssue> ReceptionIssues { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -67,6 +69,8 @@ namespace TransitManager.Infrastructure.Data
             modelBuilder.Entity<Barcode>().HasQueryFilter(b => b.Colis.Actif);
             modelBuilder.Entity<Message>().HasQueryFilter(e => e.Actif);
             modelBuilder.Entity<TrackingEvent>().HasQueryFilter(e => e.Actif);
+            modelBuilder.Entity<ReceptionControl>().HasQueryFilter(e => e.Actif);
+            modelBuilder.Entity<ReceptionIssue>().HasQueryFilter(e => e.Actif);
         }
 
         public override int SaveChanges()

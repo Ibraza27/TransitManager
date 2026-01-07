@@ -168,7 +168,12 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Compagnie</label>
-                                <input type="text" class="form-control" @bind="_conteneur.NomCompagnie" />
+                                <select class="form-select @(string.IsNullOrEmpty(_conteneur.NomCompagnie) ? "text-muted" : "fw-bold")" 
+                                        @bind="_conteneur.NomCompagnie">
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="CMA CGM">CMA CGM</option>
+                                    <option value="MSC">MSC</option>
+                                </select>
                             </div>
                              <div class="col-md-3">
                                 <label class="form-label">Transitaire</label>
@@ -265,7 +270,15 @@
                         <div class="col-lg-12">
                             <div class="card shadow-sm border-primary">
                                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold"><i class="bi bi-box-seam me-2"></i>Colis Affectés (@_dto.Colis.Count)</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-bold"><i class="bi bi-box-seam me-2"></i>Colis Affectés (@_dto.Colis.Count)</span>
+                                        @if (!string.IsNullOrEmpty(_conteneur.NomCompagnie) && !string.IsNullOrEmpty(_conteneur.NumeroDossier))
+                                        {
+                                            <a href="@GetTrackingUrl()" target="_blank" class="btn btn-sm btn-info text-white border-white shadow-sm ms-3" title="Suivre le conteneur">
+                                                <i class="bi bi-radar me-1"></i>Suivi @_conteneur.NomCompagnie
+                                            </a>
+                                        }
+                                    </div>
                                     <button class="btn btn-sm btn-light text-primary fw-bold shadow-sm" @onclick="() => _showAddParcel = true">
                                         ➕ Ajouter
                                     </button>
@@ -590,5 +603,21 @@
             _isLoading = false;
             StateHasChanged();
         }
+    }
+    private string GetTrackingUrl()
+    {
+        if (string.IsNullOrEmpty(_conteneur.NomCompagnie) || string.IsNullOrEmpty(_conteneur.NumeroDossier)) return "#";
+
+        var refNum = _conteneur.NumeroDossier.Trim();
+        // Optionnel : Si le numéro dossier n'est pas le numéro de tracking, utiliser NumeroPlomb ou autre ?
+        // On suppose ici que NumeroDossier (ou un autre champ) sert de référence.
+        // Si c'est NumeroPlomb : var refNum = _conteneur.NumeroPlomb;
+        
+        return _conteneur.NomCompagnie.ToUpper() switch
+        {
+            "CMA CGM" => $"https://www.cma-cgm.com/ebusiness/tracking/search?searchBy=BL&searchValue={refNum}",
+            "MSC" => $"https://www.msc.com/en/track-a-shipment?reference={refNum}",
+            _ => "#"
+        };
     }
 }

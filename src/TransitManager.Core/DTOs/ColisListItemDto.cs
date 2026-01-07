@@ -23,10 +23,13 @@ namespace TransitManager.Core.DTOs
         // --- AJOUTS POUR LA VUE WEB ---
         public int NombrePieces { get; set; }
         public decimal PrixTotal { get; set; }
+        public decimal FraisDouane { get; set; } // AJOUT
+        public TypeEnvoi TypeEnvoi { get; set; } // AJOUT
         public decimal SommePayee { get; set; }
         public bool IsExcludedFromExport { get; set; }
         
         // Propriété calculée simple (le calcul réel se fera lors du mapping)
-        public decimal RestantAPayer => PrixTotal - SommePayee;
+        public decimal TotalFinal => TypeEnvoi == TypeEnvoi.AvecDedouanement ? PrixTotal + FraisDouane : PrixTotal;
+        public decimal RestantAPayer => TotalFinal - SommePayee;
     }
 }

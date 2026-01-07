@@ -87,6 +87,7 @@ namespace TransitManager.Infrastructure.Services
                 Volume = colisDto.Volume,
                 ValeurDeclaree = colisDto.ValeurDeclaree,
                 PrixTotal = colisDto.PrixTotal,
+                FraisDouane = colisDto.FraisDouane, // MAPPING
                 Destinataire = colisDto.Destinataire,
                 TelephoneDestinataire = colisDto.TelephoneDestinataire,
                 LivraisonADomicile = colisDto.LivraisonADomicile,
@@ -98,7 +99,12 @@ namespace TransitManager.Infrastructure.Services
                 TypeEnvoi = colisDto.TypeEnvoi,
                 ConteneurId = colisDto.ConteneurId,
                 AdresseFrance = colisDto.AdresseFrance,
-                AdresseDestination = colisDto.AdresseDestination
+                AdresseDestination = colisDto.AdresseDestination,
+                // MAPPING CORRIGÉ : Inventaire et Signatures
+                InventaireJson = colisDto.InventaireJson,
+                LieuSignatureInventaire = colisDto.LieuSignatureInventaire,
+                DateSignatureInventaire = colisDto.DateSignatureInventaire,
+                SignatureClientInventaire = colisDto.SignatureClientInventaire
             };
             foreach (var barcodeValue in colisDto.Barcodes)
             {
@@ -120,10 +126,12 @@ namespace TransitManager.Infrastructure.Services
             await uow.CommitAsync();
             await _timelineService.AddEventAsync("Colis créé et enregistré", colisId: newColis.Id, statut: newColis.Statut.ToString());
 
+            var client = await uow.Clients.GetByIdAsync(newColis.ClientId);
+            
             // NOTIFICATION ADMIN
             await _notificationService.CreateAndSendAsync(
                 title: "📦 Nouveau Colis",
-                message: $"Colis {newColis.NumeroReference} ajouté pour {newColis.Client?.NomComplet ?? "Client"}",
+                message: $"Nouveau colis {newColis.NumeroReference} ajouté pour {client?.NomComplet ?? "Client inconnu"}",
                 userId: null, // Broadcast Admin
                 categorie: CategorieNotification.StatutColis,
                 actionUrl: $"/colis/edit/{newColis.Id}", // URL Admin
@@ -160,6 +168,9 @@ namespace TransitManager.Infrastructure.Services
                 var originalClientId = colisInDb.ClientId;
                 var originalConteneurId = colisInDb.ConteneurId;
                 var oldStatus = colisInDb.Statut;
+                
+                Console.WriteLine($"[DEBUG] UpdateColisAsync: ID={id}, DTO Volume={colisDto.Volume}, DB Volume={colisInDb.Volume}");    
+                Console.WriteLine($"[DEBUG] InventaireJson Length: {colisInDb.InventaireJson?.Length ?? 0}");
 
                 // --- 1. Logique "Retourné" ---
                 if (colisDto.Statut == StatutColis.Retourne)
@@ -174,10 +185,11 @@ namespace TransitManager.Infrastructure.Services
                 if (string.IsNullOrEmpty(colisInDb.InventaireJson) || colisInDb.InventaireJson == "[]")
                 {
                     colisInDb.NombrePieces = colisDto.NombrePieces;
-                    colisInDb.Volume = colisDto.Volume;
                     colisInDb.ValeurDeclaree = colisDto.ValeurDeclaree;
                 }
+                colisInDb.Volume = colisDto.Volume; // Moved out of if block
                 colisInDb.PrixTotal = colisDto.PrixTotal;
+                colisInDb.FraisDouane = colisDto.FraisDouane; // AJOUT
                 colisInDb.Destinataire = colisDto.Destinataire;
                 colisInDb.TelephoneDestinataire = colisDto.TelephoneDestinataire;
                 colisInDb.LivraisonADomicile = colisDto.LivraisonADomicile;
@@ -259,7 +271,7 @@ namespace TransitManager.Infrastructure.Services
                             message: $"Votre colis {colisInDb.NumeroReference} est maintenant : {colisInDb.Statut}",
                             userId: clientUser.Id,
                             categorie: CategorieNotification.StatutColis,
-                            actionUrl: $"/colis/edit/{colisInDb.Id}",
+                            actionUrl: $"/colis/detail/{colisInDb.Id}?tab=suivi",
                             relatedEntityId: colisInDb.Id,
                             relatedEntityType: "Colis"
                         );
@@ -474,6 +486,10 @@ namespace TransitManager.Infrastructure.Services
             colis.Actif = false;
             await uow.Colis.UpdateAsync(colis);
             await uow.CommitAsync();
+            
+            // CLEANUP NOTIFICATIONS
+            await _notificationService.DeleteByEntityAsync(id, CategorieNotification.StatutColis);
+            
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId);
             return true;
         }

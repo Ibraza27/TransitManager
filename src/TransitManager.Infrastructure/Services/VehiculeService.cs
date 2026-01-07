@@ -91,10 +91,12 @@ namespace TransitManager.Infrastructure.Services
                 }
             }
 
+            var clientEntity = await context.Clients.FindAsync(vehicule.ClientId);
+            
             // Notification aux Admins (si créé par un autre admin ou via un import)
             await _notificationService.CreateAndSendAsync(
                 title: "🚗 Nouveau Véhicule",
-                message: $"Nouveau véhicule ajouté : {vehicule.Immatriculation} (Client : {vehicule.ClientId})",
+                message: $"Nouveau véhicule ajouté : {vehicule.Immatriculation} (Client : {clientEntity?.NomComplet ?? "Inconnu"})",
                 userId: null, // Broadcast Admin
                 categorie: CategorieNotification.StatutVehicule,
                 actionUrl: $"/vehicule/edit/{vehicule.Id}",
@@ -372,6 +374,10 @@ namespace TransitManager.Infrastructure.Services
             var clientId = vehicule.ClientId;
             vehicule.Actif = false;
             await context.SaveChangesAsync();
+            
+            // CLEANUP NOTIFICATIONS
+            await _notificationService.DeleteByEntityAsync(id, CategorieNotification.StatutVehicule);
+
             await _clientService.RecalculateAndUpdateClientStatisticsAsync(clientId);
             return true;
         }

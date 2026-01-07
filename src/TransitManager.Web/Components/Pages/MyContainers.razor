@@ -64,6 +64,15 @@
     </div>
 
     <!-- Tableau -->
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <div class="text-muted mt-2">Chargement des conteneurs...</div>
+        </div>
+    }
+    else
+    {
     <div class="card shadow-sm border-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" style="min-width: 1400px;">
@@ -73,12 +82,8 @@
                         <th>Statut</th>
                         <th>Destination</th>
                         <th>Plomb</th>
-                        <th>Compagnie</th>
-                        <AuthorizeView Roles="Administrateur">
-                            <Authorized>
-                                <th>Transitaire</th>
-                            </Authorized>
-                        </AuthorizeView>
+                         <th>Compagnie</th>
+                        <th>Transitaire</th>
                         <th class="text-center">Réception</th>
                         <th class="text-center">Chargement</th>
                         <th class="text-center">Départ</th>
@@ -103,12 +108,38 @@
                                     <small class="text-muted">@c.PaysDestination</small>
                                 </td>
                                 <td class="font-monospace small">@(c.NumeroPlomb ?? "-")</td>
-                                <td>@(c.NomCompagnie ?? "-")</td>
-                                <AuthorizeView Roles="Administrateur">
-                                    <Authorized>
-                                        <td>@(c.NomTransitaire ?? "-")</td>
-                                    </Authorized>
-                                </AuthorizeView>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(c.NomCompagnie))
+                                    {
+                                        var trackingUrl = "#";
+                                        var refNum = c.NumeroDossier;
+                                        if (c.NomCompagnie.Contains("CMA", StringComparison.OrdinalIgnoreCase)) trackingUrl = $"https://www.cma-cgm.com/ebusiness/tracking/search?searchBy=BL&searchValue={refNum}";
+                                        else if (c.NomCompagnie.Contains("MSC", StringComparison.OrdinalIgnoreCase)) trackingUrl = $"https://www.msc.com/en/track-a-shipment?reference={refNum}";
+                                        
+                                        if (trackingUrl != "#")
+                                        {
+                                            <a href="@trackingUrl" target="_blank" class="text-decoration-none fw-bold">@c.NomCompagnie <i class="bi bi-box-arrow-up-right small"></i></a>
+                                        }
+                                        else
+                                        {
+                                            @c.NomCompagnie
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <AuthorizeView Roles="Administrateur">
+                                        <Authorized>
+                                            @(c.NomTransitaire ?? "-")
+                                        </Authorized>
+                                        <NotAuthorized>
+                                            -
+                                        </NotAuthorized>
+                                    </AuthorizeView>
+                                </td>
                                 
                                 <!-- Dates -->
                                 <td class="text-center small">@(c.DateReception?.ToString("dd/MM/yyyy") ?? "-")</td>
@@ -124,16 +155,13 @@
                                 <td class="text-end pe-4">
 									<div class="d-flex justify-content-end gap-2">
 										
-										<!-- Tracking Dropdown -->
-										<div class="btn-group">
-											<button type="button" class="btn btn-outline-info btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-												🚢 Suivi
-											</button>
-											<ul class="dropdown-menu">
-												<li><a class="dropdown-item" href="https://www.cma-cgm.fr/ebusiness/tracking" target="_blank">CMA CGM</a></li>
-												<li><a class="dropdown-item" href="https://www.msc.com/fr/track-a-shipment" target="_blank">MSC</a></li>
-											</ul>
-										</div>
+										<!-- Tracking Button (Conditionnel) -->
+                                        @if (!string.IsNullOrEmpty(GetTrackingUrl(c)))
+                                        {
+                                            <a href="@GetTrackingUrl(c)" target="_blank" class="btn btn-outline-info btn-sm" title="Suivre sur le site de la compagnie">
+                                                🚢 Suivi
+                                            </a>
+                                        }
 
 										<!-- AJOUT : Restriction Admin pour le bouton Modifier -->
 										<AuthorizeView Roles="Administrateur">
@@ -165,10 +193,12 @@
             </table>
         </div>
     </div>
+    }
 </div>
 
 @code {
     private IEnumerable<Conteneur> _allContainers = new List<Conteneur>();
+    private bool _isLoading = true;
     private string SearchTerm { get; set; } = "";
     private StatutConteneur? SelectedStatus { get; set; }
 
@@ -179,10 +209,19 @@
 
     private async Task LoadContainers()
     {
-        var result = await ApiService.GetMyConteneursAsync();
-        if (result != null)
+        _isLoading = true;
+        StateHasChanged(); // Force spinner
+        try
         {
-            _allContainers = result;
+            var result = await ApiService.GetMyConteneursAsync();
+            if (result != null)
+            {
+                _allContainers = result;
+            }
+        }
+        finally
+        {
+            _isLoading = false;
             StateHasChanged();
         }
     }
@@ -245,4 +284,18 @@
         StatutConteneur.Probleme => "bg-danger",
         _ => "bg-light text-dark border"
     };
+
+    private string GetTrackingUrl(Conteneur c)
+    {
+        if (string.IsNullOrEmpty(c.NomCompagnie) || string.IsNullOrEmpty(c.NumeroDossier)) return "";
+        
+        var refNum = c.NumeroDossier.Trim();
+        if (c.NomCompagnie.Contains("CMA", StringComparison.OrdinalIgnoreCase)) 
+            return $"https://www.cma-cgm.com/ebusiness/tracking/search?searchBy=BL&searchValue={refNum}";
+        
+        if (c.NomCompagnie.Contains("MSC", StringComparison.OrdinalIgnoreCase)) 
+            return $"https://www.msc.com/en/track-a-shipment?reference={refNum}";
+
+        return "";
+    }
 }

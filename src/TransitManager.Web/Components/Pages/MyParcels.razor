@@ -132,7 +132,20 @@
                                         }
                                     </td>
                                     <td class="text-center">@colis.NombrePieces</td>
-                                    <td class="text-end fw-bold">@colis.PrixTotal.ToString("C0", _culture)</td>
+                                    <td class="text-end fw-bold">
+                                    <td class="text-end fw-bold">
+                                        @if(colis.TypeEnvoi == TypeEnvoi.AvecDedouanement)
+                                        {
+                                            <div>@colis.TotalFinal.ToString("C0", _culture)</div>
+                                            <small class="text-muted d-block" style="font-size: 0.7rem;">(Avec Douane)</small>
+                                        }
+                                        else
+                                        {
+                                            <div>@colis.TotalFinal.ToString("C0", _culture)</div>
+                                            <small class="text-muted d-block" style="font-size: 0.7rem;">(Sans Douane)</small>
+                                        }
+                                    </td>
+                                    </td>
                                     <td class="text-end text-success">@colis.SommePayee.ToString("C0", _culture)</td>
                                     <td class="text-end">
                                         @if (colis.RestantAPayer > 0)
@@ -191,7 +204,7 @@
                                 <td colspan="5" class="text-end text-secondary">TOTAUX :</td>
                                 <!-- TOTAL PIÈCES AJOUTÉ -->
                                 <td class="text-center">@FilteredParcels.Sum(c => c.NombrePieces) pce(s)</td>
-                                <td class="text-end">@FilteredParcels.Sum(c => c.PrixTotal).ToString("C0", _culture)</td>
+                                <td class="text-end">@FilteredParcels.Sum(c => c.TotalFinal).ToString("C0", _culture)</td>
                                 <td class="text-end text-success">@FilteredParcels.Sum(c => c.SommePayee).ToString("C0", _culture)</td>
                                 <td class="text-end text-danger">@FilteredParcels.Sum(c => c.RestantAPayer).ToString("C0", _culture)</td>
                                 <td colspan="2"></td>
@@ -276,19 +289,26 @@
     private async Task LoadParcels()
     {
         _isLoading = true;
-        var result = await ApiService.GetMyColisAsync();
-        if (result != null)
+        StateHasChanged(); // Force spinner
+        try
         {
-            _allParcels = result;
-
-            _containers = _allParcels
-                .Where(c => !string.IsNullOrEmpty(c.ConteneurNumeroDossier))
-                .Select(c => c.ConteneurNumeroDossier!)
-                .Distinct()
-                .OrderBy(c => c)
-                .ToList();
+            var result = await ApiService.GetMyColisAsync();
+            if (result != null)
+            {
+                _allParcels = result;
+                _containers = _allParcels
+                    .Where(c => !string.IsNullOrEmpty(c.ConteneurNumeroDossier))
+                    .Select(c => c.ConteneurNumeroDossier!)
+                    .Distinct()
+                    .OrderBy(c => c)
+                    .ToList();
+            }
         }
-        _isLoading = false;
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 	private string SelectedContainerSearch { get; set; } = "";
 

@@ -38,6 +38,7 @@
                                     <th>Immatriculation</th>
                                     <th>Véhicule</th>
                                     <th>Client</th>
+                                    <th>Commentaire</th>
                                     <!-- CORRECTION : Ajout des colonnes financières -->
                                     <th class="text-end">Prix Total</th>
                                     <th class="text-end">Payé</th>
@@ -59,6 +60,9 @@
                                             <td>
                                                 <div class="fw-bold">@item.Data.ClientNomComplet</div>
                                                 <small class="text-muted">@item.Data.ClientTelephonePrincipal</small>
+                                            </td>
+                                            <td class="small text-danger fw-bold text-truncate" style="max-width: 150px;" title="@item.Data.Commentaires">
+                                                @item.Data.Commentaires
                                             </td>
                                             
                                             <!-- CORRECTION : Affichage des données financières -->

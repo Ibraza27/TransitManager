@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema; // AJOUT
 using System.Linq;
 using TransitManager.Core.Enums;
 
@@ -132,13 +133,19 @@ namespace TransitManager.Core.Entities
 			set => SetProperty(ref _destinationFinale, value?.ToUpper()); 
 		}
 
-        public TypeEnvoi TypeEnvoi { get => _typeEnvoi; set => SetProperty(ref _typeEnvoi, value); }
+        public TypeEnvoi TypeEnvoi { get => _typeEnvoi; set { if (SetProperty(ref _typeEnvoi, value)) { OnPropertyChanged(nameof(TotalFinal)); OnPropertyChanged(nameof(RestantAPayer)); } } }
         public bool LivraisonADomicile { get => _livraisonADomicile; set => SetProperty(ref _livraisonADomicile, value); }
-        public decimal PrixTotal { get => _prixTotal; set { if (SetProperty(ref _prixTotal, value)) OnPropertyChanged(nameof(RestantAPayer)); } }
+        public decimal PrixTotal { get => _prixTotal; set { if (SetProperty(ref _prixTotal, value)) { OnPropertyChanged(nameof(TotalFinal)); OnPropertyChanged(nameof(RestantAPayer)); } } }
+        
+        // --- NOUVEAU CHAMP ---
+        private decimal _fraisDouane;
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal FraisDouane { get => _fraisDouane; set { if (SetProperty(ref _fraisDouane, value)) { OnPropertyChanged(nameof(TotalFinal)); OnPropertyChanged(nameof(RestantAPayer)); } } }
         
         public decimal SommePayee { get => _sommePayee; set { if (SetProperty(ref _sommePayee, value)) OnPropertyChanged(nameof(RestantAPayer)); } }
         
-        public decimal RestantAPayer => PrixTotal - SommePayee;
+        public decimal TotalFinal => TypeEnvoi == TypeEnvoi.AvecDedouanement ? PrixTotal + FraisDouane : PrixTotal;
+        public decimal RestantAPayer => TotalFinal - SommePayee;
 
         // --- NOUVELLE PROPRIÉTÉ ---
         [StringLength(50)]

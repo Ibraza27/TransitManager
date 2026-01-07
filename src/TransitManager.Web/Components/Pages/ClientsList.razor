@@ -132,7 +132,7 @@
                                 <td class="text-end">
                                     @if (c.Impayes > 0)
                                     {
-                                        <span class="text-danger fw-bold">@c.Impayes.ToString("C0")</span>
+                                        <span class="text-danger fw-bold">@c.Impayes.ToString("C2")</span>
                                     }
                                     else
                                     {
@@ -170,7 +170,7 @@
                     <tfoot class="bg-light fw-bold border-top">
                         <tr>
                             <td colspan="6" class="text-end text-secondary text-uppercase pe-3">Total Impayés :</td>
-                            <td class="text-end text-danger">@FilteredClients.Sum(c => c.Impayes).ToString("C0")</td>
+                            <td class="text-end text-danger">@FilteredClients.Where(c => c.Impayes > 0).Sum(c => c.Impayes).ToString("C2")</td>
                             <td colspan="2"></td>
                         </tr>
                     </tfoot>

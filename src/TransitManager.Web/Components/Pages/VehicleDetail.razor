@@ -114,6 +114,20 @@
                     </button>
                 </li>
              }
+            @if(!IsNew)
+            {
+                 <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "sav" ? "active fw-bold" : "")" @onclick='() => _activeTab = "sav"'>
+                        <i class="bi bi-shield-check me-2"></i>SAV / Signalement
+                         @if (_receptionControl != null)
+                        {
+                            <span class="badge rounded-pill ms-2 @(_receptionControl.Status == ReceptionStatus.ReceivedFull ? "bg-success" : "bg-danger")">
+                                @(_receptionControl.Status == ReceptionStatus.ReceivedFull ? "OK" : "!")
+                            </span>
+                        }
+                    </button>
+                </li>
+            }
         </ul>
 
         <div class="tab-content">
@@ -359,6 +373,114 @@
                 </div>
             }
         </div>
+            
+             <!-- ONGLET 5 : SAV -->
+            @if (!IsNew)
+            {
+                <div class="tab-pane fade @(_activeTab == "sav" ? "show active" : "")">
+                    <!-- Galerie Photos SAV -->
+                    <SavPhotoGallery @ref="_savGallery" EntityId="@_vehicule.Id" EntityType="Vehicule" />
+
+                    @if (_receptionControl == null)
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-car-front fs-1 text-muted mb-3 d-block"></i>
+                            <h4 class="fw-bold mb-3">Réception du Véhicule</h4>
+                            <p class="text-muted mb-4" style="max-width: 500px; margin: 0 auto;">
+                                Avez-vous bien reçu ce véhicule ? Signalez-nous la bonne réception ou un éventuel dommage pour nous aider à améliorer notre service.
+                            </p>
+                            <button class="btn btn-primary px-5 py-3 rounded-pill shadow-sm" @onclick="() => _showSavWizard = true">
+                                <i class="bi bi-ui-checks me-2"></i>Faire l'état des lieux de réception
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-primary">Rapport de Réception</h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge @(_receptionControl.Status == ReceptionStatus.ReceivedFull ? "bg-success" : "bg-danger") fs-6">
+                                        @(_receptionControl.Status == ReceptionStatus.ReceivedFull ? "Conforme" : "Problème Signalé")
+                                    </span>
+                                    @if(IsAdmin)
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="DeleteSavReport" title="Supprimer le rapport">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-4">
+                                     <div class="col-md-6">
+                                         <h6 class="fw-bold text-muted text-uppercase small">Évaluations</h6>
+                                         <div class="d-flex flex-column gap-2 mb-3">
+                                             <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                                                 <span>Service Global</span>
+                                                 <span class="fw-bold text-primary">@_receptionControl.RateService/10</span>
+                                             </div>
+                                             <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                                                 <span>État Véhicule</span>
+                                                  <span class="fw-bold text-primary">@_receptionControl.RateCondition/10</span>
+                                             </div>
+                                         </div>
+                                         @if (!string.IsNullOrEmpty(_receptionControl.GlobalComment))
+                                         {
+                                             <div class="alert alert-light border">
+                                                 <i class="bi bi-chat-quote me-2 text-primary"></i>
+                                                 <span class="fst-italic">"@_receptionControl.GlobalComment"</span>
+                                             </div>
+                                         }
+                                     </div>
+                                     <div class="col-md-6">
+                                         @if (_receptionControl.Issues.Any())
+                                         {
+                                             <h6 class="fw-bold text-danger text-uppercase small">Problèmes Signalés</h6>
+                                             <ul class="list-group list-group-flush">
+                                                 @foreach(var issue in _receptionControl.Issues)
+                                                 {
+                                                     <li class="list-group-item px-0">
+                                                         <div class="fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>@GetTranslatedIssueType(issue.Type)</div>
+                                                         <div class="small text-muted">@issue.Description</div>
+                                                     </li>
+                                                 }
+                                             </ul>
+                                         }
+                                         else
+                                         {
+                                             <div class="alert alert-success d-flex align-items-center">
+                                                 <i class="bi bi-check-circle-fill fs-4 me-3"></i>
+                                                 <div>
+                                                     <strong>Aucun problème signalé.</strong>
+                                                     <div class="small">Le client a confirmé la réception conforme.</div>
+                                                 </div>
+                                             </div>
+                                         }
+                                     </div>
+                                </div>
+                                 @if (!string.IsNullOrEmpty(_receptionControl.SavSchemaPointsJson) || !string.IsNullOrEmpty(_receptionControl.SavSchemaStrokesJson))
+                                {
+                                    <div class="mt-4">
+                                        <h6 class="fw-bold text-muted text-uppercase small mb-2">SCHÉMA DES DOMMAGES</h6>
+                                        <SavVehicleSchema 
+                                            ImageUrl="images/plans/vehicule_plan.png" 
+                                            OriginalPointsJson="@_vehicule.EtatDesLieux"
+                                            OriginalStrokesJson="@_vehicule.EtatDesLieuxRayures"
+                                            PointsJson="@_receptionControl.SavSchemaPointsJson" 
+                                            StrokesJson="@_receptionControl.SavSchemaStrokesJson"
+                                            IsReadOnly="true" />
+                                    </div>
+                                }
+                                <div class="text-end mt-4 text-muted small">
+                                    Soumis le @_receptionControl.CreationDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
     }
 
     <!-- MODALES -->
@@ -388,12 +510,41 @@
                         InitialLength="@_vehicule.DimensionsLongueurCm"
                         InitialWidth="@_vehicule.DimensionsLargeurCm"
                         InitialHeight="@_vehicule.DimensionsHauteurCm"
+                        InitialPrice="@_vehicule.PrixTotal"
                         OnPriceConfirmed="@(args => UpdatePrice(args))"
                         OnClose="() => _showPriceProposal = false" />
+                        
+    @if (!IsNew)
+    {
+        <SavWizard Show="_showSavWizard" ShowChanged="@((v) => { _showSavWizard = v; if(!v) ReloadSav(); })"
+               EntityType="Vehicule" EntityId="@_vehicule.Id" ClientId="@_vehicule.ClientId"
+               Vehicule="_vehicule" />
+    }
 </div>
 
 @code {
     [Parameter] public Guid? Id { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Tab { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Action { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Tab))
+        {
+            _activeTab = Tab.ToLower();
+        }
+
+        if (!string.IsNullOrEmpty(Action))
+        {
+            if (Action.ToLower() == "inspection") _showInspection = true;
+            if (Action.ToLower() == "payment") _showPayments = true;
+            if (Action.ToLower() == "priceproposal") _showPriceProposal = true;
+        }
+    }
     private Vehicule _vehicule = new() { Statut = StatutVehicule.EnAttente };
 
     private bool _isLoading = true;
@@ -407,6 +558,8 @@
     private bool _showPayments = false;
     private bool _showPriceProposal = false; 
     private bool _isExportMenuOpen = false;
+    private bool _showSavWizard = false;
+    private ReceptionControl? _receptionControl;
 
     private int _unreadMessagesCount = 0;
 
@@ -461,6 +614,9 @@
             {
                 _sameAsClient = true;
             }
+            
+            // SAV
+            _receptionControl = await ApiService.GetReceptionControlAsync("Vehicule", Id.Value);
         }
         else
         {
@@ -740,4 +896,45 @@
     }
 
     private string DestinationLabel => string.IsNullOrWhiteSpace(_vehicule.DestinationFinale) ? "Adresse Destination" : $"Adresse {_vehicule.DestinationFinale}";
+    
+    private async Task DeleteSavReport()
+    {
+        if (_receptionControl == null) return;
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Êtes-vous sûr de vouloir supprimer ce rapport SAV ?")) return;
+
+        var success = await ApiService.DeleteControlAsync(_receptionControl.Id);
+        if (success)
+        {
+            _receptionControl = null;
+            if (_savGallery != null) await _savGallery.ReloadAsync();
+            StateHasChanged();
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la suppression.");
+        }
+    }
+    
+    private SavPhotoGallery? _savGallery;
+
+    private async Task ReloadSav()
+    {
+        if (Id.HasValue)
+        {
+            _receptionControl = await ApiService.GetReceptionControlAsync("Vehicule", Id.Value);
+            if (_savGallery != null) await _savGallery.ReloadAsync();
+        }
+        StateHasChanged();
+    }
+    
+    private string GetTranslatedIssueType(IssueType type)
+    {
+        return type switch
+        {
+            IssueType.Damage => "Dommage",
+            IssueType.MissingItem => "Article Manquant",
+            IssueType.Other => "Autre",
+            _ => type.ToString()
+        };
+    }
 }

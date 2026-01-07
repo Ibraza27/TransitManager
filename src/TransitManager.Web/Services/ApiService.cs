@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TransitManager.Core.DTOs;
+using TransitManager.Core.DTOs;
 using TransitManager.Core.Entities;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
@@ -55,6 +56,21 @@ namespace TransitManager.Web.Services
         {
             try { await _httpClient.PostAsync("api/auth/logout", null); }
             catch { }
+        }
+
+        public async Task<PortalAccessResult> CreateOrResetPortalAccessAsync(Guid clientId)
+        {
+            var request = new { ClientId = clientId };
+            var response = await _httpClient.PostAsJsonAsync("api/users/create-portal-access", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error creating portal access: {response.StatusCode} - {error}");
+            }
+
+            return await response.Content.ReadFromJsonAsync<PortalAccessResult>()
+                   ?? throw new InvalidOperationException("Failed to deserialize the portal access result.");
         }
 
         public async Task<IEnumerable<Client>?> GetClientsAsync()
@@ -371,6 +387,24 @@ namespace TransitManager.Web.Services
             try
             {
                 return await _httpClient.GetFromJsonAsync<IEnumerable<Document>>($"api/dashboard/admin/missing-documents", _jsonOptions)
+                       ?? Enumerable.Empty<Document>();
+            }
+            catch { return Enumerable.Empty<Document>(); }
+        }
+
+        public async Task<IEnumerable<Document>> GetFinancialDocumentsAsync(int? year, int? month, TypeDocument? type, Guid? clientId = null)
+        {
+            try
+            {
+                var queryParams = new List<string>();
+                if (year.HasValue) queryParams.Add($"year={year.Value}");
+                if (month.HasValue) queryParams.Add($"month={month.Value}");
+                if (type.HasValue) queryParams.Add($"type={type.Value}");
+                if (clientId.HasValue) queryParams.Add($"clientId={clientId.Value}");
+
+                var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+
+                return await _httpClient.GetFromJsonAsync<IEnumerable<Document>>($"api/documents/financial{queryString}", _jsonOptions)
                        ?? Enumerable.Empty<Document>();
             }
             catch { return Enumerable.Empty<Document>(); }
@@ -713,29 +747,7 @@ namespace TransitManager.Web.Services
 		}		
 		
 		// Classe pour le résultat (à mettre dans le namespace ou à part)
-		public class PortalAccessResult
-		{
-			public string Message { get; set; } = "";
-			public Guid UserId { get; set; }
-			public string Username { get; set; } = "";
-			public string TemporaryPassword { get; set; } = "";
-		}
 
-		// Dans la classe ApiService
-		public async Task<PortalAccessResult> CreateOrResetPortalAccessAsync(Guid clientId)
-		{
-			try
-			{
-				var response = await _httpClient.PostAsJsonAsync("api/users/create-portal-access", new { ClientId = clientId });
-				if (response.IsSuccessStatusCode)
-				{
-					return await response.Content.ReadFromJsonAsync<PortalAccessResult>(_jsonOptions) ?? new();
-				}
-				// Gérer l'erreur si besoin
-				return new PortalAccessResult { Message = "Erreur API" };
-			}
-			catch (Exception ex) { return new PortalAccessResult { Message = ex.Message }; }
-		}
 		
 		public async Task<bool> RegisterClientAsync(RegisterClientRequestDto request)
 		{
@@ -1017,16 +1029,37 @@ namespace TransitManager.Web.Services
             }
         }
 
-        public async Task<bool> SendMessageAsync(CreateMessageDto dto)
+        public async Task<Guid?> SendMessageAsync(CreateMessageDto dto)
         {
             try
             {
                 var response = await _httpClient.PostAsJsonAsync("api/messages", dto);
-                return response.IsSuccessStatusCode;
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                    if (result.TryGetProperty("id", out var idProp) && idProp.TryGetGuid(out var id))
+                    {
+                        return id;
+                    }
+                    return Guid.Empty; // Fallback success but no ID
+                }
+                return null;
             }
             catch
             {
-                return false;
+                return null;
+            }
+        }
+        
+        public async Task DeleteMessageAsync(Guid messageId)
+        {
+            try
+            {
+                await _httpClient.DeleteAsync($"api/messages/{messageId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erreur DeleteMessageAsync: {ex.Message}");
             }
         }
 
@@ -1034,9 +1067,13 @@ namespace TransitManager.Web.Services
         {
             try
             {
-                // On inclut bien le conteneurId dans la requête
-                var request = new { ColisId = colisId, VehiculeId = vehiculeId, ConteneurId = conteneurId };
-                await _httpClient.PostAsJsonAsync("api/messages/mark-read", request);
+                var query = new List<string>();
+                if (colisId.HasValue) query.Add($"colisId={colisId}");
+                if (vehiculeId.HasValue) query.Add($"vehiculeId={vehiculeId}");
+                if (conteneurId.HasValue) query.Add($"conteneurId={conteneurId}");
+
+                var queryString = query.Any() ? "?" + string.Join("&", query) : "";
+                await _httpClient.PostAsync($"api/messages/mark-read{queryString}", null);
             }
             catch 
             { 
@@ -1292,6 +1329,75 @@ namespace TransitManager.Web.Services
         public async Task<List<DashboardEntityDto>> GetUnpricedItemsAsync()
         {
             return await _httpClient.GetFromJsonAsync<List<DashboardEntityDto>>("api/dashboard/admin/unpriced-items");
+        }
+        public async Task<ReceptionControl?> GetReceptionControlAsync(string entityType, Guid entityId)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<ReceptionControl>($"api/reception/entity/{entityType}/{entityId}", _jsonOptions);
+            }
+            catch { return null; }
+        }
+
+        public async Task<ReceptionControl?> CreateReceptionControlAsync(ReceptionControl control)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/reception", control, _jsonOptions);
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<ReceptionControl>(_jsonOptions);
+                }
+                return null;
+            }
+            catch { return null; }
+        }
+
+        public async Task<List<ReceptionControl>> GetRecentReceptionControlsAsync(int count)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<List<ReceptionControl>>($"api/reception/recent?count={count}", _jsonOptions) ?? new();
+            }
+            catch { return new List<ReceptionControl>(); }
+        }
+
+        public async Task<ReceptionStatsDto?> GetReceptionStatsAsync(DateTime? start = null, DateTime? end = null)
+        {
+            try
+            {
+                var query = "api/reception/stats";
+                var paramsList = new List<string>();
+                if (start.HasValue) paramsList.Add($"start={start.Value:yyyy-MM-dd}");
+                if (end.HasValue) paramsList.Add($"end={end.Value:yyyy-MM-dd}");
+
+                if (paramsList.Any()) query += "?" + string.Join("&", paramsList);
+
+                return await _httpClient.GetFromJsonAsync<ReceptionStatsDto>(query, _jsonOptions);
+            }
+            catch { return null; }
+        }
+
+        public async Task<string> GetSettingAsync(string key)
+        {
+            try
+            {
+                var result = await _httpClient.GetFromJsonAsync<SettingResponseDto>($"api/settings/{key}?_={DateTime.UtcNow.Ticks}", _jsonOptions);
+                return result?.Value ?? "";
+            }
+            catch { return ""; }
+        }
+
+        private class SettingResponseDto { public string Value { get; set; } = ""; }
+
+        public async Task<bool> DeleteControlAsync(Guid id)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/reception/{id}");
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
         }
     }
 }

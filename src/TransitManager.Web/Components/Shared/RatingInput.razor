@@ -1,0 +1,59 @@
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="d-flex flex-column align-items-center mb-3">
+    <div class="d-flex align-items-center mb-2">
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <i class="bi @Icon fs-5 me-2 @Color"></i>
+        }
+        <label class="fw-bold text-muted small text-uppercase">@Label</label>
+    </div>
+    
+    <div class="rating-input d-flex gap-1" style="cursor: pointer;">
+        @for (int i = 1; i <= 10; i++)
+        {
+            var value = i; // capture
+            <div @onclick="() => UpdateValue(value)" 
+                 @onmouseover="() => HoverValue(value)"
+                 @onmouseout="ResetHover"
+                 class="rating-star transition-all" 
+                 style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                 
+                @if (i <= (_hoverValue ?? Value))
+                {
+                    <i class="bi bi-star-fill text-warning fs-5"></i>
+                }
+                else
+                {
+                    <i class="bi bi-star text-black-50 fs-6"></i>
+                }
+            </div>
+        }
+    </div>
+    <div class="small fw-bold mt-1 @((_hoverValue ?? Value) > 0 ? "text-primary" : "text-muted")">
+        @(_hoverValue ?? Value)/10
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Note";
+    [Parameter] public string Icon { get; set; }
+    [Parameter] public string Color { get; set; } = "text-secondary";
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+
+    private int? _hoverValue;
+
+    private async Task UpdateValue(int val)
+    {
+        Value = val;
+        await ValueChanged.InvokeAsync(val);
+    }
+
+    private void HoverValue(int val) => _hoverValue = val;
+    private void ResetHover() => _hoverValue = null;
+}
+
+<style>
+    .rating-star:hover { transform: scale(1.2); }
+</style>

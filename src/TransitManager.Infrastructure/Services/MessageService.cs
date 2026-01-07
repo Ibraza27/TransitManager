@@ -55,6 +55,8 @@ namespace TransitManager.Infrastructure.Services
 
 			context.Messages.Add(message);
 			await context.SaveChangesAsync();
+            
+            Console.WriteLine($"[MessageService] Message créé. ID: {message.Id}, HasRelatedEntityId: {true}");
 
 			// SignalR
 			var messageDto = new MessageDto
@@ -84,47 +86,69 @@ namespace TransitManager.Infrastructure.Services
 			// Notifications
 			if (sender.Role == RoleUtilisateur.Client)
 			{
-				// Notifier les admins
+				// Le Client écrit -> Notifier les admins
+                Console.WriteLine($"[MessageService] Notifying Admins for Message {message.Id}");
 				await _notificationService.CreateAndSendAsync(
 					"Nouveau Message",
 					$"Message de {sender.NomComplet} : {Truncate(dto.Contenu, 30)}", // Utilisation de notre helper
 					null, // Admin
 					CategorieNotification.NouveauMessage,
-					actionUrl: GetMessageUrl(dto)
+					actionUrl: GetMessageUrl(dto),
+                    relatedEntityId: message.Id, // AJOUT CORRECTIF
+                    relatedEntityType: "Message"
 				);
 			}
-			else if (!dto.IsInternal)
-			{
-				// Notifier le client
-				Guid? clientId = null;
+			else if (sender.Role == RoleUtilisateur.Administrateur || sender.Role == RoleUtilisateur.Gestionnaire)
+            {
+                // Un Admin écrit...
 
-				if (dto.ColisId.HasValue)
-				{
-					var colis = await context.Colis.Include(c => c.Client).FirstOrDefaultAsync(c => c.Id == dto.ColisId);
-					clientId = colis?.ClientId;
-				}
-				else if (dto.VehiculeId.HasValue)
-				{
-					var vehicule = await context.Vehicules.Include(v => v.Client).FirstOrDefaultAsync(v => v.Id == dto.VehiculeId);
-					clientId = vehicule?.ClientId;
-				}
-				// NOTE : On ne notifie pas de client spécifique pour un Conteneur car il y en a plusieurs.
+                // 1. Si ce n'est pas une note interne -> Notifier le client concerné
+                if (!dto.IsInternal)
+                {
+				    Guid? clientId = null;
+				    if (dto.ColisId.HasValue)
+				    {
+					    var colis = await context.Colis.Include(c => c.Client).FirstOrDefaultAsync(c => c.Id == dto.ColisId);
+					    clientId = colis?.ClientId;
+				    }
+				    else if (dto.VehiculeId.HasValue)
+				    {
+					    var vehicule = await context.Vehicules.Include(v => v.Client).FirstOrDefaultAsync(v => v.Id == dto.VehiculeId);
+					    clientId = vehicule?.ClientId;
+				    }
+                    // Conteneur = Pas de client unique
 
-				if (clientId.HasValue)
-				{
-					var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == clientId);
-					if (clientUser != null)
-					{
-						await _notificationService.CreateAndSendAsync(
-							"Nouveau Message",
-							$"Vous avez reçu un message : {Truncate(dto.Contenu, 30)}",
-							clientUser.Id,
-							CategorieNotification.NouveauMessage,
-							actionUrl: GetMessageUrl(dto)
-						);
-					}
-				}
-			}
+                    if (clientId.HasValue)
+				    {
+					    var clientUser = await context.Utilisateurs.FirstOrDefaultAsync(u => u.ClientId == clientId);
+					    if (clientUser != null)
+					    {
+                            Console.WriteLine($"[MessageService] Notifying Client {clientUser.Id} for Message {message.Id}");
+						    await _notificationService.CreateAndSendAsync(
+							    "Nouveau Message",
+							    $"Vous avez reçu un message : {Truncate(dto.Contenu, 30)}",
+							    clientUser.Id,
+							    CategorieNotification.NouveauMessage,
+							    actionUrl: GetMessageUrl(dto),
+                                relatedEntityId: message.Id, 
+                                relatedEntityType: "Message"
+						    );
+					    }
+				    }
+                }
+
+                // 2. ET DANS TOUS LES CAS -> Notifier les AUTRES Admins (Broadcast)
+                Console.WriteLine($"[MessageService] Broadcasting Admin Notification for Message {message.Id}");
+                await _notificationService.CreateAndSendAsync(
+                    "Nouveau Message Admin",
+                    $"{sender.NomComplet} : {Truncate(dto.Contenu, 30)}",
+                    null, // Broadcast Admin (exclut l'expéditeur automatiquement)
+                    CategorieNotification.NouveauMessage,
+                    actionUrl: GetMessageUrl(dto),
+                    relatedEntityId: message.Id,
+                    relatedEntityType: "Message"
+                );
+            }
 
 			return message;
 		}
@@ -139,11 +163,11 @@ namespace TransitManager.Infrastructure.Services
 		private string GetMessageUrl(CreateMessageDto dto)
 		{
 			if (dto.ColisId.HasValue)
-				return $"/colis/edit/{dto.ColisId}";
+				return $"/colis/edit/{dto.ColisId}?tab=discussion";
 			else if (dto.VehiculeId.HasValue)
-				return $"/vehicule/edit/{dto.VehiculeId}";
+				return $"/vehicule/edit/{dto.VehiculeId}?tab=discussion";
 			else if (dto.ConteneurId.HasValue)
-				return $"/conteneur/detail/{dto.ConteneurId}";
+				return $"/conteneur/detail/{dto.ConteneurId}?tab=discussion";
 			else
 				return "#";
 		}
@@ -209,6 +233,32 @@ namespace TransitManager.Infrastructure.Services
                     msg.DateLecture = DateTime.UtcNow;
                 }
                 await context.SaveChangesAsync();
+            }
+
+        }
+
+        public async Task DeleteMessageAsync(Guid messageId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var message = await context.Messages.FindAsync(messageId);
+            if (message != null)
+            {
+                // Identification du groupe pour SignalR
+                string groupName = message.ColisId.HasValue ? message.ColisId.ToString()
+                                 : message.VehiculeId.HasValue ? message.VehiculeId.ToString()
+                                 : message.ConteneurId.ToString() ?? "General";
+
+                context.Messages.Remove(message);
+                await context.SaveChangesAsync();
+
+                // 1. Notifier les clients via SignalR (mise à jour du Chat)
+                if (!string.IsNullOrEmpty(groupName))
+                {
+                    await _hubContext.Clients.Group(groupName).SendAsync("MessageDeleted", messageId);
+                }
+
+                // 2. Supprimer la notification associée (pour que l'utilisateur ne clique pas sur une notif invalide)
+                await _notificationService.DeleteByEntityAsync(messageId, CategorieNotification.NouveauMessage);
             }
         }
     }

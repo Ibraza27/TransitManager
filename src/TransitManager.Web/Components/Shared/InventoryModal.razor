@@ -45,14 +45,14 @@
                                         <div class="row g-2 align-items-end">
                                             <div class="col-md-4">
                                                 <label class="small text-muted fw-bold">Désignation</label>
-                                                <input type="text" class="form-control form-control-sm" @bind="_newItem.Designation" placeholder="Ex: Chemises..." />
+                                                <input type="text" class="form-control form-control-sm" @bind="_newItem.Designation" placeholder="Ex: carton, canapé, frigo..." />
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="small text-muted fw-bold">Quantité</label>
                                                 <input type="number" class="form-control form-control-sm" @bind="_newItem.Quantite" min="1" />
                                             </div>
                                             <div class="col-md-2">
-                                                <label class="small text-muted fw-bold">Total (€)</label>
+                                                <label class="small text-muted fw-bold">Valeur (€)</label>
                                                 <input type="number" class="form-control form-control-sm" @bind="_newItem.Valeur" min="0" step="0.01" />
                                             </div>
                                             <div class="col-md-3">
@@ -192,7 +192,7 @@
                     <button type="button" class="btn btn-secondary" @onclick="Close">Annuler</button>
                     @if (!IsReadOnly)
                     {
-                        <button type="button" class="btn btn-primary px-4" @onclick="SaveAndClose" disabled="@(!_isDisclaimed)">
+                        <button type="button" class="btn btn-primary px-4" @onclick="SaveAndClose">
                             <i class="bi bi-check-lg me-2"></i>Valider et Enregistrer
                         </button>
                     }
@@ -263,8 +263,8 @@
             // Si la date est null, on met aujourd'hui
             _dateSignature = Date ?? DateTime.Now;
             
-            // Reset disclaimer
-            _isDisclaimed = false;
+            // Reset disclaimer logic: if signature exists, we assume it was disclaimed
+            _isDisclaimed = !string.IsNullOrEmpty(_signatureBase64);
         }
     }
 
@@ -333,17 +333,41 @@
     }
 
 
-	private async Task SaveAndClose()
+    private async Task SaveAndClose()
     {
-        // Récupérer la signature du canvas si on est sur l'onglet signature
+        // 1. Récupérer la signature du canvas si on est déjà sur l'onglet signature
         if (_activeTab == "signature" && string.IsNullOrEmpty(_signatureBase64))
         {
              try {
                  _signatureBase64 = await JSRuntime.InvokeAsync<string>("signaturePad.getImage", "sig-canvas-inventory");
              } catch {}
+             // Check if empty canvas
+             if(string.IsNullOrEmpty(_signatureBase64) || _signatureBase64.Length < 500) _signatureBase64 = null;
         }
         
-        // Nettoyage si vide
+        // 2. Vérifier si l'inventaire contient des articles
+        bool hasItems = _items.Any();
+        
+        if (hasItems)
+        {
+            // 3. Si articles présents, la signature est obligatoire
+            if (string.IsNullOrEmpty(_signatureBase64) || !_isDisclaimed)
+            {
+                // Redirection vers l'anglet validation
+                await ChangeTab("signature");
+                
+                // Petit délai pour l'affichage
+                await Task.Delay(100);
+                
+                // Alerte utilisateur (Pourrait être un Toast plus joli, ou juste le focus)
+                // Ici on redirige, l'utilisateur verra qu'il doit signer.
+                // Alerte utilisateur explicite
+                await JSRuntime.InvokeVoidAsync("alert", "Veuillez cocher la décharge et signer pour valider l'inventaire.");
+                return;
+            }
+        }
+        
+        // Nettoyage si vide (cas limite)
         if (_signatureBase64 != null && _signatureBase64.Length < 500) _signatureBase64 = null;
 
         var result = new InventoryResult

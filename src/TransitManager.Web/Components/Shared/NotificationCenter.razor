@@ -194,17 +194,8 @@
                     };
                 })
 
-                // Reconnexion automatique INFINIE avec Backoff progressif
-                .WithAutomaticReconnect(new[] { 
-                    TimeSpan.Zero, 
-                    TimeSpan.FromSeconds(2), 
-                    TimeSpan.FromSeconds(5), 
-                    TimeSpan.FromSeconds(10), 
-                    TimeSpan.FromSeconds(20),
-                    TimeSpan.FromSeconds(30) // Ensuite, le client continuera d'essayer toutes les 30s indéfiniment (comportement par défaut si array fini ?) Non, par défaut ça s'arrête.
-                    // Pour infini, on doit gérer manuellement ou fournir un array très long.
-                    // Mieux : Custom Retry Policy
-                })
+                // Reconnexion automatique INFINIE (Custom Policy)
+                .WithAutomaticReconnect(new InfiniteRetryPolicy())
                 .Build();
 
             // Gestion de la visibilité de page pour reconnexion immédiate sur Mobile
@@ -370,5 +361,17 @@
     public async ValueTask DisposeAsync()
     {
         if (_hubConnection != null) await _hubConnection.DisposeAsync();
+    }
+
+    public class InfiniteRetryPolicy : IRetryPolicy
+    {
+        public TimeSpan? NextRetryDelay(RetryContext retryContext)
+        {
+            // Backoff progressif : 0s, 2s, 4s, ..., max 30s
+            // Et on ne renvoie jamais null => Infini
+            var delay = retryContext.PreviousRetryCount * 2;
+            if (delay > 30) delay = 30; 
+            return TimeSpan.FromSeconds(delay == 0 ? 0 : delay);
+        }
     }
 }

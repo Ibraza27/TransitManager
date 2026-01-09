@@ -78,6 +78,8 @@ namespace TransitManager.Core.Entities
 
         public string? Commentaires { get => _commentaires; set => SetProperty(ref _commentaires, value); }
         
+        public bool HasAssurance { get; set; } // AJOUT: Assurance optionnelle
+
         public decimal PrixTotal
         {
             get => _prixTotal;
@@ -90,7 +92,21 @@ namespace TransitManager.Core.Entities
             set { if (SetProperty(ref _sommePayee, value)) { OnPropertyChanged(nameof(RestantAPayer)); } }
         }
 
-        public decimal RestantAPayer => PrixTotal - SommePayee;
+        public decimal RestantAPayer 
+        {
+            get
+            {
+                var total = PrixTotal;
+                if (HasAssurance)
+                {
+                    var baseAmount = (ValeurDeclaree + PrixTotal) * 1.2m; // +20%
+                    var assurance = (baseAmount * 0.007m) + 50m; // 0.7% + 50€
+                    if (assurance < 250m) assurance = 250m;
+                    total += assurance;
+                }
+                return total - SommePayee;
+            }
+        }
         
         // Dimensions pour calcul de prix
         public int? DimensionsLongueurCm { get; set; }

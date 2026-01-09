@@ -149,6 +149,7 @@ namespace TransitManager.Infrastructure.Services
 
             // Protection financière
             vehiculeInDb.PrixTotal = vehicule.PrixTotal;
+            vehiculeInDb.HasAssurance = vehicule.HasAssurance; // FIX: Persistence
             // Also allow ValeurDeclaree updates always
             vehiculeInDb.ValeurDeclaree = vehicule.ValeurDeclaree;
             vehiculeInDb.SommePayee = vehicule.SommePayee;
@@ -484,7 +485,13 @@ namespace TransitManager.Infrastructure.Services
                     Commentaires = v.Commentaires,
                     DateCreation = v.DateCreation,
                     DestinationFinale = v.DestinationFinale,
-                    PrixTotal = v.PrixTotal,
+                    PrixTotal = v.HasAssurance 
+                        ? v.PrixTotal + (
+                            (((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m) < 250m 
+                                ? 250m 
+                                : (((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m)
+                          )
+                        : v.PrixTotal,
                     SommePayee = v.SommePayee,
                     HasMissingDocuments = v.Documents.Any(d => d.Statut == StatutDocument.Manquant)
                  })
@@ -534,6 +541,13 @@ namespace TransitManager.Infrastructure.Services
                  .OrderByDescending(v => v.DateCreation)
                  .AsNoTracking()
                  .ToListAsync();
+        }
+
+        public decimal CalculateAssuranceCost(decimal valeurDeclaree, decimal prixTotal)
+        {
+            var baseAmount = (valeurDeclaree + prixTotal) * 1.2m; // +20%
+            var assurance = (baseAmount * 0.007m) + 50m; // 0.7% + 50€
+            return assurance < 250m ? 250m : assurance;
         }
     }
 }

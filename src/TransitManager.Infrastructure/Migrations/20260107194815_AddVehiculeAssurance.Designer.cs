@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TransitManager.Infrastructure.Data;
@@ -11,9 +12,11 @@ using TransitManager.Infrastructure.Data;
 namespace TransitManager.Infrastructure.Migrations
 {
     [DbContext(typeof(TransitContext))]
-    partial class TransitContextModelSnapshot : ModelSnapshot
+    [Migration("20260107194815_AddVehiculeAssurance")]
+    partial class AddVehiculeAssurance
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1381,7 +1384,7 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2026, 1, 7, 20, 25, 37, 285, DateTimeKind.Utc).AddTicks(1378),
+                            DateCreation = new DateTime(2026, 1, 7, 19, 48, 12, 466, DateTimeKind.Utc).AddTicks(7222),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             EmailConfirme = false,

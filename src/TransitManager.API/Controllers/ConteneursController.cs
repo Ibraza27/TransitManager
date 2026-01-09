@@ -252,7 +252,9 @@ namespace TransitManager.API.Controllers
                     Commentaires = v.Commentaires,
                     DateCreation = v.DateCreation,
                     DestinationFinale = v.DestinationFinale,
-                    PrixTotal = v.PrixTotal,
+                    PrixTotal = v.HasAssurance 
+                        ? v.PrixTotal + _vehiculeService.CalculateAssuranceCost(v.ValeurDeclaree, v.PrixTotal)
+                        : v.PrixTotal,
                     SommePayee = v.SommePayee
                 });
             }

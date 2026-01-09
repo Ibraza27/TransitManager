@@ -16,6 +16,7 @@
                         <i class="bi bi-info-circle me-2"></i>
                         Si vous ne connaissez pas les dimensions de votre véhicule, vous pouvez les consulter sur 
                         <a href="https://www.lacentrale.fr/fiche-technique-auto.php" target="_blank" class="fw-bold">La Centrale</a>.
+                        <br/><span class="fw-bold mt-1 d-block">Attention : Saisissez les dimensions en centimètres (ex: 450 cm pour 4,50 m).</span>
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -48,7 +49,7 @@
                             <div class="card-body text-center">
                                 <h6 class="text-muted mb-1">Volume Estimé</h6>
                                 <p class="fw-bold mb-2">@_volumeM3.ToString("N3") m³</p>
-                                <h6 class="text-muted mb-1">Prix Proposé</h6>
+                                <h6 class="text-muted mb-1">Prix Proposé (Hors Douane)</h6>
                                 <h3 class="text-primary fw-bold mb-0">@_calculatedPrice.ToString("C2")</h3>
                                 <small class="text-muted">Basé sur un tarif de @_pricePerM3.ToString("C2")/m³</small>
                             </div>

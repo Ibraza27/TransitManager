@@ -22,5 +22,6 @@ namespace TransitManager.Core.Interfaces
         Task<Core.DTOs.PagedResult<Core.DTOs.VehiculeListItemDto>> GetPagedAsync(int page, int pageSize, string? search = null, Guid? clientId = null);
         Task<IEnumerable<Vehicule>> GetDelayedVehiculesAsync(int days);
         Task<IEnumerable<Vehicule>> GetUnpricedVehiculesAsync();
+        decimal CalculateAssuranceCost(decimal valeurDeclaree, decimal prixTotal);
     }
 }

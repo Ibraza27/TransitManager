@@ -107,29 +107,30 @@ else
 builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 
 // On remplace toutes les injections de XRepository ou de IDbContextFactory par IUnitOfWork
-builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
-builder.Services.AddTransient<IClientService, ClientService>();
-builder.Services.AddTransient<IColisService, ColisService>();
-builder.Services.AddTransient<IVehiculeService, VehiculeService>();
-builder.Services.AddTransient<IConteneurService, ConteneurService>();
-builder.Services.AddTransient<IPaiementService, PaiementService>();
-builder.Services.AddTransient<INotificationService, NotificationService>();
-builder.Services.AddTransient<IFinanceService, FinanceService>();
-builder.Services.AddTransient<IBarcodeService, BarcodeService>();
-builder.Services.AddTransient<IExportService, ExportService>();
-builder.Services.AddTransient<IBackupService, BackupService>();
-builder.Services.AddTransient<IPrintingService, PrintingService>();
-builder.Services.AddTransient<IDocumentService, DocumentService>();
-builder.Services.AddTransient<IJwtService, JwtService>();
-builder.Services.AddTransient<IUserService, UserService>();
+// On remplace toutes les injections de XRepository ou de IDbContextFactory par IUnitOfWork
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IClientService, ClientService>();
+builder.Services.AddScoped<IColisService, ColisService>();
+builder.Services.AddScoped<IVehiculeService, VehiculeService>();
+builder.Services.AddScoped<IConteneurService, ConteneurService>();
+builder.Services.AddScoped<IPaiementService, PaiementService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IFinanceService, FinanceService>();
+builder.Services.AddScoped<IBarcodeService, BarcodeService>();
+builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<IBackupService, BackupService>();
+builder.Services.AddScoped<IPrintingService, PrintingService>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddSingleton<INotificationHubService, NotificationHubService>();
 builder.Services.AddHostedService<MaintenanceService>(); // AJOUT SERVICE MAINTENANCE (Background)
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
-builder.Services.AddTransient<IEmailService, EmailService>();
-builder.Services.AddTransient<IMessageService, MessageService>();
-builder.Services.AddTransient<ITimelineService, TimelineService>();
-builder.Services.AddTransient<IReceptionService, ReceptionService>(); // Module SAV
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddScoped<ITimelineService, TimelineService>();
+builder.Services.AddScoped<IReceptionService, ReceptionService>(); // Module SAV
 // --- SERVICES WEB API ---
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -227,11 +228,12 @@ builder.Services.AddAuthorization(options =>
     options.DefaultPolicy = options.GetPolicy("HybridPolicy")!;
 });
 // --- SIGNALR ---
-// Augmenter les limites pour éviter les timeouts en dev
+// Augmenter les limites pour éviter les timeouts en dev et mobile
 var signalRBuilder = builder.Services.AddSignalR(options => {
     options.EnableDetailedErrors = true;
-    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    // OPTIMISATION MOBILE : Timeouts augmentés
+    options.KeepAliveInterval = TimeSpan.FromSeconds(30); // Heartbeat plus lent (économise batterie/data)
+    options.ClientTimeoutInterval = TimeSpan.FromMinutes(2); // Tolérance de 2 minutes de déconnexion avant de tuer la session serveur
 });
 
 if (useRedis && !string.IsNullOrWhiteSpace(redisConnectionString))

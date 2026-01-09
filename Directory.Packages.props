@@ -7,7 +7,7 @@
     <PackageVersion Include="MailKit" Version="4.14.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.21" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.21" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
     <PackageVersion Include="Microsoft.Maui.Controls" Version="8.0.40" />
     <PackageVersion Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.40" />
@@ -34,7 +34,7 @@
     <PackageVersion Include="Refit.HttpClientFactory" Version="7.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.22" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.4.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
+
     <!-- UI - WPF -->
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <PackageVersion Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc2" />
@@ -51,7 +51,7 @@
     <!-- Outils & Utilitaires -->
     <PackageVersion Include="AutoMapper" Version="13.0.1" />
     <PackageVersion Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageVersion Include="ClosedXML" Version="0.102.2" />
+
     <PackageVersion Include="FluentValidation" Version="11.9.0" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="5.0.0" />

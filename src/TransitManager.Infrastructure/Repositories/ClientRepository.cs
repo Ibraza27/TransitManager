@@ -51,50 +51,60 @@ namespace TransitManager.Infrastructure.Repositories
 
         public async Task<IEnumerable<Client>> GetActiveClientsAsync()
         {
-            var clients = await _context.Set<Client>()
-                .Include(c => c.Colis)
-                .Include(c => c.Vehicules)
+            // OPTIMISATION: Projection SQL directe pour éviter le N+1 et le chargement de toutes les collections
+            var data = await _context.Set<Client>()
                 .Where(c => c.Actif)
-                .OrderBy(c => c.Nom)
-                .ThenBy(c => c.Prenom)
+                .Select(c => new 
+                { 
+                    Client = c,
+                    // Calcul direct en base de données
+                    ImpayesColis = c.Colis.Where(x => x.Actif).Sum(x => x.PrixTotal - x.SommePayee),
+                    ImpayesVehicules = c.Vehicules.Where(v => v.Actif)
+                        // Logique inline de l'assurance pour le calcul précis
+                        .Sum(v => (v.HasAssurance 
+                            ? v.PrixTotal + ((((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m) < 250m ? 250m : (((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m))
+                            : v.PrixTotal) - v.SommePayee)
+                })
+                .OrderBy(x => x.Client.Nom)
+                .ThenBy(x => x.Client.Prenom)
+                .AsNoTracking() // Gain de perf supplémentaire lecture seule
                 .ToListAsync();
 
-            // Recalcul des impayés à la volée pour garantir la cohérence
-            foreach (var client in clients)
+            // Matérialisation
+            var results = new List<Client>();
+            foreach (var item in data)
             {
-                var impayesColis = client.Colis
-                    .Where(c => c.Actif)
-                    .Sum(c => c.PrixTotal - c.SommePayee); // Utilisation directe du calcul si RestantAPayer n'est pas mappé
-
-                var impayesVehicules = client.Vehicules
-                    .Where(v => v.Actif)
-                    .Sum(v => v.PrixTotal - v.SommePayee);
-
-                client.Impayes = impayesColis + impayesVehicules;
+                var c = item.Client;
+                c.Impayes = item.ImpayesColis + item.ImpayesVehicules; // Affectation de la propriété non-mappée
+                results.Add(c);
             }
 
-            return clients;
+            return results;
         }
 
         public async Task<IEnumerable<Client>> SearchAsync(string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
                 return await GetActiveClientsAsync();
-            searchTerm = searchTerm.ToLower();
+
+            var term = $"%{searchTerm}%"; // Wildcards pour ILike
+
             return await _context.Set<Client>()
                 .Where(c => c.Actif && (
-                    c.CodeClient.ToLower().Contains(searchTerm) ||
-                    c.Nom.ToLower().Contains(searchTerm) ||
-                    c.Prenom.ToLower().Contains(searchTerm) ||
-                    (c.Nom + " " + c.Prenom).ToLower().Contains(searchTerm) ||
-                    c.TelephonePrincipal.Contains(searchTerm) ||
-                    (c.TelephoneSecondaire != null && c.TelephoneSecondaire.Contains(searchTerm)) ||
-                    (c.Email != null && c.Email.ToLower().Contains(searchTerm)) ||
-                    (c.Ville != null && c.Ville.ToLower().Contains(searchTerm)) ||
-                    (c.AdressePrincipale != null && c.AdressePrincipale.ToLower().Contains(searchTerm))
+                    EF.Functions.ILike(c.CodeClient, term) ||
+                    EF.Functions.ILike(c.Nom, term) ||
+                    EF.Functions.ILike(c.Prenom, term) ||
+                    // Concaténation pour Nom complet (Note: ILike sur concat peut ne pas utiliser l'index, mais mieux que ToLower)
+                    EF.Functions.ILike(c.Nom + " " + c.Prenom, term) || 
+                    EF.Functions.ILike(c.TelephonePrincipal, term) ||
+                    (c.TelephoneSecondaire != null && EF.Functions.ILike(c.TelephoneSecondaire, term)) ||
+                    (c.Email != null && EF.Functions.ILike(c.Email, term)) ||
+                    (c.Ville != null && EF.Functions.ILike(c.Ville, term)) ||
+                    (c.AdressePrincipale != null && EF.Functions.ILike(c.AdressePrincipale, term))
                 ))
                 .OrderBy(c => c.Nom)
                 .ThenBy(c => c.Prenom)
+                .AsNoTracking()
                 .ToListAsync();
         }
 

@@ -143,5 +143,9 @@ namespace TransitManager.Web.Services
         Task<ReceptionStatsDto?> GetReceptionStatsAsync(DateTime? start = null, DateTime? end = null);
         Task<bool> DeleteControlAsync(Guid id);
         Task<string> GetSettingAsync(string key);
+
+        // --- Audit ---
+        Task<PagedResult<AuditLogDto>> GetAuditLogsAsync(int page = 1, int pageSize = 20, string? userId = null, string? entityName = null, DateTime? date = null);
+        Task<AuditLogDto?> GetAuditLogByIdAsync(Guid id);
     }
 }

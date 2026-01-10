@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance en cours - TransitManager</title>
+    <style>
+        :root {
+            --primary: #0d6efd;
+            --secondary: #6c757d;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --bg-color: #f3f4f6;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--dark);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .icon {
+            font-size: 4rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        p {
+            color: var(--secondary);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(13, 110, 253, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: #0b5ed7;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🛠️</div>
+        <h1>Maintenance en cours</h1>
+        <p>
+            Nous effectuons actuellement une mise à jour pour améliorer nos services.<br>
+            L'application sera de nouveau disponible dans quelques instants.
+        </p>
+        
+        <div class="loader"></div>
+        
+        <div>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem;">La page se rechargera automatiquement...</p>
+            <button onclick="window.location.reload()" class="btn">Réessayer maintenant</button>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh every 30 seconds to check if back online
+        setInterval(() => {
+            fetch(window.location.href, { method: 'HEAD' })
+                .then(response => {
+                    if (response.status === 200) {
+                        window.location.reload();
+                    }
+                })
+                .catch(() => {
+                    // Still down, do nothing
+                });
+        }, 15000);
+    </script>
+</body>
+</html>

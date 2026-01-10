@@ -1,46 +1,320 @@
 @page "/audit"
 @using Microsoft.AspNetCore.Authorization
+@using System.Text.Json
+@using TransitManager.Core.DTOs
+@using TransitManager.Web.Services
+@inject IApiService ApiService
 @attribute [Authorize(Roles = "Administrateur")]
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-0 text-primary fw-bold"><i class="bi bi-shield-check me-2"></i>Audit et Sécurité</h2>
-            <p class="text-muted mb-0">Journal des activités et traçabilité du système.</p>
+            <p class="text-muted mb-0">Historique des actions et modifications.</p>
         </div>
-        <div>
-             <button class="btn btn-outline-secondary" disabled>
-                 <i class="bi bi-download me-1"></i> Exporter
-             </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" @onclick="LoadData">
+                <i class="bi bi-arrow-clockwise"></i> Actualiser
+            </button>
         </div>
     </div>
 
-    <!-- Info Box explaining the purpose -->
-    <div class="alert alert-info shadow-sm border-0">
-        <h5 class="alert-heading"><i class="bi bi-info-circle me-2"></i>À propos de l'Audit</h5>
-        <p class="mb-0">
-            Cette section permet aux administrateurs de consulter l'historique détaillé des actions effectuées sur la plateforme.
-            Vous y trouverez :
-        </p>
-        <ul class="mt-2 mb-0">
-            <li>Les connexions et déconnexions des utilisateurs.</li>
-            <li>Les créations, modifications et suppressions de fiches (Clients, Colis, Véhicules).</li>
-            <li>Les changements de statuts critiques.</li>
-            <li>Les accès aux données sensibles.</li>
-        </ul>
-    </div>
-
-    <!-- Placeholder for future implementation -->
-    <div class="card shadow-sm border-0 mt-4 text-center py-5">
-        <div class="card-body">
-            <div class="mb-3">
-                <i class="bi bi-cone-striped text-warning" style="font-size: 3rem;"></i>
+    <!-- Filters -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body bg-light rounded-3">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Utilisateur</label>
+                    <input type="text" class="form-control" @bind="FilterUser" @bind:after="LoadData" placeholder="Chercher un utilisateur..." />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Entité (Type)</label>
+                    <select class="form-select" @bind="FilterEntity" @bind:after="LoadData">
+                        <option value="">Toutes</option>
+                        <option value="Colis">Colis</option>
+                        <option value="Vehicule">Véhicule</option>
+                        <option value="Client">Client</option>
+                        <option value="Conteneur">Conteneur</option>
+                        <option value="Utilisateur">Utilisateur</option>
+                        <option value="Login">Authentification</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Date</label>
+                    <input type="date" class="form-control" @bind="FilterDate" @bind:after="LoadData" />
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" @onclick="LoadData">Filtrer</button>
+                </div>
             </div>
-            <h4 class="text-muted">Module en cours de développement</h4>
-            <p class="text-secondary max-w-600 mx-auto">
-                La fonctionnalité de journalisation complète est en cours d'intégration.
-                Les données sont actuellement collectées en arrière-plan et seront bientôt visibles ici.
-            </p>
+        </div>
+    </div>
+
+    <!-- Data Grid -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Date & Heure</th>
+                        <th>Utilisateur</th>
+                        <th>Action</th>
+                        <th>Cible</th>
+                        <th>Détails</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (IsLoading)
+                    {
+                        <tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                    }
+                    else if (Logs == null || !Logs.Any())
+                    {
+                        <tr><td colspan="6" class="text-center py-5 text-muted">Aucun historique trouvé.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var log in Logs)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">@log.Timestamp.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                                    <div class="small text-muted">@log.Timestamp.ToLocalTime().ToString("HH:mm:ss")</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle-sm bg-light text-primary me-2 fw-bold">
+                                            @GetInitials(log.UserName)
+                                        </div>
+                                        <div>@log.UserName</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (log.Action == "CREATE")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Création</span>
+                                    }
+                                    else if (log.Action == "UPDATE")
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Modification</span>
+                                    }
+                                    else if (log.Action == "DELETE")
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Suppression</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">@log.Action</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="fw-medium">@log.EntityName</span>
+                                    @if(!string.IsNullOrEmpty(log.EntityId))
+                                    {
+                                        <span class="text-muted ms-1 small">#@ShortId(log.EntityId)</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">
+                                    @log.Description
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowDetails(log)">
+                                        <i class="bi bi-eye"></i> Voir
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="card-footer bg-white py-3 border-top-0 d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Page @CurrentPage sur @TotalPages (@TotalCount entrées)</span>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(CurrentPage - 1)">Précédent</button>
+                    </li>
+                    <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(CurrentPage + 1)">Suivant</button>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
 </div>
+
+<!-- Details Modal -->
+@if (SelectedLog != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title">Détails de l'action</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDetails"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="small text-muted">Utilisateur</label>
+                            <div class="fw-bold">@SelectedLog.UserName</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted">Date</label>
+                            <div class="fw-bold">@SelectedLog.Timestamp.ToLocalTime().ToString("f")</div>
+                        </div>
+                    </div>
+                    
+                    @if (SelectedLog.Action == "UPDATE" && !string.IsNullOrEmpty(SelectedLog.ValuesBefore) && !string.IsNullOrEmpty(SelectedLog.ValuesAfter))
+                    {
+                        <h6 class="border-bottom pb-2 mb-3 mt-4">Modifications détectées</h6>
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 30%">Champ</th>
+                                    <th style="width: 35%">Avant</th>
+                                    <th style="width: 35%">Après</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var diff in GetDiffs(SelectedLog.ValuesBefore, SelectedLog.ValuesAfter))
+                                {
+                                    <tr>
+                                        <td class="fw-medium">@diff.Key</td>
+                                        <td class="text-danger text-break bg-danger-subtle">@diff.Before</td>
+                                        <td class="text-success text-break bg-success-subtle">@diff.After</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else if (SelectedLog.Action == "CREATE" && !string.IsNullOrEmpty(SelectedLog.ValuesAfter))
+                    {
+                        <h6 class="border-bottom pb-2 mb-3 mt-4">Données créées</h6>
+                        <pre class="bg-light p-3 rounded small">@FormatJson(SelectedLog.ValuesAfter)</pre>
+                    }
+                    else if (SelectedLog.Action == "DELETE" && !string.IsNullOrEmpty(SelectedLog.ValuesBefore))
+                    {
+                         <h6 class="border-bottom pb-2 mb-3 mt-4">Données supprimées</h6>
+                         <pre class="bg-light p-3 rounded small">@FormatJson(SelectedLog.ValuesBefore)</pre>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDetails">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<AuditLogDto> Logs = new();
+    private bool IsLoading = true;
+    private int CurrentPage = 1;
+    private int PageSize = 25;
+    private int TotalPages = 1;
+    private int TotalCount = 0;
+
+    private string? FilterUser;
+    private string? FilterEntity;
+    private DateTime? FilterDate;
+
+    private AuditLogDto? SelectedLog;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
+        try
+        {
+            var result = await ApiService.GetAuditLogsAsync(CurrentPage, PageSize, FilterUser, FilterEntity, FilterDate);
+            Logs = result.Items.ToList();
+            TotalCount = result.TotalCount;
+            TotalPages = result.TotalPages;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task ChangePage(int newPage)
+    {
+        if (newPage >= 1 && newPage <= TotalPages)
+        {
+            CurrentPage = newPage;
+            await LoadData();
+        }
+    }
+
+    private void ShowDetails(AuditLogDto log)
+    {
+        SelectedLog = log;
+    }
+
+    private void CloseDetails()
+    {
+        SelectedLog = null;
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name == "System") return "SY";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2) return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return name.Substring(0, Math.Min(2, name.Length)).ToUpper();
+    }
+
+    private string ShortId(string? id)
+    {
+        if (string.IsNullOrEmpty(id) || id.Length < 8) return id ?? "";
+        return id.Substring(0, 8) + "...";
+    }
+
+    private string FormatJson(string json)
+    {
+        try 
+        {
+            using var doc = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch { return json; }
+    }
+
+    private List<(string Key, string Before, string After)> GetDiffs(string jsonBefore, string jsonAfter)
+    {
+        var diffs = new List<(string, string, string)>();
+        try
+        {
+            var dictBefore = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonBefore);
+            var dictAfter = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonAfter);
+
+            if (dictBefore == null || dictAfter == null) return diffs;
+
+            foreach (var key in dictAfter.Keys)
+            {
+                var valAfter = dictAfter[key]?.ToString() ?? "null";
+                var valBefore = dictBefore.ContainsKey(key) ? (dictBefore[key]?.ToString() ?? "null") : "null";
+
+                if (valBefore != valAfter && key != "DateModification" && key != "ModifiePar") // Ignore meta-fields
+                {
+                    diffs.Add((key, valBefore, valAfter));
+                }
+            }
+        }
+        catch { }
+        return diffs;
+    }
+}

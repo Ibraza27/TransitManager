@@ -19,6 +19,7 @@ using System.IO;
 using TransitManager.Infrastructure.Hubs;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using TransitManager.API.Infra;
 
 Directory.SetCurrentDirectory(AppContext.BaseDirectory); // Fix for Windows Service pathing
 var builder = WebApplication.CreateBuilder(args);
@@ -66,11 +67,20 @@ builder.Services.AddRateLimiter(options => {
 // -----------------------------------
 
 // --- CONFIGURATION DB ---
+// --- CONFIGURATION DB ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContextFactory<TransitContext>(options =>
+
+// Enregistrement de l'intercepteur (Singleton car HttpContextAccessor est Singleton)
+builder.Services.AddHttpContextAccessor(); // Assurons-nous qu'il est là tôt
+builder.Services.AddSingleton<AuditSaveChangesInterceptor>();
+
+builder.Services.AddDbContextFactory<TransitContext>((sp, options) =>
+{
+    var interceptor = sp.GetRequiredService<AuditSaveChangesInterceptor>();
     options.UseNpgsql(connectionString)
-           .LogTo(Console.WriteLine, LogLevel.Information)
-);
+           .AddInterceptors(interceptor)
+           .LogTo(Console.WriteLine, LogLevel.Information);
+});
 
 // --- CACHE & SIGNALR (REDIS OPTIONNEL) ---
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
@@ -130,8 +140,9 @@ builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<ITimelineService, TimelineService>();
-builder.Services.AddScoped<IReceptionService, ReceptionService>(); // Module SAV
 // --- SERVICES WEB API ---
+builder.Services.AddScoped<IReceptionService, ReceptionService>(); // Module SAV
+builder.Services.AddScoped<IAuditService, AuditService>(); // Module Audit
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {

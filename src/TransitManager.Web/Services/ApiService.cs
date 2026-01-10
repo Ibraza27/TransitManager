@@ -1399,5 +1399,29 @@ namespace TransitManager.Web.Services
             }
             catch { return false; }
         }
+        
+        public async Task<PagedResult<AuditLogDto>> GetAuditLogsAsync(int page = 1, int pageSize = 20, string? userId = null, string? entityName = null, DateTime? date = null)
+        {
+            var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };
+            if (!string.IsNullOrEmpty(userId)) query.Add($"userId={userId}");
+            if (!string.IsNullOrEmpty(entityName)) query.Add($"entityName={entityName}");
+            if (date.HasValue) query.Add($"date={date.Value:yyyy-MM-dd}");
+
+            try 
+            {
+                return await _httpClient.GetFromJsonAsync<PagedResult<AuditLogDto>>($"api/audit?{string.Join("&", query)}", _jsonOptions) 
+                       ?? new PagedResult<AuditLogDto>();
+            }
+            catch { return new PagedResult<AuditLogDto>(); }
+        }
+
+        public async Task<AuditLogDto?> GetAuditLogByIdAsync(Guid id)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<AuditLogDto>($"api/audit/{id}", _jsonOptions);
+            }
+            catch { return null; }
+        }
     }
 }

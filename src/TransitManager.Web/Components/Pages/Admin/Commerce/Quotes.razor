@@ -8,199 +8,113 @@
 @inject IJSRuntime JS
 @attribute [Authorize(Roles = "Administrateur")]
 
-    <div class="bg-light p-2 border-bottom d-flex align-items-center gap-3">
-        <div class="btn-group">
-            <button class="btn btn-link text-decoration-none fw-bold @(FilterStatus == null ? "text-success" : "text-muted")" @onclick="() => FilterBy(null)">Tout</button>
-            <button class="btn btn-link text-decoration-none @(FilterStatus == QuoteStatus.Accepted.ToString() ? "text-success fw-bold" : "text-muted")" @onclick="() => FilterBy(QuoteStatus.Accepted.ToString())">Acceptés</button>
-            <button class="btn btn-link text-decoration-none @(FilterStatus == QuoteStatus.Draft.ToString() ? "text-success fw-bold" : "text-muted")" @onclick="() => FilterBy(QuoteStatus.Draft.ToString())">Brouillons</button>
-            <button class="btn btn-link text-decoration-none @(FilterStatus == QuoteStatus.Rejected.ToString() ? "text-danger fw-bold" : "text-muted")" @onclick="() => FilterBy(QuoteStatus.Rejected.ToString())">Refusés</button>
-             <button class="btn btn-link text-decoration-none @(FilterStatus == QuoteStatus.Deleted.ToString() ? "text-secondary fw-bold" : "text-muted")" @onclick="() => FilterBy(QuoteStatus.Deleted.ToString())">Corbeille</button>
-        </div>
-        <div class="input-group" style="max-width: 300px;">
-            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control border-start-0 ps-0" placeholder="Rechercher..." @bind="SearchTerm" @bind:after="() => LoadList(false)" />
-        </div>
-        <div class="ms-auto">
-            <button class="btn btn-success fw-bold shadow-sm" @onclick="CreateNew"><i class="bi bi-plus-lg me-2"></i>Nouveau Devis</button>
+<div class="d-flex flex-column h-100">
+    <!-- Header Responsive -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+        <h3 class="mb-0">Devis</h3>
+        <div class="d-flex gap-2">
+            <a href="/admin/commerce/quotes/new" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-2"></i>Nouveau Devis
+            </a>
+             <div class="input-group input-group-sm" style="max-width: 250px;">
+                <input type="text" class="form-control" placeholder="Rechercher..." @bind="SearchTerm" @bind:event="oninput" @onkeyup="LoadQuotes" />
+                <button class="btn btn-outline-secondary" @onclick="LoadQuotes"><i class="bi bi-search"></i></button>
+            </div>
+             <select class="form-select form-select-sm" style="max-width: 150px;" @bind="FilterStatus">
+                <option value="">Tous statuts</option>
+                @foreach(var status in Enum.GetValues<QuoteStatus>())
+                {
+                    <option value="@status">@status</option>
+                }
+            </select>
         </div>
     </div>
 
-    <!-- Split View Content -->
-    <div class="d-flex flex-grow-1 overflow-hidden">
+    <!-- Responsive Split View Layout -->
+    <div class="row g-0 flex-grow-1 overflow-hidden" style="min-height: 0;">
         
-        <!-- Left List -->
-        <div class="border-end bg-white overflow-auto" style="width: 400px; min-width: 350px;">
+        <!-- List Column (Full width on mobile) -->
+        <div class="col-12 col-lg-4 col-xl-3 border-end h-100 overflow-auto bg-white">
             @if (IsLoadingList)
             {
-                <div class="text-center p-4"><div class="spinner-border text-primary"></div></div>
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary spinner-border-sm"></div>
+                </div>
+            }
+            else if (QuoteList.Any())
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var quote in QuoteList)
+                    {
+                        <button class="list-group-item list-group-item-action @(SelectedQuote?.Id == quote.Id ? "active" : "") border-bottom p-3" @onclick="() => SelectQuote(quote)">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <span class="fw-bold @(SelectedQuote?.Id == quote.Id ? "text-white" : "text-dark")">@quote.Reference</span>
+                                <small class="@(SelectedQuote?.Id == quote.Id ? "text-light" : "text-muted")">@quote.DateCreated.ToString("dd/MM")</small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-truncate @(SelectedQuote?.Id == quote.Id ? "text-light" : "text-secondary")" style="max-width: 70%;">
+                                    @quote.ClientName
+                                </div>
+                                <span class="badge rounded-pill @GetStatusClass(quote.Status)">
+                                    @quote.StatusName
+                                </span>
+                            </div>
+                            <div class="mt-2 text-end fw-bold @(SelectedQuote?.Id == quote.Id ? "text-white" : "text-primary")">
+                                @quote.TotalTTC.ToString("C2")
+                            </div>
+                        </button>
+                    }
+                </div>
+                
+                 <!-- Pagination simplified -->
+                <div class="p-2 border-top text-center d-flex justify-content-between align-items-center">
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(CurrentPage == 1)" @onclick="PreviousPage"><i class="bi bi-chevron-left"></i></button>
+                    <small>Page @CurrentPage / @TotalPages (@TotalCount)</small>
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(CurrentPage == TotalPages)" @onclick="NextPage"><i class="bi bi-chevron-right"></i></button>
+                </div>
             }
             else
             {
-        <div class="list-group list-group-flush">
-                    @foreach (var quote in QuoteList)
-                    {
-                        <a href="javascript:void(0)" class="list-group-item list-group-item-action @(SelectedQuote?.Id == quote.Id ? "active-quote" : "")" @onclick="() => SelectQuote(quote)">
-                            <div class="d-flex w-100 justify-content-between mb-1">
-                                <h6 class="mb-0 fw-bold">@quote.ClientName @quote.ClientFirstname</h6>
-                                <span class="badge @GetStatusClass(quote.Status)">@quote.StatusName</span>
-                            </div>
-                            <div class="small text-muted mb-1">
-                                <div><i class="bi bi-telephone me-1"></i> @quote.ClientPhone</div>
-                                <div class="text-truncate"><i class="bi bi-geo-alt me-1"></i> @quote.ClientAddress</div>
-                            </div>
-                            <div class="d-flex w-100 justify-content-between align-items-center mt-2 border-top pt-2">
-                                <small class="text-muted">@quote.Reference • @quote.DateCreated.ToString("dd.MM")</small>
-                                <span class="fw-bold text-primary">@quote.TotalTTC.ToString("C2")</span>
-                            </div>
-                        </a>
-                    }
-                    
-                    <!-- Pagination Load More -->
-                    @if (CurrentPage < TotalPages)
-                    {
-                         <button class="btn btn-light w-100 mt-2" @onclick="LoadMore">Charger plus...</button>
-                    }
-                </div>
+                <div class="p-4 text-center text-muted">Aucun devis trouvé.</div>
             }
         </div>
 
-        <!-- Right Preview/Edit Area -->
-        <div class="flex-grow-1 bg-light overflow-auto p-4 d-flex justify-content-center">
+        <!-- Detail Column (Hidden on mobile, visible on LG+) -->
+        <div class="d-none d-lg-block col-lg-8 col-xl-9 h-100 overflow-auto bg-light p-4">
             @if (SelectedQuote != null)
             {
-                <div class="bg-white shadow-sm rounded w-100" style="max-width: 900px; min-height: 800px;">
-                    <!-- Action Bar -->
-                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
-                         <div>
-                             <span class="badge @GetStatusClass(SelectedQuote.Status) me-2">@SelectedQuote.StatusName</span>
-                             <span class="text-muted small">Créé le @SelectedQuote.DateCreated.ToString("dd.MM.yyyy")</span>
-                         </div>
-                         <div class="d-flex gap-2">
-                             @if (SelectedQuote.Status == QuoteStatus.Draft)
-                             {
-                                 <button class="btn btn-primary btn-sm" @onclick="EditQuote"><i class="bi bi-pencil me-1"></i> Modifier</button>
-                                 <button class="btn btn-outline-primary btn-sm" @onclick="SendEmail"><i class="bi bi-envelope me-1"></i> Envoyer</button>
-                             }
-                             
-                             @if (SelectedQuote.Status != QuoteStatus.Draft)
-                             {
-                                 <a href="@SelectedQuote.PublicUrl" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-eye me-1"></i> Voir Public</a>
-                             }
-                             else
-                             {
-                                  <button class="btn btn-outline-secondary btn-sm" @onclick="EditQuote"><i class="bi bi-eye me-1"></i> Visualiser</button>
-                             }
-                             <button class="btn btn-outline-dark btn-sm" @onclick="DownloadPdf"><i class="bi bi-file-earmark-pdf me-1"></i> PDF</button>
-                             <div class="dropdown">
-                                 <button class="btn btn-link text-dark p-0 ms-2" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                                 <ul class="dropdown-menu dropdown-menu-end">
-                                     <li><button class="dropdown-item" @onclick="CreateCopy">Créer une copie</button></li>
-                                     <li><hr class="dropdown-divider"></li>
-                                     @if(SelectedQuote.Status == QuoteStatus.Draft)
-                                     {
-                                        <li><button class="dropdown-item text-danger" @onclick="DeleteQuote">Supprimer</button></li>
-                                     }
-                                     else 
-                                     {
-                                         <li><button class="dropdown-item" @onclick="() => MarkStatus(QuoteStatus.Accepted)">Marquer Accepté</button></li>
-                                         <li><button class="dropdown-item" @onclick="() => MarkStatus(QuoteStatus.Rejected)">Marquer Refusé</button></li>
-                                     }
-                                 </ul>
-                             </div>
-                         </div>
-                    </div>
-
-                    <!-- Quote Content Preview -->
-                    <div class="p-5">
-                        <div class="row mb-5">
-                            <div class="col-6">
-                                <h4 class="fw-bold text-uppercase mb-4">Devis</h4>
-                                <div class="fw-bold fs-5">@SelectedQuote.ClientName</div>
-                                <div class="text-muted">@SelectedQuote.ClientEmail</div>
-                            </div>
-                            <div class="col-6 text-end">
-                                <div class="fw-bold fs-4">@SelectedQuote.Reference</div>
-                                <div class="text-muted mt-2">Date: @SelectedQuote.DateCreated.ToString("dd.MM.yyyy")</div>
-                                <div class="text-muted">Valide jusqu'au: @SelectedQuote.DateValidity.ToString("dd.MM.yyyy")</div>
-                            </div>
-                        </div>
-
-                        <table class="table table-borderless mb-4">
-                            <thead class="border-bottom">
-                                <tr class="text-uppercase small text-muted">
-                                    <th style="width: 40%">Description</th>
-                                    <th class="text-end">Qté</th>
-                                    <th class="text-end">Prix Unitaire</th>
-                                    <th class="text-end">TVA</th>
-                                    <th class="text-end">Montant HT</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var line in SelectedQuote.Lines)
-                                {
-                                    <tr>
-                                        <td>
-                                            <div class="fw-bold">@line.Description</div>
-                                        </td>
-                                        <td class="text-end">@line.Quantity.ToString("G29") @line.Unit</td>
-                                        <td class="text-end">@line.UnitPrice.ToString("N2") €</td>
-                                        <td class="text-end">@line.VATRate.ToString("G29") %</td>
-                                        <td class="text-end">@line.TotalHT.ToString("N2") €</td>
-                                    </tr>
-                                }
-                            </tbody>
-                            <tfoot class="border-top">
-                                <tr>
-                                    <td colspan="4" class="text-end pt-3">Total HT</td>
-                                    <td class="text-end pt-3">@SelectedQuote.TotalHT.ToString("N2") €</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="4" class="text-end border-0">TVA</td>
-                                    <td class="text-end border-0">@SelectedQuote.TotalTVA.ToString("N2") €</td>
-                                </tr>
-                                <tr class="fs-5 fw-bold">
-                                    <td colspan="4" class="text-end border-0 pt-3">Total TTC</td>
-                                    <td class="text-end border-0 pt-3">@SelectedQuote.TotalTTC.ToString("N2") €</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                        
-                        @if (!string.IsNullOrEmpty(SelectedQuote.Message))
-                        {
-                            <div class="mb-4">
-                                <h6 class="fw-bold text-muted text-uppercase small">Message</h6>
-                                <p class="text-pre-wrap">@SelectedQuote.Message</p>
-                            </div>
-                        }
-                        
-                         @if (!string.IsNullOrEmpty(SelectedQuote.PaymentTerms))
-                        {
-                            <div class="mb-4">
-                                <h6 class="fw-bold text-muted text-uppercase small">Modalités de Paiement</h6>
-                                <p>@SelectedQuote.PaymentTerms</p>
-                            </div>
-                        }
-
-                        <!-- History -->
-                        <div class="mt-5 pt-4 border-top">
-                            <h6 class="text-muted small text-uppercase mb-3">Historique</h6>
-                            <ul class="timeline small">
-                                <li class="text-success">Créé le @SelectedQuote.DateCreated.ToString("g")</li>
-                                @if(SelectedQuote.Status == QuoteStatus.Sent) { <li class="text-primary">Envoyé le @SelectedQuote.DateCreated.ToString("g") (Simulé)</li> } <!-- Using Created date as fallback if Sent is null -->
-                            </ul>
-                        </div>
-                    </div>
+                <div class="bg-white shadow rounded-3 h-100 d-flex flex-column" style="min-height: 600px;">
+                    @RenderQuoteDetail(SelectedQuote)
                 </div>
             }
             else
             {
-                <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted opacity-50">
                     <i class="bi bi-file-earmark-text display-1 mb-3"></i>
-                    <h5>Sélectionnez un devis pour voir les détails</h5>
+                    <h4>Sélectionnez un devis pour voir les détails</h4>
                 </div>
             }
         </div>
     </div>
+</div>
+
+<!-- Mobile Modal for Details -->
+@if (ShowMobileModal && SelectedQuote != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-fullscreen-sm-down modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Détails Devis</h5>
+                    <button type="button" class="btn-close" @onclick="CloseMobileModal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    @RenderQuoteDetail(SelectedQuote, true)
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <style>
     .active-quote {
@@ -223,11 +137,121 @@
     private int CurrentPage = 1;
     private int TotalPages = 1;
     private int TotalCount = 0;
+    private bool IsLoading = true;
+    private bool ShowMobileModal = false;
+
+    // Helper to render Detail view (shared between Desktop Right Pane and Mobile Modal)
+    private RenderFragment RenderQuoteDetail(QuoteDto quote, bool isMobile = false) => __builder =>
+    {
+        <div class="@(isMobile ? "p-3" : "h-100 d-flex flex-column")">
+             <!-- Top Actions Header inside Detail View -->
+            <div class="d-flex justify-content-between align-items-start mb-4 border-bottom pb-3 pt-3 px-3">
+                <div>
+                     <h2 class="fw-bold mb-1">@quote.Reference</h2>
+                     <div class="d-flex align-items-center gap-2 text-muted">
+                        <i class="bi bi-calendar"></i> @quote.DateCreated.ToString("dd/MM/yyyy")
+                        <span class="badge rounded-pill @GetStatusClass(quote.Status)">@quote.StatusName</span>
+                     </div>
+                </div>
+                 <div class="d-flex gap-2">
+                     <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Actions
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            @if(quote.Status == QuoteStatus.Draft || quote.Status == QuoteStatus.Sent)
+                            {
+                                 <li><a class="dropdown-item" href="/admin/commerce/quotes/edit/@quote.Id"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
+                            }
+                            <li><button class="dropdown-item" @onclick="DownloadPdf"><i class="bi bi-download me-2"></i>Télécharger PDF</button></li>
+                            <li><button class="dropdown-item" @onclick="() => CopyPublicLink(quote)"><i class="bi bi-link-45deg me-2"></i>Copier lien public</button></li>
+                            <li><hr class="dropdown-divider"></li>
+                             <li><a class="dropdown-item text-danger" href="#" @onclick:preventDefault @onclick="DeleteQuote"><i class="bi bi-trash me-2"></i>Supprimer</a></li>
+                        </ul>
+                    </div>
+                    <!-- Direct Primary Action -->
+                    @if(quote.Status == QuoteStatus.Draft)
+                    {
+                         <a href="/admin/commerce/quotes/edit/@quote.Id?preview=true" class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i>Envoyer</a>
+                    }
+                    else 
+                    {
+                         <a href="@quote.PublicUrl" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye me-1"></i>Visualiser</a>
+                    }
+                 </div>
+            </div>
+
+            <!-- Content -->
+             <div class="flex-grow-1 overflow-auto px-4">
+                <!-- Client Card -->
+                <div class="card mb-4 border-0 bg-light">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted text-uppercase small fw-bold">Client</h6>
+                        <div class="fs-5 fw-bold">@quote.ClientName @quote.ClientFirstname</div>
+                         <div class="text-secondary"><i class="bi bi-envelope me-2"></i>@quote.ClientEmail</div>
+                         <div class="text-secondary"><i class="bi bi-telephone me-2"></i>@quote.ClientPhone</div>
+                    </div>
+                </div>
+
+                <!-- Lines -->
+                <h6 class="text-uppercase small fw-bold text-muted mb-3">Articles</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Description</th>
+                                <th class="text-end">Qté</th>
+                                <th class="text-end">Prix</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(var line in quote.Lines)
+                            {
+                                <tr>
+                                    <td>@line.Description</td>
+                                    <td class="text-end">@line.Quantity</td>
+                                    <td class="text-end">@line.UnitPrice.ToString("N0")</td>
+                                    <td class="text-end fw-bold">@line.TotalHT.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                 @if (!string.IsNullOrEmpty(quote.Message))
+                {
+                    <div class="alert alert-light border mb-3">
+                        <h6 class="fw-bold text-muted text-uppercase small">Message</h6>
+                        <p class="text-pre-wrap small mb-0">@quote.Message</p>
+                    </div>
+                }
+            </div>
+            
+             <!-- Footer Totals -->
+             <div class="bg-light p-3 rounded mt-auto mx-4 mb-4">
+                 <div class="d-flex justify-content-between mb-1">
+                     <span>Total HT</span>
+                     <span>@quote.TotalHT.ToString("N2") €</span>
+                 </div>
+                 <div class="d-flex justify-content-between mb-1">
+                     <span>TVA</span>
+                     <span>@quote.TotalTVA.ToString("N2") €</span>
+                 </div>
+                 <div class="d-flex justify-content-between fs-5 fw-bold text-primary mt-2 pt-2 border-top">
+                     <span>Total TTC</span>
+                     <span>@quote.TotalTTC.ToString("C2")</span>
+                 </div>
+             </div>
+        </div>
+    };
 
     protected override async Task OnInitializedAsync()
     {
         await LoadList();
     }
+
+    private async Task LoadQuotes() => await LoadList();
 
     private async Task LoadList(bool append = false)
     {
@@ -258,7 +282,15 @@
         }
     }
 
-    private async Task FilterBy(string? status)
+    private void PreviousPage() {
+        if(CurrentPage > 1) { CurrentPage--; LoadList(); }
+    }
+    
+    private void NextPage() {
+        if(CurrentPage < TotalPages) { CurrentPage++; LoadList(); }
+    }
+
+    private async Task FilterBy(string? status) // Not used in current simplified header
     {
         FilterStatus = status;
         CurrentPage = 1;
@@ -275,28 +307,20 @@
     private void SelectQuote(QuoteDto quote)
     {
         SelectedQuote = quote;
-        // In real app, fetch full details here if needed
-    }
-    
-    private void CreateNew()
-    {
-        NavManager.NavigateTo("/admin/commerce/quotes/new");
+        ShowMobileModal = true;
     }
 
-    private void EditQuote()
+    private void CloseMobileModal()
     {
-        if (SelectedQuote != null)
-            NavManager.NavigateTo($"/admin/commerce/quotes/edit/{SelectedQuote.Id}");
+        ShowMobileModal = false;
     }
 
     private async Task SendEmail()
     {
-        // For now, toggle status and show the link
         if (SelectedQuote != null)
         {
             await ApiService.UpdateQuoteStatusAsync(SelectedQuote.Id, QuoteStatus.Sent);
             SelectedQuote.Status = QuoteStatus.Sent;
-            // Refresh list item
             var index = QuoteList.FindIndex(q => q.Id == SelectedQuote.Id);
             if (index >= 0) QuoteList[index] = SelectedQuote;
         }
@@ -308,6 +332,7 @@
         try
         {
              var pdfBytes = await ApiService.GetQuotePdfAsync(SelectedQuote.Id);
+             if (pdfBytes.Length == 0) throw new Exception("PDF vide");
              using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
              await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{SelectedQuote.Reference}.pdf", streamRef);
         }
@@ -317,9 +342,19 @@
         }
     }
 
-    private async Task CreateCopy()
+    private async Task CopyPublicLink(QuoteDto quote)
     {
-        // TODO implementation
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", quote.PublicUrl);
+        await JS.InvokeVoidAsync("alert", "Lien copié !");
+    }
+    
+    private async Task MarkStatus(QuoteStatus status)
+    {
+        if (SelectedQuote != null)
+        {
+             await ApiService.UpdateQuoteStatusAsync(SelectedQuote.Id, status);
+             SelectedQuote.Status = status;
+        }
     }
     
     private async Task DeleteQuote()
@@ -330,15 +365,6 @@
             QuoteList.Remove(SelectedQuote);
             SelectedQuote = null;
             if (QuoteList.Any()) SelectedQuote = QuoteList.First();
-        }
-    }
-    
-    private async Task MarkStatus(QuoteStatus status)
-    {
-        if (SelectedQuote != null)
-        {
-             await ApiService.UpdateQuoteStatusAsync(SelectedQuote.Id, status);
-             SelectedQuote.Status = status;
         }
     }
 

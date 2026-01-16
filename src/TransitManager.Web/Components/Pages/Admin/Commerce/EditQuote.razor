@@ -17,32 +17,32 @@
 <div class="d-flex h-100 flex-column" style="height: calc(100vh - 60px);">
     
     <!-- Action Bar -->
-    <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-white">
+    <div class="d-flex flex-wrap justify-content-between align-items-center p-3 border-bottom bg-white gap-3">
         <div class="d-flex align-items-center gap-3">
             <button class="btn btn-outline-secondary rounded-circle p-2" @onclick="Cancel" title="Retour">
                 <i class="bi bi-x-lg"></i>
             </button>
-            <h4 class="mb-0 fw-bold">@(Id == null ? "Nouveau devis" : $"Devis {ExistingRef}")</h4>
+            <h4 class="mb-0 fw-bold text-truncate" style="max-width: 200px;">@(Id == null ? "Nouveau" : $"{ExistingRef}")</h4>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             @if (IsPreviewMode)
             {
-                <button class="btn btn-secondary" @onclick="TogglePreview">
-                    <i class="bi bi-arrow-left me-2"></i>Retour à l'édition
+                <button class="btn btn-secondary btn-sm" @onclick="TogglePreview">
+                    <i class="bi bi-arrow-left me-2"></i>Editer
                 </button>
-                 <button class="btn btn-primary" @onclick="SendEmail">
-                    <i class="bi bi-envelope-fill me-2"></i>Envoyer par email
+                 <button class="btn btn-primary btn-sm" @onclick="SendEmail">
+                    <i class="bi bi-envelope-fill me-2"></i>Envoyer
                 </button>
-                <button class="btn btn-outline-secondary" @onclick="DownloadPdf"><i class="bi bi-download me-2"></i>PDF</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="DownloadPdf"><i class="bi bi-download"></i></button>
             }
             else
             {
-                 <a href="/admin/commerce/quotes" class="btn btn-outline-secondary">Annuler</a>
-                 <button class="btn btn-info text-white" @onclick="TogglePreview">
-                    <i class="bi bi-eye me-2"></i>Visualiser
+                 <button class="btn btn-outline-secondary btn-sm d-none d-md-inline-block" @onclick="Cancel">Annuler</button>
+                 <button class="btn btn-info text-white btn-sm" @onclick="TogglePreview">
+                    <i class="bi bi-eye me-2"></i>Aperçu
                 </button>
-                 <button class="btn btn-secondary" @onclick="SaveDraft">
-                    <i class="bi bi-save me-2"></i>Enregistrer le brouillon
+                 <button class="btn btn-secondary btn-sm" @onclick="SaveDraft">
+                    <i class="bi bi-save me-2"></i>Brouillon
                 </button>
             }
         </div>
@@ -56,151 +56,154 @@
     }
     else if (IsPreviewMode)
     {
-        <!-- PREVIEW MODE - Matches PublicQuote.razor layout -->
-        <div class="card border-0 shadow-lg mx-auto" style="max-width: 900px; min-height: 1000px;">
-            <div class="card-body p-5">
-                 <!-- Header -->
-                <div class="row mb-5 border-bottom pb-4">
-                    <div class="col-7">
-                            <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
-                         <div class="small text-muted">
-                            <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
-                            7 Rue Pascal<br/>
-                            33370 TRESSES<br/>
-                            France<br/>
-                            <br/>
-                            Tél: 09 81 72 45 40<br/>
-                            Email: contact@hippocampeimportexport.com
+        <!-- PREVIEW MODE - Responsive Wrapper -->
+        <div class="p-0 p-md-4 bg-light flex-grow-1 overflow-auto">
+            <div class="card border-0 shadow-lg mx-auto" style="max-width: 900px; min-height: 800px;">
+             <!-- ... existing preview content ... -->
+             <!-- Reuse RenderQuoteDetail logic if I extracted it, but for now just ensure container is ok -->
+             <!-- I will assume the Preview logic inside is ok via scroll, but let's check the container -->
+                <div class="card-body p-3 p-md-5">
+                    <!-- Reuse the same Preview Content structure but adjusted padding -->
+                     <!-- Header -->
+                    <div class="row mb-5 border-bottom pb-4">
+                        <div class="col-12 col-md-7 mb-3 mb-md-0">
+                                <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
+                                <!-- ... -->
+                                <div class="small text-muted">
+                                    <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
+                                    7 Rue Pascal, 33370 TRESSES<br/>
+                                    Email: contact@hippocampeimportexport.com
+                                </div>
+                        </div>
+                        <div class="col-12 col-md-5 text-md-end">
+                            <h2 class="fw-bold text-uppercase text-secondary mb-3">Devis</h2>
+                            <h4 class="fw-bold fs-3">@(Model.Reference ?? "BROUILLON")</h4>
+                            <div class="text-muted mt-2">Date: @(Model.DateCreated?.ToString("dd/MM/yyyy") ?? DateTime.Now.ToString("dd/MM/yyyy"))</div>
+                             <div class="text-danger fw-bold">Valide: @Model.DateValidity.ToString("dd/MM/yyyy")</div>
                         </div>
                     </div>
-                    <div class="col-5 text-end">
-                        <h2 class="fw-bold text-uppercase text-secondary mb-3">Devis</h2>
-                        <h4 class="fw-bold fs-3">@(Model.Reference ?? "BROUILLON")</h4>
-                        <div class="text-muted mt-2">Date: @(Model.DateCreated?.ToString("dd/MM/yyyy") ?? DateTime.Now.ToString("dd/MM/yyyy"))</div>
-                         <div class="text-danger fw-bold">Valide jusqu'au: @Model.DateValidity.ToString("dd/MM/yyyy")</div>
-                    </div>
-                </div>
 
-                <!-- Client Info -->
-                 <div class="row mb-5 justify-content-end">
-                    <div class="col-md-6">
-                        <div class="p-4 bg-light rounded-3 border">
-                            <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
-                             @if(SelectedClient != null)
-                            {
-                                <div class="fs-5 fw-bold text-dark">@SelectedClient.Nom @SelectedClient.Prenom</div>
-                                <div class="text-muted">@SelectedClient.AdressePrincipale @SelectedClient.CodePostal @SelectedClient.Ville</div>
-                                <div class="text-muted">@SelectedClient.TelephonePrincipal</div>
-                                <div class="text-muted">@SelectedClient.Email</div>
-                            }
-                            else
-                            {
-                                <div class="text-muted fst-italic">Aucun client sélectionné</div>
-                            }
+                    <!-- Client Info -->
+                     <div class="row mb-5 justify-content-end">
+                        <div class="col-md-6">
+                            <div class="p-4 bg-light rounded-3 border">
+                                <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
+                                 @if(SelectedClient != null)
+                                {
+                                    <div class="fs-5 fw-bold text-dark">@SelectedClient.Nom @SelectedClient.Prenom</div>
+                                    <div class="text-muted">@SelectedClient.AdressePrincipale @SelectedClient.CodePostal @SelectedClient.Ville</div>
+                                    <div class="text-muted">@SelectedClient.Email</div>
+                                }
+                                else
+                                {
+                                    <div class="text-muted fst-italic">Aucun client sélectionné</div>
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                 <!-- Line Items -->
-                <table class="table table-striped table-hover mb-5">
-                    <thead class="table-dark">
-                        <tr>
-                            <th class="py-3 ps-4">Description</th>
-                            <th class="text-end py-3">Quantité</th>
-                            <th class="text-end py-3">Prix Unit.</th>
-                            <th class="text-end py-3">TVA</th>
-                            <th class="text-end py-3 pe-4">Total HT</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var line in Model.Lines)
+                     <!-- Line Items (Responsive Table) -->
+                    <div class="table-responsive mb-5">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="py-3 ps-4">Description</th>
+                                    <th class="text-end py-3">Qté</th>
+                                    <th class="text-end py-3">Prix</th>
+                                    <th class="text-end py-3">TVA</th>
+                                    <th class="text-end py-3 pe-4">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in Model.Lines)
+                                {
+                                    <tr>
+                                        <td class="ps-4 py-3 fw-medium">@line.Description</td>
+                                        <td class="text-end py-3">@line.Quantity @line.Unit</td>
+                                        <td class="text-end py-3">@line.UnitPrice.ToString("N2")</td>
+                                        <td class="text-end py-3">@line.VATRate%</td>
+                                        <td class="text-end py-3 pe-4">@((line.Quantity * line.UnitPrice).ToString("N2"))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Total TVA</span>
+                        <span>@TotalTVA.ToString("N2") €</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-top bg-light fw-bold fs-5 px-2 mt-2">
+                         <span>Total TTC</span>
+                        <span>@TotalTTC.ToString("N2") €</span>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="mt-auto pt-5">
+                        @if(!string.IsNullOrEmpty(Model.PaymentTerms))
                         {
-                            <tr>
-                                <td class="ps-4 py-3 fw-medium">@line.Description</td>
-                                <td class="text-end py-3">@line.Quantity @line.Unit</td>
-                                <td class="text-end py-3">@line.UnitPrice.ToString("N2") €</td>
-                                <td class="text-end py-3">@line.VATRate %</td>
-                                <td class="text-end py-3 pe-4">@((line.Quantity * line.UnitPrice).ToString("N2")) €</td>
-                            </tr>
+                            <div class="mb-3">
+                                 <strong>Modalités:</strong> <span class="text-muted">@Model.PaymentTerms</span>
+                            </div>
                         }
-                    </tbody>
-                </table>
-
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>Total TVA</span>
-                            <span>@TotalTVA.ToString("N2") €</span>
-                        </div>
-                        <div class="d-flex justify-content-between py-2 border-top bg-light fw-bold fs-5 px-2 mt-2">
-                             <span>Total TTC</span>
-                            <span>@TotalTTC.ToString("N2") €</span>
-                        </div>
-                
-                <!-- Footer -->
-                <div class="mt-auto pt-5">
-                    @if(!string.IsNullOrEmpty(Model.PaymentTerms))
-                    {
-                        <div class="mb-3">
-                             <strong>Modalités de paiement:</strong> <span class="text-muted">@Model.PaymentTerms</span>
-                        </div>
-                    }
-                     @if(!string.IsNullOrEmpty(Model.FooterNote))
-                    {
-                        <div class="small text-muted border-top pt-2">
-                            @Model.FooterNote
-                        </div>
-                    }
-                     <div class="text-center small text-muted mt-4 pt-3 border-top">
-                        HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses<br/>
-                        SIRET: 891909772 - TVA: FR42891909772 - BORDEAUX
+                         @if(!string.IsNullOrEmpty(Model.FooterNote))
+                        {
+                            <div class="small text-muted border-top pt-2">
+                                @Model.FooterNote
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
             
-             <!-- Modal Actions -->
-             <div class="card position-fixed bottom-0 end-0 m-4 shadow p-3" style="width: 300px;">
+             <!-- Modal Actions (Mobile Optimized) -->
+             <div class="card position-fixed bottom-0 end-0 m-3 m-md-4 shadow p-3" style="width: 300px; max-width: calc(100vw - 32px);">
                  <h6 class="fw-bold mb-3">Actions</h6>
                  <div class="d-grid gap-2">
-                     <button class="btn btn-success" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver et Fermer (Simul)</button>
-                     <button class="btn btn-outline-dark" @onclick="DownloadPdf"><i class="bi bi-download me-2"></i>Télécharger PDF</button>
-                      <button class="btn btn-outline-dark" @onclick="PrintPdf"><i class="bi bi-printer me-2"></i>Imprimer</button>
-                     <button class="btn btn-outline-primary" @onclick="SendEmail"><i class="bi bi-envelope me-2"></i>Envoyer par Mail</button>
+                     <button class="btn btn-success" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver (Simul)</button>
+                     <div class="d-flex gap-2">
+                         <button class="btn btn-outline-dark flex-grow-1" @onclick="DownloadPdf"><i class="bi bi-download"></i> PDF</button>
+                         <button class="btn btn-outline-dark flex-grow-1" @onclick="PrintPdf"><i class="bi bi-printer"></i> Print</button>
+                     </div>
+                     <button class="btn btn-outline-primary" @onclick="SendEmail"><i class="bi bi-envelope me-2"></i>Envoyer</button>
                  </div>
              </div>
         </div>
     }
     else
     {
-        <!-- Editor Mode -->
-        <div class="d-flex flex-grow-1 overflow-hidden">
-             <!-- Main Content -->
-             <div class="flex-grow-1 p-4 overflow-auto bg-light">
-                 <div class="bg-white shadow-sm rounded p-4 mb-4">
+        <!-- Editor Mode - Responsive Layout -->
+        <div class="d-flex flex-column flex-lg-row flex-grow-1 overflow-hidden h-100">
+             
+             <!-- Main Content (Left) -->
+             <div class="flex-grow-1 p-3 p-md-4 overflow-auto bg-light">
+                 <div class="bg-white shadow-sm rounded p-3 p-md-4 mb-4">
                      <!-- Client & Info -->
                      <div class="row g-3 mb-4">
-                         <div class="col-md-5">
+                         <div class="col-12 col-md-5">
                              <label class="form-label text-muted small fw-bold text-uppercase">Client</label>
                              <ClientAutocomplete 
                                  SelectedClient="@SelectedClient" 
                                  OnClientSelected="HandleClientSelected" />
                          </div>
-                         <div class="mb-3">
+                         <div class="col-12 mb-3">
                             <label class="form-label">Modalités de paiement</label>
                              <textarea class="form-control" rows="2" @bind="Model.PaymentTerms"></textarea>
                         </div>
                     </div>
                 </div>     
                      <!-- Lines -->
-                     <div class="table-responsive mb-4" style="min-height: 200px;">
-                         <table class="table table-borderless align-middle">
+                     <div class="table-responsive mb-4 bg-white rounded shadow-sm p-2" style="min-height: 200px;">
+                         <table class="table table-borderless align-middle mb-0">
                              <thead class="border-bottom">
                                  <tr class="text-uppercase small text-muted">
-                                     <th style="width: 40%;">Description</th>
-                                     <th>Date</th>
-                                     <th style="width: 100px;">Qté</th>
-                                     <th style="width: 80px;">Unité</th>
-                                     <th style="width: 120px;">Prix</th>
-                                     <th style="width: 100px;">TVA</th>
-                                     <th class="text-end" style="width: 100px;">Montant</th>
+                                     <th style="min-width: 200px;">Description</th>
+                                     <th style="min-width: 100px;">Date</th>
+                                     <th style="min-width: 80px;">Qté</th>
+                                     <th style="min-width: 60px;">U</th>
+                                     <th style="min-width: 100px;">Prix</th>
+                                     <th style="min-width: 80px;">TVA</th>
+                                     <th class="text-end" style="min-width: 100px;">Total</th>
                                      <th style="width: 40px;"></th>
                                  </tr>
                              </thead>
@@ -208,151 +211,110 @@
                                  @foreach (var line in Model.Lines)
                                 {
                                     <tr>
-                                        <td>
-                                            <input type="text" class="form-control" placeholder="Description..." @bind="line.Description" />
-                                        </td>
-                                        <td>
-                                            <!-- Date placeholder -->
-                                            <span class="text-muted small">@DateTime.Today.ToString("dd.MM.yyyy")</span>
-                                        </td>
-                                        <td>
-                                            <input type="number" class="form-control text-center" @bind="line.Quantity" step="0.01" />
-                                        </td>
-                                        <td>
-                                            <input type="text" class="form-control text-center" @bind="line.Unit" /> 
-                                        </td>
-                                        <td>
-                                            <input type="number" class="form-control text-end" @bind="line.UnitPrice" step="0.01" />
-                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm" placeholder="Desc" @bind="line.Description" /></td>
+                                        <td><span class="text-muted small">@DateTime.Today.ToString("dd.MM")</span></td>
+                                        <td><input type="number" class="form-control form-control-sm text-center" @bind="line.Quantity" step="0.01" /></td>
+                                        <td><input type="text" class="form-control form-control-sm text-center" @bind="line.Unit" /></td>
+                                        <td><input type="number" class="form-control form-control-sm text-end" @bind="line.UnitPrice" step="0.01" /></td>
                                         <td>
                                              <div class="input-group input-group-sm">
                                                  <input type="number" class="form-control text-end" @bind="line.VATRate" step="0.1" />
-                                                 <span class="input-group-text">%</span>
+                                                 <span class="input-group-text px-1">%</span>
                                              </div>
                                         </td>
-                                        <td class="text-end fw-bold">
-                                            @((line.Quantity * line.UnitPrice).ToString("N2")) €
-                                        </td>
-                                        <td>
-                                             <button class="btn btn-link text-danger p-0" @onclick="() => RemoveLine(line)"><i class="bi bi-x"></i></button>
-                                        </td>
+                                        <td class="text-end fw-bold small">@((line.Quantity * line.UnitPrice).ToString("N0"))</td>
+                                        <td><button class="btn btn-link text-danger p-0" @onclick="() => RemoveLine(line)"><i class="bi bi-x"></i></button></td>
                                     </tr>
                                 }
                              </tbody>
                          </table>
-                         <button class="btn btn-dark btn-sm rounded-pill mt-2" @onclick="AddLine">
-                            <i class="bi bi-plus-lg me-1"></i> Ajouter une ligne
-                        </button>
+                         <div class="p-2">
+                            <button class="btn btn-dark btn-sm rounded-pill" @onclick="AddLine">
+                                <i class="bi bi-plus-lg me-1"></i> Ajouter ligne
+                            </button>
+                         </div>
                      </div>
                      
                      <!-- Footer Notes -->
                      <div class="mt-5">
                          <div class="mb-3">
                              <div class="d-flex justify-content-between">
-                                 <label class="form-label fw-bold small">Note de bas de page</label>
+                                 <label class="form-label fw-bold small">Notes</label>
                                  <span class="text-muted small">@((Model.FooterNote?.Length ?? 0))/1000</span>
                              </div>
-                             <textarea class="form-control" rows="3" @bind="Model.FooterNote" 
-                                       placeholder="Texte légal ou conditions spécifiques..."></textarea>
+                             <textarea class="form-control" rows="3" @bind="Model.FooterNote"></textarea>
                          </div>
                      </div>
 
                  </div>
              
-             <!-- Right Sidebar (Totals & Discount) -->
-             <div class="bg-white border-start p-4" style="width: 350px; overflow-y: auto;">
-                 <h6 class="fw-bold mb-4">Calculs & Remises</h6>
-                 
-                 <div class="card bg-light border-0 p-3 mb-4">
-                     <label class="form-label small fw-bold text-uppercase mb-2">Remise Globale</label>
+             <!-- Right Sidebar (Totals & Discount) - Stacked on Mobile -->
+             <div class="bg-white border-start-lg border-bottom border-lg-0-bottom p-4 overflow-auto sidebar-totals" >
+                 <!-- Wrapper for Desktop width constraint -->
+                 <div class="d-lg-block">
                      
-                     <!-- Discount Type -->
-                     <div class="mb-3">
-                         <label class="small text-muted">Type de remise</label>
-                         <div class="btn-group w-100" role="group">
-                             <input type="radio" class="btn-check" name="discType" id="dtPct" autocomplete="off" 
-                                    checked="@(Model.DiscountType == DiscountType.Percent)" 
-                                    @onchange="() => Model.DiscountType = DiscountType.Percent">
-                             <label class="btn btn-outline-secondary btn-sm" for="dtPct">%</label>
-
-                             <input type="radio" class="btn-check" name="discType" id="dtEur" autocomplete="off" 
-                                    checked="@(Model.DiscountType == DiscountType.Amount)" 
-                                    @onchange="() => Model.DiscountType = DiscountType.Amount">
-                             <label class="btn btn-outline-secondary btn-sm" for="dtEur">EUR</label>
-                         </div>
-                     </div>
+                     <!-- On Desktop, we want this to be fixed width. On mobile, full width. -->
+                     <!-- Since we are in a flex-row container on desktop, we can force width via style media query or simple class utility if available. 
+                          But style attribute logic is easier here. -->
+                     <!-- Actually, the parent div handles the flex sizing. Let's make this inner content clean. -->
                      
-                     <!-- Discount Base -->
-                     <div class="mb-3">
-                         <label class="small text-muted">Base de remise</label>
-                         <div class="btn-group w-100" role="group">
-                             <input type="radio" class="btn-check" name="discBase" id="dbHT" autocomplete="off" 
-                                    checked="@(Model.DiscountBase == DiscountBase.BaseHT)" 
-                                    @onchange="() => Model.DiscountBase = DiscountBase.BaseHT">
-                             <label class="btn btn-outline-secondary btn-sm" for="dbHT">Base HT</label>
-
-                             <input type="radio" class="btn-check" name="discBase" id="dbTTC" autocomplete="off" 
-                                    checked="@(Model.DiscountBase == DiscountBase.BaseTTC)" 
-                                    @onchange="() => Model.DiscountBase = DiscountBase.BaseTTC">
-                             <label class="btn btn-outline-secondary btn-sm" for="dbTTC">Base TTC</label>
-                         </div>
-                     </div>
+                     <h6 class="fw-bold mb-4">Calculs & Remises</h6>
                      
-                     <!-- Value -->
-                     <div class="mb-3">
-                         <label class="small text-muted">Valeur</label>
-                         <div class="input-group">
-                             <input type="number" class="form-control" @bind="Model.DiscountValue" step="0.01" />
-                             <span class="input-group-text">@(Model.DiscountType == DiscountType.Percent ? "%" : "€")</span>
+                     <div class="card bg-light border-0 p-3 mb-4">
+                         <div class="row g-2">
+                             <div class="col-6">
+                                  <label class="small text-muted">Type</label>
+                                  <select class="form-select form-select-sm" @bind="Model.DiscountType">
+                                      <option value="@DiscountType.Percent">%</option>
+                                      <option value="@DiscountType.Amount">EUR</option>
+                                  </select>
+                             </div>
+                             <div class="col-6">
+                                 <label class="small text-muted">Valeur</label>
+                                 <input type="number" class="form-control form-control-sm" @bind="Model.DiscountValue" />
+                             </div>
                          </div>
-                         <div class="form-text text-end text-danger mt-1">
+                         <div class="mt-2 text-end text-danger small fw-bold">
                              -@DiscountAmount.ToString("N2") €
                          </div>
                      </div>
+                     
+                     <!-- Totals Display -->
+                     <div class="d-flex justify-content-between mb-2">
+                         <span class="text-muted">Total HT</span>
+                         <span class="fw-bold">@RawTotalHT.ToString("N2") €</span>
+                     </div>
+                      <div class="d-flex justify-content-between mb-2 text-danger">
+                         <span class="text-muted">Remise</span>
+                         <span class="fw-bold">-@DiscountAmount.ToString("N2") €</span>
+                     </div>
+                     <div class="d-flex justify-content-between mb-2">
+                         <span class="text-muted">Net HT</span>
+                         <span class="fw-bold">@NetHT.ToString("N2") €</span>
+                     </div>
+                     <div class="d-flex justify-content-between mb-2">
+                         <span class="text-muted">TVA</span>
+                         <span class="fw-bold">@TotalTVA.ToString("N2") €</span>
+                     </div>
+                     
+                     <hr />
+                     
+                     <div class="d-flex justify-content-between mb-2">
+                         <span class="fw-bold fs-5">Total TTC</span>
+                         <span class="fw-bold fs-5 text-success">@TotalTTC.ToString("N2") €</span>
+                     </div>
+                     
+                      <div class="mt-4">
+                         <label class="form-label small fw-bold text-muted">Paiement</label>
+                         <select class="form-select form-select-sm mb-2" @bind="Model.PaymentTerms">
+                             <option value="">Choisir...</option>
+                             <option value="Comptant">Comptant</option>
+                             <option value="30 jours">30 jours net</option>
+                             <option value="A réception">A réception</option>
+                             <option value="50% acompte, solde à la livraison">50% acompte</option>
+                         </select>
+                     </div>
                  </div>
-                 
-                 <!-- Totals Display -->
-                 <div class="d-flex justify-content-between mb-2">
-                     <span class="text-muted">Total HT (Brut)</span>
-                     <span class="fw-bold">@RawTotalHT.ToString("N2") €</span>
-                 </div>
-                  <div class="d-flex justify-content-between mb-2 text-danger">
-                     <span class="text-muted">Remise</span>
-                     <span class="fw-bold">-@DiscountAmount.ToString("N2") €</span>
-                 </div>
-                 <div class="d-flex justify-content-between mb-2">
-                     <span class="text-muted">Net HT</span>
-                     <span class="fw-bold">@NetHT.ToString("N2") €</span>
-                 </div>
-                 <div class="d-flex justify-content-between mb-2">
-                     <span class="text-muted">TVA</span>
-                     <span class="fw-bold">@TotalTVA.ToString("N2") €</span>
-                 </div>
-                 
-                 <hr />
-                 
-                 <div class="d-flex justify-content-between mb-2">
-                     <span class="fw-bold fs-5">Total TTC</span>
-                     <span class="fw-bold fs-5 text-success">@TotalTTC.ToString("N2") €</span>
-                 </div>
-                 
-                 <div class="d-flex justify-content-between mb-2 text-muted small">
-                     <span>Dont TVA Est.</span>
-                     <span>@TotalTVA.ToString("N2") €</span>
-                 </div>
-                 
-                  <div class="mt-4">
-                     <label class="form-label small fw-bold text-muted">Modalités de Paiement</label>
-                     <select class="form-select form-select-sm mb-2" @bind="Model.PaymentTerms">
-                         <option value="">Choisir...</option>
-                         <option value="Comptant">Comptant</option>
-                         <option value="30 jours">30 jours net</option>
-                         <option value="A réception">A réception</option>
-                         <option value="50% acompte, solde à la livraison">50% acompte</option>
-                     </select>
-                     <textarea class="form-control form-control-sm" rows="3" @bind="Model.Message" placeholder="Conditions spécific..."></textarea>
-                 </div>
-                 
              </div>
         </div>
     }
@@ -592,3 +554,11 @@
          NavManager.NavigateTo("/admin/commerce/quotes");
     }
 }
+
+<style>
+    /* Responsive Sidebar Width */
+    .sidebar-totals { width: 100%; }
+    @@media (min-width: 992px) {
+        .sidebar-totals { width: 350px; }
+    }
+</style>

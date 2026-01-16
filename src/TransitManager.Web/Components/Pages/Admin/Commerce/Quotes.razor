@@ -46,9 +46,9 @@
                 <div class="list-group list-group-flush">
                     @foreach (var quote in QuoteList)
                     {
-                        <div class="list-group-item @(SelectedQuote?.Id == quote.Id ? "active-quote" : "") p-3 border-bottom">
+                        <div class="list-group-item list-group-item-action @(SelectedQuote?.Id == quote.Id ? "active-quote" : "") p-3 border-bottom cursor-pointer" @onclick="() => SelectQuote(quote)">
                             <div class="d-flex w-100 justify-content-between mb-1">
-                                <a href="javascript:void(0)" class="fw-bold text-decoration-none text-primary" @onclick="() => SelectQuote(quote)">@quote.Reference</a>
+                                <span class="fw-bold text-primary">@quote.Reference</span>
                                 <span class="badge @GetStatusClass(quote.Status)">@GetStatusName(quote.Status)</span>
                             </div>
                             <div class="small text-muted mb-2">
@@ -158,14 +158,26 @@
                      </div>
                 </div>
                  <div class="d-flex gap-2">
-                     <div class="dropdown">
+                     <div class="dropdown" @onclick:stopPropagation>
                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                             Actions
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><a class="dropdown-item" href="/admin/commerce/quotes/edit/@quote.Id"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
                             
-                            <li><button class="dropdown-item" @onclick="() => DownloadPdf(quote)"><i class="bi bi-file-pdf me-2"></i>Télécharger PDF</button></li>
+                            <li>
+                                <button class="dropdown-item" @onclick="() => DownloadPdf(quote)" disabled="@IsLoadingPdf">
+                                    @if(IsLoadingPdf && LoadingQuoteId == quote.Id)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        <span>Téléchargement...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-file-pdf me-2"></i><span>Télécharger PDF</span>
+                                    }
+                                </button>
+                            </li>
                             
                             @if(quote.Status != QuoteStatus.Draft)
                             {
@@ -179,11 +191,11 @@
                     <!-- Direct Primary Action -->
                     @if(quote.Status == QuoteStatus.Draft)
                     {
-                         <a href="/admin/commerce/quotes/edit/@quote.Id?preview=true" class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i>Envoyer</a>
+                         <a href="/admin/commerce/quotes/edit/@quote.Id?preview=true" class="btn btn-primary btn-sm" @onclick:stopPropagation><i class="bi bi-send me-1"></i>Envoyer</a>
                     }
                     else 
                     {
-                         <a href="@quote.PublicUrl" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye me-1"></i>Visualiser</a>
+                         <a href="@quote.PublicUrl" target="_blank" class="btn btn-outline-primary btn-sm" @onclick:stopPropagation><i class="bi bi-eye me-1"></i>Visualiser</a>
                     }
                  </div>
             </div>
@@ -342,10 +354,17 @@
         }
     }
 
+    private bool IsLoadingPdf = false;
+    private Guid? LoadingQuoteId = null;
+
     private async Task DownloadPdf(QuoteDto quote)
     {
         try
         {
+             LoadingQuoteId = quote.Id;
+             IsLoadingPdf = true;
+             StateHasChanged();
+             
              var pdfBytes = await ApiService.GetQuotePdfAsync(quote.Id);
              if (pdfBytes.Length == 0) throw new Exception("PDF vide");
              using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
@@ -354,6 +373,12 @@
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("alert", $"Erreur lors du téléchargement: {ex.Message}");
+        }
+        finally
+        {
+             IsLoadingPdf = false;
+             LoadingQuoteId = null;
+             StateHasChanged();
         }
     }
 

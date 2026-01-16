@@ -33,7 +33,10 @@
                  <button class="btn btn-primary btn-sm" @onclick="SendEmail">
                     <i class="bi bi-envelope-fill me-2"></i>Envoyer
                 </button>
-                <button class="btn btn-outline-secondary btn-sm" @onclick="DownloadPdf"><i class="bi bi-download"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="DownloadPdf" disabled="@IsLoadingPdf">
+                    @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> }
+                    else { <i class="bi bi-download"></i> }
+                </button>
             }
             else
             {
@@ -162,8 +165,13 @@
                  <div class="d-grid gap-2">
                      <button class="btn btn-success" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver (Simul)</button>
                      <div class="d-flex gap-2">
-                         <button class="btn btn-outline-dark flex-grow-1" @onclick="DownloadPdf"><i class="bi bi-download"></i> PDF</button>
-                         <button class="btn btn-outline-dark flex-grow-1" @onclick="PrintPdf"><i class="bi bi-printer"></i> Imprimer</button>
+                         <button class="btn btn-outline-dark flex-grow-1" @onclick="DownloadPdf" disabled="@IsLoadingPdf">
+                            @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>PDF...</span> }
+                            else { <i class="bi bi-download"></i><span> PDF</span> }
+                         </button>
+                         <button class="btn btn-outline-dark flex-grow-1" @onclick="PrintPdf" disabled="@IsLoadingPdf">
+                            <i class="bi bi-printer"></i> Imprimer
+                         </button>
                      </div>
                      <button class="btn btn-outline-primary" @onclick="SendEmail"><i class="bi bi-envelope me-2"></i>Envoyer</button>
                  </div>
@@ -311,9 +319,9 @@
                          <select class="form-select form-select-sm mb-2" @bind="Model.PaymentTerms">
                              <option value="">Choisir...</option>
                              <option value="Comptant">Comptant</option>
-                             <option value="30 jours">30 jours net</option>
-                             <option value="A réception">A réception</option>
-                             <option value="50% acompte, solde à la livraison">50% acompte</option>
+                             <option value="30 jours net">30 jours net</option>
+                             <option value="A réception">À réception</option>
+                             <option value="50% acompte, solde à la livraison">50% acompte, solde à la livraison</option>
                          </select>
                      </div>
                  </div>
@@ -335,13 +343,13 @@
         DiscountScope = DiscountScope.Total
     };
     
-    // Client selection logic
     private Client? SelectedClient;
     
     private string ExistingRef = "";
     private bool IsLoading = true;
     private bool IsSaving = false;
     private bool IsPreviewMode = false;
+    private bool IsLoadingPdf = false; // New state
 
     // --- Computed Properties for UI ---
     
@@ -351,7 +359,7 @@
     {
         get 
         {
-            decimal baseAmount = (Model.DiscountBase == DiscountBase.BaseHT) ? RawTotalHT : (RawTotalHT * 1.2m); // Approx for UI
+            decimal baseAmount = (Model.DiscountBase == DiscountBase.BaseHT) ? RawTotalHT : (RawTotalHT * 1.2m);
             decimal amount = 0;
             
             if (Model.DiscountType == DiscountType.Percent)
@@ -363,25 +371,20 @@
         }
     }
     
-    private decimal NetHT => RawTotalHT - (Model.DiscountBase == DiscountBase.BaseHT ? DiscountAmount : 0); // If Discount is TTC, HT is not affected directly? Complex. sticky to HT for now.
+    private decimal NetHT => RawTotalHT - (Model.DiscountBase == DiscountBase.BaseHT ? DiscountAmount : 0);
     
-    // Simplified VAT Calc for UI (Backend handles it precisely)
-    // We assume discount proportional reduces tax base
     private decimal TotalTVA 
     {
         get 
         {
             var rawTva = Model.Lines.Sum(l => (l.Quantity * l.UnitPrice) * (l.VATRate / 100m));
             if (RawTotalHT == 0) return 0;
-            // Prorate logic
             var ratio = (Model.DiscountBase == DiscountBase.BaseHT) ? (DiscountAmount / RawTotalHT) : 0; 
             return rawTva * (1 - ratio);
         }
     }
     
-    private decimal TotalTTC => NetHT + TotalTVA; // This assumes Discount applied to HT.
-    // If Discount applied to TTC, we subtract from TTC. 
-    // Logic needs to be aligned with Service.Service implements HT discount mainly.
+    private decimal TotalTTC => NetHT + TotalTVA;
 
     protected override async Task OnInitializedAsync()
     {
@@ -409,7 +412,6 @@
                         Lines = quote.Lines
                     };
                     
-                    // Fetch client details for display
                     if (quote.ClientId != Guid.Empty)
                         SelectedClient = await ApiService.GetClientByIdAsync(quote.ClientId);
                 }
@@ -417,6 +419,10 @@
             else
             {
                 AddLine();
+                // Auto-save logic can be tricky if we don't have a client yet. 
+                // We should WAIT for user input, BUT fixing the "400" error specifically requires an ID.
+                // Best approach: create ID only when Saving, but ensure Save() is called before PDF/Print.
+                // We'll rely on the updated Action methods to force Save().
             }
         }
         finally
@@ -459,17 +465,19 @@
 
     private async Task SaveDraft()
     {
-        await Save();
+        if (await Save())
+        {
+             await ApiService.UpdateQuoteStatusAsync(Model.Id.Value, QuoteStatus.Draft);
+             NavManager.NavigateTo("/admin/commerce/quotes");
+        }
     }
     
     private async Task Finalize(QuoteStatus status)
     {
-        // Save then update status
         if (await Save())
         {
             try 
             {
-                // Call API to update status
                 await ApiService.UpdateQuoteStatusAsync(Model.Id.Value, status);
                 NavManager.NavigateTo("/admin/commerce/quotes");
             }
@@ -498,7 +506,8 @@
         try
         {
             var result = await ApiService.CreateOrUpdateQuoteAsync(Model);
-            Model.Id = result.Id; // Update ID if new
+            Model.Id = result.Id;
+            if(!Id.HasValue) { Id = result.Id; } // Update local ID binding
             return true;
         }
         catch (Exception ex)
@@ -531,51 +540,81 @@
 
     private async Task DownloadPdf()
     {
-         if (!Id.HasValue) 
+         if (!Id.HasValue || Model.Id == null) 
          {
+             // Try to save first
              if(!await Save()) return;
          }
          
          if (Model.Id == null) return;
          
+         IsLoadingPdf = true;
+         StateHasChanged();
          try
          {
              var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id.Value);
              using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
-             await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{Model.Reference}.pdf", streamRef);
+             await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{Model.Reference ?? "Brouillon"}.pdf", streamRef);
          }
          catch (Exception ex)
          {
              await JS.InvokeVoidAsync("alert", "Erreur lors du téléchargement du PDF: " + ex.Message);
          }
+         finally
+         {
+             IsLoadingPdf = false;
+             StateHasChanged();
+         }
     }
 
     private async Task PrintPdf()
     {
-         if (!Id.HasValue) 
+         if (!Id.HasValue || Model.Id == null) 
          {
              if(!await Save()) return;
          }
          
          if (Model.Id == null) return;
          
+         IsLoadingPdf = true; // Use same spinner state for now
+         StateHasChanged();
          try
          {
              var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id.Value);
              using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
-             // We need a JS function to open blob in new tab
              await JS.InvokeVoidAsync("openPdfInNewTab", streamRef);
          }
          catch (Exception ex)
          {
              await JS.InvokeVoidAsync("alert", "Erreur lors de l'impression: " + ex.Message);
          }
+         finally
+         {
+             IsLoadingPdf = false;
+             StateHasChanged();
+         }
     }
 
-    private void Cancel()
+    private async Task Cancel()
     {
-         NavManager.NavigateTo("/admin/commerce/quotes");
+        // If it was a NEW quote (Draft not saved by user explicitly) and we auto-saved it... 
+        // Logic: Standard Cancel just goes back. User can delete draft from list.
+        // Implementing "Auto-delete on Cancel" is risky if they wanted to keep it.
+        // Staying safe: Just Navigate back.
+        NavManager.NavigateTo("/admin/commerce/quotes");
     }
+    
+    private string GetStatusName(QuoteStatus status) => status switch
+    {
+        QuoteStatus.Draft => "Brouillon",
+        QuoteStatus.Sent => "Envoyé",
+        QuoteStatus.Viewed => "Vu",
+        QuoteStatus.Accepted => "Accepté",
+        QuoteStatus.Rejected => "Refusé",
+        QuoteStatus.Converted => "Converti",
+        QuoteStatus.Deleted => "Supprimé",
+        _ => status.ToString()
+    };
 }
 
 <style>

@@ -37,8 +37,14 @@
             <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2">
                 <h4 class="mb-0 text-muted">Aperçu du devis</h4>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="Print"><i class="bi bi-printer me-2"></i>Imprimer</button>
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="DownloadPdf"><i class="bi bi-download me-2"></i>PDF</button>
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="Print" disabled="@IsLoadingPdf">
+                         @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>Impression...</span> }
+                         else { <i class="bi bi-printer me-2"></i><span>Imprimer</span> }
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="DownloadPdf" disabled="@IsLoadingPdf">
+                         @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>PDF...</span> }
+                         else { <i class="bi bi-download me-2"></i><span>PDF</span> }
+                    </button>
                 </div>
             </div>
 
@@ -229,29 +235,53 @@
         }
     }
     
+    private bool IsLoadingPdf = false; // New state
+
     private async Task DownloadPdf()
     {
         if (Quote == null) return;
-        var bytes = await ApiService.GetQuotePdfAsync(Quote.Id, Token);
-        if (bytes.Length > 0)
+        
+        IsLoadingPdf = true;
+        StateHasChanged();
+        try 
         {
-            using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(bytes));
-            await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{Quote.Reference}.pdf", streamRef);
+            var bytes = await ApiService.GetQuotePdfAsync(Quote.Id, Token);
+            if (bytes.Length > 0)
+            {
+                using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(bytes));
+                await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{Quote.Reference}.pdf", streamRef);
+            }
+            else
+            {
+                 await JS.InvokeVoidAsync("alert", "Erreur lors du téléchargement du PDF.");
+            }
         }
-        else
+        finally
         {
-             await JS.InvokeVoidAsync("alert", "Erreur lors du téléchargement du PDF.");
+            IsLoadingPdf = false;
+            StateHasChanged();
         }
     }
 
     private async Task Print()
     {
          if (Quote == null) return;
-        var bytes = await ApiService.GetQuotePdfAsync(Quote.Id, Token);
-        if (bytes.Length > 0)
+         
+        IsLoadingPdf = true;
+        StateHasChanged();
+        try
         {
-            using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(bytes));
-            await JS.InvokeVoidAsync("openPdfInNewTab", streamRef);
+            var bytes = await ApiService.GetQuotePdfAsync(Quote.Id, Token);
+            if (bytes.Length > 0)
+            {
+                using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(bytes));
+                await JS.InvokeVoidAsync("openPdfInNewTab", streamRef);
+            }
+        }
+        finally
+        {
+            IsLoadingPdf = false;
+            StateHasChanged();
         }
     }
 

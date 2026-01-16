@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
+using TransitManager.Core.DTOs.Commerce;
 
 namespace TransitManager.Core.Interfaces
 {
@@ -16,6 +17,7 @@ namespace TransitManager.Core.Interfaces
         Task<byte[]> GenerateDashboardReportAsync(DashboardData data);
         Task<byte[]> ExportFinancialReportAsync(DateTime startDate, DateTime endDate, IEnumerable<Paiement> paiements);
         Task<string> ExportToCsvAsync<T>(IEnumerable<T> data, string fileName);
+        Task<byte[]> GenerateQuotePdfAsync(QuoteDto quote);
 		Task<byte[]> ExportConteneurDetailToPdfAsync(Conteneur conteneur);
 		Task<byte[]> GenerateColisTicketPdfAsync(Colis colis, string format = "thermal");
 		Task<byte[]> GenerateContainerPdfAsync(Conteneur conteneur, bool includeFinancials);

@@ -8,6 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using TransitManager.Core.Entities;
+using TransitManager.Core.Entities.Commerce; // Ensure this is present
+using TransitManager.Core.DTOs.Commerce; // Ensure this is present
 using TransitManager.Core.Enums;
 using QuestPDF.Fluent;
 using TransitManager.Core.Interfaces;
@@ -356,6 +358,195 @@ namespace TransitManager.Infrastructure.Services
                                         row.ConstantItem(100).Text("Total TTC:").SemiBold();
                                         row.ConstantItem(100).AlignRight().Text($"{montant * 1.2m:C}").SemiBold();
                                     });
+                                });
+                            });
+                        }
+                    });
+                });
+                return document.GeneratePdf();
+            });
+        }
+
+        public async Task<byte[]> GenerateQuotePdfAsync(QuoteDto quote)
+        {
+             // Tenter de récupérer le logo
+             string logoPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images", "logo.jpg");
+             if (!File.Exists(logoPath))
+             {
+                 var devPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.jpg"); 
+                 if (File.Exists(devPath)) logoPath = devPath;
+                 else 
+                 {
+                     devPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../TransitManager.Web/wwwroot/images/logo.jpg"));
+                     if (File.Exists(devPath)) logoPath = devPath;
+                 }
+             }
+
+            return await Task.Run(() =>
+            {
+                var document = PdfDocument.Create(container =>
+                {
+                    container.Page(page =>
+                    {
+                        page.Size(PageSizes.A4);
+                        page.Margin(2, Unit.Centimetre);
+                        page.PageColor(Colors.White);
+                        
+                        page.Header().Element(ComposeHeader);
+                        page.Content().Element(ComposeContent);
+                        page.Footer().Element(ComposeFooter);
+
+                        void ComposeHeader(IContainer container)
+                        {
+                            container.Row(row =>
+                            {
+                                // Logo and Company Info Left
+                                row.RelativeItem().Column(column =>
+                                {
+                                    if (File.Exists(logoPath))
+                                    {
+                                        column.Item().Height(60).Image(logoPath).FitArea();
+                                    }
+                                    else
+                                    {
+                                         column.Item().Text("HIPPOCAMPE").FontSize(20).Bold().FontColor(Colors.Blue.Darken2);
+                                    }
+                                    
+                                    column.Item().PaddingTop(5).Text("HIPPOCAMPE IMPORT EXPORT - SAS").FontSize(10).Bold();
+                                    column.Item().Text("7 Rue Pascal, 33370 Tresses").FontSize(10);
+                                    column.Item().Text("Tél: 09 81 72 45 40").FontSize(10);
+                                    column.Item().Text("Email: contact@hippocampeimportexport.com").FontSize(10);
+                                });
+
+                                // Quote Info Right
+                                row.ConstantItem(200).AlignRight().Column(column =>
+                                {
+                                    column.Item().Text("DEVIS").FontSize(24).SemiBold().FontColor(Colors.Grey.Darken2);
+                                    column.Item().Text($"{quote.Reference}").FontSize(14).Bold();
+                                    column.Item().PaddingTop(10).Text($"Date: {quote.DateCreated:dd/MM/yyyy}").FontSize(10);
+                                    column.Item().Text($"Validité: {quote.DateValidity:dd/MM/yyyy}").FontSize(10).FontColor(Colors.Red.Medium);
+                                });
+                            });
+                        }
+
+                        void ComposeContent(IContainer container)
+                        {
+                            container.PaddingVertical(20).Column(column =>
+                            {
+                                column.Spacing(20);
+
+                                // Client Section (Right aligned or Boxed)
+                                column.Item().Row(r => 
+                                {
+                                    r.RelativeItem(); // Spacer
+                                    r.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(10).Column(c =>
+                                    {
+                                        c.Item().Text("Destinataire:").FontSize(9).SemiBold().FontColor(Colors.Grey.Darken1);
+                                        c.Item().Text($"{quote.ClientName} {quote.ClientFirstname}").FontSize(11).Bold();
+                                        if(!string.IsNullOrEmpty(quote.ClientAddress)) c.Item().Text(quote.ClientAddress).FontSize(10);
+                                        if(!string.IsNullOrEmpty(quote.ClientPhone)) c.Item().Text(quote.ClientPhone).FontSize(10);
+                                        if(!string.IsNullOrEmpty(quote.ClientEmail)) c.Item().Text(quote.ClientEmail).FontSize(10);
+                                    });
+                                });
+
+                                // Lines Table
+                                column.Item().Table(table =>
+                                {
+                                    table.ColumnsDefinition(columns =>
+                                    {
+                                        columns.RelativeColumn(3);
+                                        columns.RelativeColumn(1);
+                                        columns.RelativeColumn(1.5f);
+                                        columns.RelativeColumn(1);
+                                        columns.RelativeColumn(1.5f);
+                                    });
+
+                                    table.Header(header =>
+                                    {
+                                        header.Cell().Element(HeaderStyle).Text("Description");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Qté");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Prix Unit.");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("TVA");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Total HT");
+                                        
+                                        static IContainer HeaderStyle(IContainer container)
+                                        {
+                                            return container.DefaultTextStyle(x => x.SemiBold().Color(Colors.White))
+                                                            .Background(Colors.Grey.Darken3)
+                                                            .PaddingVertical(5).PaddingHorizontal(5);
+                                        }
+                                    });
+
+                                    foreach (var line in quote.Lines)
+                                    {
+                                        table.Cell().Element(CellStyle).Text(line.Description);
+                                        table.Cell().Element(CellStyle).AlignRight().Text($"{line.Quantity} {line.Unit}");
+                                        table.Cell().Element(CellStyle).AlignRight().Text($"{line.UnitPrice:N2} €");
+                                        table.Cell().Element(CellStyle).AlignRight().Text($"{line.VATRate}%");
+                                        table.Cell().Element(CellStyle).AlignRight().Text($"{line.TotalHT:N2} €");
+
+                                        static IContainer CellStyle(IContainer container)
+                                        {
+                                            return container.BorderBottom(1).BorderColor(Colors.Grey.Lighten3).PaddingVertical(5).PaddingHorizontal(5);
+                                        }
+                                    }
+                                });
+
+                                // Totals
+                                column.Item().AlignRight().Column(col =>
+                                {
+                                    col.Item().Row(row =>
+                                    {
+                                        row.ConstantItem(120).Text("Total HT:");
+                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalHT:N2} €");
+                                    });
+                                    
+                                    col.Item().Row(row =>
+                                    {
+                                        row.ConstantItem(120).Text("TVA:");
+                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalTVA:N2} €");
+                                    });
+
+                                    col.Item().PaddingTop(5).Row(row =>
+                                    {
+                                        row.ConstantItem(120).Text("Total TTC:").SemiBold().FontSize(12);
+                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalTTC:N2} €").SemiBold().FontSize(12).FontColor(Colors.Blue.Darken2);
+                                    });
+                                });
+                                
+                                // Footer Note
+                                if(!string.IsNullOrEmpty(quote.Message))
+                                {
+                                    column.Item().PaddingTop(10).Text("Message:").SemiBold().FontSize(10);
+                                    column.Item().Text(quote.Message).FontSize(9);
+                                }
+                                
+                                if(!string.IsNullOrEmpty(quote.PaymentTerms))
+                                {
+                                    column.Item().PaddingTop(10).Text("Modalités de paiement:").SemiBold().FontSize(10);
+                                    column.Item().Text(quote.PaymentTerms).FontSize(9);
+                                }
+                                
+                                if(!string.IsNullOrEmpty(quote.FooterNote))
+                                {
+                                    column.Item().PaddingTop(10).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+                                    column.Item().PaddingTop(5).Text(quote.FooterNote).FontSize(8).FontColor(Colors.Grey.Darken1);
+                                }
+                            });
+                        }
+
+                        void ComposeFooter(IContainer container)
+                        {
+                            container.AlignCenter().Column(c =>
+                            {
+                                c.Item().Text("HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses").FontSize(8).FontColor(Colors.Grey.Darken1);
+                                c.Item().Text("SIRET: 891909772 - TVA: FR42891909772 - BORDEAUX").FontSize(8).FontColor(Colors.Grey.Darken1);
+                                 c.Item().PaddingTop(5).Text(x =>
+                                {
+                                    x.Span("Page ");
+                                    x.CurrentPageNumber();
+                                    x.Span(" / ");
+                                    x.TotalPages();
                                 });
                             });
                         }

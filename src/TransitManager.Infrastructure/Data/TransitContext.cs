@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using TransitManager.Core.Entities;
+using TransitManager.Core.Entities.Commerce;
+using TransitManager.Core.Enums;
 
 namespace TransitManager.Infrastructure.Data
 {
@@ -25,6 +27,11 @@ namespace TransitManager.Infrastructure.Data
         public DbSet<Utilisateur> Utilisateurs { get; set; } = null!;
         public DbSet<Document> Documents { get; set; } = null!;
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+
+        // Commerce
+        public DbSet<Product> Products { get; set; } = null!;
+        public DbSet<Quote> Quotes { get; set; } = null!;
+        public DbSet<QuoteLine> QuoteLines { get; set; } = null!;
         public DbSet<Barcode> Barcodes { get; set; } = null!;
         public DbSet<Vehicule> Vehicules { get; set; } = null!;
         public DbSet<Message> Messages { get; set; } = null!;

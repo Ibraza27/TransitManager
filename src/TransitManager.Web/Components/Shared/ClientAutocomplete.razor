@@ -1,0 +1,105 @@
+@using System.Timers
+@using TransitManager.Core.Entities
+@inject IApiService ApiService
+
+<div class="position-relative">
+    <div class="input-group">
+        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+        <input type="text" 
+               class="form-control" 
+               placeholder="Rechercher un client (Nom, Prénom, Email, Tel...)" 
+               @bind="SearchText" 
+               @oninput="OnInput"
+               @onfocusin="() => ShowDropdown = true" 
+               @onfocusout="OnFocusOut" />
+        @if (SelectedClient != null)
+        {
+            <button class="btn btn-outline-secondary" type="button" @onclick="ClearSelection">
+                <i class="bi bi-x"></i>
+            </button>
+        }
+    </div>
+
+    @if (ShowDropdown && Results.Any())
+    {
+        <div class="dropdown-menu show w-100 shadow-sm" style="max-height: 300px; overflow-y: auto;">
+            @foreach (var client in Results)
+            {
+                <button class="dropdown-item p-2 border-bottom" @onclick="() => SelectClient(client)" @onmousedown:preventDefault>
+                    <div class="d-flex justify-content-between">
+                        <strong>@client.Nom @client.Prenom</strong>
+                        <small class="text-muted">@client.TelephonePrincipal</small>
+                    </div>
+                    <div class="small text-muted">@client.Email</div>
+                    <div class="small text-secondary text-truncate">@client.AdressePrincipale</div>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<Client> OnClientSelected { get; set; }
+    [Parameter] public Client? SelectedClient { get; set; }
+
+    private string SearchText { get; set; } = "";
+    private List<Client> Results { get; set; } = new();
+    private bool ShowDropdown { get; set; }
+    private Timer _debounceTimer;
+
+    protected override void OnInitialized()
+    {
+        _debounceTimer = new Timer(500);
+        _debounceTimer.AutoReset = false;
+        _debounceTimer.Elapsed += async (sender, args) => await SearchAsync();
+        
+        if (SelectedClient != null)
+        {
+            SearchText = $"{SelectedClient.Nom} {SelectedClient.Prenom}";
+        }
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        SearchText = e.Value?.ToString() ?? "";
+        _debounceTimer.Stop();
+        _debounceTimer.Start();
+        ShowDropdown = true;
+    }
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SearchText) || SearchText.Length < 2)
+        {
+            Results.Clear();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var results = await ApiService.SearchClientsAsync(SearchText);
+        Results = results?.Take(10).ToList() ?? new List<Client>();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SelectClient(Client client)
+    {
+        SelectedClient = client;
+        SearchText = $"{client.Nom} {client.Prenom}";
+        ShowDropdown = false;
+        await OnClientSelected.InvokeAsync(client);
+    }
+
+    private async Task ClearSelection()
+    {
+        SelectedClient = null;
+        SearchText = "";
+        Results.Clear();
+        await OnClientSelected.InvokeAsync(null);
+    }
+
+    private async Task OnFocusOut()
+    {
+        await Task.Delay(200); // Allow click event to process
+        ShowDropdown = false;
+    }
+}

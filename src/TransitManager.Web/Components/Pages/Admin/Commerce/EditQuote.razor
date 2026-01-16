@@ -1,0 +1,594 @@
+@page "/admin/commerce/quotes/new"
+@page "/admin/commerce/quotes/edit/{Id:guid}"
+@using Microsoft.AspNetCore.Authorization
+@using TransitManager.Core.DTOs.Commerce
+@using TransitManager.Core.DTOs
+@using TransitManager.Web.Services
+@using TransitManager.Core.Enums
+@using TransitManager.Web.Components.Shared
+@using TransitManager.Core.Entities 
+@using Microsoft.JSInterop
+
+@inject IApiService ApiService
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+@attribute [Authorize(Roles = "Administrateur")]
+
+<div class="d-flex h-100 flex-column" style="height: calc(100vh - 60px);">
+    
+    <!-- Action Bar -->
+    <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-white">
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-outline-secondary rounded-circle p-2" @onclick="Cancel" title="Retour">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <h4 class="mb-0 fw-bold">@(Id == null ? "Nouveau devis" : $"Devis {ExistingRef}")</h4>
+        </div>
+        <div class="d-flex gap-2">
+            @if (IsPreviewMode)
+            {
+                <button class="btn btn-secondary" @onclick="TogglePreview">
+                    <i class="bi bi-arrow-left me-2"></i>Retour à l'édition
+                </button>
+                 <button class="btn btn-primary" @onclick="SendEmail">
+                    <i class="bi bi-envelope-fill me-2"></i>Envoyer par email
+                </button>
+                <button class="btn btn-outline-secondary" @onclick="DownloadPdf"><i class="bi bi-download me-2"></i>PDF</button>
+            }
+            else
+            {
+                 <a href="/admin/commerce/quotes" class="btn btn-outline-secondary">Annuler</a>
+                 <button class="btn btn-info text-white" @onclick="TogglePreview">
+                    <i class="bi bi-eye me-2"></i>Visualiser
+                </button>
+                 <button class="btn btn-secondary" @onclick="SaveDraft">
+                    <i class="bi bi-save me-2"></i>Enregistrer le brouillon
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center flex-grow-1">
+             <div class="spinner-border text-primary"></div>
+        </div>
+    }
+    else if (IsPreviewMode)
+    {
+        <!-- PREVIEW MODE - Matches PublicQuote.razor layout -->
+        <div class="card border-0 shadow-lg mx-auto" style="max-width: 900px; min-height: 1000px;">
+            <div class="card-body p-5">
+                 <!-- Header -->
+                <div class="row mb-5 border-bottom pb-4">
+                    <div class="col-7">
+                            <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
+                         <div class="small text-muted">
+                            <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
+                            7 Rue Pascal<br/>
+                            33370 TRESSES<br/>
+                            France<br/>
+                            <br/>
+                            Tél: 09 81 72 45 40<br/>
+                            Email: contact@hippocampeimportexport.com
+                        </div>
+                    </div>
+                    <div class="col-5 text-end">
+                        <h2 class="fw-bold text-uppercase text-secondary mb-3">Devis</h2>
+                        <h4 class="fw-bold fs-3">@(Model.Reference ?? "BROUILLON")</h4>
+                        <div class="text-muted mt-2">Date: @(Model.DateCreated?.ToString("dd/MM/yyyy") ?? DateTime.Now.ToString("dd/MM/yyyy"))</div>
+                         <div class="text-danger fw-bold">Valide jusqu'au: @Model.DateValidity.ToString("dd/MM/yyyy")</div>
+                    </div>
+                </div>
+
+                <!-- Client Info -->
+                 <div class="row mb-5 justify-content-end">
+                    <div class="col-md-6">
+                        <div class="p-4 bg-light rounded-3 border">
+                            <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
+                             @if(SelectedClient != null)
+                            {
+                                <div class="fs-5 fw-bold text-dark">@SelectedClient.Nom @SelectedClient.Prenom</div>
+                                <div class="text-muted">@SelectedClient.AdressePrincipale @SelectedClient.CodePostal @SelectedClient.Ville</div>
+                                <div class="text-muted">@SelectedClient.TelephonePrincipal</div>
+                                <div class="text-muted">@SelectedClient.Email</div>
+                            }
+                            else
+                            {
+                                <div class="text-muted fst-italic">Aucun client sélectionné</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- Line Items -->
+                <table class="table table-striped table-hover mb-5">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="py-3 ps-4">Description</th>
+                            <th class="text-end py-3">Quantité</th>
+                            <th class="text-end py-3">Prix Unit.</th>
+                            <th class="text-end py-3">TVA</th>
+                            <th class="text-end py-3 pe-4">Total HT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in Model.Lines)
+                        {
+                            <tr>
+                                <td class="ps-4 py-3 fw-medium">@line.Description</td>
+                                <td class="text-end py-3">@line.Quantity @line.Unit</td>
+                                <td class="text-end py-3">@line.UnitPrice.ToString("N2") €</td>
+                                <td class="text-end py-3">@line.VATRate %</td>
+                                <td class="text-end py-3 pe-4">@((line.Quantity * line.UnitPrice).ToString("N2")) €</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Total TVA</span>
+                            <span>@TotalTVA.ToString("N2") €</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2 border-top bg-light fw-bold fs-5 px-2 mt-2">
+                             <span>Total TTC</span>
+                            <span>@TotalTTC.ToString("N2") €</span>
+                        </div>
+                
+                <!-- Footer -->
+                <div class="mt-auto pt-5">
+                    @if(!string.IsNullOrEmpty(Model.PaymentTerms))
+                    {
+                        <div class="mb-3">
+                             <strong>Modalités de paiement:</strong> <span class="text-muted">@Model.PaymentTerms</span>
+                        </div>
+                    }
+                     @if(!string.IsNullOrEmpty(Model.FooterNote))
+                    {
+                        <div class="small text-muted border-top pt-2">
+                            @Model.FooterNote
+                        </div>
+                    }
+                     <div class="text-center small text-muted mt-4 pt-3 border-top">
+                        HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses<br/>
+                        SIRET: 891909772 - TVA: FR42891909772 - BORDEAUX
+                    </div>
+                </div>
+            </div>
+            
+             <!-- Modal Actions -->
+             <div class="card position-fixed bottom-0 end-0 m-4 shadow p-3" style="width: 300px;">
+                 <h6 class="fw-bold mb-3">Actions</h6>
+                 <div class="d-grid gap-2">
+                     <button class="btn btn-success" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver et Fermer (Simul)</button>
+                     <button class="btn btn-outline-dark" @onclick="DownloadPdf"><i class="bi bi-download me-2"></i>Télécharger PDF</button>
+                      <button class="btn btn-outline-dark" @onclick="PrintPdf"><i class="bi bi-printer me-2"></i>Imprimer</button>
+                     <button class="btn btn-outline-primary" @onclick="SendEmail"><i class="bi bi-envelope me-2"></i>Envoyer par Mail</button>
+                 </div>
+             </div>
+        </div>
+    }
+    else
+    {
+        <!-- Editor Mode -->
+        <div class="d-flex flex-grow-1 overflow-hidden">
+             <!-- Main Content -->
+             <div class="flex-grow-1 p-4 overflow-auto bg-light">
+                 <div class="bg-white shadow-sm rounded p-4 mb-4">
+                     <!-- Client & Info -->
+                     <div class="row g-3 mb-4">
+                         <div class="col-md-5">
+                             <label class="form-label text-muted small fw-bold text-uppercase">Client</label>
+                             <ClientAutocomplete 
+                                 SelectedClient="@SelectedClient" 
+                                 OnClientSelected="HandleClientSelected" />
+                         </div>
+                         <div class="mb-3">
+                            <label class="form-label">Modalités de paiement</label>
+                             <textarea class="form-control" rows="2" @bind="Model.PaymentTerms"></textarea>
+                        </div>
+                    </div>
+                </div>     
+                     <!-- Lines -->
+                     <div class="table-responsive mb-4" style="min-height: 200px;">
+                         <table class="table table-borderless align-middle">
+                             <thead class="border-bottom">
+                                 <tr class="text-uppercase small text-muted">
+                                     <th style="width: 40%;">Description</th>
+                                     <th>Date</th>
+                                     <th style="width: 100px;">Qté</th>
+                                     <th style="width: 80px;">Unité</th>
+                                     <th style="width: 120px;">Prix</th>
+                                     <th style="width: 100px;">TVA</th>
+                                     <th class="text-end" style="width: 100px;">Montant</th>
+                                     <th style="width: 40px;"></th>
+                                 </tr>
+                             </thead>
+                             <tbody>
+                                 @foreach (var line in Model.Lines)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="text" class="form-control" placeholder="Description..." @bind="line.Description" />
+                                        </td>
+                                        <td>
+                                            <!-- Date placeholder -->
+                                            <span class="text-muted small">@DateTime.Today.ToString("dd.MM.yyyy")</span>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control text-center" @bind="line.Quantity" step="0.01" />
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control text-center" @bind="line.Unit" /> 
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control text-end" @bind="line.UnitPrice" step="0.01" />
+                                        </td>
+                                        <td>
+                                             <div class="input-group input-group-sm">
+                                                 <input type="number" class="form-control text-end" @bind="line.VATRate" step="0.1" />
+                                                 <span class="input-group-text">%</span>
+                                             </div>
+                                        </td>
+                                        <td class="text-end fw-bold">
+                                            @((line.Quantity * line.UnitPrice).ToString("N2")) €
+                                        </td>
+                                        <td>
+                                             <button class="btn btn-link text-danger p-0" @onclick="() => RemoveLine(line)"><i class="bi bi-x"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                             </tbody>
+                         </table>
+                         <button class="btn btn-dark btn-sm rounded-pill mt-2" @onclick="AddLine">
+                            <i class="bi bi-plus-lg me-1"></i> Ajouter une ligne
+                        </button>
+                     </div>
+                     
+                     <!-- Footer Notes -->
+                     <div class="mt-5">
+                         <div class="mb-3">
+                             <div class="d-flex justify-content-between">
+                                 <label class="form-label fw-bold small">Note de bas de page</label>
+                                 <span class="text-muted small">@((Model.FooterNote?.Length ?? 0))/1000</span>
+                             </div>
+                             <textarea class="form-control" rows="3" @bind="Model.FooterNote" 
+                                       placeholder="Texte légal ou conditions spécifiques..."></textarea>
+                         </div>
+                     </div>
+
+                 </div>
+             
+             <!-- Right Sidebar (Totals & Discount) -->
+             <div class="bg-white border-start p-4" style="width: 350px; overflow-y: auto;">
+                 <h6 class="fw-bold mb-4">Calculs & Remises</h6>
+                 
+                 <div class="card bg-light border-0 p-3 mb-4">
+                     <label class="form-label small fw-bold text-uppercase mb-2">Remise Globale</label>
+                     
+                     <!-- Discount Type -->
+                     <div class="mb-3">
+                         <label class="small text-muted">Type de remise</label>
+                         <div class="btn-group w-100" role="group">
+                             <input type="radio" class="btn-check" name="discType" id="dtPct" autocomplete="off" 
+                                    checked="@(Model.DiscountType == DiscountType.Percent)" 
+                                    @onchange="() => Model.DiscountType = DiscountType.Percent">
+                             <label class="btn btn-outline-secondary btn-sm" for="dtPct">%</label>
+
+                             <input type="radio" class="btn-check" name="discType" id="dtEur" autocomplete="off" 
+                                    checked="@(Model.DiscountType == DiscountType.Amount)" 
+                                    @onchange="() => Model.DiscountType = DiscountType.Amount">
+                             <label class="btn btn-outline-secondary btn-sm" for="dtEur">EUR</label>
+                         </div>
+                     </div>
+                     
+                     <!-- Discount Base -->
+                     <div class="mb-3">
+                         <label class="small text-muted">Base de remise</label>
+                         <div class="btn-group w-100" role="group">
+                             <input type="radio" class="btn-check" name="discBase" id="dbHT" autocomplete="off" 
+                                    checked="@(Model.DiscountBase == DiscountBase.BaseHT)" 
+                                    @onchange="() => Model.DiscountBase = DiscountBase.BaseHT">
+                             <label class="btn btn-outline-secondary btn-sm" for="dbHT">Base HT</label>
+
+                             <input type="radio" class="btn-check" name="discBase" id="dbTTC" autocomplete="off" 
+                                    checked="@(Model.DiscountBase == DiscountBase.BaseTTC)" 
+                                    @onchange="() => Model.DiscountBase = DiscountBase.BaseTTC">
+                             <label class="btn btn-outline-secondary btn-sm" for="dbTTC">Base TTC</label>
+                         </div>
+                     </div>
+                     
+                     <!-- Value -->
+                     <div class="mb-3">
+                         <label class="small text-muted">Valeur</label>
+                         <div class="input-group">
+                             <input type="number" class="form-control" @bind="Model.DiscountValue" step="0.01" />
+                             <span class="input-group-text">@(Model.DiscountType == DiscountType.Percent ? "%" : "€")</span>
+                         </div>
+                         <div class="form-text text-end text-danger mt-1">
+                             -@DiscountAmount.ToString("N2") €
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <!-- Totals Display -->
+                 <div class="d-flex justify-content-between mb-2">
+                     <span class="text-muted">Total HT (Brut)</span>
+                     <span class="fw-bold">@RawTotalHT.ToString("N2") €</span>
+                 </div>
+                  <div class="d-flex justify-content-between mb-2 text-danger">
+                     <span class="text-muted">Remise</span>
+                     <span class="fw-bold">-@DiscountAmount.ToString("N2") €</span>
+                 </div>
+                 <div class="d-flex justify-content-between mb-2">
+                     <span class="text-muted">Net HT</span>
+                     <span class="fw-bold">@NetHT.ToString("N2") €</span>
+                 </div>
+                 <div class="d-flex justify-content-between mb-2">
+                     <span class="text-muted">TVA</span>
+                     <span class="fw-bold">@TotalTVA.ToString("N2") €</span>
+                 </div>
+                 
+                 <hr />
+                 
+                 <div class="d-flex justify-content-between mb-2">
+                     <span class="fw-bold fs-5">Total TTC</span>
+                     <span class="fw-bold fs-5 text-success">@TotalTTC.ToString("N2") €</span>
+                 </div>
+                 
+                 <div class="d-flex justify-content-between mb-2 text-muted small">
+                     <span>Dont TVA Est.</span>
+                     <span>@TotalTVA.ToString("N2") €</span>
+                 </div>
+                 
+                  <div class="mt-4">
+                     <label class="form-label small fw-bold text-muted">Modalités de Paiement</label>
+                     <select class="form-select form-select-sm mb-2" @bind="Model.PaymentTerms">
+                         <option value="">Choisir...</option>
+                         <option value="Comptant">Comptant</option>
+                         <option value="30 jours">30 jours net</option>
+                         <option value="A réception">A réception</option>
+                         <option value="50% acompte, solde à la livraison">50% acompte</option>
+                     </select>
+                     <textarea class="form-control form-control-sm" rows="3" @bind="Model.Message" placeholder="Conditions spécific..."></textarea>
+                 </div>
+                 
+             </div>
+        </div>
+    }
+</div>
+
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    
+    private UpsertQuoteDto Model = new() 
+    { 
+        DateValidity = DateTime.Today.AddDays(30),
+        FooterNote = "SOUS RESERVE DU VOLUME FINAL RECEPTIONNE A QUAI -\nSOUS RESERVE DU PRIX FINAL LORS DES ACHATS EN MAGASIN -\nSOUS RESERVE DE PLACE SUR LE NAVIRE ET DES CONTENEURS DISPONIBLES -\nNOS DEVIS SONT SOUMIS A L'EVOLUTION MENSUEL DU PRIX DU GASOIL",
+        DiscountType = DiscountType.Percent,
+        DiscountBase = DiscountBase.BaseHT,
+        DiscountScope = DiscountScope.Total
+    };
+    
+    // Client selection logic
+    private Client? SelectedClient;
+    
+    private string ExistingRef = "";
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private bool IsPreviewMode = false;
+
+    // --- Computed Properties for UI ---
+    
+    private decimal RawTotalHT => Model.Lines.Sum(l => l.Quantity * l.UnitPrice);
+    
+    private decimal DiscountAmount 
+    {
+        get 
+        {
+            decimal baseAmount = (Model.DiscountBase == DiscountBase.BaseHT) ? RawTotalHT : (RawTotalHT * 1.2m); // Approx for UI
+            decimal amount = 0;
+            
+            if (Model.DiscountType == DiscountType.Percent)
+                amount = baseAmount * (Model.DiscountValue / 100m);
+            else
+                amount = Model.DiscountValue;
+                
+            return amount > baseAmount ? baseAmount : amount;
+        }
+    }
+    
+    private decimal NetHT => RawTotalHT - (Model.DiscountBase == DiscountBase.BaseHT ? DiscountAmount : 0); // If Discount is TTC, HT is not affected directly? Complex. sticky to HT for now.
+    
+    // Simplified VAT Calc for UI (Backend handles it precisely)
+    // We assume discount proportional reduces tax base
+    private decimal TotalTVA 
+    {
+        get 
+        {
+            var rawTva = Model.Lines.Sum(l => (l.Quantity * l.UnitPrice) * (l.VATRate / 100m));
+            if (RawTotalHT == 0) return 0;
+            // Prorate logic
+            var ratio = (Model.DiscountBase == DiscountBase.BaseHT) ? (DiscountAmount / RawTotalHT) : 0; 
+            return rawTva * (1 - ratio);
+        }
+    }
+    
+    private decimal TotalTTC => NetHT + TotalTVA; // This assumes Discount applied to HT.
+    // If Discount applied to TTC, we subtract from TTC. 
+    // Logic needs to be aligned with Service.Service implements HT discount mainly.
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+        try 
+        {
+            if (Id.HasValue)
+            {
+                var quote = await ApiService.GetQuoteByIdAsync(Id.Value);
+                if (quote != null)
+                {
+                    ExistingRef = quote.Reference;
+                    Model = new UpsertQuoteDto
+                    {
+                        Id = quote.Id,
+                        ClientId = quote.ClientId,
+                        DateValidity = quote.DateValidity,
+                        Message = quote.Message,
+                        PaymentTerms = quote.PaymentTerms,
+                        FooterNote = quote.FooterNote,
+                        DiscountValue = quote.DiscountValue,
+                        DiscountType = quote.DiscountType,
+                        DiscountBase = quote.DiscountBase,
+                        DiscountScope = quote.DiscountScope,
+                        Lines = quote.Lines
+                    };
+                    
+                    // Fetch client details for display
+                    if (quote.ClientId != Guid.Empty)
+                        SelectedClient = await ApiService.GetClientByIdAsync(quote.ClientId);
+                }
+            }
+            else
+            {
+                AddLine();
+            }
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void AddLine()
+    {
+        Model.Lines.Add(new QuoteLineDto { Quantity = 1, Unit = "pce", VATRate = 20 });
+    }
+
+    private void RemoveLine(QuoteLineDto line)
+    {
+        Model.Lines.Remove(line);
+        if (!Model.Lines.Any()) AddLine();
+    }
+    
+    private void HandleClientSelected(Client client)
+    {
+        SelectedClient = client;
+        Model.ClientId = client?.Id ?? Guid.Empty;
+    }
+
+    private void TogglePreview()
+    {
+        if (Model.ClientId == Guid.Empty)
+        {
+             JS.InvokeVoidAsync("alert", "Veuillez d'abord sélectionner un client.");
+             return;
+        }
+        IsPreviewMode = !IsPreviewMode;
+    }
+    
+    private string GetDiscountLabel()
+    {
+        return Model.DiscountType == DiscountType.Percent ? $"{Model.DiscountValue}%" : "Forfait";
+    }
+
+    private async Task SaveDraft()
+    {
+        await Save();
+    }
+    
+    private async Task Finalize(QuoteStatus status)
+    {
+        // Save then update status
+        if (await Save())
+        {
+            // Call API to update status
+            await ApiService.UpdateQuoteStatusAsync(Model.Id.Value, status);
+            NavManager.NavigateTo("/admin/commerce/quotes");
+        }
+    }
+
+    private async Task<bool> Save()
+    {
+        if (Model.ClientId == Guid.Empty) 
+        {
+            await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un client.");
+            return false;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var result = await ApiService.CreateOrUpdateQuoteAsync(Model);
+            Model.Id = result.Id; // Update ID if new
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+             IsSaving = false;
+        }
+    }
+    
+    private async Task SendEmail()
+    {
+         if (await Save())
+         {
+             try
+             {
+                 await ApiService.SendQuoteByEmailAsync(Model.Id.Value);
+                 await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
+             }
+             catch(Exception ex)
+             {
+                 await JS.InvokeVoidAsync("alert", $"Erreur lors de l'envoi: {ex.Message}");
+             }
+         }
+    }
+
+    private async Task DownloadPdf()
+    {
+         if (Model.Id == null) return;
+         
+         try
+         {
+             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id.Value);
+             using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
+             await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{Model.Reference}.pdf", streamRef);
+         }
+         catch (Exception ex)
+         {
+             await JS.InvokeVoidAsync("alert", "Erreur lors du téléchargement du PDF: " + ex.Message);
+         }
+    }
+
+    private async Task PrintPdf()
+    {
+         // We do not have direct print JS for PDF blob in new tab easily without backend returning stream url.
+         // Simplified: Open in new tab and let user print. OR use iframe.
+         // Let's reuse Download but trigger open.
+         if (Model.Id == null) return;
+         
+         try
+         {
+             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id.Value);
+             using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
+             // We need a JS function to open blob in new tab
+             await JS.InvokeVoidAsync("openPdfInNewTab", streamRef);
+         }
+         catch (Exception ex)
+         {
+             await JS.InvokeVoidAsync("alert", "Erreur lors de l'impression: " + ex.Message);
+         }
+    }
+
+    private void Cancel()
+    {
+         NavManager.NavigateTo("/admin/commerce/quotes");
+    }
+}

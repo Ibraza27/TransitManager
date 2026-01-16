@@ -128,7 +128,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IFinanceService, FinanceService>();
 builder.Services.AddScoped<IBarcodeService, BarcodeService>();
 builder.Services.AddScoped<IExportService, ExportService>();
-builder.Services.AddScoped<IBackupService, BackupService>();
+builder.Services.AddScoped<ICommerceService, CommerceService>();
 builder.Services.AddScoped<IPrintingService, PrintingService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IJwtService, JwtService>();

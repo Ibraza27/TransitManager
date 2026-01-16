@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Forms;
 using TransitManager.Core.DTOs;
 using TransitManager.Core.DTOs;
+using TransitManager.Core.DTOs.Commerce;
 using TransitManager.Core.Entities;
 using TransitManager.Core.Enums;
 
@@ -75,8 +76,8 @@ namespace TransitManager.Web.Services
 		Task<bool> ChangeUserPasswordAsync(Guid id, string newPassword);
 		Task<PortalAccessResult> CreateOrResetPortalAccessAsync(Guid clientId);
 		Task<bool> RegisterClientAsync(RegisterClientRequestDto request);
-		Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials);
-
+        Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials);
+        Task<byte[]> GetQuotePdfAsync(Guid quoteId, Guid? token = null);
 		// Ajoutez ces signatures dans l'interface IApiService
 		Task<IEnumerable<Document>> GetDocumentsByEntityAsync(string entityType, Guid entityId);
 		Task<Document?> UploadDocumentAsync(IBrowserFile file, TypeDocument type, Guid? clientId, Guid? vehiculeId, Guid? colisId, Guid? conteneurId);
@@ -147,5 +148,23 @@ namespace TransitManager.Web.Services
         // --- Audit ---
         Task<PagedResult<AuditLogDto>> GetAuditLogsAsync(int page = 1, int pageSize = 20, string? userId = null, string? entityName = null, DateTime? date = null);
         Task<AuditLogDto?> GetAuditLogByIdAsync(Guid id);
+
+        // --- Commerce ---
+        Task<PagedResult<ProductDto>> GetProductsAsync(string? search, int page = 1, int pageSize = 50);
+        Task<ProductDto> CreateProductAsync(ProductDto dto);
+        Task<ProductDto> UpdateProductAsync(ProductDto dto);
+        Task DeleteProductAsync(Guid id);
+
+        Task<PagedResult<QuoteDto>> GetQuotesAsync(string? search, Guid? clientId, string? status, int page = 1, int pageSize = 20);
+        Task<QuoteDto> GetQuoteByIdAsync(Guid id);
+        Task<QuoteDto> CreateOrUpdateQuoteAsync(UpsertQuoteDto dto);
+        Task UpdateQuoteStatusAsync(Guid id, QuoteStatus status, string? reason = null);
+        Task DeleteQuoteAsync(Guid id);
+        Task SendQuoteByEmailAsync(Guid id);
+        
+        // Public Token Access
+        Task<QuoteDto> GetPublicQuoteAsync(Guid token);
+        Task AcceptPublicQuoteAsync(Guid token);
+        Task RejectPublicQuoteAsync(Guid token, string reason);
     }
 }

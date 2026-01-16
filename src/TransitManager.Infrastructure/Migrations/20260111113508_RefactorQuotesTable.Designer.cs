@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TransitManager.Infrastructure.Data;
@@ -11,9 +12,11 @@ using TransitManager.Infrastructure.Data;
 namespace TransitManager.Infrastructure.Migrations
 {
     [DbContext(typeof(TransitContext))]
-    partial class TransitContextModelSnapshot : ModelSnapshot
+    [Migration("20260111113508_RefactorQuotesTable")]
+    partial class RefactorQuotesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -540,23 +543,6 @@ namespace TransitManager.Infrastructure.Migrations
 
                     b.Property<DateTime?>("DateViewed")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("DiscountBase")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("DiscountScope")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("DiscountType")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("DiscountValue")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("FooterNote")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("Message")
                         .HasMaxLength(3000)
@@ -1556,7 +1542,7 @@ namespace TransitManager.Infrastructure.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             Actif = true,
-                            DateCreation = new DateTime(2026, 1, 15, 16, 51, 5, 274, DateTimeKind.Utc).AddTicks(465),
+                            DateCreation = new DateTime(2026, 1, 11, 11, 35, 6, 320, DateTimeKind.Utc).AddTicks(5285),
                             DoitChangerMotDePasse = false,
                             Email = "admin@transitmanager.com",
                             EmailConfirme = false,

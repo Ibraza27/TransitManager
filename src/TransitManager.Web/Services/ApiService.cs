@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TransitManager.Core.DTOs;
-using TransitManager.Core.DTOs;
+using TransitManager.Core.DTOs.Commerce;
 using TransitManager.Core.Entities;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
@@ -797,6 +797,21 @@ namespace TransitManager.Web.Services
 				return Array.Empty<byte>();
 			}
 		}
+
+        public async Task<byte[]> GetQuotePdfAsync(Guid quoteId, Guid? token = null)
+        {
+            var url = $"api/commerce/quotes/{quoteId}/pdf";
+            if(token.HasValue) url += $"?token={token}";
+            
+            try
+            {
+                return await _httpClient.GetByteArrayAsync(url);
+            }
+            catch
+            {
+                return Array.Empty<byte>();
+            }
+        }
 		
 
 		public async Task<byte[]> ExportColisPdfAsync(Guid id, bool includeFinancials, bool includePhotos)
@@ -1423,5 +1438,103 @@ namespace TransitManager.Web.Services
             }
             catch { return null; }
         }
+
+        // --- Commerce ---
+
+        public async Task<PagedResult<ProductDto>> GetProductsAsync(string? search, int page = 1, int pageSize = 50)
+        {
+             var query = $"page={page}&pageSize={pageSize}";
+             if (!string.IsNullOrEmpty(search)) query += $"&search={search}";
+             return await _httpClient.GetFromJsonAsync<PagedResult<ProductDto>>($"api/commerce/products?{query}", _jsonOptions) ?? new();
+        }
+
+        public async Task<ProductDto> CreateProductAsync(ProductDto dto)
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/commerce/products", dto, _jsonOptions);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<ProductDto>(_jsonOptions);
+        }
+
+        public async Task<ProductDto> UpdateProductAsync(ProductDto dto)
+        {
+             var response = await _httpClient.PutAsJsonAsync($"api/commerce/products/{dto.Id}", dto, _jsonOptions);
+             response.EnsureSuccessStatusCode();
+             return await response.Content.ReadFromJsonAsync<ProductDto>(_jsonOptions);
+        }
+
+        public async Task DeleteProductAsync(Guid id)
+        {
+             await _httpClient.DeleteAsync($"api/commerce/products/{id}");
+        }
+
+        public async Task<PagedResult<QuoteDto>> GetQuotesAsync(string? search, Guid? clientId, string? status, int page = 1, int pageSize = 20)
+        {
+            var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };
+            if (!string.IsNullOrEmpty(search)) query.Add($"search={search}");
+            if (clientId.HasValue) query.Add($"clientId={clientId}");
+            if (!string.IsNullOrEmpty(status)) query.Add($"status={status}");
+            
+            var response = await _httpClient.GetAsync($"api/commerce/quotes?{string.Join("&", query)}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"API Error GetQuotes: {response.StatusCode} - {content}");
+                throw new Exception($"API Error {response.StatusCode}: {content}");
+            }
+            return await response.Content.ReadFromJsonAsync<PagedResult<QuoteDto>>(_jsonOptions) ?? new();
+        }
+
+        public async Task<QuoteDto> GetQuoteByIdAsync(Guid id)
+        {
+             try { return await _httpClient.GetFromJsonAsync<QuoteDto>($"api/commerce/quotes/{id}", _jsonOptions); }
+             catch { return null; }
+        }
+        
+        public async Task<QuoteDto> CreateOrUpdateQuoteAsync(UpsertQuoteDto dto)
+        {
+             var response = await _httpClient.PostAsJsonAsync("api/commerce/quotes", dto, _jsonOptions);
+             response.EnsureSuccessStatusCode();
+             return await response.Content.ReadFromJsonAsync<QuoteDto>(_jsonOptions);
+        }
+
+        public async Task UpdateQuoteStatusAsync(Guid id, QuoteStatus status, string? reason = null)
+        {
+             var url = $"api/commerce/quotes/{id}/status?status={status}";
+             if(!string.IsNullOrEmpty(reason)) url += $"&rejectionReason={reason}";
+             await _httpClient.PostAsync(url, null);
+        }
+        
+        public async Task DeleteQuoteAsync(Guid id)
+        {
+             await _httpClient.DeleteAsync($"api/commerce/quotes/{id}");
+        }
+
+        public async Task SendQuoteByEmailAsync(Guid id)
+        {
+             var response = await _httpClient.PostAsync($"api/commerce/quotes/{id}/email", null);
+             if (!response.IsSuccessStatusCode)
+             {
+                 var content = await response.Content.ReadAsStringAsync();
+                 throw new Exception($"Erreur envoi email: {content}");
+             }
+        }
+
+        // Public
+        public async Task<QuoteDto> GetPublicQuoteAsync(Guid token)
+        {
+             try { return await _httpClient.GetFromJsonAsync<QuoteDto>($"api/commerce/public/quote/{token}", _jsonOptions); }
+             catch { return null; }
+        }
+
+        public async Task AcceptPublicQuoteAsync(Guid token)
+        {
+             await _httpClient.PostAsync($"api/commerce/public/quote/{token}/accept", null);
+        }
+
+        public async Task RejectPublicQuoteAsync(Guid token, string reason)
+        {
+             await _httpClient.PostAsJsonAsync($"api/commerce/public/quote/{token}/reject", reason);
+        }
+
     }
 }

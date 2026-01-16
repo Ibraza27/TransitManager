@@ -92,7 +92,6 @@ namespace TransitManager.Web.Controllers
 
 
 		[HttpPost("/account/resend-confirmation")]
-		[HttpPost("/account/resend-confirmation")]
         [ValidateAntiForgeryToken] // <--- SÉCURITÉ RÉACTIVÉE (Fix V6)
         public async Task<IActionResult> ResendConfirmation([FromForm] string email)
         {

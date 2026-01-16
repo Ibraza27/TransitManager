@@ -46,23 +46,27 @@
                 <div class="list-group list-group-flush">
                     @foreach (var quote in QuoteList)
                     {
-                        <button class="list-group-item list-group-item-action @(SelectedQuote?.Id == quote.Id ? "active" : "") border-bottom p-3" @onclick="() => SelectQuote(quote)">
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <span class="fw-bold @(SelectedQuote?.Id == quote.Id ? "text-white" : "text-dark")">@quote.Reference</span>
-                                <small class="@(SelectedQuote?.Id == quote.Id ? "text-light" : "text-muted")">@quote.DateCreated.ToString("dd/MM")</small>
+                        <div class="list-group-item @(SelectedQuote?.Id == quote.Id ? "active-quote" : "") p-3 border-bottom">
+                            <div class="d-flex w-100 justify-content-between mb-1">
+                                <a href="javascript:void(0)" class="fw-bold text-decoration-none text-primary" @onclick="() => SelectQuote(quote)">@quote.Reference</a>
+                                <span class="badge @GetStatusClass(quote.Status)">@GetStatusName(quote.Status)</span>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-truncate @(SelectedQuote?.Id == quote.Id ? "text-light" : "text-secondary")" style="max-width: 70%;">
-                                    @quote.ClientName
-                                </div>
-                                <span class="badge rounded-pill @GetStatusClass(quote.Status)">
-                                    @quote.StatusName
-                                </span>
+                            <div class="small text-muted mb-2">
+                                <div class="fw-bold text-dark">@quote.ClientName @quote.ClientFirstname</div>
+                                @if(!string.IsNullOrEmpty(quote.ClientPhone)) { <div><i class="bi bi-telephone me-1"></i> @quote.ClientPhone</div> }
+                                @if(!string.IsNullOrEmpty(quote.ClientEmail)) { <div class="text-truncate"><i class="bi bi-envelope me-1"></i> @quote.ClientEmail</div> }
+                                @if(!string.IsNullOrEmpty(quote.ClientAddress)) { <div class="text-truncate"><i class="bi bi-geo-alt me-1"></i> @quote.ClientAddress</div> }
                             </div>
-                            <div class="mt-2 text-end fw-bold @(SelectedQuote?.Id == quote.Id ? "text-white" : "text-primary")">
-                                @quote.TotalTTC.ToString("C2")
+                            <div class="d-flex w-100 justify-content-between align-items-center mt-2 border-top pt-2">
+                                <small class="text-muted">@quote.DateCreated.ToString("dd/MM/yyyy")</small>
+                                <span class="fw-bold text-primary">@quote.TotalTTC.ToString("C2")</span>
                             </div>
-                        </button>
+                        </div>
+                    }
+                    
+                    @if (CurrentPage < TotalPages)
+                    {
+                         <button class="btn btn-light w-100 py-3 text-primary fw-bold" @onclick="LoadMore">Charger plus...</button>
                     }
                 </div>
                 
@@ -159,14 +163,17 @@
                             Actions
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
-                            @if(quote.Status == QuoteStatus.Draft || quote.Status == QuoteStatus.Sent)
+                            <li><a class="dropdown-item" href="/admin/commerce/quotes/edit/@quote.Id"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
+                            
+                            <li><button class="dropdown-item" @onclick="() => DownloadPdf(quote)"><i class="bi bi-file-pdf me-2"></i>Télécharger PDF</button></li>
+                            
+                            @if(quote.Status != QuoteStatus.Draft)
                             {
-                                 <li><a class="dropdown-item" href="/admin/commerce/quotes/edit/@quote.Id"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
+                                <li><a class="dropdown-item" href="#" @onclick="() => SendEmail(quote)" @onclick:preventDefault><i class="bi bi-envelope me-2"></i>Envoyer par Email</a></li>
                             }
-                            <li><button class="dropdown-item" @onclick="DownloadPdf"><i class="bi bi-download me-2"></i>Télécharger PDF</button></li>
-                            <li><button class="dropdown-item" @onclick="() => CopyPublicLink(quote)"><i class="bi bi-link-45deg me-2"></i>Copier lien public</button></li>
+                            
                             <li><hr class="dropdown-divider"></li>
-                             <li><a class="dropdown-item text-danger" href="#" @onclick:preventDefault @onclick="DeleteQuote"><i class="bi bi-trash me-2"></i>Supprimer</a></li>
+                            <li><button class="dropdown-item text-danger" @onclick="() => DeleteQuote(quote)"><i class="bi bi-trash me-2"></i>Supprimer</button></li>
                         </ul>
                     </div>
                     <!-- Direct Primary Action -->
@@ -315,26 +322,34 @@
         ShowMobileModal = false;
     }
 
-    private async Task SendEmail()
+    private async Task SendEmail(QuoteDto quote)
     {
-        if (SelectedQuote != null)
+        try
         {
-            await ApiService.UpdateQuoteStatusAsync(SelectedQuote.Id, QuoteStatus.Sent);
-            SelectedQuote.Status = QuoteStatus.Sent;
-            var index = QuoteList.FindIndex(q => q.Id == SelectedQuote.Id);
-            if (index >= 0) QuoteList[index] = SelectedQuote;
+            await ApiService.SendQuoteByEmailAsync(quote.Id);
+            await ApiService.UpdateQuoteStatusAsync(quote.Id, QuoteStatus.Sent);
+            
+            // Dynamic Update
+            quote.Status = QuoteStatus.Sent;
+            var index = QuoteList.FindIndex(q => q.Id == quote.Id);
+            if (index >= 0) QuoteList[index] = quote;
+            
+            await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Erreur lors de l'envoi: {ex.Message}");
         }
     }
 
-    private async Task DownloadPdf()
+    private async Task DownloadPdf(QuoteDto quote)
     {
-        if (SelectedQuote == null) return;
         try
         {
-             var pdfBytes = await ApiService.GetQuotePdfAsync(SelectedQuote.Id);
+             var pdfBytes = await ApiService.GetQuotePdfAsync(quote.Id);
              if (pdfBytes.Length == 0) throw new Exception("PDF vide");
              using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
-             await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{SelectedQuote.Reference}.pdf", streamRef);
+             await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{quote.Reference}.pdf", streamRef);
         }
         catch (Exception ex)
         {
@@ -348,25 +363,38 @@
         await JS.InvokeVoidAsync("alert", "Lien copié !");
     }
     
-    private async Task MarkStatus(QuoteStatus status)
+    private async Task DeleteQuote(QuoteDto quote)
     {
-        if (SelectedQuote != null)
+        if (await JS.InvokeAsync<bool>("confirm", "Supprimer ce devis ?"))
         {
-             await ApiService.UpdateQuoteStatusAsync(SelectedQuote.Id, status);
-             SelectedQuote.Status = status;
+            try
+            {
+                await ApiService.DeleteQuoteAsync(quote.Id);
+                QuoteList.Remove(quote);
+                if (SelectedQuote?.Id == quote.Id) 
+                {
+                    SelectedQuote = null;
+                    if (QuoteList.Any()) SelectedQuote = QuoteList.First();
+                }
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync("alert", $"Erreur lors de la suppression: {ex.Message}");
+            }
         }
     }
-    
-    private async Task DeleteQuote()
+
+    private string GetStatusName(QuoteStatus status) => status switch
     {
-        if (SelectedQuote != null && await JS.InvokeAsync<bool>("confirm", "Supprimer ce devis ?"))
-        {
-            await ApiService.DeleteQuoteAsync(SelectedQuote.Id);
-            QuoteList.Remove(SelectedQuote);
-            SelectedQuote = null;
-            if (QuoteList.Any()) SelectedQuote = QuoteList.First();
-        }
-    }
+        QuoteStatus.Draft => "Brouillon",
+        QuoteStatus.Sent => "Envoyé",
+        QuoteStatus.Viewed => "Vu",
+        QuoteStatus.Accepted => "Accepté",
+        QuoteStatus.Rejected => "Refusé",
+        QuoteStatus.Converted => "Converti",
+        QuoteStatus.Deleted => "Supprimé",
+        _ => status.ToString()
+    };
 
     private string GetStatusClass(QuoteStatus status) => status switch
     {

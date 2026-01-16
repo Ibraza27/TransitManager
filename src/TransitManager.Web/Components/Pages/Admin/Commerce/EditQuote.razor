@@ -28,7 +28,7 @@
             @if (IsPreviewMode)
             {
                 <button class="btn btn-secondary btn-sm" @onclick="TogglePreview">
-                    <i class="bi bi-arrow-left me-2"></i>Editer
+                    <i class="bi bi-arrow-left me-2"></i>Éditer
                 </button>
                  <button class="btn btn-primary btn-sm" @onclick="SendEmail">
                     <i class="bi bi-envelope-fill me-2"></i>Envoyer
@@ -57,8 +57,8 @@
     else if (IsPreviewMode)
     {
         <!-- PREVIEW MODE - Responsive Wrapper -->
-        <div class="p-0 p-md-4 bg-light flex-grow-1 overflow-auto">
-            <div class="card border-0 shadow-lg mx-auto" style="max-width: 900px; min-height: 800px;">
+        <div class="p-0 p-md-4 bg-light flex-grow-1 overflow-auto pb-5 mb-5">
+            <div class="card border-0 shadow-lg mx-auto mb-5" style="max-width: 900px; min-height: 800px;">
              <!-- ... existing preview content ... -->
              <!-- Reuse RenderQuoteDetail logic if I extracted it, but for now just ensure container is ok -->
              <!-- I will assume the Preview logic inside is ok via scroll, but let's check the container -->
@@ -78,8 +78,8 @@
                         <div class="col-12 col-md-5 text-md-end">
                             <h2 class="fw-bold text-uppercase text-secondary mb-3">Devis</h2>
                             <h4 class="fw-bold fs-3">@(Model.Reference ?? "BROUILLON")</h4>
-                            <div class="text-muted mt-2">Date: @(Model.DateCreated?.ToString("dd/MM/yyyy") ?? DateTime.Now.ToString("dd/MM/yyyy"))</div>
-                             <div class="text-danger fw-bold">Valide: @Model.DateValidity.ToString("dd/MM/yyyy")</div>
+                            <div class="text-muted mt-2">Date : @(Model.DateCreated?.ToString("dd/MM/yyyy") ?? DateTime.Now.ToString("dd/MM/yyyy"))</div>
+                             <div class="text-danger fw-bold">Valide jusqu'au : @Model.DateValidity.ToString("dd/MM/yyyy")</div>
                         </div>
                     </div>
 
@@ -143,7 +143,7 @@
                         @if(!string.IsNullOrEmpty(Model.PaymentTerms))
                         {
                             <div class="mb-3">
-                                 <strong>Modalités:</strong> <span class="text-muted">@Model.PaymentTerms</span>
+                                 <strong>Modalités de paiement :</strong> <span class="text-muted">@Model.PaymentTerms</span>
                             </div>
                         }
                          @if(!string.IsNullOrEmpty(Model.FooterNote))
@@ -157,17 +157,19 @@
             </div>
             
              <!-- Modal Actions (Mobile Optimized) -->
-             <div class="card position-fixed bottom-0 end-0 m-3 m-md-4 shadow p-3" style="width: 300px; max-width: calc(100vw - 32px);">
+             <div class="card position-fixed bottom-0 end-0 m-3 m-md-4 shadow p-3 mb-5 mb-md-4" style="width: 300px; max-width: calc(100vw - 32px); z-index: 1000;">
                  <h6 class="fw-bold mb-3">Actions</h6>
                  <div class="d-grid gap-2">
                      <button class="btn btn-success" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver (Simul)</button>
                      <div class="d-flex gap-2">
                          <button class="btn btn-outline-dark flex-grow-1" @onclick="DownloadPdf"><i class="bi bi-download"></i> PDF</button>
-                         <button class="btn btn-outline-dark flex-grow-1" @onclick="PrintPdf"><i class="bi bi-printer"></i> Print</button>
+                         <button class="btn btn-outline-dark flex-grow-1" @onclick="PrintPdf"><i class="bi bi-printer"></i> Imprimer</button>
                      </div>
                      <button class="btn btn-outline-primary" @onclick="SendEmail"><i class="bi bi-envelope me-2"></i>Envoyer</button>
                  </div>
              </div>
+             <!-- Spacer for mobile view to scroll past floating actions -->
+             <div class="d-block d-md-none" style="height: 250px;"></div>
         </div>
     }
     else
@@ -230,7 +232,7 @@
                          </table>
                          <div class="p-2">
                             <button class="btn btn-dark btn-sm rounded-pill" @onclick="AddLine">
-                                <i class="bi bi-plus-lg me-1"></i> Ajouter ligne
+                                <i class="bi bi-plus-lg me-1"></i> Ajouter une ligne
                             </button>
                          </div>
                      </div>
@@ -258,7 +260,7 @@
                           But style attribute logic is easier here. -->
                      <!-- Actually, the parent div handles the flex sizing. Let's make this inner content clean. -->
                      
-                     <h6 class="fw-bold mb-4">Calculs & Remises</h6>
+                     <h6 class="fw-bold mb-4">Calculs et Remises</h6>
                      
                      <div class="card bg-light border-0 p-3 mb-4">
                          <div class="row g-2">
@@ -465,9 +467,16 @@
         // Save then update status
         if (await Save())
         {
-            // Call API to update status
-            await ApiService.UpdateQuoteStatusAsync(Model.Id.Value, status);
-            NavManager.NavigateTo("/admin/commerce/quotes");
+            try 
+            {
+                // Call API to update status
+                await ApiService.UpdateQuoteStatusAsync(Model.Id.Value, status);
+                NavManager.NavigateTo("/admin/commerce/quotes");
+            }
+             catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync("alert", $"Erreur lors de la mise à jour du statut: {ex.Message}");
+            }
         }
     }
 
@@ -477,6 +486,12 @@
         {
             await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un client.");
             return false;
+        }
+        
+        if (!Model.Lines.Any())
+        {
+             await JS.InvokeVoidAsync("alert", "Veuillez ajouter au moins une ligne.");
+             return false;
         }
 
         IsSaving = true;
@@ -488,7 +503,8 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
+            Console.WriteLine($"Save Error: {ex}");
+            await JS.InvokeVoidAsync("alert", $"Erreur lors de l'enregistrement: {ex.Message}");
             return false;
         }
         finally
@@ -515,6 +531,11 @@
 
     private async Task DownloadPdf()
     {
+         if (!Id.HasValue) 
+         {
+             if(!await Save()) return;
+         }
+         
          if (Model.Id == null) return;
          
          try
@@ -531,9 +552,11 @@
 
     private async Task PrintPdf()
     {
-         // We do not have direct print JS for PDF blob in new tab easily without backend returning stream url.
-         // Simplified: Open in new tab and let user print. OR use iframe.
-         // Let's reuse Download but trigger open.
+         if (!Id.HasValue) 
+         {
+             if(!await Save()) return;
+         }
+         
          if (Model.Id == null) return;
          
          try

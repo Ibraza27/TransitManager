@@ -78,7 +78,7 @@ builder.Services.AddDbContextFactory<TransitContext>((sp, options) =>
 {
     var interceptor = sp.GetRequiredService<AuditSaveChangesInterceptor>();
     options.UseNpgsql(connectionString)
-           .AddInterceptors(interceptor)
+           // .AddInterceptors(interceptor) // Disabled for debugging Concurrency Exception
            .LogTo(Console.WriteLine, LogLevel.Information);
 });
 
@@ -151,6 +151,12 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
+
+// Suppress automatic 400 Validation Error to allow logging in Controller
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 // --- CORRECTION DÉFINITIVE : AUTHENTIFICATION HYBRIDE CORRECTEMENT CONFIGURÉE ---

@@ -15,10 +15,10 @@ namespace TransitManager.Core.Entities.Commerce
         [MaxLength(50)]
         public string Reference { get; set; } // e.g. DEV-2026-001
 
-        public Guid ClientId { get; set; } // Foreign Key to existing Clients
+        public Guid? ClientId { get; set; } // Foreign Key (Nullable for Draft)
 
         [ForeignKey("ClientId")]
-        public Client Client { get; set; }
+        public Client? Client { get; set; }
 
         public DateTime DateCreated { get; set; } = DateTime.UtcNow;
         public DateTime DateValidity { get; set; } = DateTime.UtcNow.AddDays(30);

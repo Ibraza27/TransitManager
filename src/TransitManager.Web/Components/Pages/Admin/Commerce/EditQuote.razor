@@ -159,12 +159,12 @@
                 </div>
             </div>
             
-             <!-- Modal Actions (Mobile Optimized) -->
-             <div class="card position-fixed bottom-0 end-0 m-3 m-md-4 shadow p-3 mb-5 mb-md-4" style="width: 300px; max-width: calc(100vw - 32px); z-index: 1000;">
-                 <h6 class="fw-bold mb-3">Actions</h6>
-                 <div class="d-grid gap-2">
-                     <button class="btn btn-success" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver (Simul)</button>
-                     <div class="d-flex gap-2">
+             <!-- Modal Actions (Mobile Optimized - Floating Fixed Bottom) -->
+             <div class="fixed-bottom bg-white border-top p-3 shadow-lg d-print-none animation-slide-up action-bar-floating" style="z-index: 1040;">
+                 <h6 class="fw-bold mb-3 d-none d-md-block">Actions</h6>
+                 <div class="d-grid gap-2 d-md-block">
+                     <button class="btn btn-success mb-2 mb-md-0 me-md-2" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver (Simul)</button>
+                     <div class="d-flex gap-2 d-md-inline-flex">
                          <button class="btn btn-outline-dark flex-grow-1" @onclick="DownloadPdf" disabled="@IsLoadingPdf">
                             @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>PDF...</span> }
                             else { <i class="bi bi-download"></i><span> PDF</span> }
@@ -173,11 +173,10 @@
                             <i class="bi bi-printer"></i> Imprimer
                          </button>
                      </div>
-                     <button class="btn btn-outline-primary" @onclick="SendEmail"><i class="bi bi-envelope me-2"></i>Envoyer</button>
+                     <button class="btn btn-outline-primary mt-2 mt-md-0 ms-md-2" @onclick="SendEmail"><i class="bi bi-envelope me-2"></i>Envoyer</button>
                  </div>
              </div>
-             <!-- Spacer for mobile view to scroll past floating actions -->
-             <div class="d-block d-md-none" style="height: 250px;"></div>
+             <div style="height: 180px;"></div>
         </div>
     }
     else
@@ -386,6 +385,8 @@
     
     private decimal TotalTTC => NetHT + TotalTVA;
 
+    private bool IsAutoDraft = false; // Track if we auto-created this
+
     protected override async Task OnInitializedAsync()
     {
         IsLoading = true;
@@ -412,17 +413,33 @@
                         Lines = quote.Lines
                     };
                     
-                    if (quote.ClientId != Guid.Empty)
-                        SelectedClient = await ApiService.GetClientByIdAsync(quote.ClientId);
+                    if (quote.ClientId.HasValue && quote.ClientId != Guid.Empty)
+                        SelectedClient = await ApiService.GetClientByIdAsync(quote.ClientId.Value);
                 }
             }
             else
             {
+                // NEW QUOTE: Auto-save as Draft immediately to get an ID
+                Model = new UpsertQuoteDto
+                {
+                    DateValidity = DateTime.UtcNow.AddDays(30),
+                    DateCreated = DateTime.UtcNow
+                };
                 AddLine();
-                // Auto-save logic can be tricky if we don't have a client yet. 
-                // We should WAIT for user input, BUT fixing the "400" error specifically requires an ID.
-                // Best approach: create ID only when Saving, but ensure Save() is called before PDF/Print.
-                // We'll rely on the updated Action methods to force Save().
+                // Model.ClientId is null by default
+                
+                try 
+                {
+                     // Create minimal draft in DB
+                     var result = await ApiService.CreateOrUpdateQuoteAsync(Model);
+                     Model.Id = result.Id;
+                     Id = result.Id;
+                     IsAutoDraft = true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Auto-draft creation warning: " + ex.Message);
+                }
             }
         }
         finally
@@ -431,9 +448,13 @@
         }
     }
 
+    // ... (AddLine/RemoveLine/etc unchanged)
+
+
+
     private void AddLine()
     {
-        Model.Lines.Add(new QuoteLineDto { Quantity = 1, Unit = "pce", VATRate = 20 });
+        Model.Lines.Add(new QuoteLineDto { Quantity = 1, Unit = "pce", VATRate = 20, Description = "" });
     }
 
     private void RemoveLine(QuoteLineDto line)
@@ -467,18 +488,26 @@
     {
         if (await Save())
         {
-             await ApiService.UpdateQuoteStatusAsync(Model.Id.Value, QuoteStatus.Draft);
+             // Model.Id is guaranteed by Save()
+             await ApiService.UpdateQuoteStatusAsync(Model.Id!.Value, QuoteStatus.Draft);
              NavManager.NavigateTo("/admin/commerce/quotes");
         }
     }
     
     private async Task Finalize(QuoteStatus status)
     {
+        // Enforce Client for Finalization
+        if (Model.ClientId == null || Model.ClientId == Guid.Empty)
+        {
+             await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un client pour finaliser.");
+             return;
+        }
+
         if (await Save())
         {
             try 
             {
-                await ApiService.UpdateQuoteStatusAsync(Model.Id.Value, status);
+                await ApiService.UpdateQuoteStatusAsync(Model.Id!.Value, status);
                 NavManager.NavigateTo("/admin/commerce/quotes");
             }
              catch (Exception ex)
@@ -490,11 +519,7 @@
 
     private async Task<bool> Save()
     {
-        if (Model.ClientId == Guid.Empty) 
-        {
-            await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un client.");
-            return false;
-        }
+        // Allowed to save without Client (Draft mode)
         
         if (!Model.Lines.Any())
         {
@@ -528,7 +553,7 @@
          {
              try
              {
-                 await ApiService.SendQuoteByEmailAsync(Model.Id.Value);
+                 await ApiService.SendQuoteByEmailAsync(Model.Id!.Value);
                  await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
              }
              catch(Exception ex)
@@ -552,7 +577,7 @@
          StateHasChanged();
          try
          {
-             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id.Value);
+             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id!.Value);
              using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
              await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{Model.Reference ?? "Brouillon"}.pdf", streamRef);
          }
@@ -580,7 +605,7 @@
          StateHasChanged();
          try
          {
-             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id.Value);
+             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id!.Value);
              using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
              await JS.InvokeVoidAsync("openPdfInNewTab", streamRef);
          }
@@ -597,10 +622,15 @@
 
     private async Task Cancel()
     {
-        // If it was a NEW quote (Draft not saved by user explicitly) and we auto-saved it... 
-        // Logic: Standard Cancel just goes back. User can delete draft from list.
-        // Implementing "Auto-delete on Cancel" is risky if they wanted to keep it.
-        // Staying safe: Just Navigate back.
+        // If it was an auto-created draft and user is cancelling immediately (no client selected)
+        if (IsAutoDraft && Model.ClientId == Guid.Empty && Model.Id.HasValue) 
+        {
+             try 
+             {
+                 await ApiService.DeleteQuoteAsync(Model.Id.Value);
+             }
+             catch {} // Ignore errors on cleanup
+        }
         NavManager.NavigateTo("/admin/commerce/quotes");
     }
     
@@ -622,5 +652,10 @@
     .sidebar-totals { width: 100%; }
     @@media (min-width: 992px) {
         .sidebar-totals { width: 350px; }
+        /* Floating Action Bar Offset for Desktop Sidebar (approx 250px) */
+        .action-bar-floating {
+            margin-left: 250px; /* Adjust based on actual sidebar width */
+            width: calc(100% - 250px) !important;
+        }
     }
 </style>

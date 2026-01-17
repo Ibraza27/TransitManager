@@ -8,12 +8,12 @@ namespace TransitManager.Core.DTOs.Commerce
     {
         public Guid Id { get; set; }
         public string Reference { get; set; }
-        public Guid ClientId { get; set; }
-        public string ClientName { get; set; } // Flattened from Client.Nom
-        public string ClientFirstname { get; set; }
-        public string ClientPhone { get; set; }
-        public string ClientAddress { get; set; }
-        public string ClientEmail { get; set; }
+        public Guid? ClientId { get; set; }
+        public string? ClientName { get; set; } // Flattened from Client.Nom
+        public string? ClientFirstname { get; set; }
+        public string? ClientPhone { get; set; }
+        public string? ClientAddress { get; set; }
+        public string? ClientEmail { get; set; }
         public DateTime DateCreated { get; set; }
         public DateTime DateValidity { get; set; }
         public QuoteStatus Status { get; set; }
@@ -56,7 +56,7 @@ namespace TransitManager.Core.DTOs.Commerce
     {
         public Guid? Id { get; set; }
         public string? Reference { get; set; } // For UI Preview only
-        public Guid ClientId { get; set; }
+        public Guid? ClientId { get; set; }
         public DateTime? DateCreated { get; set; } // For UI Preview only
         public DateTime DateValidity { get; set; }
         public string? Message { get; set; }

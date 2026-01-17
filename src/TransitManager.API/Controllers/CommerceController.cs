@@ -90,6 +90,13 @@ namespace TransitManager.API.Controllers
         [Authorize(Roles = "Administrateur")]
         public async Task<IActionResult> CreateOrUpdateQuote([FromBody] UpsertQuoteDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                System.IO.File.AppendAllText("api_debug_log.txt", $"[{DateTime.Now}] Validation Error: {errors}\n");
+                return BadRequest($"Validation Failed: {errors}");
+            }
+
             try
             {
                 var result = await _commerceService.CreateOrUpdateQuoteAsync(dto);
@@ -98,8 +105,8 @@ namespace TransitManager.API.Controllers
             }
             catch (Exception ex)
             {
-                // In prod, log this exception
-                return BadRequest(ex.Message);
+                System.IO.File.AppendAllText("api_debug_log.txt", $"[{DateTime.Now}] Exception: {ex}\n");
+                return BadRequest($"Error: {ex.Message} | Inner: {ex.InnerException?.Message}");
             }
         }
 

@@ -144,6 +144,8 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<QuoteDto> CreateOrUpdateQuoteAsync(UpsertQuoteDto dto)
         {
+            try { System.IO.File.AppendAllText("commerce_debug.txt", $"[{DateTime.Now}] INPUT: Id={dto.Id}, ClientId={dto.ClientId}, LinesCount={dto.Lines?.Count} \n"); } catch {}
+            
             Quote quote;
             if (dto.Id.HasValue)
             {
@@ -240,10 +242,81 @@ namespace TransitManager.Infrastructure.Services
 
             quote.TotalTTC = quote.TotalHT + quote.TotalTVA;
 
-            await _context.SaveChangesAsync();
+            try 
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // DETECT PHANTOM EXCEPTION ON INSERT
+                var exists = await _context.Quotes.AnyAsync(q => q.Id == quote.Id);
+                if (!exists) throw;
+
+                // Ensure context is clean
+                _context.Entry(quote).State = EntityState.Detached;
+
+                // RECOVERY: Check if data was lost (e.g. Phantom Insert of empty row)
+                var savedQuote = await _context.Quotes.Include(q => q.Lines).FirstOrDefaultAsync(q => q.Id == quote.Id);
+                
+                if (savedQuote != null)
+                {
+                    bool needSave = false;
+                    
+                    // 1. Recover Header Fields (Client, Totals, Strings) if missing or default
+                    // We assume 'quote' has the correct intent. We force update the saved instance.
+                    savedQuote.ClientId = quote.ClientId;
+                    savedQuote.DateValidity = quote.DateValidity;
+                    savedQuote.Message = quote.Message;
+                    savedQuote.PaymentTerms = quote.PaymentTerms;
+                    savedQuote.FooterNote = quote.FooterNote;
+                    savedQuote.DiscountValue = quote.DiscountValue;
+                    savedQuote.DiscountType = quote.DiscountType;
+                    savedQuote.DiscountBase = quote.DiscountBase;
+                    savedQuote.DiscountScope = quote.DiscountScope;
+                    savedQuote.TotalHT = quote.TotalHT;
+                    savedQuote.TotalTVA = quote.TotalTVA;
+                    savedQuote.TotalTTC = quote.TotalTTC;
+                    savedQuote.Reference = quote.Reference; // Ensure ref matches
+                    savedQuote.DateCreated = quote.DateCreated;
+                    
+                    needSave = true;
+
+                    // 2. Recover Lines if missing
+                    if ((savedQuote.Lines == null || savedQuote.Lines.Count == 0) && dto.Lines != null && dto.Lines.Count > 0)
+                    {
+                        try { System.IO.File.AppendAllText("commerce_debug.txt", $"[{DateTime.Now}] RECOVERING LINES for {quote.Id}\n"); } catch {}
+                        
+                        foreach (var lineDto in dto.Lines)
+                        {
+                            var lineTotalHT = lineDto.Quantity * lineDto.UnitPrice;
+                            var line = new QuoteLine
+                            {
+                                QuoteId = savedQuote.Id,
+                                ProductId = lineDto.ProductId,
+                                Description = lineDto.Description,
+                                Quantity = lineDto.Quantity,
+                                Unit = lineDto.Unit,
+                                UnitPrice = lineDto.UnitPrice,
+                                VATRate = lineDto.VATRate,
+                                TotalHT = lineTotalHT
+                            };
+                            _context.QuoteLines.Add(line);
+                        }
+                    }
+                    
+                    if (needSave)
+                    {
+                        await _context.SaveChangesAsync();
+                        _context.Entry(savedQuote).State = EntityState.Detached; // Detach again for clean reload
+                    }
+                }
+            }
             
             // Reload to get Client info
-            return await GetQuoteByIdAsync(quote.Id) ?? throw new Exception("Error retrieving saved quote");
+            var reloaded = await GetQuoteByIdAsync(quote.Id);
+            try { System.IO.File.AppendAllText("commerce_debug.txt", $"[{DateTime.Now}] RELOADED LineCount={reloaded?.Lines?.Count}\n"); } catch {}
+            
+            return reloaded ?? throw new Exception("Error retrieving saved quote (Reload failed)");
         }
 
         public async Task<bool> UpdateQuoteStatusAsync(Guid id, QuoteStatus status, string? rejectionReason = null)

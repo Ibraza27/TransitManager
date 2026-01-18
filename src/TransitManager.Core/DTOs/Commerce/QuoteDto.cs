@@ -19,6 +19,12 @@ namespace TransitManager.Core.DTOs.Commerce
         public QuoteStatus Status { get; set; }
         public string StatusName => Status.ToString();
         
+        // History Dates
+        public DateTime? DateSent { get; set; }
+        public DateTime? DateAccepted { get; set; }
+        public DateTime? DateRejected { get; set; }
+        public DateTime? DateViewed { get; set; }
+        
         public string? Message { get; set; }
         public string? PaymentTerms { get; set; }
         public string? FooterNote { get; set; }
@@ -33,6 +39,7 @@ namespace TransitManager.Core.DTOs.Commerce
 
         public string? RejectionReason { get; set; } // NEW
 
+        public List<QuoteHistoryDto> History { get; set; } = new();
         public List<QuoteLineDto> Lines { get; set; } = new();
 
         public decimal TotalHT { get; set; }
@@ -45,6 +52,7 @@ namespace TransitManager.Core.DTOs.Commerce
         public Guid Id { get; set; }
         public Guid? ProductId { get; set; }
         public string Description { get; set; }
+        public DateTime? Date { get; set; } // NEW
         public decimal Quantity { get; set; }
         public string Unit { get; set; }
         public decimal UnitPrice { get; set; }
@@ -71,5 +79,13 @@ namespace TransitManager.Core.DTOs.Commerce
         // Removed InternalNotes as it is not in Entity
 
         public List<QuoteLineDto> Lines { get; set; } = new();
+    }
+
+    public class QuoteHistoryDto
+    {
+        public DateTime Date { get; set; }
+        public string Action { get; set; }
+        public string Details { get; set; }
+        public string User { get; set; }
     }
 }

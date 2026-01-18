@@ -454,16 +454,18 @@ namespace TransitManager.Infrastructure.Services
                                 {
                                     table.ColumnsDefinition(columns =>
                                     {
-                                        columns.RelativeColumn(3);
-                                        columns.RelativeColumn(1);
-                                        columns.RelativeColumn(1.5f);
-                                        columns.RelativeColumn(1);
-                                        columns.RelativeColumn(1.5f);
+                                        columns.RelativeColumn(3); // Description
+                                        columns.RelativeColumn(1); // Date - NEW
+                                        columns.RelativeColumn(1); // Qty
+                                        columns.RelativeColumn(1.5f); // Unit Price
+                                        columns.RelativeColumn(1); // VAT
+                                        columns.RelativeColumn(1.5f); // Total
                                     });
 
                                     table.Header(header =>
                                     {
                                         header.Cell().Element(HeaderStyle).Text("Description");
+                                        header.Cell().Element(HeaderStyle).AlignCenter().Text("Date"); // NEW
                                         header.Cell().Element(HeaderStyle).AlignRight().Text("Qté");
                                         header.Cell().Element(HeaderStyle).AlignRight().Text("Prix Unit.");
                                         header.Cell().Element(HeaderStyle).AlignRight().Text("TVA");
@@ -480,6 +482,7 @@ namespace TransitManager.Infrastructure.Services
                                     foreach (var line in quote.Lines)
                                     {
                                         table.Cell().Element(CellStyle).Text(line.Description);
+                                        table.Cell().Element(CellStyle).AlignCenter().Text(line.Date?.ToString("dd/MM") ?? "-"); // NEW
                                         table.Cell().Element(CellStyle).AlignRight().Text($"{line.Quantity} {line.Unit}");
                                         table.Cell().Element(CellStyle).AlignRight().Text($"{line.UnitPrice:N2} €");
                                         table.Cell().Element(CellStyle).AlignRight().Text($"{line.VATRate}%");

@@ -32,6 +32,7 @@ namespace TransitManager.Infrastructure.Data
         public DbSet<Product> Products { get; set; } = null!;
         public DbSet<Quote> Quotes { get; set; } = null!;
         public DbSet<QuoteLine> QuoteLines { get; set; } = null!;
+        public DbSet<QuoteHistory> QuoteHistories { get; set; } = null!;
         public DbSet<Barcode> Barcodes { get; set; } = null!;
         public DbSet<Vehicule> Vehicules { get; set; } = null!;
         public DbSet<Message> Messages { get; set; } = null!;

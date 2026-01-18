@@ -55,6 +55,7 @@ namespace TransitManager.Core.Entities.Commerce
 
         // Navigation
         public List<QuoteLine> Lines { get; set; } = new();
+        public List<QuoteHistory> History { get; set; } = new();
 
         // Totals (Computed or Cached)
         [Column(TypeName = "decimal(18,2)")]

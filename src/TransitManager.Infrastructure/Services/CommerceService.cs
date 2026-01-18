@@ -98,6 +98,7 @@ namespace TransitManager.Infrastructure.Services
             var query = _context.Quotes
                 .Include(q => q.Client)
                 .Include(q => q.Lines)
+                .Include(q => q.History)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
@@ -129,6 +130,7 @@ namespace TransitManager.Infrastructure.Services
             var quote = await _context.Quotes
                 .Include(q => q.Client)
                 .Include(q => q.Lines)
+                .Include(q => q.History)
                 .FirstOrDefaultAsync(q => q.Id == id);
             return quote == null ? null : MapToDto(quote);
         }
@@ -138,7 +140,25 @@ namespace TransitManager.Infrastructure.Services
             var quote = await _context.Quotes
                 .Include(q => q.Client)
                 .Include(q => q.Lines)
+                .Include(q => q.History)
                 .FirstOrDefaultAsync(q => q.PublicToken == token);
+            
+            if (quote != null && quote.Status == QuoteStatus.Sent)
+            {
+                quote.Status = QuoteStatus.Viewed;
+                quote.DateViewed = DateTime.UtcNow;
+                
+                _context.QuoteHistories.Add(new QuoteHistory 
+                { 
+                    QuoteId = quote.Id, 
+                    Date = DateTime.UtcNow, 
+                    Action = "Consulté en ligne", 
+                    Details = "Devis visionné via le lien public" 
+                });
+                
+                await _context.SaveChangesAsync();
+            }
+
             return quote == null ? null : MapToDto(quote);
         }
 
@@ -184,6 +204,15 @@ namespace TransitManager.Infrastructure.Services
                     Status = QuoteStatus.Draft
                 };
                 _context.Quotes.Add(quote);
+                
+                // History: Create
+                _context.QuoteHistories.Add(new QuoteHistory 
+                { 
+                    QuoteId = quote.Id, 
+                    Date = DateTime.UtcNow, 
+                    Action = "Création", 
+                    Details = "Devis créé" 
+                });
             }
 
             // Add Lines
@@ -203,6 +232,7 @@ namespace TransitManager.Infrastructure.Services
                 {
                     ProductId = lineDto.ProductId,
                     Description = lineDto.Description,
+                    Date = lineDto.Date,
                     Quantity = lineDto.Quantity,
                     Unit = lineDto.Unit,
                     UnitPrice = lineDto.UnitPrice,
@@ -294,6 +324,7 @@ namespace TransitManager.Infrastructure.Services
                                 QuoteId = savedQuote.Id,
                                 ProductId = lineDto.ProductId,
                                 Description = lineDto.Description,
+                                Date = lineDto.Date,
                                 Quantity = lineDto.Quantity,
                                 Unit = lineDto.Unit,
                                 UnitPrice = lineDto.UnitPrice,
@@ -333,6 +364,29 @@ namespace TransitManager.Infrastructure.Services
                 quote.DateRejected = DateTime.UtcNow;
                 quote.RejectionReason = rejectionReason;
             }
+
+            // History Log
+            string action = status switch 
+            {
+                QuoteStatus.Sent => "Envoyé",
+                QuoteStatus.Viewed => "Consulté",
+                QuoteStatus.Accepted => "Accepté",
+                QuoteStatus.Rejected => "Refusé",
+                QuoteStatus.Draft => "Brouillon",
+                _ => "Modifié"
+            };
+
+            var historyDetails = $"Statut passé à {action}";
+            if (rejectionReason != null) historyDetails += $" ({rejectionReason})";
+            if (status == QuoteStatus.Draft) historyDetails = "Devis remis en brouillon";
+
+            _context.QuoteHistories.Add(new QuoteHistory 
+            { 
+                QuoteId = id, 
+                Date = DateTime.UtcNow, 
+                Action = "Changement de statut", 
+                Details = historyDetails
+            });
 
             await _context.SaveChangesAsync();
             return true;
@@ -416,14 +470,38 @@ namespace TransitManager.Infrastructure.Services
     </div>
 </div>";
 
-            await _emailService.SendEmailAsync(quote.Client.Email, subject, body);
-            
-            // Update status if Draft -> Sent
-            if (quote.Status == QuoteStatus.Draft)
+            try
             {
-                quote.Status = QuoteStatus.Sent;
-                quote.DateSent = DateTime.UtcNow;
+                await _emailService.SendEmailAsync(quote.Client.Email, subject, body);
+                
+                // Update status if Draft -> Sent
+                if (quote.Status == QuoteStatus.Draft)
+                {
+                    quote.Status = QuoteStatus.Sent;
+                    quote.DateSent = DateTime.UtcNow;
+
+                    _context.QuoteHistories.Add(new QuoteHistory 
+                    { 
+                        QuoteId = id, 
+                        Date = DateTime.UtcNow, 
+                        Action = "Email envoyé", 
+                        Details = $"Devis envoyé par email à {quote.Client.Email} avec succès" 
+                    });
+
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _context.QuoteHistories.Add(new QuoteHistory 
+                { 
+                    QuoteId = id, 
+                    Date = DateTime.UtcNow, 
+                    Action = "Erreur Envoi Email", 
+                    Details = $"L'envoi du devis par email a échoué: {ex.Message}" 
+                });
                 await _context.SaveChangesAsync();
+                throw; // Re-throw to alert user
             }
         }
 
@@ -451,6 +529,14 @@ namespace TransitManager.Infrastructure.Services
                 DiscountType = q.DiscountType,
                 DiscountBase = q.DiscountBase,
                 DiscountScope = q.DiscountScope,
+                
+                // History
+                DateSent = q.DateSent,
+                DateAccepted = q.DateAccepted,
+                DateRejected = q.DateRejected,
+                DateViewed = q.DateViewed,
+                RejectionReason = q.RejectionReason,
+                
                 PublicToken = q.PublicToken,
                 // PublicUrl will be set by Controller/Service with Host info, or frontend
                 TotalHT = q.TotalHT,
@@ -461,12 +547,21 @@ namespace TransitManager.Infrastructure.Services
                     Id = l.Id,
                     ProductId = l.ProductId,
                     Description = l.Description,
+                    Date = l.Date,
                     Quantity = l.Quantity,
                     Unit = l.Unit,
                     UnitPrice = l.UnitPrice,
                     VATRate = l.VATRate,
                     TotalHT = l.TotalHT
-                }).ToList()
+                }).ToList(),
+
+                History = q.History.Select(h => new QuoteHistoryDto
+                {
+                    Date = h.Date,
+                    Action = h.Action,
+                    Details = h.Details,
+                    User = h.UserId ?? "Système"
+                }).OrderByDescending(h => h.Date).ToList()
             };
         }
 

@@ -8,6 +8,7 @@
 @using TransitManager.Web.Components.Shared
 @using TransitManager.Core.Entities 
 @using Microsoft.JSInterop
+@using System.Text.Json
 
 @inject IApiService ApiService
 @inject NavigationManager NavManager
@@ -45,7 +46,7 @@
                     <i class="bi bi-eye me-2"></i>Aperçu
                 </button>
                  <button class="btn btn-secondary btn-sm" @onclick="SaveDraft">
-                    <i class="bi bi-save me-2"></i>Brouillon
+                    <i class="bi bi-save me-2"></i>@(Id.HasValue && !IsAutoDraft ? "Enregistrer" : "Brouillon")
                 </button>
             }
         </div>
@@ -111,7 +112,9 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th class="py-3 ps-4">Description</th>
+                                    <th class="py-3 text-center">Date</th>
                                     <th class="text-end py-3">Qté</th>
+                                    <th class="text-center py-3">Unité</th>
                                     <th class="text-end py-3">Prix</th>
                                     <th class="text-end py-3">TVA</th>
                                     <th class="text-end py-3 pe-4">Total</th>
@@ -122,7 +125,9 @@
                                 {
                                     <tr>
                                         <td class="ps-4 py-3 fw-medium">@line.Description</td>
-                                        <td class="text-end py-3">@line.Quantity @line.Unit</td>
+                                        <td class="text-center py-3">@line.Date?.ToString("dd/MM")</td>
+                                        <td class="text-end py-3">@line.Quantity</td>
+                                        <td class="text-center py-3">@line.Unit</td>
                                         <td class="text-end py-3">@line.UnitPrice.ToString("N2")</td>
                                         <td class="text-end py-3">@line.VATRate%</td>
                                         <td class="text-end py-3 pe-4">@((line.Quantity * line.UnitPrice).ToString("N2"))</td>
@@ -195,6 +200,10 @@
                                  SelectedClient="@SelectedClient" 
                                  OnClientSelected="HandleClientSelected" />
                          </div>
+                         <div class="col-12 col-md-3 mb-3">
+                               <label class="form-label text-muted small fw-bold text-uppercase">Validité</label>
+                               <input type="date" class="form-control" @bind="Model.DateValidity" />
+                         </div>
                          <div class="col-12 mb-3">
                             <label class="form-label">Modalités de paiement</label>
                              <textarea class="form-control" rows="2" @bind="Model.PaymentTerms"></textarea>
@@ -221,7 +230,7 @@
                                 {
                                     <tr>
                                         <td><input type="text" class="form-control form-control-sm" placeholder="Desc" @bind="line.Description" /></td>
-                                        <td><span class="text-muted small">@DateTime.Today.ToString("dd.MM")</span></td>
+                                        <td><input type="date" class="form-control form-control-sm" @bind="line.Date" /></td>
                                         <td><input type="number" class="form-control form-control-sm text-center" @bind="line.Quantity" step="0.01" /></td>
                                         <td><input type="text" class="form-control form-control-sm text-center" @bind="line.Unit" /></td>
                                         <td><input type="number" class="form-control form-control-sm text-end" @bind="line.UnitPrice" step="0.01" /></td>
@@ -349,6 +358,8 @@
     private bool IsSaving = false;
     private bool IsPreviewMode = false;
     private bool IsLoadingPdf = false; // New state
+    private QuoteStatus CurrentStatus = QuoteStatus.Draft;
+    private string OriginalModelJson = ""; // Snapshot for Revert
 
     // --- Computed Properties for UI ---
     
@@ -415,6 +426,21 @@
                     
                     if (quote.ClientId.HasValue && quote.ClientId != Guid.Empty)
                         SelectedClient = await ApiService.GetClientByIdAsync(quote.ClientId.Value);
+                    
+                    CurrentStatus = quote.Status;
+
+                    // Date Fix: Ensure dates are Local/Unspecified to avoid J-1 on display
+                    if (quote.DateValidity.Kind == DateTimeKind.Utc) Model.DateValidity = quote.DateValidity.ToLocalTime();
+                    foreach(var line in Model.Lines) 
+                    {
+                        if (line.Date.HasValue && line.Date.Value.Kind == DateTimeKind.Utc)
+                        {
+                            line.Date = line.Date.Value.ToLocalTime();
+                        }
+                    }
+
+                    // SNAPSHOT
+                    OriginalModelJson = JsonSerializer.Serialize(Model);
                 }
             }
             else
@@ -435,6 +461,13 @@
                      Model.Id = result.Id;
                      Id = result.Id;
                      IsAutoDraft = true;
+                     CurrentStatus = result.Status;
+                     
+                     // Fix Date for AutoDraft
+                     if (Model.DateCreated.HasValue) Model.DateCreated = Model.DateCreated.Value.ToLocalTime();
+
+                     // SNAPSHOT (After auto-draft creation)
+                     OriginalModelJson = JsonSerializer.Serialize(Model);
                 }
                 catch (Exception ex)
                 {
@@ -454,7 +487,7 @@
 
     private void AddLine()
     {
-        Model.Lines.Add(new QuoteLineDto { Quantity = 1, Unit = "pce", VATRate = 20, Description = "" });
+        Model.Lines.Add(new QuoteLineDto { Quantity = 1, Unit = "pce", VATRate = 20, Description = "", Date = DateTime.Today });
     }
 
     private void RemoveLine(QuoteLineDto line)
@@ -469,13 +502,20 @@
         Model.ClientId = client?.Id ?? Guid.Empty;
     }
 
-    private void TogglePreview()
+    private async Task TogglePreview()
     {
         if (Model.ClientId == Guid.Empty)
         {
-             JS.InvokeVoidAsync("alert", "Veuillez d'abord sélectionner un client.");
+             await JS.InvokeVoidAsync("alert", "Veuillez d'abord sélectionner un client.");
              return;
         }
+
+        if (!IsPreviewMode)
+        {
+            // Enter Preview -> Save to ensure PDF generation works
+            if (!await Save()) return;
+        }
+
         IsPreviewMode = !IsPreviewMode;
     }
     
@@ -533,6 +573,7 @@
             var result = await ApiService.CreateOrUpdateQuoteAsync(Model);
             Model.Id = result.Id;
             if(!Id.HasValue) { Id = result.Id; } // Update local ID binding
+            CurrentStatus = result.Status;
             return true;
         }
         catch (Exception ex)
@@ -622,15 +663,34 @@
 
     private async Task Cancel()
     {
-        // If it was an auto-created draft and user is cancelling immediately (no client selected)
-        if (IsAutoDraft && Model.ClientId == Guid.Empty && Model.Id.HasValue) 
+        // If it looks like a new draft (auto-draft or just created), delete it on cancel
+        if (IsAutoDraft || (Id.HasValue && CurrentStatus == QuoteStatus.Draft && (Model.DateCreated ?? DateTime.MinValue) > DateTime.UtcNow.AddMinutes(-30))) // Heuristic: Created recently
         {
              try 
              {
-                 await ApiService.DeleteQuoteAsync(Model.Id.Value);
+                 if (Id.HasValue) await ApiService.DeleteQuoteAsync(Id.Value);
              }
              catch {} // Ignore errors on cleanup
         }
+        else if (!string.IsNullOrEmpty(OriginalModelJson))
+        {
+            // REVERT Logic: If we modified an existing quote (or draft) and saved intermediate changes (e.g. for preview)
+            // we should revert to the original state.
+            try 
+            {
+                var original = JsonSerializer.Deserialize<UpsertQuoteDto>(OriginalModelJson);
+                if (original != null)
+                {
+                    // Restore original state to DB
+                    await ApiService.CreateOrUpdateQuoteAsync(original);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error reverting quote: " + ex.Message);
+            }
+        }
+
         NavManager.NavigateTo("/admin/commerce/quotes");
     }
     

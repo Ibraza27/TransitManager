@@ -1448,6 +1448,11 @@ namespace TransitManager.Web.Services
              return await _httpClient.GetFromJsonAsync<PagedResult<ProductDto>>($"api/commerce/products?{query}", _jsonOptions) ?? new();
         }
 
+        public async Task<byte[]> ExportProductsCsvAsync()
+        {
+            return await _httpClient.GetByteArrayAsync("api/commerce/products/export");
+        }
+
         public async Task<ProductDto> CreateProductAsync(ProductDto dto)
         {
             var response = await _httpClient.PostAsJsonAsync("api/commerce/products", dto, _jsonOptions);
@@ -1487,10 +1492,7 @@ namespace TransitManager.Web.Services
              return 0;
         }
 
-        public async Task<byte[]> ExportProductsCsvAsync() // NEW
-        {
-             return await _httpClient.GetByteArrayAsync("api/commerce/products/export");
-        }
+
 
         public async Task<PagedResult<QuoteDto>> GetQuotesAsync(string? search, Guid? clientId, string? status, int page = 1, int pageSize = 20)
         {

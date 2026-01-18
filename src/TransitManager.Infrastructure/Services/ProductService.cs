@@ -81,33 +81,42 @@ namespace TransitManager.Infrastructure.Services
             var count = 0;
             var lines = csvContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             
-            // Expected Header: "Produit,Unité,Prix HT (EUR),TVA,Prix TTC (EUR)"
-            // Skipping header if present
+            // Expected Header: "Produit;Unité;Prix HT (EUR);TVA;Prix TTC (EUR)" OR with commas
+            // Detection strategy: Check first line for ';' vs ','
+            char delimiter = ',';
+            if (lines.Length > 0 && lines[0].Contains(";")) delimiter = ';';
+
             var start = 0;
-            if (lines.Length > 0 && lines[0].Contains("Produit")) start = 1;
+            // Skipping header if likely present
+            if (lines.Length > 0 && (lines[0].Contains("Produit", StringComparison.OrdinalIgnoreCase) || lines[0].Contains("Product", StringComparison.OrdinalIgnoreCase))) 
+                start = 1;
 
             for (int i = start; i < lines.Length; i++)
             {
                 var line = lines[i];
-                var parts = ParseCsvLine(line);
-                if (parts.Count < 4) continue; // Minimum required
+                var parts = ParseCsvLine(line, delimiter);
+                if (parts.Count < 3) continue; // Minimum required: Name, Price, maybe unit/vat
 
+                // Map columns based on Zervant format: Name(0), Unit(1), PriceHT(2), TVA(3), PriceTTC(4)
+                // If only 3 columns, assume Name, Unit, Price
                 var name = parts[0];
-                var unit = parts[1];
+                if (string.IsNullOrWhiteSpace(name)) continue;
+
+                var unit = parts.Count > 1 ? parts[1] : "pce";
                 if(string.IsNullOrWhiteSpace(unit)) unit = "pce";
                 
                 // Parse Price HT
-                if (!decimal.TryParse(parts[2].Replace("€","").Replace(" ",""), NumberStyles.Any, CultureInfo.InvariantCulture, out var priceHt))
+                decimal priceHt = 0;
+                if (parts.Count > 2)
                 {
-                     // Try French format
-                     decimal.TryParse(parts[2].Replace("€","").Replace(" ",""), NumberStyles.Any, new CultureInfo("fr-FR"), out priceHt);
+                    priceHt = ParseDecimal(parts[2]);
                 }
 
-                // Parse TVA (e.g. "20 %" or "0.2")
-                var tvaStr = parts[3].Replace("%", "").Replace(" ", "");
-                if (!decimal.TryParse(tvaStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var tva))
+                // Parse TVA
+                decimal tva = 20; // default
+                if (parts.Count > 3)
                 {
-                     decimal.TryParse(tvaStr, NumberStyles.Any, new CultureInfo("fr-FR"), out tva);
+                    tva = ParseDecimal(parts[3]);
                 }
                 
                 // Check if exists
@@ -117,7 +126,7 @@ namespace TransitManager.Infrastructure.Services
                     existing.UnitPrice = priceHt;
                     existing.Unit = unit;
                     existing.VATRate = tva;
-                    // Type ? Default to Goods for now unless guessed
+                    _context.Entry(existing).State = EntityState.Modified;
                 }
                 else
                 {
@@ -138,6 +147,27 @@ namespace TransitManager.Infrastructure.Services
             return count;
         }
 
+        private decimal ParseDecimal(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return 0;
+            // Cleanup: remove currency symbols, spaces, %
+            var clean = input.Replace("€", "").Replace("$", "").Replace("%", "").Trim();
+            // Handle space as thousand separator in French "1 200,50" -> "1200,50"
+            clean = clean.Replace(" ", "").Replace("\u00A0", ""); // Non-breaking space
+            
+            // Try explicit French culture first (comma decimal)
+            if (decimal.TryParse(clean, NumberStyles.Any, new CultureInfo("fr-FR"), out var resultFr))
+            {
+                return resultFr;
+            }
+            // Try Invariant (dot decimal)
+            if (decimal.TryParse(clean, NumberStyles.Any, CultureInfo.InvariantCulture, out var resultInv))
+            {
+                return resultInv;
+            }
+            return 0;
+        }
+
         public Task<byte[]> ExportCsvAsync()
         {
             var sb = new StringBuilder();
@@ -153,16 +183,29 @@ namespace TransitManager.Infrastructure.Services
             return Task.FromResult(Encoding.UTF8.GetBytes(sb.ToString()));
         }
 
-        private List<string> ParseCsvLine(string line)
+        private List<string> ParseCsvLine(string line, char delimiter)
         {
             var result = new List<string>();
             var inQuotes = false;
             var current = new StringBuilder();
             
-            foreach (var c in line)
+            for (int i = 0; i < line.Length; i++)
             {
-                if (c == '"') inQuotes = !inQuotes;
-                else if (c == ',' && !inQuotes)
+                var c = line[i];
+                if (c == '"') 
+                {
+                    // Handle escaped quotes ""
+                    if (inQuotes && i + 1 < line.Length && line[i+1] == '"')
+                    {
+                         current.Append('"');
+                         i++; // skip next quote
+                    }
+                    else
+                    {
+                        inQuotes = !inQuotes;
+                    }
+                }
+                else if (c == delimiter && !inQuotes)
                 {
                     result.Add(current.ToString());
                     current.Clear();

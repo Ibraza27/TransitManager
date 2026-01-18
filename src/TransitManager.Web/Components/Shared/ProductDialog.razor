@@ -1,0 +1,59 @@
+@using TransitManager.Core.DTOs.Commerce
+@inject IApiService ApiService
+@inject IJSRuntime JS
+
+@if (Show)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content overflow-hidden">
+                <ProductEditor 
+                    Product="Product" 
+                    OnSave="HandleSave" 
+                    OnClose="Close" 
+                />
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<ProductDto> OnProductCreated { get; set; }
+    
+    private bool Show { get; set; }
+    private ProductDto Product { get; set; } = new();
+
+    public void Open(string initialName = "")
+    {
+        Product = new ProductDto 
+        { 
+            Name = initialName, 
+            Unit = "pce", 
+            UnitPrice = 0, 
+            VATRate = 20 
+        };
+        Show = true;
+        StateHasChanged();
+    }
+
+    private void Close()
+    {
+        Show = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleSave(ProductDto p)
+    {
+        try
+        {
+            var created = await ApiService.CreateProductAsync(p);
+            await OnProductCreated.InvokeAsync(created);
+            Close();
+            await JS.InvokeVoidAsync("alert", "Produit créé avec succès !");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", "Erreur: " + ex.Message);
+        }
+    }
+}

@@ -1,0 +1,148 @@
+@using TransitManager.Core.DTOs.Commerce
+@using TransitManager.Core.Enums
+@inject IJSRuntime JS
+
+<div class="h-100 d-flex flex-column bg-white">
+    <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+        <h5 class="mb-0 fw-bold text-uppercase">@((Product.Id == Guid.Empty) ? "Nouveau Produit" : "Modifier")</h5>
+        @if(OnClose.HasDelegate)
+        {
+            <button type="button" class="btn-close" @onclick="Close"></button>
+        }
+    </div>
+    
+    <div class="p-4 flex-grow-1 overflow-auto">
+        <!-- Form -->
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-muted text-uppercase">Nom (0/255)</label>
+            <input type="text" class="form-control" @bind="Product.Name" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-muted text-uppercase">Type de produit</label>
+            <select class="form-select" @bind="Product.Type">
+                <option value="@ProductType.Goods">Biens</option>
+                <option value="@ProductType.Services">Services</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-muted text-uppercase">Commentaire (0/255)</label>
+            <textarea class="form-control" rows="4" @bind="Product.Description"></textarea>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label small fw-bold text-muted text-uppercase">Unité</label>
+            <select class="form-select" @bind="Product.Unit">
+                <option value="h">Heures (h)</option>
+                <option value="pce">Pièces (pce)</option>
+                <option value="kg">Kilogrammes (kg)</option>
+                <option value="m3">Mètres cubes (m3)</option>
+                <option value="km">Kilomètres (km)</option>
+                <option value="f">Forfait (f)</option>
+            </select>
+        </div>
+
+        <div class="row g-2 mb-3 align-items-end">
+                <div class="col-12">
+                <label class="form-label small fw-bold text-muted text-uppercase">Prix basé sur</label>
+                <select class="form-select mb-2" @bind="PriceBase">
+                    <option value="HT">Prix HT</option>
+                    <option value="TTC">Prix TTC</option>
+                </select>
+                </div>
+        </div>
+
+        <div class="border rounded p-3 bg-light">
+                <div class="row mb-2">
+                    <div class="col-6 fw-bold">Prix HT</div>
+                    <div class="col-6">
+                        <input type="number" step="0.01" class="form-control form-control-sm text-end" @bind="Product.UnitPrice" disabled="@(PriceBase == "TTC")" />
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-6 fw-bold align-self-center">TVA</div>
+                    <div class="col-6">
+                        <div class="input-group input-group-sm">
+                        <input type="number" step="0.1" class="form-control text-end" @bind="Product.VATRate" />
+                        <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 fw-bold fs-5">Prix TTC</div>
+                    <div class="col-6 fw-bold fs-5 text-end">
+                        @if(PriceBase == "TTC")
+                        {
+                            <input type="number" step="0.01" class="form-control form-control-sm text-end fw-bold" value="@GetTtc(Product)" @onchange="UpdateFromTtc" />
+                        }
+                        else
+                        {
+                            <span>@GetTtc(Product).ToString("N2") €</span>
+                        }
+                    </div>
+                </div>
+        </div>
+    </div>
+
+    <div class="p-3 border-top bg-light d-flex justify-content-between">
+            @if(Product.Id != Guid.Empty && OnDelete.HasDelegate)
+            {
+                <button class="btn btn-link text-danger text-decoration-none" @onclick="Delete">Supprimer</button>
+            }
+            else { <div></div> }
+        
+            <div class="d-flex gap-2">
+                @if(OnClose.HasDelegate)
+                {
+                    <button class="btn btn-link text-dark text-decoration-none" @onclick="Close">Annuler</button>
+                }
+                <button class="btn btn-dark px-4" @onclick="Save">Enregistrer</button>
+            </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ProductDto Product { get; set; } = new();
+    [Parameter] public EventCallback<ProductDto> OnSave { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<ProductDto> OnDelete { get; set; }
+
+    private string PriceBase = "HT";
+
+    protected override void OnInitialized()
+    {
+        // Default to Goods if new
+        if (Product.Id == Guid.Empty && Product.Type == 0) Product.Type = ProductType.Goods;
+    }
+
+    private decimal GetTtc(ProductDto p) => p.UnitPrice * (1 + p.VATRate / 100m);
+    
+    private void UpdateFromTtc(ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out var ttc))
+        {
+            Product.UnitPrice = ttc / (1 + Product.VATRate / 100m);
+        }
+    }
+
+    private async Task Save()
+    {
+         if (string.IsNullOrWhiteSpace(Product.Name)) 
+        {
+            await JS.InvokeVoidAsync("alert", "Le nom est obligatoire");
+            return;
+        }
+        await OnSave.InvokeAsync(Product);
+    }
+
+    private async Task Delete()
+    {
+        await OnDelete.InvokeAsync(Product);
+    }
+    
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

@@ -29,6 +29,11 @@
                     </div>
                 </button>
             }
+            <div class="border-top p-1">
+                <button class="dropdown-item fw-bold text-primary" @onclick="CreateNewProduct" @onmousedown:preventDefault>
+                    <i class="bi bi-plus-circle me-2"></i>Ajouter un nouveau produit
+                </button>
+            </div>
         </div>
     }
 </div>
@@ -37,6 +42,7 @@
     [Parameter] public string Description { get; set; } = "";
     [Parameter] public EventCallback<string> DescriptionChanged { get; set; }
     [Parameter] public EventCallback<ProductDto> OnProductSelected { get; set; }
+    [Parameter] public EventCallback OnCreateNew { get; set; }
 
     private List<ProductDto> Results { get; set; } = new();
     private bool ShowDropdown { get; set; }
@@ -79,6 +85,12 @@
         
         ShowDropdown = false;
         Results.Clear();
+    }
+    
+    private async Task CreateNewProduct()
+    {
+        ShowDropdown = false;
+        await OnCreateNew.InvokeAsync();
     }
 
     private async Task OnFocusOut()

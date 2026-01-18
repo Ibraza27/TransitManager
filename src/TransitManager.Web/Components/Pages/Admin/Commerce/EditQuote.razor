@@ -231,9 +231,9 @@
                                     <tr>
                                     <td>
                                         <ProductAutocomplete 
-                                            Description="@line.Description" 
-                                            DescriptionChanged="@((val) => line.Description = val)"
-                                            OnProductSelected="@((p) => HandleProductSelected(line, p))" />
+                                            @bind-Description="line.Description" 
+                                            OnProductSelected="@((p) => HandleProductSelected(line, p))"
+                                            OnCreateNew="() => OpenNewProductDialog(line)" />
                                     </td>
                                         <td><input type="date" class="form-control form-control-sm" @bind="line.Date" /></td>
                                         <td><input type="number" class="form-control form-control-sm text-center" @bind="line.Quantity" step="0.01" /></td>
@@ -343,8 +343,27 @@
     }
 </div>
 
+<ProductDialog @ref="_productDialog" OnProductCreated="HandleNewProductCreated" />
 
 @code {
+    private ProductDialog _productDialog;
+    private QuoteLineDto _activeLineForCreation;
+
+    private void OpenNewProductDialog(QuoteLineDto line)
+    {
+        _activeLineForCreation = line;
+        _productDialog.Open(line.Description); // Pre-fill with what user typed
+    }
+
+    private void HandleNewProductCreated(ProductDto product)
+    {
+        if (_activeLineForCreation != null)
+        {
+            _activeLineForCreation.Description = product.Name;
+            HandleProductSelected(_activeLineForCreation, product);
+            _activeLineForCreation = null;
+        }
+    }
     [Parameter] public Guid? Id { get; set; }
     
     private UpsertQuoteDto Model = new() 

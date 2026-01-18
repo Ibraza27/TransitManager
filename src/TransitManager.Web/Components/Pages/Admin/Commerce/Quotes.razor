@@ -227,14 +227,17 @@
                         </ul>
                     </div>
                     <!-- Direct Primary Action -->
-                    @if(quote.Status == QuoteStatus.Draft)
-                    {
-                         <button class="btn btn-primary btn-sm" @onclick="() => SendEmail(quote)" @onclick:stopPropagation><i class="bi bi-send me-1"></i>Envoyer</button>
-                    }
-                    else 
-                    {
-                         <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenAdminPreview(quote)" @onclick:stopPropagation><i class="bi bi-eye me-1"></i>Voir</button>
-                    }
+                    <div class="d-flex gap-2">
+                        @if(quote.Status == QuoteStatus.Draft)
+                        {
+                             <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenAdminPreview(quote)" @onclick:stopPropagation><i class="bi bi-eye me-1"></i>Voir</button>
+                             <button class="btn btn-primary btn-sm" @onclick="() => SendEmail(quote)" @onclick:stopPropagation><i class="bi bi-send me-1"></i>Envoyer</button>
+                        }
+                        else 
+                        {
+                             <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenAdminPreview(quote)" @onclick:stopPropagation><i class="bi bi-eye me-1"></i>Voir</button>
+                        }
+                    </div>
                  </div>
             </div>
 
@@ -483,6 +486,13 @@
             if (!append && SelectedQuote == null && QuoteList.Any())
             {
                 SelectedQuote = QuoteList.First();
+            }
+            // Refresh SelectedQuote if it exists
+            else if (SelectedQuote != null)
+            {
+                var refreshed = QuoteList.FirstOrDefault(q => q.Id == SelectedQuote.Id);
+                if (refreshed != null) SelectedQuote = refreshed;
+                else if (!append) SelectedQuote = null; 
             }
         }
         catch (Exception ex)

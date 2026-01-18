@@ -588,14 +588,17 @@
         }
     }
     
-    private async Task SendEmail()
+     private async Task SendEmail()
     {
          if (await Save())
          {
              try
              {
                  await ApiService.SendQuoteByEmailAsync(Model.Id!.Value);
+                 await ApiService.UpdateQuoteStatusAsync(Model.Id!.Value, QuoteStatus.Sent);
+                 
                  await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
+                 NavManager.NavigateTo("/admin/commerce/quotes");
              }
              catch(Exception ex)
              {

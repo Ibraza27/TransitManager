@@ -140,6 +140,7 @@ builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<ITimelineService, TimelineService>();
+builder.Services.AddScoped<IProductService, ProductService>(); // NEW: Product Service
 // --- SERVICES WEB API ---
 builder.Services.AddScoped<IReceptionService, ReceptionService>(); // Module SAV
 builder.Services.AddScoped<IAuditService, AuditService>(); // Module Audit

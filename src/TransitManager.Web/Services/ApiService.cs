@@ -1467,6 +1467,31 @@ namespace TransitManager.Web.Services
              await _httpClient.DeleteAsync($"api/commerce/products/{id}");
         }
 
+        public async Task DeleteProductsManyAsync(List<Guid> ids) // NEW
+        {
+             await _httpClient.PostAsJsonAsync("api/commerce/products/delete-many", ids);
+        }
+
+        public async Task<int> ImportProductsCsvAsync(IBrowserFile file) // NEW
+        {
+             using var content = new MultipartFormDataContent();
+             using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB limit
+             content.Add(new StreamContent(stream), "file", file.Name);
+             
+             var response = await _httpClient.PostAsync("api/commerce/products/import", content);
+             if (response.IsSuccessStatusCode)
+             {
+                 var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                 if (result.TryGetProperty("count", out var c)) return c.GetInt32();
+             }
+             return 0;
+        }
+
+        public async Task<byte[]> ExportProductsCsvAsync() // NEW
+        {
+             return await _httpClient.GetByteArrayAsync("api/commerce/products/export");
+        }
+
         public async Task<PagedResult<QuoteDto>> GetQuotesAsync(string? search, Guid? clientId, string? status, int page = 1, int pageSize = 20)
         {
             var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };

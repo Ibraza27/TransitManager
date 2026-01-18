@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TransitManager.Core.Enums;
 
 namespace TransitManager.Core.Entities.Commerce
 {
@@ -24,6 +25,8 @@ namespace TransitManager.Core.Entities.Commerce
 
         [Column(TypeName = "decimal(5,2)")]
         public decimal VATRate { get; set; } = 20.0m;
+
+        public ProductType Type { get; set; } = ProductType.Goods;
 
         public bool IsActive { get; set; } = true;
     }

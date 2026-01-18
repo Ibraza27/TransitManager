@@ -154,6 +154,9 @@ namespace TransitManager.Web.Services
         Task<ProductDto> CreateProductAsync(ProductDto dto);
         Task<ProductDto> UpdateProductAsync(ProductDto dto);
         Task DeleteProductAsync(Guid id);
+        Task DeleteProductsManyAsync(List<Guid> ids); // NEW
+        Task<int> ImportProductsCsvAsync(IBrowserFile file); // NEW
+        Task<byte[]> ExportProductsCsvAsync(); // NEW
 
         Task<PagedResult<QuoteDto>> GetQuotesAsync(string? search, Guid? clientId, string? status, int page = 1, int pageSize = 20);
         Task<QuoteDto> GetQuoteByIdAsync(Guid id);

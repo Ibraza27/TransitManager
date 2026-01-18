@@ -229,7 +229,12 @@
                                  @foreach (var line in Model.Lines)
                                 {
                                     <tr>
-                                        <td><input type="text" class="form-control form-control-sm" placeholder="Desc" @bind="line.Description" /></td>
+                                    <td>
+                                        <ProductAutocomplete 
+                                            Description="@line.Description" 
+                                            DescriptionChanged="@((val) => line.Description = val)"
+                                            OnProductSelected="@((p) => HandleProductSelected(line, p))" />
+                                    </td>
                                         <td><input type="date" class="form-control form-control-sm" @bind="line.Date" /></td>
                                         <td><input type="number" class="form-control form-control-sm text-center" @bind="line.Quantity" step="0.01" /></td>
                                         <td><input type="text" class="form-control form-control-sm text-center" @bind="line.Unit" /></td>
@@ -500,6 +505,15 @@
     {
         SelectedClient = client;
         Model.ClientId = client?.Id ?? Guid.Empty;
+    }
+
+    private void HandleProductSelected(QuoteLineDto line, ProductDto product)
+    {
+        line.Description = product.Name; // Redundant but safe
+        line.Unit = product.Unit;
+        line.UnitPrice = product.UnitPrice;
+        line.VATRate = product.VATRate;
+        // Optionally update description with more details if needed
     }
 
     private async Task TogglePreview()

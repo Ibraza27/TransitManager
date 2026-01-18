@@ -1,0 +1,89 @@
+@using System.Timers
+@using TransitManager.Core.DTOs.Commerce
+@using TransitManager.Core.Enums
+@using TransitManager.Web.Services
+@inject IApiService ApiService
+
+<div class="position-relative">
+    <input type="text" 
+           class="form-control form-control-sm" 
+           placeholder="Description" 
+           value="@Description"
+           @oninput="OnInput"
+           @onfocusin="() => ShowDropdown = true" 
+           @onfocusout="OnFocusOut" />
+
+    @if (ShowDropdown && Results.Any())
+    {
+        <div class="dropdown-menu show w-100 shadow-sm" style="max-height: 200px; overflow-y: auto; z-index: 1050;">
+            @foreach (var p in Results)
+            {
+                <button class="dropdown-item p-2 border-bottom" @onclick="() => SelectProduct(p)" @onmousedown:preventDefault>
+                    <div class="d-flex justify-content-between">
+                        <strong>@p.Name</strong>
+                        <span class="fw-bold">@p.UnitPrice.ToString("N2")€</span>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between">
+                        <span>@p.Type</span>
+                        <span>(@p.Unit) TVA: @p.VATRate%</span>
+                    </div>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Description { get; set; } = "";
+    [Parameter] public EventCallback<string> DescriptionChanged { get; set; }
+    [Parameter] public EventCallback<ProductDto> OnProductSelected { get; set; }
+
+    private List<ProductDto> Results { get; set; } = new();
+    private bool ShowDropdown { get; set; }
+    private Timer _debounceTimer;
+
+    protected override void OnInitialized()
+    {
+        _debounceTimer = new Timer(300);
+        _debounceTimer.AutoReset = false;
+        _debounceTimer.Elapsed += async (sender, args) => await SearchAsync();
+    }
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString() ?? "";
+        Description = val;
+        await DescriptionChanged.InvokeAsync(val);
+
+        _debounceTimer.Stop();
+        if (val.Length >= 2) _debounceTimer.Start();
+        else Results.Clear();
+        
+        ShowDropdown = true;
+    }
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Description) || Description.Length < 2) return;
+
+        var result = await ApiService.GetProductsAsync(Description, 1, 10);
+        Results = result.Items.ToList();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SelectProduct(ProductDto p)
+    {
+        Description = p.Name;
+        await DescriptionChanged.InvokeAsync(Description);
+        await OnProductSelected.InvokeAsync(p);
+        
+        ShowDropdown = false;
+        Results.Clear();
+    }
+
+    private async Task OnFocusOut()
+    {
+        await Task.Delay(200);
+        ShowDropdown = false;
+    }
+}

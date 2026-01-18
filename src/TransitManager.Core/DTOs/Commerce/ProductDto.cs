@@ -1,4 +1,5 @@
 using System;
+using TransitManager.Core.Enums;
 
 namespace TransitManager.Core.DTOs.Commerce
 {
@@ -10,5 +11,6 @@ namespace TransitManager.Core.DTOs.Commerce
         public decimal UnitPrice { get; set; }
         public string Unit { get; set; }
         public decimal VATRate { get; set; }
+        public ProductType Type { get; set; }
     }
 }

@@ -1,0 +1,364 @@
+@page "/admin/commerce/products"
+@using Microsoft.AspNetCore.Authorization
+@using TransitManager.Core.DTOs.Commerce
+@using TransitManager.Core.Enums
+@using TransitManager.Web.Services
+@inject IApiService ApiService
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+@attribute [Authorize(Roles = "Administrateur")]
+
+<div class="d-flex flex-column" style="height: calc(100vh - 3.5rem);">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0 fw-bold">Produits et services</h3>
+        <div class="d-flex gap-2">
+            <div class="input-group input-group-sm" style="max-width: 300px;">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control border-start-0 ps-0" placeholder="Rechercher dans la liste" @bind="SearchTerm" @bind:event="oninput" @onkeyup="LoadProducts" />
+            </div>
+            <button class="btn btn-dark btn-sm rounded-pill px-3 fw-bold" @onclick="CreateNew">Nouveau produit</button>
+        </div>
+    </div>
+
+    <!-- Actions Bar (Bulk) -->
+    @if (SelectedIds.Any())
+    {
+        <div class="bg-light p-2 mb-3 rounded d-flex gap-3 align-items-center border">
+            <div class="fw-bold text-primary">@SelectedIds.Count sélectionné(s)</div>
+            <button class="btn btn-link text-decoration-none text-dark fw-bold p-0" @onclick="BulkDelete">Supprimer sélection</button>
+            <button class="btn btn-link text-decoration-none text-dark fw-bold p-0" @onclick="ClearSelection">Annuler</button>
+        </div>
+    }
+    else 
+    {
+         <div class="d-flex justify-content-end mb-2">
+             <button class="btn btn-link text-muted text-decoration-none p-0 me-3" @onclick="TriggerImport">Importer produits</button>
+             <button class="btn btn-link text-muted text-decoration-none p-0" @onclick="TriggerExport">Exporter produits</button>
+             <InputFile id="importInput" OnChange="UploadFiles" hidden />
+         </div>
+    }
+
+    <!-- Main Content: Split View -->
+    <div class="row g-0 flex-grow-1 overflow-hidden h-100">
+        <!-- Grid -->
+        <div class="col h-100 overflow-auto border-end pe-0">
+             <table class="table table-hover align-middle mb-0">
+                 <thead class="table-light sticky-top">
+                     <tr>
+                         <th style="width: 40px;" class="ps-3">
+                             <input type="checkbox" class="form-check-input" @onchange="ToggleAll" checked="@AllSelected" />
+                         </th>
+                         <th>PRODUIT</th>
+                         <th class="text-end">PRIX HT</th>
+                         <th class="text-end">TVA</th>
+                         <th class="text-end pe-3">PRIX TTC</th>
+                         <th style="width: 40px;"></th>
+                     </tr>
+                 </thead>
+                 <tbody>
+                     @if (IsLoading)
+                     {
+                         <tr><td colspan="6" class="text-center p-5"><div class="spinner-border text-primary"></div></td></tr>
+                     }
+                     else if (!ProductList.Any())
+                     {
+                         <tr><td colspan="6" class="text-center p-5 text-muted">Aucun produit trouvé.</td></tr>
+                     }
+                     else
+                     {
+                         @foreach (var p in ProductList)
+                         {
+                             <tr class="@(EditedProduct?.Id == p.Id ? "table-active" : "") cursor-pointer" @onclick="() => Edit(p)">
+                                 <td class="ps-3" @onclick:stopPropagation>
+                                     <input type="checkbox" class="form-check-input" checked="@SelectedIds.Contains(p.Id)" @onchange="(e) => ToggleSelection(p.Id, e)" />
+                                 </td>
+                                 <td class="fw-bold">@p.Name</td>
+                                 <td class="text-end">@p.UnitPrice.ToString("N2") €</td>
+                                 <td class="text-end">@p.VATRate %</td>
+                                 <td class="text-end pe-3 fw-bold">@GetTtc(p).ToString("N2") €</td>
+                                 <td class="text-center text-muted"><i class="bi bi-chevron-right" style="font-size: 0.8rem;"></i></td>
+                             </tr>
+                         }
+                     }
+                 </tbody>
+             </table>
+        </div>
+
+        <!-- Sidebar Editor -->
+        <div class="col-4 bg-white border-start shadow-sm h-100 d-flex flex-column" style="display: @(EditedProduct != null ? "flex" : "none") !important;">
+            @if (EditedProduct != null)
+            {
+                <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="mb-0 fw-bold text-uppercase">@((EditedProduct.Id == Guid.Empty) ? "Nouveau Produit" : "Modifier")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditor"></button>
+                </div>
+                
+                <div class="p-4 flex-grow-1 overflow-auto">
+                    <!-- Form -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Nom (0/255)</label>
+                        <input type="text" class="form-control" @bind="EditedProduct.Name" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Type de produit</label>
+                        <select class="form-select" @bind="EditedProduct.Type">
+                            <option value="@ProductType.Goods">Biens</option>
+                            <option value="@ProductType.Services">Services</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Commentaire (0/255)</label>
+                        <textarea class="form-control" rows="4" @bind="EditedProduct.Description"></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Unité</label>
+                        <select class="form-select" @bind="EditedProduct.Unit">
+                            <option value="h">Heures (h)</option>
+                            <option value="pce">Pièces (pce)</option>
+                            <option value="kg">Kilogrammes (kg)</option>
+                            <option value="m3">Mètres cubes (m3)</option>
+                            <option value="km">Kilomètres (km)</option>
+                            <option value="f">Forfait (f)</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3 align-items-end">
+                         <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Prix basé sur</label>
+                            <select class="form-select mb-2" @bind="PriceBase">
+                                <option value="HT">Prix HT</option>
+                                <option value="TTC">Prix TTC</option>
+                            </select>
+                         </div>
+                    </div>
+
+                    <div class="border rounded p-3 bg-light">
+                         <div class="row mb-2">
+                             <div class="col-6 fw-bold">Prix HT</div>
+                             <div class="col-6">
+                                 <input type="number" step="0.01" class="form-control form-control-sm text-end" @bind="EditedProduct.UnitPrice" disabled="@(PriceBase == "TTC")" />
+                             </div>
+                         </div>
+                         <div class="row mb-2">
+                             <div class="col-6 fw-bold align-self-center">TVA</div>
+                             <div class="col-6">
+                                 <div class="input-group input-group-sm">
+                                    <input type="number" step="0.1" class="form-control text-end" @bind="EditedProduct.VATRate" />
+                                    <span class="input-group-text">%</span>
+                                 </div>
+                             </div>
+                         </div>
+                         <div class="row">
+                             <div class="col-6 fw-bold fs-5">Prix TTC</div>
+                             <div class="col-6 fw-bold fs-5 text-end">
+                                 @if(PriceBase == "TTC")
+                                 {
+                                      <input type="number" step="0.01" class="form-control form-control-sm text-end fw-bold" value="@GetTtc(EditedProduct)" @onchange="UpdateFromTtc" />
+                                 }
+                                 else
+                                 {
+                                     <span>@GetTtc(EditedProduct).ToString("N2") €</span>
+                                 }
+                             </div>
+                         </div>
+                    </div>
+                </div>
+
+                <div class="p-3 border-top bg-light d-flex justify-content-between">
+                     @if(EditedProduct.Id != Guid.Empty)
+                     {
+                         <button class="btn btn-link text-danger text-decoration-none" @onclick="() => Delete(EditedProduct)">Supprimer</button>
+                     }
+                     else { <div></div> }
+                    
+                     <div class="d-flex gap-2">
+                         <button class="btn btn-link text-dark text-decoration-none" @onclick="CloseEditor">Annuler</button>
+                         <button class="btn btn-dark px-4" @onclick="Save">Enregistrer</button>
+                     </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .table-active { background-color: #f0f8ff !important; border-left: 4px solid #0d6efd; }
+</style>
+
+@code {
+    private List<ProductDto> ProductList = new();
+    private HashSet<Guid> SelectedIds = new();
+    private string SearchTerm = "";
+    private bool IsLoading = true;
+    private ProductDto? EditedProduct;
+    private string PriceBase = "HT"; // HT or TTC
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        IsLoading = true;
+        try 
+        {
+            var result = await ApiService.GetProductsAsync(SearchTerm, 1, 100); // 100 limit for now
+            ProductList = result.Items.ToList();
+        }
+        finally { IsLoading = false; }
+    }
+
+    private void CreateNew()
+    {
+        EditedProduct = new ProductDto 
+        { 
+            Name = "", 
+            Unit = "pce", 
+            UnitPrice = 0, 
+            VATRate = 20, 
+            Type = ProductType.Goods 
+        };
+        PriceBase = "HT";
+    }
+
+    private void Edit(ProductDto p)
+    {
+        // Clone to avoid live editing in grid
+        EditedProduct = new ProductDto 
+        { 
+            Id = p.Id, 
+            Name = p.Name, 
+            Description = p.Description,
+            Unit = p.Unit, 
+            UnitPrice = p.UnitPrice, 
+            VATRate = p.VATRate,
+            Type = p.Type
+        };
+        PriceBase = "HT";
+    }
+
+    private void CloseEditor()
+    {
+        EditedProduct = null;
+    }
+
+    private async Task Save()
+    {
+        if (EditedProduct == null) return;
+        if (string.IsNullOrWhiteSpace(EditedProduct.Name)) 
+        {
+            await JS.InvokeVoidAsync("alert", "Le nom est obligatoire");
+            return;
+        }
+
+        try
+        {
+            if (EditedProduct.Id == Guid.Empty)
+            {
+                var created = await ApiService.CreateProductAsync(EditedProduct);
+                ProductList.Add(created);
+            }
+            else
+            {
+                var updated = await ApiService.UpdateProductAsync(EditedProduct);
+                var index = ProductList.FindIndex(p => p.Id == updated.Id);
+                if (index >= 0) ProductList[index] = updated;
+            }
+            CloseEditor();
+            await JS.InvokeVoidAsync("alert", "Enregistré !");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", "Erreur: " + ex.Message);
+        }
+    }
+
+    private async Task Delete(ProductDto p)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", "Supprimer ce produit ?"))
+        {
+            await ApiService.DeleteProductAsync(p.Id);
+            ProductList.RemoveAll(x => x.Id == p.Id);
+            CloseEditor();
+        }
+    }
+
+    private async Task BulkDelete()
+    {
+         if (await JS.InvokeAsync<bool>("confirm", $"Supprimer {SelectedIds.Count} produits ?"))
+         {
+             await ApiService.DeleteProductsManyAsync(SelectedIds.ToList());
+             await LoadProducts();
+             SelectedIds.Clear();
+         }
+    }
+
+    private void ToggleSelection(Guid id, ChangeEventArgs e)
+    {
+        if ((bool?)e.Value == true) SelectedIds.Add(id);
+        else SelectedIds.Remove(id);
+    }
+
+    private void ToggleAll(ChangeEventArgs e)
+    {
+        if ((bool?)e.Value == true) SelectedIds = ProductList.Select(p => p.Id).ToHashSet();
+        else SelectedIds.Clear();
+    }
+    private bool AllSelected => ProductList.Any() && SelectedIds.Count == ProductList.Count;
+    private void ClearSelection() => SelectedIds.Clear();
+    
+    // --- Price Helpers ---
+    private decimal GetTtc(ProductDto p) => p.UnitPrice * (1 + p.VATRate / 100m);
+    
+    private void UpdateFromTtc(ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out var ttc) && EditedProduct != null)
+        {
+            EditedProduct.UnitPrice = ttc / (1 + EditedProduct.VATRate / 100m);
+        }
+    }
+    
+    // --- Import/Export ---
+    private async Task TriggerImport()
+    {
+        await JS.InvokeVoidAsync("eval", "document.getElementById('importInput').click()");
+    }
+    
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try 
+            {
+                var count = await ApiService.ImportProductsCsvAsync(file);
+                await LoadProducts();
+                await JS.InvokeVoidAsync("alert", $"{count} produits importés !");
+            }
+            catch(Exception ex)
+            {
+                await JS.InvokeVoidAsync("alert", "Erreur import: " + ex.Message);
+            }
+        }
+    }
+
+    private async Task TriggerExport()
+    {
+         try 
+        {
+            var bytes = await ApiService.ExportProductsCsvAsync();
+            using var streamRef = new DotNetStreamReference(new MemoryStream(bytes));
+            await JS.InvokeVoidAsync("downloadFileFromStream", "Produits.csv", streamRef);
+        }
+        catch(Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", "Erreur export: " + ex.Message);
+        }
+    }
+}

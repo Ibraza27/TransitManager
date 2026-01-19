@@ -481,12 +481,34 @@ namespace TransitManager.Infrastructure.Services
 
                                     foreach (var line in quote.Lines)
                                     {
-                                        table.Cell().Element(CellStyle).Text(line.Description);
-                                        table.Cell().Element(CellStyle).AlignCenter().Text(line.Date?.ToString("dd/MM") ?? "-"); // NEW
-                                        table.Cell().Element(CellStyle).AlignRight().Text($"{line.Quantity} {line.Unit}");
-                                        table.Cell().Element(CellStyle).AlignRight().Text($"{line.UnitPrice:N2} €");
-                                        table.Cell().Element(CellStyle).AlignRight().Text($"{line.VATRate}%");
-                                        table.Cell().Element(CellStyle).AlignRight().Text($"{line.TotalHT:N2} €");
+                                        if (line.Type == QuoteLineType.Title)
+                                        {
+                                            table.Cell().ColumnSpan(6).Element(c => c.PaddingTop(10).PaddingBottom(5)).Text(line.Description).FontSize(11).Bold();
+                                        }
+                                        else if (line.Type == QuoteLineType.Text)
+                                        {
+                                            table.Cell().ColumnSpan(6).Element(c => c.PaddingBottom(5)).Text(line.Description).FontSize(10);
+                                        }
+                                        else if (line.Type == QuoteLineType.Subtotal)
+                                        {
+                                            // Subtotal Row: Border Top and Bottom usually, or just Bottom as separator
+                                            // User requested a separator line AFTER subtotal
+                                            
+                                            IContainer SubtotalStyle(IContainer container) => container.BorderBottom(1).BorderColor(Colors.Black).PaddingVertical(5);
+                                            
+                                            table.Cell().Element(SubtotalStyle).Text(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description).Bold();
+                                            table.Cell().ColumnSpan(4).Element(SubtotalStyle); // Empty columns
+                                            table.Cell().Element(SubtotalStyle).AlignRight().Text($"{line.TotalHT:N2} €").Bold();
+                                        }
+                                        else // Product
+                                        {
+                                            table.Cell().Element(CellStyle).Text(line.Description);
+                                            table.Cell().Element(CellStyle).AlignCenter().Text(line.Date?.ToString("dd/MM") ?? "-");
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.Quantity} {line.Unit}");
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.UnitPrice:N2} €");
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.VATRate}%");
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.TotalHT:N2} €");
+                                        }
 
                                         static IContainer CellStyle(IContainer container)
                                         {

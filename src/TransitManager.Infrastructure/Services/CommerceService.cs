@@ -237,7 +237,9 @@ namespace TransitManager.Infrastructure.Services
                     Unit = lineDto.Unit,
                     UnitPrice = lineDto.UnitPrice,
                     VATRate = lineDto.VATRate,
-                    TotalHT = lineTotalHT
+                    TotalHT = lineTotalHT,
+                    Type = lineDto.Type,
+                    Position = lineDto.Position
                 });
             }
 
@@ -329,7 +331,9 @@ namespace TransitManager.Infrastructure.Services
                                 Unit = lineDto.Unit,
                                 UnitPrice = lineDto.UnitPrice,
                                 VATRate = lineDto.VATRate,
-                                TotalHT = lineTotalHT
+                                TotalHT = lineTotalHT,
+                                Type = lineDto.Type,
+                                Position = lineDto.Position
                             };
                             _context.QuoteLines.Add(line);
                         }
@@ -542,7 +546,7 @@ namespace TransitManager.Infrastructure.Services
                 TotalHT = q.TotalHT,
                 TotalTVA = q.TotalTVA,
                 TotalTTC = q.TotalTTC,
-                Lines = q.Lines.Select(l => new QuoteLineDto
+                Lines = q.Lines.OrderBy(l => l.Position).Select(l => new QuoteLineDto
                 {
                     Id = l.Id,
                     ProductId = l.ProductId,
@@ -552,7 +556,9 @@ namespace TransitManager.Infrastructure.Services
                     Unit = l.Unit,
                     UnitPrice = l.UnitPrice,
                     VATRate = l.VATRate,
-                    TotalHT = l.TotalHT
+                    TotalHT = l.TotalHT,
+                    Type = l.Type,
+                    Position = l.Position
                 }).ToList(),
 
                 History = q.History.Select(h => new QuoteHistoryDto

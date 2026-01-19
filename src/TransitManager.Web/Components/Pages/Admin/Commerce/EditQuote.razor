@@ -215,85 +215,87 @@
                          <table class="table table-borderless align-middle mb-0">
                              <thead class="border-bottom">
                                  <tr class="text-uppercase small text-muted">
-                                     <th style="min-width: 200px;">Description</th>
-                                     <th style="min-width: 100px;">Date</th>
-                                     <th style="min-width: 80px;">Qté</th>
-                                     <th style="min-width: 60px;">U</th>
-                                     <th style="min-width: 100px;">Prix</th>
-                                     <th style="min-width: 80px;">TVA</th>
-                                     <th class="text-end" style="min-width: 100px;">Total</th>
-                                     <th style="width: 80px;"></th>
+                                     <th style="width: 40%;">Description</th>
+                                     <th class="text-center" style="width: 100px;">Date</th>
+                                     <th class="text-center" style="width: 80px;">Qté</th>
+                                     <th class="text-center" style="width: 60px;">U</th>
+                                     <th class="text-center" style="width: 100px;">Prix</th>
+                                     <th class="text-center" style="width: 80px;">TVA</th>
+                                     <th class="text-end" style="width: 100px;">Total</th>
+                                     <th style="width: 60px;"></th>
                                  </tr>
                              </thead>
                              <tbody class="sortable-list">
+                                 @{ int index = 0; }
                                  @foreach (var line in Model.Lines)
                                 {
-                                    <tr class="@(line.Type == QuoteLineType.Subtotal ? "bg-light fw-bold border-top border-bottom" : "")">
-                                        <!-- Description Column -->
-                                        <td>
-                                            @if(line.Type == QuoteLineType.Product)
-                                            {
-                                                <ProductAutocomplete 
-                                                    @bind-Description="line.Description" 
-                                                    OnProductSelected="@((p) => HandleProductSelected(line, p))"
-                                                    OnCreateNew="() => OpenNewProductDialog(line)" />
-                                            }
-                                            else if(line.Type == QuoteLineType.Title)
-                                            {
-                                                <input type="text" class="form-control fw-bold" placeholder="Titre de section" @bind="line.Description" />
-                                            }
-                                            else if(line.Type == QuoteLineType.Text)
-                                            {
-                                                <textarea class="form-control" rows="1" placeholder="Texte libre..." @bind="line.Description"></textarea>
-                                            }
-                                            else if(line.Type == QuoteLineType.Subtotal)
-                                            {
-                                                <div class="d-flex align-items-center h-100">
-                                                    <span>Sous-total</span>
-                                                    @if(!string.IsNullOrEmpty(line.Description) && line.Description != "Sous-total") 
-                                                    { 
-                                                         <span class="ms-2 text-muted">(@line.Description)</span> 
-                                                    }
-                                                </div>
-                                            }
-                                        </td>
+                                    var localIndex = index;
+                                    <tr class="@(line.Type == QuoteLineType.Subtotal ? "fw-bold border-bottom border-dark" : "")" 
+                                        style="@(line.Type == QuoteLineType.Subtotal ? "border-top: 2px solid #dee2e6;" : "") cursor: move;"
+                                        draggable="true"
+                                        @ondragstart="@(() => HandleDragStart(localIndex))"
+                                        @ondragover:preventDefault
+                                        @ondrop="@(() => HandleDrop(localIndex))">
                                         
-                                        <!-- Other Columns (Hide/Show based on Type) -->
-                                        @if(line.Type == QuoteLineType.Product)
+                                        <!-- Description Column -->
+                                        @if(line.Type == QuoteLineType.Title)
                                         {
-                                            <td><input type="date" class="form-control form-control-sm" @bind="line.Date" /></td>
-                                            <td><input type="number" class="form-control form-control-sm text-center" @bind="line.Quantity" step="0.01" @onfocusout="UpdateSubtotals" /></td>
-                                            <td><input type="text" class="form-control form-control-sm text-center" @bind="line.Unit" /></td>
-                                            <td><input type="number" class="form-control form-control-sm text-end" @bind="line.UnitPrice" step="0.01" @onfocusout="UpdateSubtotals" /></td>
-                                            <td>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" class="form-control text-end" @bind="line.VATRate" step="0.1" />
-                                                    <span class="input-group-text px-1">%</span>
-                                                </div>
+                                            <td colspan="7" class="py-2">
+                                                <input type="text" class="form-control fw-bold border-0 fs-6" placeholder="TITRE DE SECTION" @bind="line.Description" style="background: transparent;" />
                                             </td>
-                                            <td class="text-end fw-bold small">@((line.Quantity * line.UnitPrice).ToString("N2"))</td>
                                         }
-                                        else if(line.Type == QuoteLineType.Subtotal)
+                                        else if (line.Type == QuoteLineType.Text)
                                         {
-                                            <td colspan="5"></td>
-                                            <td class="text-end fw-bold fs-6">@line.TotalHT.ToString("N2") €</td>
+                                             <td colspan="7" class="py-2">
+                                                <textarea class="form-control border-0" rows="1" placeholder="Texte libre..." @bind="line.Description" style="height: auto; resize: none; overflow: hidden; background: transparent;"></textarea>
+                                            </td>
                                         }
                                         else 
                                         {
-                                            <td colspan="6"></td>
+                                            /* Product or Subtotal */
+                                            <td class="py-2">
+                                                @if(line.Type == QuoteLineType.Product)
+                                                {
+                                                    <ProductAutocomplete 
+                                                        @bind-Description="line.Description" 
+                                                        OnProductSelected="@((p) => HandleProductSelected(line, p))"
+                                                        OnCreateNew="() => OpenNewProductDialog(line)" />
+                                                }
+                                                else // Subtotal
+                                                {
+                                                    <div class="d-flex align-items-center h-100 fw-bold">
+                                                        <span>Sous-total</span>
+                                                    </div>
+                                                }
+                                            </td>
+                                            
+                                            @if(line.Type == QuoteLineType.Product)
+                                            {
+                                                <td><input type="date" class="form-control form-control-sm border-0 text-center" @bind="line.Date" /></td>
+                                                <td><input type="number" class="form-control form-control-sm border-0 text-center" @bind="line.Quantity" step="0.01" @onfocusout="UpdateSubtotals" /></td>
+                                                <td><input type="text" class="form-control form-control-sm border-0 text-center" @bind="line.Unit" /></td>
+                                                <td><input type="number" class="form-control form-control-sm border-0 text-end" @bind="line.UnitPrice" step="0.01" @onfocusout="UpdateSubtotals" /></td>
+                                                <td>
+                                                    <div class="input-group input-group-sm border-0">
+                                                        <input type="number" class="form-control border-0 text-end" @bind="line.VATRate" step="0.1" />
+                                                        <span class="input-group-text border-0 bg-transparent px-1">%</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-end fw-bold small py-3">@((line.Quantity * line.UnitPrice).ToString("N2")) €</td>
+                                            }
+                                            else if (line.Type == QuoteLineType.Subtotal)
+                                            {
+                                                <td colspan="5"></td> <!-- Empty columns -->
+                                                <td class="text-end fw-bold fs-6 py-3">@line.TotalHT.ToString("N2") €</td>
+                                            }
                                         }
 
                                         <!-- Actions -->
-                                        <td>
-                                            <div class="d-flex justify-content-end gap-1">
-                                                <div class="btn-group-vertical btn-group-sm opacity-50 me-2" role="group">
-                                                     <button type="button" class="btn btn-light border py-0 px-1" title="Monter" @onclick="() => MoveLine(line, -1)"><i class="bi bi-chevron-up small"></i></button>
-                                                     <button type="button" class="btn btn-light border py-0 px-1" title="Descendre" @onclick="() => MoveLine(line, 1)"><i class="bi bi-chevron-down small"></i></button>
-                                                </div>
-                                                <button class="btn btn-link text-danger p-0" title="Supprimer" @onclick="() => RemoveLine(line)"><i class="bi bi-x-lg"></i></button>
-                                            </div>
+                                        <td class="align-middle text-center">
+                                            <button class="btn btn-link text-danger p-0" title="Supprimer" @onclick="() => RemoveLine(line)"><i class="bi bi-trash small"></i></button>
                                         </td>
                                     </tr>
+                                    @{ index++; }
                                 }
                              </tbody>
                          </table>
@@ -635,6 +637,14 @@
         Model.ClientId = client?.Id ?? Guid.Empty;
     }
 
+    private async Task OpenNewProductDialog(QuoteLineDto line)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", "Voulez-vous ouvrir la gestion des produits ? Pensez à sauvegarder votre devis avant."))
+        {
+            NavManager.NavigateTo("/admin/commerce/products");
+        }
+    }
+
     private void HandleProductSelected(QuoteLineDto line, ProductDto product)
     {
         line.Description = product.Name; // Redundant but safe
@@ -664,6 +674,38 @@
     private string GetDiscountLabel()
     {
         return Model.DiscountType == DiscountType.Percent ? $"{Model.DiscountValue}%" : "Forfait";
+    }
+
+    private int _draggedIndex = -1;
+
+    private void HandleDragStart(int index)
+    {
+        _draggedIndex = index;
+    }
+
+    private void HandleDrop(int dropIndex)
+    {
+        if (_draggedIndex < 0 || _draggedIndex >= Model.Lines.Count || dropIndex < 0 || dropIndex >= Model.Lines.Count || _draggedIndex == dropIndex)
+        {
+            _draggedIndex = -1;
+            return;
+        }
+
+        var item = Model.Lines[_draggedIndex];
+        Model.Lines.RemoveAt(_draggedIndex);
+        Model.Lines.Insert(dropIndex, item);
+        
+        RenumberLines();
+        UpdateSubtotals();
+        _draggedIndex = -1;
+    }
+
+    private void RenumberLines()
+    {
+        for(int i=0; i < Model.Lines.Count; i++)
+        {
+            Model.Lines[i].Position = i;
+        }
     }
 
     private async Task SaveDraft()
@@ -712,6 +754,9 @@
         IsSaving = true;
         try
         {
+            // Ensure positions are consistent 0,1,2...
+            RenumberLines();
+            
             var result = await ApiService.CreateOrUpdateQuoteAsync(Model);
             Model.Id = result.Id;
             if(!Id.HasValue) { Id = result.Id; } // Update local ID binding

@@ -102,16 +102,32 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var line in Quote.Lines)
-                                {
-                                    <tr>
-                                        <td class="ps-4 py-3 fw-medium">@line.Description</td>
-                                        <td class="text-end py-3">@line.Quantity @line.Unit</td>
-                                        <td class="text-end py-3">@line.UnitPrice.ToString("N2") €</td>
-                                        <td class="text-end py-3">@line.VATRate %</td>
-                                        <td class="text-end py-3 pe-4">@line.TotalHT.ToString("N2") €</td>
-                                    </tr>
-                                }
+                                    @foreach (var line in Quote.Lines)
+                                    {
+                                        <tr class="@(line.Type == QuoteLineType.Subtotal ? "fw-bold" : "")" style="@(line.Type == QuoteLineType.Subtotal ? "border-bottom: 2px solid #000 !important;" : "")">
+                                            @if(line.Type == QuoteLineType.Title)
+                                            {
+                                                <td colspan="5" class="ps-4 py-3 fw-bold text-uppercase bg-light">@line.Description</td>
+                                            }
+                                            else if(line.Type == QuoteLineType.Text)
+                                            {
+                                                <td colspan="5" class="ps-4 py-2 text-muted">@line.Description</td>
+                                            }
+                                            else if(line.Type == QuoteLineType.Subtotal)
+                                            {
+                                                <td colspan="4" class="ps-4 py-3 fw-bold">Sous-total</td>
+                                                <td class="text-end py-3 pe-4 fw-bold">@line.TotalHT.ToString("N2") €</td>
+                                            }
+                                            else
+                                            {
+                                                <td class="ps-4 py-3 fw-medium">@line.Description</td>
+                                                <td class="text-end py-3">@line.Quantity @line.Unit</td>
+                                                <td class="text-end py-3">@line.UnitPrice.ToString("N2") €</td>
+                                                <td class="text-end py-3">@line.VATRate %</td>
+                                                <td class="text-end py-3 pe-4">@line.TotalHT.ToString("N2") €</td>
+                                            }
+                                        </tr>
+                                    }
                             </tbody>
                         </table>
                     </div>

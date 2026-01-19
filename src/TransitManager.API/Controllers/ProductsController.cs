@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using TransitManager.Core.DTOs.Commerce;
 using TransitManager.Core.Entities.Commerce;
 using TransitManager.Core.Interfaces;
+using TransitManager.Core.DTOs;
 using AutoMapper;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace TransitManager.API.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/commerce/products")]
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
@@ -26,7 +27,8 @@ namespace TransitManager.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll([FromQuery] string? search = null)
+        [HttpGet]
+        public async Task<ActionResult<PagedResult<ProductDto>>> GetAll([FromQuery] string? search = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
         {
             IEnumerable<Product> products;
             if (!string.IsNullOrWhiteSpace(search))
@@ -37,7 +39,20 @@ namespace TransitManager.API.Controllers
             {
                 products = await _productService.GetAllAsync();
             }
-            return Ok(_mapper.Map<IEnumerable<ProductDto>>(products));
+            
+            var dtos = _mapper.Map<IEnumerable<ProductDto>>(products);
+            var total = dtos.Count();
+            
+            // Simple in-memory pagination to satisfy contract
+            var pagedItems = dtos.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            return Ok(new PagedResult<ProductDto>
+            {
+                Items = pagedItems,
+                TotalCount = total,
+                Page = page,
+                PageSize = pageSize
+            });
         }
 
         [HttpGet("{id}")]

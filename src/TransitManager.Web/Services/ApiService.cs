@@ -1489,6 +1489,11 @@ namespace TransitManager.Web.Services
                  var result = await response.Content.ReadFromJsonAsync<JsonElement>();
                  if (result.TryGetProperty("count", out var c)) return c.GetInt32();
              }
+             else 
+             {
+                 var error = await response.Content.ReadAsStringAsync();
+                 throw new Exception($"Import failed ({response.StatusCode}): {error}");
+             }
              return 0;
         }
 

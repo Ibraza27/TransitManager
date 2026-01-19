@@ -78,48 +78,52 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<int> ImportCsvAsync(string csvContent)
         {
+            Console.WriteLine($"[CSV Import] Content Length: {csvContent?.Length ?? 0}");
+            if (string.IsNullOrEmpty(csvContent)) return 0;
+
             var count = 0;
             var lines = csvContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            Console.WriteLine($"[CSV Import] Lines found: {lines.Length}");
             
-            // Expected Header: "Produit;Unité;Prix HT (EUR);TVA;Prix TTC (EUR)" OR with commas
-            // Detection strategy: Check first line for ';' vs ','
             char delimiter = ',';
-            if (lines.Length > 0 && lines[0].Contains(";")) delimiter = ';';
-
+            
             var start = 0;
-            // Skipping header if likely present
-            if (lines.Length > 0 && (lines[0].Contains("Produit", StringComparison.OrdinalIgnoreCase) || lines[0].Contains("Product", StringComparison.OrdinalIgnoreCase))) 
-                start = 1;
+            if (lines.Length > 0)
+            {
+                 Console.WriteLine($"[CSV Import] Header line: {lines[0]}");
+                 if (lines[0].Contains("Produit") || lines[0].Contains("Product")) 
+                    start = 1;
+            }
 
             for (int i = start; i < lines.Length; i++)
             {
                 var line = lines[i];
                 var parts = ParseCsvLine(line, delimiter);
-                if (parts.Count < 3) continue; // Minimum required: Name, Price, maybe unit/vat
+                
+                if (parts.Count < 3) 
+                {
+                    Console.WriteLine($"[CSV Import] Line {i} skipped (Parts < 3): {parts.Count} parts. Line: {line}");
+                    continue; 
+                }
 
-                // Map columns based on Zervant format: Name(0), Unit(1), PriceHT(2), TVA(3), PriceTTC(4)
-                // If only 3 columns, assume Name, Unit, Price
-                var name = parts[0];
-                if (string.IsNullOrWhiteSpace(name)) continue;
+                var name = parts[0].Trim(); 
+                if (string.IsNullOrWhiteSpace(name)) 
+                {
+                     Console.WriteLine($"[CSV Import] Line {i} skipped (Empty Name)");
+                     continue;
+                }
 
-                var unit = parts.Count > 1 ? parts[1] : "pce";
+                var unit = parts.Count > 1 ? parts[1].Trim() : "pce";
                 if(string.IsNullOrWhiteSpace(unit)) unit = "pce";
                 
-                // Parse Price HT
                 decimal priceHt = 0;
-                if (parts.Count > 2)
-                {
-                    priceHt = ParseDecimal(parts[2]);
-                }
+                if (parts.Count > 2) priceHt = ParseDecimal(parts[2]);
 
-                // Parse TVA
-                decimal tva = 20; // default
-                if (parts.Count > 3)
-                {
-                    tva = ParseDecimal(parts[3]);
-                }
+                decimal tva = 20; 
+                if (parts.Count > 3) tva = ParseDecimal(parts[3]);
                 
-                // Check if exists
+                Console.WriteLine($"[CSV Import] Importing: {name} | {priceHt} | {tva}");
+
                 var existing = await _context.Products.FirstOrDefaultAsync(p => p.Name == name);
                 if (existing != null)
                 {
@@ -137,33 +141,31 @@ namespace TransitManager.Infrastructure.Services
                         Unit = unit,
                         UnitPrice = priceHt,
                         VATRate = tva,
-                        Type = ProductType.Goods // Default
+                        Type = ProductType.Goods
                     };
                     _context.Products.Add(product);
                 }
                 count++;
             }
             await _context.SaveChangesAsync();
+            Console.WriteLine($"[CSV Import] Saved. Total count: {count}");
             return count;
         }
 
         private decimal ParseDecimal(string input)
         {
             if (string.IsNullOrWhiteSpace(input)) return 0;
-            // Cleanup: remove currency symbols, spaces, %
             var clean = input.Replace("€", "").Replace("$", "").Replace("%", "").Trim();
-            // Handle space as thousand separator in French "1 200,50" -> "1200,50"
-            clean = clean.Replace(" ", "").Replace("\u00A0", ""); // Non-breaking space
+            clean = clean.Replace("\u00A0", ""); // Non-breaking space
             
-            // Try explicit French culture first (comma decimal)
-            if (decimal.TryParse(clean, NumberStyles.Any, new CultureInfo("fr-FR"), out var resultFr))
-            {
-                return resultFr;
-            }
-            // Try Invariant (dot decimal)
+            // Priority: Invariant (Dot) then French (Comma)
             if (decimal.TryParse(clean, NumberStyles.Any, CultureInfo.InvariantCulture, out var resultInv))
             {
                 return resultInv;
+            }
+            if (decimal.TryParse(clean, NumberStyles.Any, new CultureInfo("fr-FR"), out var resultFr))
+            {
+                return resultFr;
             }
             return 0;
         }

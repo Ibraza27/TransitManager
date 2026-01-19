@@ -42,10 +42,17 @@
 
     <!-- Main Content: Split View -->
     <div class="row g-0 flex-grow-1 overflow-hidden h-100 position-relative">
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger m-3 position-absolute start-0 end-0" style="z-index: 2000;">
+                @ErrorMessage
+                <button type="button" class="btn-close float-end" @onclick="() => ErrorMessage = null"></button>
+            </div>
+        }
         <!-- Grid -->
         <div class="col-12 col-md-8 h-100 overflow-auto border-end pe-0">
              <table class="table table-hover align-middle mb-0">
-                 <thead class="table-light sticky-top">
+                 <thead class="table-light sticky-top" style="z-index: 900;">
                      <tr>
                          <th style="width: 40px;" class="ps-3">
                              <input type="checkbox" class="form-check-input" @onchange="ToggleAll" checked="@AllSelected" />
@@ -131,6 +138,7 @@
     private HashSet<Guid> SelectedIds = new();
     private string SearchTerm = "";
     private bool IsLoading = true;
+    private string? ErrorMessage;
     private ProductDto? EditedProduct;
 
     protected override async Task OnInitializedAsync()
@@ -145,6 +153,11 @@
         {
             var result = await ApiService.GetProductsAsync(SearchTerm, 1, 100); 
             ProductList = result.Items.ToList();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error loading products: {ex}");
+            ErrorMessage = $"Erreur de chargement: {ex.Message}";
         }
         finally { IsLoading = false; }
     }

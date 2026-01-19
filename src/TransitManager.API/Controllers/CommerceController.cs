@@ -19,47 +19,7 @@ namespace TransitManager.API.Controllers
             _commerceService = commerceService;
         }
 
-        // --- Products ---
-
-        [HttpGet("products")]
-        [Authorize(Roles = "Administrateur")]
-        public async Task<IActionResult> GetProducts([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
-        {
-            var result = await _commerceService.GetProductsAsync(search, page, pageSize);
-            return Ok(result);
-        }
-
-        [HttpPost("products")]
-        [Authorize(Roles = "Administrateur")]
-        public async Task<IActionResult> CreateProduct([FromBody] ProductDto dto)
-        {
-            var result = await _commerceService.CreateProductAsync(dto);
-            return Ok(result);
-        }
-
-        [HttpPut("products/{id}")]
-        [Authorize(Roles = "Administrateur")]
-        public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] ProductDto dto)
-        {
-            if (id != dto.Id) return BadRequest();
-            try
-            {
-                var result = await _commerceService.UpdateProductAsync(dto);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(ex.Message);
-            }
-        }
-
-        [HttpDelete("products/{id}")]
-        [Authorize(Roles = "Administrateur")]
-        public async Task<IActionResult> DeleteProduct(Guid id)
-        {
-            await _commerceService.DeleteProductAsync(id);
-            return NoContent();
-        }
+        // --- Products endpoints moved to ProductsController.cs ---
 
         // --- Quotes ---
 

@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TransitManager.Core.Enums;
 
 namespace TransitManager.Core.Entities.Commerce
 {
@@ -38,5 +39,9 @@ namespace TransitManager.Core.Entities.Commerce
         // Computed
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalHT { get; set; }
+
+        // New in Round 7
+        public QuoteLineType Type { get; set; } = QuoteLineType.Product;
+        public int Position { get; set; }
     }
 }

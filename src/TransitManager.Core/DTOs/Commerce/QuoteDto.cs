@@ -58,6 +58,9 @@ namespace TransitManager.Core.DTOs.Commerce
         public decimal UnitPrice { get; set; }
         public decimal VATRate { get; set; }
         public decimal TotalHT { get; set; }
+        // Round 7
+        public QuoteLineType Type { get; set; }
+        public int Position { get; set; }
     }
 
     public class UpsertQuoteDto

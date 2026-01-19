@@ -222,39 +222,94 @@
                                      <th style="min-width: 100px;">Prix</th>
                                      <th style="min-width: 80px;">TVA</th>
                                      <th class="text-end" style="min-width: 100px;">Total</th>
-                                     <th style="width: 40px;"></th>
+                                     <th style="width: 80px;"></th>
                                  </tr>
                              </thead>
-                             <tbody>
+                             <tbody class="sortable-list">
                                  @foreach (var line in Model.Lines)
                                 {
-                                    <tr>
-                                    <td>
-                                        <ProductAutocomplete 
-                                            @bind-Description="line.Description" 
-                                            OnProductSelected="@((p) => HandleProductSelected(line, p))"
-                                            OnCreateNew="() => OpenNewProductDialog(line)" />
-                                    </td>
-                                        <td><input type="date" class="form-control form-control-sm" @bind="line.Date" /></td>
-                                        <td><input type="number" class="form-control form-control-sm text-center" @bind="line.Quantity" step="0.01" /></td>
-                                        <td><input type="text" class="form-control form-control-sm text-center" @bind="line.Unit" /></td>
-                                        <td><input type="number" class="form-control form-control-sm text-end" @bind="line.UnitPrice" step="0.01" /></td>
+                                    <tr class="@(line.Type == QuoteLineType.Subtotal ? "bg-light fw-bold border-top border-bottom" : "")">
+                                        <!-- Description Column -->
                                         <td>
-                                             <div class="input-group input-group-sm">
-                                                 <input type="number" class="form-control text-end" @bind="line.VATRate" step="0.1" />
-                                                 <span class="input-group-text px-1">%</span>
-                                             </div>
+                                            @if(line.Type == QuoteLineType.Product)
+                                            {
+                                                <ProductAutocomplete 
+                                                    @bind-Description="line.Description" 
+                                                    OnProductSelected="@((p) => HandleProductSelected(line, p))"
+                                                    OnCreateNew="() => OpenNewProductDialog(line)" />
+                                            }
+                                            else if(line.Type == QuoteLineType.Title)
+                                            {
+                                                <input type="text" class="form-control fw-bold" placeholder="Titre de section" @bind="line.Description" />
+                                            }
+                                            else if(line.Type == QuoteLineType.Text)
+                                            {
+                                                <textarea class="form-control" rows="1" placeholder="Texte libre..." @bind="line.Description"></textarea>
+                                            }
+                                            else if(line.Type == QuoteLineType.Subtotal)
+                                            {
+                                                <div class="d-flex align-items-center h-100">
+                                                    <span>Sous-total</span>
+                                                    @if(!string.IsNullOrEmpty(line.Description) && line.Description != "Sous-total") 
+                                                    { 
+                                                         <span class="ms-2 text-muted">(@line.Description)</span> 
+                                                    }
+                                                </div>
+                                            }
                                         </td>
-                                        <td class="text-end fw-bold small">@((line.Quantity * line.UnitPrice).ToString("N0"))</td>
-                                        <td><button class="btn btn-link text-danger p-0" @onclick="() => RemoveLine(line)"><i class="bi bi-x"></i></button></td>
+                                        
+                                        <!-- Other Columns (Hide/Show based on Type) -->
+                                        @if(line.Type == QuoteLineType.Product)
+                                        {
+                                            <td><input type="date" class="form-control form-control-sm" @bind="line.Date" /></td>
+                                            <td><input type="number" class="form-control form-control-sm text-center" @bind="line.Quantity" step="0.01" @onfocusout="UpdateSubtotals" /></td>
+                                            <td><input type="text" class="form-control form-control-sm text-center" @bind="line.Unit" /></td>
+                                            <td><input type="number" class="form-control form-control-sm text-end" @bind="line.UnitPrice" step="0.01" @onfocusout="UpdateSubtotals" /></td>
+                                            <td>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control text-end" @bind="line.VATRate" step="0.1" />
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-end fw-bold small">@((line.Quantity * line.UnitPrice).ToString("N2"))</td>
+                                        }
+                                        else if(line.Type == QuoteLineType.Subtotal)
+                                        {
+                                            <td colspan="5"></td>
+                                            <td class="text-end fw-bold fs-6">@line.TotalHT.ToString("N2") €</td>
+                                        }
+                                        else 
+                                        {
+                                            <td colspan="6"></td>
+                                        }
+
+                                        <!-- Actions -->
+                                        <td>
+                                            <div class="d-flex justify-content-end gap-1">
+                                                <div class="btn-group-vertical btn-group-sm opacity-50 me-2" role="group">
+                                                     <button type="button" class="btn btn-light border py-0 px-1" title="Monter" @onclick="() => MoveLine(line, -1)"><i class="bi bi-chevron-up small"></i></button>
+                                                     <button type="button" class="btn btn-light border py-0 px-1" title="Descendre" @onclick="() => MoveLine(line, 1)"><i class="bi bi-chevron-down small"></i></button>
+                                                </div>
+                                                <button class="btn btn-link text-danger p-0" title="Supprimer" @onclick="() => RemoveLine(line)"><i class="bi bi-x-lg"></i></button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 }
                              </tbody>
                          </table>
-                         <div class="p-2">
-                            <button class="btn btn-dark btn-sm rounded-pill" @onclick="AddLine">
+                         
+                         <!-- Add Line Dropdown -->
+                         <div class="p-2 dropdown">
+                            <button class="btn btn-dark btn-sm rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-plus-lg me-1"></i> Ajouter une ligne
                             </button>
+                            <ul class="dropdown-menu shadow">
+                                <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Product)"><i class="bi bi-box-seam me-2"></i>Produit</button></li>
+                                <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Title)"><i class="bi bi-type-h1 me-2"></i>Titre de section</button></li>
+                                <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Text)"><i class="bi bi-file-text me-2"></i>Texte libre</button></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><button class="dropdown-item fw-bold" @onclick="() => AddLine(QuoteLineType.Subtotal)"><i class="bi bi-calculator me-2"></i>Sous-total</button></li>
+                            </ul>
                          </div>
                      </div>
                      
@@ -445,7 +500,7 @@
                         DiscountType = quote.DiscountType,
                         DiscountBase = quote.DiscountBase,
                         DiscountScope = quote.DiscountScope,
-                        Lines = quote.Lines
+                        Lines = quote.Lines.OrderBy(l => l.Position).ToList()
                     };
                     
                     if (quote.ClientId.HasValue && quote.ClientId != Guid.Empty)
@@ -509,15 +564,69 @@
 
 
 
-    private void AddLine()
+    private void AddLine(QuoteLineType type = QuoteLineType.Product)
     {
-        Model.Lines.Add(new QuoteLineDto { Quantity = 1, Unit = "pce", VATRate = 20, Description = "", Date = DateTime.Today });
+        int nextPos = Model.Lines.Any() ? Model.Lines.Max(l => l.Position) + 1 : 0;
+        var newLine = new QuoteLineDto 
+        { 
+            Type = type,
+            Position = nextPos,
+            Date = (type == QuoteLineType.Product) ? DateTime.Today : null,
+            Quantity = (type == QuoteLineType.Product) ? 1 : 0,
+            Unit = (type == QuoteLineType.Product) ? "pce" : "",
+            VATRate = (type == QuoteLineType.Product) ? 20 : 0,
+            Description = ""
+        };
+        
+        if (type == QuoteLineType.Subtotal) newLine.Description = "Sous-total";
+
+        Model.Lines.Add(newLine);
+        UpdateSubtotals();
     }
 
     private void RemoveLine(QuoteLineDto line)
     {
         Model.Lines.Remove(line);
+        UpdateSubtotals();
         if (!Model.Lines.Any()) AddLine();
+    }
+    
+    private void MoveLine(QuoteLineDto line, int direction) // -1 up, +1 down
+    {
+        var currentIndex = Model.Lines.IndexOf(line);
+        var newIndex = currentIndex + direction;
+        
+        if (newIndex < 0 || newIndex >= Model.Lines.Count) return;
+        
+        var otherLine = Model.Lines[newIndex];
+        
+        // Swap positions
+        (line.Position, otherLine.Position) = (otherLine.Position, line.Position); 
+        
+        // Swap in list
+        Model.Lines[currentIndex] = otherLine;
+        Model.Lines[newIndex] = line;
+        
+        UpdateSubtotals();
+    }
+    
+    private void UpdateSubtotals()
+    {
+        // Re-calculate all Subtotal lines
+        decimal runningTotal = 0;
+        foreach(var line in Model.Lines) // Assume logic relies on list order. Should ensure sort first if needed.
+        {
+            if (line.Type == QuoteLineType.Product)
+            {
+                runningTotal += line.Quantity * line.UnitPrice;
+            }
+            else if (line.Type == QuoteLineType.Subtotal)
+            {
+                line.TotalHT = runningTotal;
+                line.UnitPrice = runningTotal; // Hack to persist? No, we use clean fields.
+                runningTotal = 0; // Reset after subtotal? Usually yes.
+            }
+        }
     }
     
     private void HandleClientSelected(Client client)

@@ -15,7 +15,7 @@
 
     @if (ShowDropdown)
     {
-        <div class="dropdown-menu show w-100 shadow-sm" style="max-height: 250px; overflow-y: auto; z-index: 2000;">
+        <div class="dropdown-menu show shadow-sm" style="min-width: 600px; max-height: 300px; overflow-y: auto; z-index: 2000;">
             @if (Results.Any())
             {
                 @foreach (var p in Results)

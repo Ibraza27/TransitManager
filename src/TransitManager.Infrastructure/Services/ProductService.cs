@@ -70,7 +70,7 @@ namespace TransitManager.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(term)) return new List<Product>();
             
             return await _context.Products
-                .Where(p => p.Name.Contains(term))
+                .Where(p => p.Name.ToLower().Contains(term.ToLower()))
                 .OrderBy(p => p.Name)
                 .Take(20)
                 .ToListAsync();

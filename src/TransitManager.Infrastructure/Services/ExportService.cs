@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using PdfDocument = QuestPDF.Fluent.Document;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -34,7 +34,7 @@ namespace TransitManager.Infrastructure.Services
         public ExportService(IConfiguration configuration)
         {
             // On récupère le chemin de stockage défini dans appsettings.json
-            // ou on utilise un chemin par défaut relatif à l'exécution.
+            // ou on utilise un chemin par défaut relatif Ã  l'exécution.
             _storageRootPath = configuration["FileStorage:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Storage");
         }
 
@@ -54,8 +54,8 @@ namespace TransitManager.Infrastructure.Services
                 worksheet.Cell(1, 7).Value = "Pays";
                 worksheet.Cell(1, 8).Value = "Client Fidèle";
                 worksheet.Cell(1, 9).Value = "Nombre d'envois";
-                worksheet.Cell(1, 10).Value = "Volume Total (m³)";
-                worksheet.Cell(1, 11).Value = "Balance (€)";
+                worksheet.Cell(1, 10).Value = "Volume Total (mÂ³)";
+                worksheet.Cell(1, 11).Value = "Balance (â‚¬)";
                 worksheet.Cell(1, 12).Value = "Date d'inscription";
                 // Style des en-têtes
                 var headerRange = worksheet.Range(1, 1, 1, 12);
@@ -99,7 +99,7 @@ namespace TransitManager.Infrastructure.Services
                 worksheet.Cell(row + 1, 11).FormulaA1 = $"=SUM(K2:K{row - 1})";
                 // Formater les nombres
                 worksheet.Range(2, 10, row + 1, 10).Style.NumberFormat.Format = "#,##0.00";
-                worksheet.Range(2, 11, row + 1, 11).Style.NumberFormat.Format = "#,##0.00 €";
+                worksheet.Range(2, 11, row + 1, 11).Style.NumberFormat.Format = "#,##0.00 â‚¬";
                 using var stream = new MemoryStream();
                 workbook.SaveAs(stream);
                 return stream.ToArray();
@@ -118,13 +118,13 @@ namespace TransitManager.Infrastructure.Services
                 worksheet.Cell(1, 3).Value = "Client";
                 worksheet.Cell(1, 4).Value = "Conteneur";
                 worksheet.Cell(1, 5).Value = "Désignation";
-                // worksheet.Cell(1, 6).Value = "Poids (kg)"; // SUPPRIMÉ
-                worksheet.Cell(1, 6).Value = "Volume (m³)"; // MODIFIÉ (indice 6 au lieu de 7)
-                worksheet.Cell(1, 7).Value = "Statut"; // MODIFIÉ (indice 7 au lieu de 8)
-                worksheet.Cell(1, 8).Value = "Date d'arrivée"; // MODIFIÉ (indice 8 au lieu de 9)
-                worksheet.Cell(1, 9).Value = "Valeur déclarée (€)"; // MODIFIÉ (indice 9 au lieu de 10)
-                worksheet.Cell(1, 10).Value = "Fragile"; // MODIFIÉ (indice 10 au lieu de 11)
-                worksheet.Cell(1, 11).Value = "Localisation"; // MODIFIÉ (indice 11 au lieu de 12)
+                // worksheet.Cell(1, 6).Value = "Poids (kg)"; // SUPPRIMÃ‰
+                worksheet.Cell(1, 6).Value = "Volume (mÂ³)"; // MODIFIÃ‰ (indice 6 au lieu de 7)
+                worksheet.Cell(1, 7).Value = "Statut"; // MODIFIÃ‰ (indice 7 au lieu de 8)
+                worksheet.Cell(1, 8).Value = "Date d'arrivée"; // MODIFIÃ‰ (indice 8 au lieu de 9)
+                worksheet.Cell(1, 9).Value = "Valeur déclarée (â‚¬)"; // MODIFIÃ‰ (indice 9 au lieu de 10)
+                worksheet.Cell(1, 10).Value = "Fragile"; // MODIFIÃ‰ (indice 10 au lieu de 11)
+                worksheet.Cell(1, 11).Value = "Localisation"; // MODIFIÃ‰ (indice 11 au lieu de 12)
                 // Style des en-têtes
                 var headerRange = worksheet.Range(1, 1, 1, 12);
                 headerRange.Style.Font.Bold = true;
@@ -139,13 +139,13 @@ namespace TransitManager.Infrastructure.Services
                     worksheet.Cell(row, 3).Value = item.Client?.NomComplet ?? "N/A";
                     worksheet.Cell(row, 4).Value = item.Conteneur?.NumeroDossier ?? "Non affecté";
                     worksheet.Cell(row, 5).Value = item.Designation;
-                    // worksheet.Cell(row, 6).Value = item.Poids; // SUPPRIMÉ
-                    worksheet.Cell(row, 6).Value = item.Volume; // MODIFIÉ (indice 6)
-                    worksheet.Cell(row, 7).Value = item.Statut.ToString(); // MODIFIÉ (indice 7)
-                    worksheet.Cell(row, 8).Value = item.DateArrivee.ToString("dd/MM/yyyy"); // MODIFIÉ (indice 8)
-                    worksheet.Cell(row, 9).Value = item.ValeurDeclaree; // MODIFIÉ (indice 9)
-                    worksheet.Cell(row, 10).Value = item.EstFragile ? "Oui" : "Non"; // MODIFIÉ (indice 10)
-                    worksheet.Cell(row, 11).Value = item.LocalisationActuelle ?? ""; // MODIFIÉ (indice 11)
+                    // worksheet.Cell(row, 6).Value = item.Poids; // SUPPRIMÃ‰
+                    worksheet.Cell(row, 6).Value = item.Volume; // MODIFIÃ‰ (indice 6)
+                    worksheet.Cell(row, 7).Value = item.Statut.ToString(); // MODIFIÃ‰ (indice 7)
+                    worksheet.Cell(row, 8).Value = item.DateArrivee.ToString("dd/MM/yyyy"); // MODIFIÃ‰ (indice 8)
+                    worksheet.Cell(row, 9).Value = item.ValeurDeclaree; // MODIFIÃ‰ (indice 9)
+                    worksheet.Cell(row, 10).Value = item.EstFragile ? "Oui" : "Non"; // MODIFIÃ‰ (indice 10)
+                    worksheet.Cell(row, 11).Value = item.LocalisationActuelle ?? ""; // MODIFIÃ‰ (indice 11)
                     // Colorer selon le statut
                     var statusColor = item.Statut switch
                     {
@@ -180,7 +180,7 @@ namespace TransitManager.Infrastructure.Services
                         page.PageColor(Colors.White);
                         page.DefaultTextStyle(x => x.FontSize(11));
                         page.Header()
-                            .Text("MANIFESTE D'EXPÉDITION")
+                            .Text("MANIFESTE D'EXPÃ‰DITION")
                             .SemiBold().FontSize(20).FontColor(Colors.Blue.Darken2);
                         page.Content()
                             .PaddingVertical(1, Unit.Centimetre)
@@ -194,7 +194,7 @@ namespace TransitManager.Infrastructure.Services
                                     column.Item().Text($"Destination: {conteneur.Destination}, {conteneur.PaysDestination}");
                                     column.Item().Text($"Date de départ: {conteneur.DateDepart?.ToString("dd/MM/yyyy") ?? "Non définie"}");
                                     column.Item().Text($"Compagnie: {conteneur.NomCompagnie ?? "Non défini"}");
-                                    column.Item().Text($"N° Plomb: {conteneur.NumeroPlomb ?? "Non défini"}");
+                                    column.Item().Text($"NÂ° Plomb: {conteneur.NumeroPlomb ?? "Non défini"}");
                                 });
                                 // Statistiques
                                 x.Item().Row(row =>
@@ -233,8 +233,8 @@ namespace TransitManager.Infrastructure.Services
                                         table.Cell().Element(CellStyle).Text(colis.AllBarcodes);
                                         table.Cell().Element(CellStyle).Text(colis.Client?.NomComplet ?? "N/A");
                                         table.Cell().Element(CellStyle).Text(colis.Designation);
-                                        // CORRECTION : On affiche le Volume à la place du Poids
-                                        table.Cell().Element(CellStyle).Text($"{colis.Volume:N3} m³");
+                                        // CORRECTION : On affiche le Volume Ã  la place du Poids
+                                        table.Cell().Element(CellStyle).Text($"{colis.Volume:N3} mÂ³");
                                         static IContainer CellStyle(IContainer container)
                                         {
                                             return container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(5);
@@ -284,7 +284,7 @@ namespace TransitManager.Infrastructure.Services
                                 row.RelativeItem().Column(column =>
                                 {
                                     column.Item().Text("FACTURE").FontSize(24).SemiBold().FontColor(Colors.Blue.Darken2);
-                                    column.Item().Text($"N° {DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}").FontSize(12);
+                                    column.Item().Text($"NÂ° {DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}").FontSize(12);
                                     column.Item().Text($"Date: {DateTime.Now:dd/MM/yyyy}").FontSize(10);
                                 });
                                 row.ConstantItem(180).Text("HIPPOCAMPE IMPORT-EXPORT\n7 Rue Pascal\n33370 Tresses\nTél: 06 99 56 93 58\ncontact@hippocampeimportexport.com")
@@ -336,7 +336,7 @@ namespace TransitManager.Infrastructure.Services
                                         table.Cell().Text(item.Designation);
                                         // table.Cell().Text($"{item.Poids:N2} kg"); // SUPPRIMER CETTE LIGNE
                                         table.Cell().Text(""); // On laisse une cellule vide pour le poids
-                                        table.Cell().Text($"{item.Volume:N2} m³");
+                                        table.Cell().Text($"{item.Volume:N2} mÂ³");
                                         table.Cell().AlignRight().Text($"{tarif:C}");
                                     }
                                 });
@@ -382,6 +382,9 @@ namespace TransitManager.Infrastructure.Services
                  }
              }
 
+            // Currency symbol - use proper Unicode
+            const string EUR = " \u20AC"; // Proper Euro symbol
+
             return await Task.Run(() =>
             {
                 var document = PdfDocument.Create(container =>
@@ -389,8 +392,11 @@ namespace TransitManager.Infrastructure.Services
                     container.Page(page =>
                     {
                         page.Size(PageSizes.A4);
-                        page.Margin(2, Unit.Centimetre);
+                        page.Margin(1.5f, Unit.Centimetre);
+                        page.MarginLeft(2f, Unit.Centimetre);
+                        page.MarginRight(2f, Unit.Centimetre);
                         page.PageColor(Colors.White);
+                        page.DefaultTextStyle(x => x.FontSize(10));
                         
                         page.Header().Element(ComposeHeader);
                         page.Content().Element(ComposeContent);
@@ -398,180 +404,221 @@ namespace TransitManager.Infrastructure.Services
 
                         void ComposeHeader(IContainer container)
                         {
-                            container.Row(row =>
+                            container.PaddingBottom(20).Row(row =>
                             {
                                 // Logo and Company Info Left
                                 row.RelativeItem().Column(column =>
                                 {
                                     if (File.Exists(logoPath))
                                     {
-                                        column.Item().Height(60).Image(logoPath).FitArea();
+                                        column.Item().Height(65).Image(logoPath).FitArea();
                                     }
                                     else
                                     {
-                                         column.Item().Text("HIPPOCAMPE").FontSize(20).Bold().FontColor(Colors.Blue.Darken2);
+                                         column.Item().Text("HIPPOCAMPE").FontSize(22).Bold().FontColor(Colors.Blue.Darken2);
                                     }
                                     
-                                    column.Item().PaddingTop(5).Text("HIPPOCAMPE IMPORT EXPORT - SAS").FontSize(10).Bold();
-                                    column.Item().Text("7 Rue Pascal, 33370 Tresses").FontSize(10);
-                                    column.Item().Text("Tél: 09 81 72 45 40").FontSize(10);
-                                    column.Item().Text("Email: contact@hippocampeimportexport.com").FontSize(10);
+                                    column.Item().PaddingTop(8).Text("HIPPOCAMPE IMPORT EXPORT - SAS").FontSize(9).Bold();
+                                    column.Item().Text("7 Rue Pascal, 33370 Tresses").FontSize(9);
+                                    column.Item().Text("Tél: 09 81 72 45 40").FontSize(9);
+                                    column.Item().Text("Email: contact@hippocampeimportexport.com").FontSize(9);
                                 });
 
-                                // Quote Info Right
-                                row.ConstantItem(200).AlignRight().Column(column =>
+                                // Quote Info Right - Styled Box
+                                row.ConstantItem(180).AlignRight().Column(column =>
                                 {
-                                    column.Item().Text("DEVIS").FontSize(24).SemiBold().FontColor(Colors.Grey.Darken2);
-                                    column.Item().Text($"{quote.Reference}").FontSize(14).Bold();
-                                    column.Item().PaddingTop(10).Text($"Date: {quote.DateCreated:dd/MM/yyyy}").FontSize(10);
-                                    column.Item().Text($"Validité: {quote.DateValidity:dd/MM/yyyy}").FontSize(10).FontColor(Colors.Red.Medium);
+                                    column.Item().AlignRight().Text("DEVIS").FontSize(28).SemiBold().FontColor(Colors.Grey.Darken3);
+                                    column.Item().AlignRight().PaddingTop(4).Text($"{quote.Reference}").FontSize(13).Bold();
+                                    column.Item().AlignRight().PaddingTop(12).Text($"Date: {quote.DateCreated:dd/MM/yyyy}").FontSize(10);
+                                    column.Item().AlignRight().Text($"Validité: {quote.DateValidity:dd/MM/yyyy}").FontSize(10).FontColor(Colors.Red.Medium);
                                 });
                             });
                         }
 
                         void ComposeContent(IContainer container)
                         {
-                            container.PaddingVertical(20).Column(column =>
+                            container.PaddingVertical(15).Column(column =>
                             {
-                                column.Spacing(20);
+                                column.Spacing(25);
 
-                                // Client Section (Right aligned or Boxed)
+                                // Client Section - Right aligned box with nice styling
                                 column.Item().Row(r => 
                                 {
                                     r.RelativeItem(); // Spacer
-                                    r.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(10).Column(c =>
+                                    r.ConstantItem(260).Border(1).BorderColor(Colors.Grey.Lighten2).Background("#F8FAFC").Padding(15).Column(c =>
                                     {
-                                        c.Item().Text("Destinataire:").FontSize(9).SemiBold().FontColor(Colors.Grey.Darken1);
-                                        c.Item().Text($"{quote.ClientName} {quote.ClientFirstname}").FontSize(11).Bold();
-                                        if(!string.IsNullOrEmpty(quote.ClientAddress)) c.Item().Text(quote.ClientAddress).FontSize(10);
-                                        if(!string.IsNullOrEmpty(quote.ClientPhone)) c.Item().Text(quote.ClientPhone).FontSize(10);
-                                        if(!string.IsNullOrEmpty(quote.ClientEmail)) c.Item().Text(quote.ClientEmail).FontSize(10);
+                                        c.Item().Text("Destinataire").FontSize(9).SemiBold().FontColor(Colors.Grey.Darken1);
+                                        c.Item().PaddingTop(6).Text($"{quote.ClientName} {quote.ClientFirstname}").FontSize(11).Bold();
+                                        if(!string.IsNullOrEmpty(quote.ClientAddress)) 
+                                            c.Item().PaddingTop(4).Text(quote.ClientAddress).FontSize(10);
+                                        if(!string.IsNullOrEmpty(quote.ClientPhone)) 
+                                            c.Item().PaddingTop(2).Text(quote.ClientPhone).FontSize(10);
+                                        if(!string.IsNullOrEmpty(quote.ClientEmail)) 
+                                            c.Item().PaddingTop(2).Text(quote.ClientEmail).FontSize(10);
                                     });
                                 });
 
-                                // Lines Table
+                                // Lines Table - Professional Zervant-Style Compact
                                 column.Item().Table(table =>
                                 {
+                                    // Column widths based on Zervant reference - Description takes MOST space
                                     table.ColumnsDefinition(columns =>
                                     {
-                                        columns.RelativeColumn(3); // Description
-                                        columns.RelativeColumn(1); // Date - NEW
-                                        columns.RelativeColumn(1); // Qty
-                                        columns.RelativeColumn(1.5f); // Unit Price
-                                        columns.RelativeColumn(1); // VAT
-                                        columns.RelativeColumn(1.5f); // Total
+                                        columns.RelativeColumn(10f);  // Description - LARGE
+                                        columns.ConstantColumn(62);   // Date - compact
+                                        columns.ConstantColumn(32);   // Qty - small
+                                        columns.ConstantColumn(30);   // Unit - very small
+                                        columns.ConstantColumn(55);   // Price - compact
+                                        columns.ConstantColumn(42);   // VAT - compact
+                                        columns.ConstantColumn(58);   // Total - compact
                                     });
 
                                     table.Header(header =>
                                     {
                                         header.Cell().Element(HeaderStyle).Text("Description");
-                                        header.Cell().Element(HeaderStyle).AlignCenter().Text("Date"); // NEW
-                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Qté");
-                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Prix Unit.");
+                                        header.Cell().Element(HeaderStyle).AlignCenter().Text("Date");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Qté"); 
+                                        header.Cell().Element(HeaderStyle).AlignCenter().Text("Unité");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Prix unit."); 
                                         header.Cell().Element(HeaderStyle).AlignRight().Text("TVA");
-                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Total HT");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Montant");
                                         
                                         static IContainer HeaderStyle(IContainer container)
                                         {
-                                            return container.DefaultTextStyle(x => x.SemiBold().Color(Colors.White))
-                                                            .Background(Colors.Grey.Darken3)
-                                                            .PaddingVertical(5).PaddingHorizontal(5);
+                                            // Dark header (Dark Grey/Blue -> #2C3E50)
+                                            return container.DefaultTextStyle(x => x.SemiBold().FontSize(8).FontColor(Colors.White))
+                                                            .Background("#2C3E50")
+                                                            .PaddingVertical(6).PaddingHorizontal(4);
                                         }
                                     });
 
-                                    foreach (var line in quote.Lines)
+                                    foreach (var line in quote.Lines.OrderBy(l => l.Position))
                                     {
                                         if (line.Type == QuoteLineType.Title)
                                         {
-                                            table.Cell().ColumnSpan(6).Element(c => c.PaddingTop(10).PaddingBottom(5)).Text(line.Description).FontSize(11).Bold();
+                                            table.Cell().ColumnSpan(7).PaddingTop(12).PaddingBottom(4)
+                                                .Element(c => c.Text(line.Description.ToUpper()).FontSize(9).Bold().FontColor("#1E293B"));
                                         }
                                         else if (line.Type == QuoteLineType.Text)
                                         {
-                                            table.Cell().ColumnSpan(6).Element(c => c.PaddingBottom(5)).Text(line.Description).FontSize(10);
+                                            table.Cell().ColumnSpan(7).PaddingLeft(4).PaddingBottom(6)
+                                                .Element(c => c.Text(line.Description).FontSize(8).FontColor("#64748B"));
                                         }
                                         else if (line.Type == QuoteLineType.Subtotal)
                                         {
-                                            // Subtotal Row: Border Top and Bottom usually, or just Bottom as separator
-                                            // User requested a separator line AFTER subtotal
+                                            // Subtotal Row - Clean with top border
+                                            IContainer SubtotalStyle(IContainer container) => 
+                                                container.BorderTop(1).BorderColor("#CBD5E1").PaddingVertical(6);
                                             
-                                            IContainer SubtotalStyle(IContainer container) => container.BorderBottom(1).BorderColor(Colors.Black).PaddingVertical(5);
-                                            
-                                            table.Cell().Element(SubtotalStyle).Text(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description).Bold();
-                                            table.Cell().ColumnSpan(4).Element(SubtotalStyle); // Empty columns
-                                            table.Cell().Element(SubtotalStyle).AlignRight().Text($"{line.TotalHT:N2} €").Bold();
+                                            table.Cell().Element(SubtotalStyle)
+                                                .Text(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description).Bold().FontSize(8);
+                                            table.Cell().ColumnSpan(5).Element(SubtotalStyle); 
+                                            table.Cell().Element(SubtotalStyle).AlignRight()
+                                                .Text($"{line.TotalHT:N2}{EUR}").Bold().FontSize(8);
                                         }
                                         else // Product
                                         {
-                                            table.Cell().Element(CellStyle).Text(line.Description);
-                                            table.Cell().Element(CellStyle).AlignCenter().Text(line.Date?.ToString("dd/MM") ?? "-");
-                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.Quantity} {line.Unit}");
-                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.UnitPrice:N2} €");
-                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.VATRate}%");
-                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.TotalHT:N2} €");
+                                            table.Cell().Element(CellStyle).Text(line.Description).FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignCenter().Text(line.Date?.ToString("dd.MM.yyyy") ?? "").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.Quantity:0.00}").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignCenter().Text(line.Unit ?? "pce").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.UnitPrice:N2}{EUR}").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.VATRate:0.00} %").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.TotalHT:N2}{EUR}").FontSize(8);
                                         }
 
                                         static IContainer CellStyle(IContainer container)
                                         {
-                                            return container.BorderBottom(1).BorderColor(Colors.Grey.Lighten3).PaddingVertical(5).PaddingHorizontal(5);
+                                            // Minimal vertical padding for compact look
+                                            return container.BorderBottom(1).BorderColor("#E2E8F0")
+                                                           .PaddingVertical(5).PaddingHorizontal(4);
                                         }
                                     }
                                 });
 
-                                // Totals
-                                column.Item().AlignRight().Column(col =>
+                                // Totals Section - Professional Right-aligned box
+                                column.Item().AlignRight().Width(280).PaddingTop(10).Column(col =>
                                 {
+                                    // Regular totals
                                     col.Item().Row(row =>
                                     {
-                                        row.ConstantItem(120).Text("Total HT:");
-                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalHT:N2} €");
-                                    });
-                                    
-                                    col.Item().Row(row =>
-                                    {
-                                        row.ConstantItem(120).Text("TVA:");
-                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalTVA:N2} €");
+                                        row.RelativeItem().Text("Total HT").FontSize(10);
+                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalHT:N2}{EUR}").FontSize(10);
                                     });
 
-                                    col.Item().PaddingTop(5).Row(row =>
+                                    // VAT breakdown by rate if available
+                                    var vatRates = quote.Lines
+                                        .Where(l => l.Type == QuoteLineType.Product)
+                                        .GroupBy(l => l.VATRate)
+                                        .Where(g => g.Key > 0);
+                                    
+                                    foreach (var vatGroup in vatRates)
                                     {
-                                        row.ConstantItem(120).Text("Total TTC:").SemiBold().FontSize(12);
-                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalTTC:N2} €").SemiBold().FontSize(12).FontColor(Colors.Blue.Darken2);
+                                        var vatAmount = vatGroup.Sum(l => l.TotalHT * l.VATRate / 100);
+                                        col.Item().PaddingTop(4).Row(row =>
+                                        {
+                                            row.RelativeItem().Text($"TVA {vatGroup.Key:0.00} %").FontSize(10);
+                                            row.ConstantItem(100).AlignRight().Text($"{vatAmount:N2}{EUR}").FontSize(10);
+                                        });
+                                    }
+
+                                    if (!vatRates.Any())
+                                    {
+                                        col.Item().PaddingTop(4).Row(row =>
+                                        {
+                                            row.RelativeItem().Text("TVA").FontSize(10);
+                                            row.ConstantItem(100).AlignRight().Text($"{quote.TotalTVA:N2}{EUR}").FontSize(10);
+                                        });
+                                    }
+
+                                    // TVA totale line
+                                    col.Item().PaddingTop(4).BorderBottom(1).BorderColor("#CBD5E1").PaddingBottom(8).Row(row =>
+                                    {
+                                        row.RelativeItem().Text("TVA totale").FontSize(10);
+                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalTVA:N2}{EUR}").FontSize(10);
+                                    });
+
+                                    // Total TTC - Emphasized
+                                    col.Item().PaddingTop(12).Row(row =>
+                                    {
+                                        row.RelativeItem().Text("Total TTC").SemiBold().FontSize(13);
+                                        row.ConstantItem(120).AlignRight().Text($"{quote.TotalTTC:N2}{EUR}").SemiBold().FontSize(13);
                                     });
                                 });
                                 
-                                // Footer Note
+                                // Footer Notes
                                 if(!string.IsNullOrEmpty(quote.Message))
                                 {
-                                    column.Item().PaddingTop(10).Text("Message:").SemiBold().FontSize(10);
-                                    column.Item().Text(quote.Message).FontSize(9);
+                                    column.Item().PaddingTop(25).Text("Message:").SemiBold().FontSize(10);
+                                    column.Item().PaddingTop(4).Text(quote.Message).FontSize(10);
                                 }
                                 
                                 if(!string.IsNullOrEmpty(quote.PaymentTerms))
                                 {
-                                    column.Item().PaddingTop(10).Text("Modalités de paiement:").SemiBold().FontSize(10);
-                                    column.Item().Text(quote.PaymentTerms).FontSize(9);
+                                    column.Item().PaddingTop(15).Text("Modalités de paiement:").SemiBold().FontSize(10);
+                                    column.Item().PaddingTop(4).Text(quote.PaymentTerms).FontSize(10);
                                 }
                                 
                                 if(!string.IsNullOrEmpty(quote.FooterNote))
                                 {
-                                    column.Item().PaddingTop(10).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
-                                    column.Item().PaddingTop(5).Text(quote.FooterNote).FontSize(8).FontColor(Colors.Grey.Darken1);
+                                    column.Item().PaddingTop(20).LineHorizontal(1).LineColor("#E2E8F0");
+                                    column.Item().PaddingTop(8).Text(quote.FooterNote).FontSize(9).FontColor("#64748B");
                                 }
                             });
                         }
 
                         void ComposeFooter(IContainer container)
                         {
-                            container.AlignCenter().Column(c =>
+                            container.PaddingTop(15).AlignCenter().Column(c =>
                             {
-                                c.Item().Text("HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses").FontSize(8).FontColor(Colors.Grey.Darken1);
-                                c.Item().Text("SIRET: 891909772 - TVA: FR42891909772 - BORDEAUX").FontSize(8).FontColor(Colors.Grey.Darken1);
-                                 c.Item().PaddingTop(5).Text(x =>
+                                c.Item().Text("HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses").FontSize(8).FontColor("#64748B");
+                                c.Item().Text("SIRET: 891909772 - TVA: FR42891909772 - BORDEAUX").FontSize(8).FontColor("#64748B");
+                                 c.Item().PaddingTop(6).Text(x =>
                                 {
-                                    x.Span("Page ");
-                                    x.CurrentPageNumber();
-                                    x.Span(" / ");
-                                    x.TotalPages();
+                                    x.Span("Page ").FontSize(9);
+                                    x.CurrentPageNumber().FontSize(9);
+                                    x.Span(" / ").FontSize(9);
+                                    x.TotalPages().FontSize(9);
                                 });
                             });
                         }
@@ -647,8 +694,8 @@ namespace TransitManager.Infrastructure.Services
                                 {
                                     row.RelativeItem().Column(c => 
                                     {
-                                        c.Item().Text("REÇU DE PAIEMENT").FontSize(20).Bold().FontColor(Colors.Black);
-                                        c.Item().Text($"N° {paiement.NumeroRecu}").FontSize(12).FontColor(Colors.Grey.Darken1);
+                                        c.Item().Text("REÃ‡U DE PAIEMENT").FontSize(20).Bold().FontColor(Colors.Black);
+                                        c.Item().Text($"NÂ° {paiement.NumeroRecu}").FontSize(12).FontColor(Colors.Grey.Darken1);
                                         c.Item().Text($"Date: {paiement.DatePaiement:dd/MM/yyyy HH:mm}").FontSize(10);
 
                                         if (paiement.Colis != null)
@@ -779,7 +826,7 @@ namespace TransitManager.Infrastructure.Services
                 // En-têtes
                 var row = 3;
                 worksheet.Cell(row, 1).Value = "Date";
-                worksheet.Cell(row, 2).Value = "N° Reçu";
+                worksheet.Cell(row, 2).Value = "NÂ° Reçu";
                 worksheet.Cell(row, 3).Value = "Client";
                 worksheet.Cell(row, 4).Value = "Conteneur";
                 worksheet.Cell(row, 5).Value = "Mode";
@@ -813,7 +860,7 @@ namespace TransitManager.Infrastructure.Services
                 }
                 // Total
                 var totalRow = row + 1;
-                worksheet.Cell(totalRow, 6).Value = "TOTAL GÉNÉRAL:";
+                worksheet.Cell(totalRow, 6).Value = "TOTAL GÃ‰NÃ‰RAL:";
                 worksheet.Cell(totalRow, 6).Style.Font.Bold = true;
                 worksheet.Cell(totalRow, 7).Value = total;
                 worksheet.Cell(totalRow, 7).Style.Font.Bold = true;
@@ -821,7 +868,7 @@ namespace TransitManager.Infrastructure.Services
                 worksheet.Cell(totalRow, 7).Style.Fill.BackgroundColor = XLColor.LightYellow;
 
                 // Formatage
-                worksheet.Range(4, 7, totalRow, 7).Style.NumberFormat.Format = "#,##0.00 €";
+                worksheet.Range(4, 7, totalRow, 7).Style.NumberFormat.Format = "#,##0.00 â‚¬";
                 worksheet.Columns().AdjustToContents();
                 
                 using var stream = new MemoryStream();
@@ -950,7 +997,7 @@ namespace TransitManager.Infrastructure.Services
                 column.Item().Grid(grid =>
                 {
                     grid.Columns(2);
-                    grid.Item(1).Text("N° Plomb:"); grid.Item(1).Text(data.NumeroPlomb ?? "N/A").SemiBold();
+                    grid.Item(1).Text("NÂ° Plomb:"); grid.Item(1).Text(data.NumeroPlomb ?? "N/A").SemiBold();
                     grid.Item(1).Text("Compagnie:"); grid.Item(1).Text(data.NomCompagnie ?? "N/A").SemiBold();
                     grid.Item(1).Text("Transitaire:"); grid.Item(1).Text(data.NomTransitaire ?? "N/A").SemiBold();
                     grid.Item(1).Text("Pays Dest.:"); grid.Item(1).Text(data.PaysDestination).SemiBold();
@@ -974,60 +1021,41 @@ namespace TransitManager.Infrastructure.Services
 
             void ComposeTableColis(IContainer container, ICollection<Colis> colisList)
             {
-                container.Table(table =>
-                {
-                    table.ColumnsDefinition(columns =>
-                    {
-                        columns.RelativeColumn(1.5f);
-                        columns.RelativeColumn(1.5f);
-                        columns.RelativeColumn(3);
-                        columns.ConstantColumn(40);
-                        columns.RelativeColumn(1);
-                        // MODIFICATION 2 : Ajout de la colonne pour le restant
-                        columns.RelativeColumn(1);
-                    });
-                    table.Header(header =>
-                    {
-                        header.Cell().Element(CellStyle).Text("Référence");
-                        header.Cell().Element(CellStyle).Text("Client");
-                        header.Cell().Element(CellStyle).Text("Désignation");
-                        header.Cell().Element(CellStyle).AlignCenter().Text("Pièces");
-                        header.Cell().Element(CellStyle).AlignRight().Text("Prix");
-                        // MODIFICATION 2 : Ajout de l'en-tête
-                        header.Cell().Element(CellStyle).AlignRight().Text("Restant");
-                    });
-                    foreach (var colis in colisList)
-                    {
-                        table.Cell().Element(CellStyle).Text(colis.NumeroReference);
-                        table.Cell().Element(CellStyle).Text(colis.Client?.NomComplet ?? "N/A");
-                        table.Cell().Element(CellStyle).Text(colis.Designation);
-                        table.Cell().Element(CellStyle).AlignCenter().Text(colis.NombrePieces.ToString());
-                        table.Cell().Element(CellStyle).AlignRight().Text($"{colis.PrixTotal:C}");
-
-                        // MODIFICATION 2 : Ajout de la cellule avec couleur conditionnelle
-                        var restant = colis.RestantAPayer;
-                        var color = restant > 0 ? Colors.Red.Medium : Colors.Black;
-                        table.Cell().Element(CellStyle).AlignRight().Text(text =>
+                        // TABLEAU
+                        container.Table(table =>
                         {
-                            text.Span($"{restant:C}").FontColor(color);
-                        });
-                        // Logique pour l'inventaire
-                        if (!string.IsNullOrWhiteSpace(colis.InventaireJson) && colis.InventaireJson != "[]")
-                        {
-                            try
+                            table.ColumnsDefinition(columns =>
                             {
-                                var items = JsonSerializer.Deserialize<List<InventaireItem>>(colis.InventaireJson);
-                                if (items != null && items.Any())
-                                {
-                                    // On étend sur 6 colonnes maintenant
-                                    table.Cell().ColumnSpan(6).PaddingLeft(20).PaddingTop(5).PaddingBottom(10)
-                                        .Element(container => ComposeTableInventaire(container, items));
-                                }
+                                columns.RelativeColumn(2);
+                                columns.RelativeColumn(4);
+                                columns.RelativeColumn(1);
+                                columns.RelativeColumn(1);
+                                columns.RelativeColumn(2);
+                            });
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Element(CellStyle).Text("Référence");
+                                header.Cell().Element(CellStyle).Text("Description");
+                                header.Cell().Element(CellStyle).Text("Poids");
+                                header.Cell().Element(CellStyle).Text("Volume");
+                                header.Cell().Element(CellStyle).Text("Montant");
+                            });
+
+                            foreach (var item in colisList)
+                            {
+                                table.Cell().Element(CellStyle).Text(item.NumeroReference);
+                                table.Cell().Element(CellStyle).Text(item.Designation);
+                                table.Cell().Element(CellStyle).Text(""); // Poids vide
+                                table.Cell().Element(CellStyle).Text($"{item.Volume:N2} m³");
+                                table.Cell().Element(CellStyle).AlignRight().Text($"{item.PrixTotal:C}");
                             }
-                            catch { /* Ignorer JSON invalide */ }
+                        });
+
+                        static IContainer CellStyle(IContainer container)
+                        {
+                            return container.BorderBottom(1).BorderColor(Colors.Grey.Lighten3).PaddingVertical(3);
                         }
-                    }
-                });
             }
 
             void ComposeTableInventaire(IContainer container, List<InventaireItem> items)
@@ -1127,7 +1155,7 @@ namespace TransitManager.Infrastructure.Services
                 {
                     if (format.ToLower().Trim() == "a4")
                     {
-                        // Format A4: 2 Étiquettes par page
+                        // Format A4: 2 Ã‰tiquettes par page
                         for (int i = 0; i < colis.NombrePieces; i += 2)
                         {
                             container.Page(page =>
@@ -1314,7 +1342,7 @@ namespace TransitManager.Infrastructure.Services
                     {
                         row.RelativeItem().Column(column =>
                         {
-                            // Logo aligné à gauche avec correction
+                            // Logo aligné Ã  gauche avec correction
                             if (File.Exists(imagePath))
                             {
                                 try {
@@ -1356,10 +1384,10 @@ namespace TransitManager.Infrastructure.Services
                         {
                             row.RelativeItem().Column(c =>
                             {
-                                c.Item().Text("INFOS GÉNÉRALES").FontSize(9).SemiBold().Underline();
+                                c.Item().Text("INFOS GÃ‰NÃ‰RALES").FontSize(9).SemiBold().Underline();
                                 c.Item().Text($"Destination: {conteneur.Destination}, {conteneur.PaysDestination}");
                                 c.Item().Text($"Compagnie: {conteneur.NomCompagnie ?? "-"}");
-                                c.Item().Text($"N° Plomb: {conteneur.NumeroPlomb ?? "-"}");
+                                c.Item().Text($"NÂ° Plomb: {conteneur.NumeroPlomb ?? "-"}");
                             });
                             row.RelativeItem().Column(c =>
                             {
@@ -1369,10 +1397,10 @@ namespace TransitManager.Infrastructure.Services
                                 c.Item().Text($"Arrivée: {conteneur.DateArriveeDestination:dd/MM/yyyy}");
                             });
                         });
-                        // B. RÉCAPITULATIF CLIENTS (NOUVEAU !)
+                        // B. RÃ‰CAPITULATIF CLIENTS (NOUVEAU !)
                         if (statsClients.Any())
                         {
-                            column.Item().Text("RÉCAPITULATIF PAR CLIENT").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
+                            column.Item().Text("RÃ‰CAPITULATIF PAR CLIENT").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
 
                             column.Item().Table(table =>
                             {
@@ -1431,20 +1459,20 @@ namespace TransitManager.Infrastructure.Services
                                     footer.Cell().Element(FooterStyle).AlignCenter().Text(statsClients.Sum(s => s.NbVehicules).ToString()).Bold();
                                     if (includeFinancials)
                                     {
-                                        footer.Cell().Element(FooterStyle).AlignRight().Text($"{statsClients.Sum(s => s.TotalPrix):N0} €").Bold();
-                                        footer.Cell().Element(FooterStyle).AlignRight().Text($"{statsClients.Sum(s => s.TotalPaye):N0} €").Bold();
-                                        footer.Cell().Element(FooterStyle).AlignRight().Text($"{statsClients.Sum(s => s.Reste):N0} €").Bold().FontColor(Colors.Red.Medium);
+                                        footer.Cell().Element(FooterStyle).AlignRight().Text($"{statsClients.Sum(s => s.TotalPrix):N0} â‚¬").Bold();
+                                        footer.Cell().Element(FooterStyle).AlignRight().Text($"{statsClients.Sum(s => s.TotalPaye):N0} â‚¬").Bold();
+                                        footer.Cell().Element(FooterStyle).AlignRight().Text($"{statsClients.Sum(s => s.Reste):N0} â‚¬").Bold().FontColor(Colors.Red.Medium);
                                     }
                                 });
                             });
                         }
-                        // C. LISTE DÉTAILLÉE DES COLIS (Existante, mais améliorée)
-                        // MODIFICATION : Utilisation de la liste filtrée (visibleColis est local à Generate... pas ici. On refiltre)
+                        // C. LISTE DÃ‰TAILLÃ‰E DES COLIS (Existante, mais améliorée)
+                        // MODIFICATION : Utilisation de la liste filtrée (visibleColis est local Ã  Generate... pas ici. On refiltre)
                         var visibleColisList = conteneur.Colis.Where(c => !c.IsExcludedFromExport).ToList();
 
                         if (visibleColisList.Any())
                         {
-                            column.Item().PaddingTop(10).Text($"DÉTAILS DES COLIS ({visibleColisList.Count})").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
+                            column.Item().PaddingTop(10).Text($"DÃ‰TAILS DES COLIS ({visibleColisList.Count})").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
 
                             column.Item().Table(table =>
                             {
@@ -1524,10 +1552,10 @@ namespace TransitManager.Infrastructure.Services
                             });
                         }
 
-                        // D. LISTE VÉHICULES
+                        // D. LISTE VÃ‰HICULES
                         if (conteneur.Vehicules.Any())
                         {
-                             column.Item().PaddingTop(10).Text($"DÉTAILS DES VÉHICULES ({conteneur.Vehicules.Count})").FontSize(12).Bold().FontColor(Colors.Green.Darken2);
+                             column.Item().PaddingTop(10).Text($"DÃ‰TAILS DES VÃ‰HICULES ({conteneur.Vehicules.Count})").FontSize(12).Bold().FontColor(Colors.Green.Darken2);
                              // ... (Code similaire pour la table véhicules, simplifiée pour la réponse) ...
                              column.Item().Table(table =>
                              {
@@ -1627,7 +1655,7 @@ namespace TransitManager.Infrastructure.Services
 
 				void ComposeHeader(IContainer container)
 				{
-					 // (Gardez votre code existant pour le Header, identique à avant)
+					 // (Gardez votre code existant pour le Header, identique Ã  avant)
 					 // ...
 					 container.Row(row =>
 					 {
@@ -1643,7 +1671,7 @@ namespace TransitManager.Infrastructure.Services
 						// DROITE : Info Client Propriétaire
                         row.RelativeItem().AlignRight().Column(column =>
                         {
-                            column.Item().AlignRight().Text("PROPRIÉTAIRE").FontSize(8).SemiBold().FontColor(Colors.Grey.Darken2);
+                            column.Item().AlignRight().Text("PROPRIÃ‰TAIRE").FontSize(8).SemiBold().FontColor(Colors.Grey.Darken2);
                             column.Item().AlignRight().Text(colis.Client?.NomComplet ?? "Inconnu").FontSize(12).Bold();
                             column.Item().AlignRight().Text(colis.Client?.TelephonePrincipal ?? "-");
                             
@@ -1651,7 +1679,7 @@ namespace TransitManager.Infrastructure.Services
                             if (!string.IsNullOrWhiteSpace(colis.Client?.Email))
                                 column.Item().AlignRight().Text(colis.Client.Email).FontSize(9).Italic();
                             
-                            // Adresse à la fin
+                            // Adresse Ã  la fin
                             if (!string.IsNullOrWhiteSpace(colis.Client?.AdressePrincipale))
                                 column.Item().AlignRight().Text($"{colis.Client.AdressePrincipale}, {colis.Client.Ville}").FontSize(9);
                         });
@@ -1664,13 +1692,13 @@ namespace TransitManager.Infrastructure.Services
 					{
 						column.Spacing(15);
 
-						// A. INFO & DESTINATAIRE (Identique à avant)
+						// A. INFO & DESTINATAIRE (Identique Ã  avant)
 						// ... (Je ne remets pas tout le code pour abréger, gardez votre bloc existant) ...
-						// Si vous avez besoin du code complet, dites-le moi, mais c'est le bloc avec "DESTINATAIRE & LIVRAISON" et "INFOS GÉNÉRALES"
+						// Si vous avez besoin du code complet, dites-le moi, mais c'est le bloc avec "DESTINATAIRE & LIVRAISON" et "INFOS GÃ‰NÃ‰RALES"
 						
-						// --- POUR RAPPEL, LE DÉBUT DU BLOC EST : ---
+						// --- POUR RAPPEL, LE DÃ‰BUT DU BLOC EST : ---
 						bool destinataireDifferent = colis.Destinataire?.Trim().ToLower() != colis.Client?.NomComplet?.Trim().ToLower();
-						// A. LOGISTIQUE : EXPÉDITEUR & DESTINATAIRE (Modifié)
+						// A. LOGISTIQUE : EXPÃ‰DITEUR & DESTINATAIRE (Modifié)
 						column.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Row(row =>
 						{
                             // COLONNE GAUCHE : ADRESSE FRANCE
@@ -1707,7 +1735,7 @@ namespace TransitManager.Infrastructure.Services
 							});
 						});
 						
-						// B. INFOS GÉNÉRALES
+						// B. INFOS GÃ‰NÃ‰RALES
 						column.Item().Background(Colors.Grey.Lighten4).Padding(10).Column(c => 
 						{
 							c.Item().Row(r => 
@@ -1720,8 +1748,8 @@ namespace TransitManager.Infrastructure.Services
 								c.Item().PaddingTop(5).Text(t => { t.Span("Instructions: ").SemiBold().FontColor(Colors.Red.Medium); t.Span(colis.InstructionsSpeciales); });
 						});
 
-						// C. INVENTAIRE (Identique à avant)
-						column.Item().Text("DÉTAIL DE L'INVENTAIRE").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
+						// C. INVENTAIRE (Identique Ã  avant)
+						column.Item().Text("DÃ‰TAIL DE L'INVENTAIRE").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
 						// ... (Tableau inventaire inchangé) ...
 						column.Item().Table(table =>
 						{
@@ -1739,13 +1767,13 @@ namespace TransitManager.Infrastructure.Services
 							table.Footer(footer => {
 								footer.Cell().ColumnSpan(2).Element(FooterStyle).AlignRight().Text("TOTAUX :").Bold();
 								footer.Cell().Element(FooterStyle).AlignCenter().Text(inventaire.Sum(i => i.Quantite).ToString()).Bold();
-								footer.Cell().Element(FooterStyle).AlignRight().Text($"{inventaire.Sum(i => i.Valeur):N2} €").Bold();
+								footer.Cell().Element(FooterStyle).AlignRight().Text($"{inventaire.Sum(i => i.Valeur):N2} â‚¬").Bold();
 								footer.Cell().Element(FooterStyle);
 							});
 						});
 
 						// D. VALIDATION & SIGNATURE (NOUVEAU !)
-						// On affiche ce bloc tout le temps, que les prix soient là ou non.
+						// On affiche ce bloc tout le temps, que les prix soient lÃ  ou non.
 						column.Item().PaddingTop(10).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Row(row =>
 						{
 							// Infos Lieu/Date
@@ -1754,7 +1782,7 @@ namespace TransitManager.Infrastructure.Services
 								c.Item().Text("VALIDATION CLIENT").FontSize(10).SemiBold().Underline();
 								
 								if (!string.IsNullOrEmpty(colis.LieuSignatureInventaire))
-									c.Item().Text($"Fait à : {colis.LieuSignatureInventaire}");
+									c.Item().Text($"Fait Ã  : {colis.LieuSignatureInventaire}");
 								
 								if (colis.DateSignatureInventaire.HasValue)
 									c.Item().Text($"Le : {colis.DateSignatureInventaire.Value:dd/MM/yyyy}");
@@ -1788,18 +1816,18 @@ namespace TransitManager.Infrastructure.Services
 							});
 						});
 
-						// E. RÉCAPITULATIF FINANCIER (Conditionnel)
+						// E. RÃ‰CAPITULATIF FINANCIER (Conditionnel)
 						if (includeFinancials)
 						{
 							column.Item().PaddingTop(5).AlignRight().Border(1).BorderColor(Colors.Black).Padding(10).Column(c => 
 							{
-								c.Item().Text("SITUATION FINANCIÈRE").FontSize(10).Underline().Bold();
-								c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{colis.PrixTotal:N2} €").Bold(); });
-								c.Item().Row(r => { r.RelativeItem().Text("Déjà Payé :"); r.RelativeItem().AlignRight().Text($"{colis.SommePayee:N2} €").FontColor(Colors.Green.Medium); });
+								c.Item().Text("SITUATION FINANCIÃˆRE").FontSize(10).Underline().Bold();
+								c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{colis.PrixTotal:N2} â‚¬").Bold(); });
+								c.Item().Row(r => { r.RelativeItem().Text("DéjÃ  Payé :"); r.RelativeItem().AlignRight().Text($"{colis.SommePayee:N2} â‚¬").FontColor(Colors.Green.Medium); });
 								c.Item().PaddingTop(5).BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingTop(5).Row(r => 
 								{
-									r.RelativeItem().Text("RESTE À PAYER :").Bold();
-									r.RelativeItem().AlignRight().Text($"{colis.RestantAPayer:N2} €").ExtraBold().FontColor(Colors.Red.Medium);
+									r.RelativeItem().Text("RESTE Ã€ PAYER :").Bold();
+									r.RelativeItem().AlignRight().Text($"{colis.RestantAPayer:N2} â‚¬").ExtraBold().FontColor(Colors.Red.Medium);
 								});
 							});
 						}
@@ -1843,7 +1871,7 @@ namespace TransitManager.Infrastructure.Services
 
 				void ComposeFooter(IContainer container)
 				{
-					// (Identique à avant)
+					// (Identique Ã  avant)
 					 container.Column(c =>
 					{
 						c.Item().BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingTop(5).Row(row =>
@@ -1854,7 +1882,7 @@ namespace TransitManager.Infrastructure.Services
 					});
 				}
 				
-				// Styles (Identiques à avant)
+				// Styles (Identiques Ã  avant)
 				static IContainer HeaderStyle(IContainer container) => container.BorderBottom(1).BorderColor(Colors.Black).PaddingVertical(2).Background(Colors.Grey.Lighten3).PaddingHorizontal(2).DefaultTextStyle(x => x.SemiBold());
 				static IContainer FooterStyle(IContainer container) => container.BorderTop(1).BorderColor(Colors.Black).PaddingVertical(2).Background(Colors.Grey.Lighten4).PaddingHorizontal(2);
 				static IContainer CellStyle(IContainer container) => container.BorderBottom(1).BorderColor(Colors.Grey.Lighten3).PaddingVertical(2).PaddingHorizontal(2);
@@ -1878,7 +1906,7 @@ namespace TransitManager.Infrastructure.Services
                     _ => "vehicule_plan.png"
                 };
                 // Note: Assurez-vous que ces images sont bien copiées dans le dossier de sortie de l'API (comme pour le logo)
-                // ou adaptez le chemin vers wwwroot si elles sont stockées là-bas.
+                // ou adaptez le chemin vers wwwroot si elles sont stockées lÃ -bas.
                 // Ici je suppose qu'elles sont dans Resources/Plans/ pour l'exemple backend
                 var planPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Plans", planImageName);
                 // Fallback si le dossier Plans n'est pas copié, essayez la racine Resources
@@ -1935,7 +1963,7 @@ namespace TransitManager.Infrastructure.Services
 						// DROITE : Propriétaire
 						row.RelativeItem().AlignRight().Column(column =>
 						{
-							column.Item().AlignRight().Text("PROPRIÉTAIRE").FontSize(8).SemiBold().FontColor(Colors.Grey.Darken2);
+							column.Item().AlignRight().Text("PROPRIÃ‰TAIRE").FontSize(8).SemiBold().FontColor(Colors.Grey.Darken2);
 							column.Item().AlignRight().Text(vehicule.Client?.NomComplet ?? "Inconnu").FontSize(12).Bold();
 							column.Item().AlignRight().Text(vehicule.Client?.TelephonePrincipal ?? "-");
 							
@@ -1955,7 +1983,7 @@ namespace TransitManager.Infrastructure.Services
                     container.PaddingVertical(20).Column(column =>
                     {
                         column.Spacing(15);
-                        // A. INFO VÉHICULE & LOGISTIQUE
+                        // A. INFO VÃ‰HICULE & LOGISTIQUE
                         bool destDiff = vehicule.Destinataire != vehicule.Client?.NomComplet;
 
                         column.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Row(row =>
@@ -1993,8 +2021,8 @@ namespace TransitManager.Infrastructure.Services
                         {
                             column.Item().Background(Colors.Grey.Lighten4).Padding(5).Text($"Notes: {vehicule.Commentaires}").Italic();
                         }
-                        // B. ÉTAT DES LIEUX (SCHÉMA GRAPHIQUE)
-                        column.Item().PaddingTop(10).Text("ÉTAT DES LIEUX ET CARROSSERIE").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
+                        // B. Ã‰TAT DES LIEUX (SCHÃ‰MA GRAPHIQUE)
+                        column.Item().PaddingTop(10).Text("Ã‰TAT DES LIEUX ET CARROSSERIE").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
                         
                         column.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Element(box => 
                         {
@@ -2013,26 +2041,26 @@ namespace TransitManager.Infrastructure.Services
                             }
                         });
 						
-                        // C. ÉQUIPEMENTS ET ACCESSOIRES
+                        // C. Ã‰QUIPEMENTS ET ACCESSOIRES
                         column.Item().Row(row =>
                         {
                             // Liste 1
                             row.RelativeItem().Column(c =>
                             {
-                                c.Item().Text("ÉQUIPEMENTS PRÉSENTS").FontSize(10).Bold().Underline();
-                                c.Item().Text($"• Carte Grise : {(accessoires.CarteGrise ? "OUI" : "NON")}");
-                                c.Item().Text($"• Clés : {accessoires.NombreClefs}");
-                                c.Item().Text($"• Radio/Façade : {(accessoires.Radio ? "OUI" : "NON")}");
-                                c.Item().Text($"• Antenne : {(accessoires.Antenne ? "OUI" : "NON")}");
+                                c.Item().Text("Ã‰QUIPEMENTS PRÃ‰SENTS").FontSize(10).Bold().Underline();
+                                c.Item().Text($"â€¢ Carte Grise : {(accessoires.CarteGrise ? "OUI" : "NON")}");
+                                c.Item().Text($"â€¢ Clés : {accessoires.NombreClefs}");
+                                c.Item().Text($"â€¢ Radio/Façade : {(accessoires.Radio ? "OUI" : "NON")}");
+                                c.Item().Text($"â€¢ Antenne : {(accessoires.Antenne ? "OUI" : "NON")}");
                             });
 
                             // Liste 2
                             row.RelativeItem().Column(c =>
                             {
                                 c.Item().Text(""); // Spacer
-                                c.Item().Text($"• Roue Secours : {(accessoires.RoueSecours ? "OUI" : "NON")}");
-                                c.Item().Text($"• Cric/Manivelle : {(accessoires.Cric ? "OUI" : "NON")}");
-                                c.Item().Text($"• Enjoliveurs : {accessoires.NombreEnjoliveurs} / 4");
+                                c.Item().Text($"â€¢ Roue Secours : {(accessoires.RoueSecours ? "OUI" : "NON")}");
+                                c.Item().Text($"â€¢ Cric/Manivelle : {(accessoires.Cric ? "OUI" : "NON")}");
+                                c.Item().Text($"â€¢ Enjoliveurs : {accessoires.NombreEnjoliveurs} / 4");
                             });
                         });
 
@@ -2041,7 +2069,7 @@ namespace TransitManager.Infrastructure.Services
                             column.Item().Text($"Autres observations : {accessoires.AutresObservations}").FontSize(9).Italic();
                         }
 
-                        // --- AJOUT : SECTION DÉCLARATION ET RESPONSABILITÉ ---
+                        // --- AJOUT : SECTION DÃ‰CLARATION ET RESPONSABILITÃ‰ ---
                         column.Item().PaddingTop(15).Background(Colors.Grey.Lighten5).Padding(10).Column(c =>
                         {
                             // Valeur du véhicule
@@ -2052,8 +2080,8 @@ namespace TransitManager.Infrastructure.Services
                                 // --- MODIFICATION : Affichage conditionnel ---
                                 if (vehicule.ValeurDeclaree > 0)
                                 {
-                                    // Si une valeur est saisie, on l'affiche avec le sigle €
-                                    r.RelativeItem().Text($"{vehicule.ValeurDeclaree:N0} €").AlignRight().FontSize(10).Bold();
+                                    // Si une valeur est saisie, on l'affiche avec le sigle â‚¬
+                                    r.RelativeItem().Text($"{vehicule.ValeurDeclaree:N0} â‚¬").AlignRight().FontSize(10).Bold();
                                 }
                                 else
                                 {
@@ -2069,7 +2097,7 @@ namespace TransitManager.Infrastructure.Services
                                 text.DefaultTextStyle(x => x.FontSize(8)); // Texte légal un peu plus petit
                                 text.Span("Important : ").Bold();
                                 text.Span("en tant que responsable du chargement de mes effets personnels dans le conteneur et/ou véhicule, je certifie l'exactitude de ma liste et que mes colis ne contiennent aucun produit dangereux au sens du code IMDG qui peut comprendre des produits tels que : ");
-                                text.Span("ARTICLES EXPLOSIFS, GAZ COMPRIMÉ, RECHARGE DE GAZ, AÉROSOLS, PRODUITS CORROSIFS, PRODUITS TOXIQUES OU MATIÈRES RADIOACTIVES.").Bold();
+                                text.Span("ARTICLES EXPLOSIFS, GAZ COMPRIMÃ‰, RECHARGE DE GAZ, AÃ‰ROSOLS, PRODUITS CORROSIFS, PRODUITS TOXIQUES OU MATIÃˆRES RADIOACTIVES.").Bold();
                             });
 
                             c.Item().PaddingTop(2).Text("La non observation de cette règle de sécurité engagera ma responsabilité civile et pénale en cas de litige.").FontSize(8);
@@ -2094,7 +2122,7 @@ namespace TransitManager.Infrastructure.Services
                             });
                             row.RelativeItem().Column(c =>
                             {
-                                c.Item().AlignRight().Text($"Fait à {vehicule.LieuEtatDesLieux}, le {vehicule.DateEtatDesLieux:dd/MM/yyyy}").FontSize(8);
+                                c.Item().AlignRight().Text($"Fait Ã  {vehicule.LieuEtatDesLieux}, le {vehicule.DateEtatDesLieux:dd/MM/yyyy}").FontSize(8);
                                 c.Item().AlignRight().Text("Signature Client").FontSize(8).SemiBold();
                                 if (!string.IsNullOrEmpty(vehicule.SignatureClient))
                                 {
@@ -2112,14 +2140,14 @@ namespace TransitManager.Infrastructure.Services
                         {
                             column.Item().PaddingTop(10).AlignRight().Border(1).BorderColor(Colors.Black).Padding(10).Column(c =>
                             {
-                                c.Item().Text("SITUATION FINANCIÈRE").FontSize(10).Underline().Bold();
-                                c.Item().Row(r => { r.RelativeItem().Text("Valeur Déclarée :"); r.RelativeItem().AlignRight().Text($"{vehicule.ValeurDeclaree:N2} €"); });
-                                c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{vehicule.PrixTotal:N2} €").Bold(); });
-                                c.Item().Row(r => { r.RelativeItem().Text("Déjà Payé :"); r.RelativeItem().AlignRight().Text($"{vehicule.SommePayee:N2} €").FontColor(Colors.Green.Medium); });
+                                c.Item().Text("SITUATION FINANCIÃˆRE").FontSize(10).Underline().Bold();
+                                c.Item().Row(r => { r.RelativeItem().Text("Valeur Déclarée :"); r.RelativeItem().AlignRight().Text($"{vehicule.ValeurDeclaree:N2} â‚¬"); });
+                                c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{vehicule.PrixTotal:N2} â‚¬").Bold(); });
+                                c.Item().Row(r => { r.RelativeItem().Text("DéjÃ  Payé :"); r.RelativeItem().AlignRight().Text($"{vehicule.SommePayee:N2} â‚¬").FontColor(Colors.Green.Medium); });
                                 c.Item().PaddingTop(5).BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingTop(5).Row(r =>
                                 {
-                                    r.RelativeItem().Text("RESTE À PAYER :").Bold();
-                                    r.RelativeItem().AlignRight().Text($"{vehicule.RestantAPayer:N2} €").ExtraBold().FontColor(Colors.Red.Medium);
+                                    r.RelativeItem().Text("RESTE Ã€ PAYER :").Bold();
+                                    r.RelativeItem().AlignRight().Text($"{vehicule.RestantAPayer:N2} â‚¬").ExtraBold().FontColor(Colors.Red.Medium);
                                 });
                             });
                         }
@@ -2135,7 +2163,7 @@ namespace TransitManager.Infrastructure.Services
                              if (photos.Any())
                              {
                                  column.Item().PageBreak();
-                                 column.Item().Text("PHOTOS DU VÉHICULE").FontSize(14).Bold().FontColor(Colors.Blue.Darken2);
+                                 column.Item().Text("PHOTOS DU VÃ‰HICULE").FontSize(14).Bold().FontColor(Colors.Blue.Darken2);
 
                                  column.Item().Grid(grid =>
                                  {
@@ -2213,7 +2241,7 @@ namespace TransitManager.Infrastructure.Services
                 canvas.DrawBitmap(planBitmap, 0, 0);
 
                 // 2. Dessiner les rayures
-                // On adapte l'épaisseur du trait à la taille de l'image (ex: 0.5% de la largeur)
+                // On adapte l'épaisseur du trait Ã  la taille de l'image (ex: 0.5% de la largeur)
                 float strokeWidth = planBitmap.Width * 0.005f; 
                 if (strokeWidth < 2) strokeWidth = 2;
 
@@ -2314,12 +2342,12 @@ namespace TransitManager.Infrastructure.Services
 						
 						column.Item().Height(20); // Espace réduit
 
-						// DÉCLARATION
+						// DÃ‰CLARATION
 						column.Item().Text(text =>
 						{
 							text.Span("Je soussigné ");
 							text.Span($"{vehicule.Client?.NomComplet}").Bold();
-							text.Span($" déclare vouloir expédier à {vehicule.DestinationFinale} mon véhicule personnel décrit ci-dessous :");
+							text.Span($" déclare vouloir expédier Ã  {vehicule.DestinationFinale} mon véhicule personnel décrit ci-dessous :");
 						});
 
 						column.Item().Height(15);
@@ -2328,7 +2356,7 @@ namespace TransitManager.Infrastructure.Services
 						
 						column.Item().Height(10);
 
-						// TABLEAU 1 : INFOS VÉHICULE
+						// TABLEAU 1 : INFOS VÃ‰HICULE
 						column.Item().Table(table =>
 						{
 							table.ColumnsDefinition(columns =>
@@ -2349,15 +2377,15 @@ namespace TransitManager.Infrastructure.Services
 							AddRow("Modèle :", vehicule.Modele);
                             AddRow("Motorisation :", vehicule.Motorisation.ToString());
 							AddRow("Immatriculation :", vehicule.Immatriculation);
-							AddRow("Valeur :", $"{vehicule.ValeurDeclaree:N0} €");
-							AddRow("N° de téléphone :", vehicule.Client?.TelephonePrincipal ?? "");
+							AddRow("Valeur :", $"{vehicule.ValeurDeclaree:N0} â‚¬");
+							AddRow("NÂ° de téléphone :", vehicule.Client?.TelephonePrincipal ?? "");
 							AddRow("Adresse mail :", vehicule.Client?.Email ?? "");
 						});
 
 						column.Item().Height(15);
 
 						// TABLEAU 2 : ADRESSE UNIQUE (Fusionnée)
-						// TABLEAU 2 : ADRESSES DÉPART / ARRIVÉE
+						// TABLEAU 2 : ADRESSES DÃ‰PART / ARRIVÃ‰E
 						column.Item().Table(table =>
 						{
 							table.ColumnsDefinition(columns =>
@@ -2383,8 +2411,8 @@ namespace TransitManager.Infrastructure.Services
 
 						column.Item().Height(15);
 
-						// DOCUMENTS À JOINDRE
-						column.Item().Text("Documents à joindre :").Bold().Underline();
+						// DOCUMENTS Ã€ JOINDRE
+						column.Item().Text("Documents Ã  joindre :").Bold().Underline();
 						column.Item().Text("- copie carte grise");
 						column.Item().Text("- copie du certificat de cession (si la carte grise n'est pas au nom de l'acheteur)");
 						column.Item().Text("- certificat de non-gage");
@@ -2403,7 +2431,7 @@ namespace TransitManager.Infrastructure.Services
 						string lieu = !string.IsNullOrEmpty(vehicule.LieuEtatDesLieux) ? vehicule.LieuEtatDesLieux : "Bordeaux";
 						string date = vehicule.DateEtatDesLieux.HasValue ? vehicule.DateEtatDesLieux.Value.ToString("dd/MM/yyyy") : DateTime.Now.ToString("dd/MM/yyyy");
 
-						column.Item().Text($"Fait à {lieu}, le {date}");
+						column.Item().Text($"Fait Ã  {lieu}, le {date}");
 						
 						column.Item().PaddingTop(5).Text("Signature :");
 						

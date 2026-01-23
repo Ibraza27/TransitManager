@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore; // Might be needed for other things
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseWindowsService(); // Enable running as a Windows Service
-Directory.SetCurrentDirectory(AppContext.BaseDirectory); // Fix for Windows Service pathing to find appsettings.json
+// Directory.SetCurrentDirectory(AppContext.BaseDirectory); // Fix for Windows Service pathing to find appsettings.json
 // === DÉBUT DE L'AJOUT STRATÉGIQUE ===
 Console.WriteLine("[WEB] Configuration du partage de clés de protection des données...");
 try

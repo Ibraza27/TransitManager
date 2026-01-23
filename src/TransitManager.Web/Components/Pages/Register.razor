@@ -7,127 +7,136 @@
 
 <PageTitle>Inscription - Hippocampe</PageTitle>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow-lg border-0 rounded-3">
-                <div class="card-body p-4">
-                    <div class="text-center mb-4">
-                        <img src="images/logo.jpg" alt="Logo" height="60" class="mb-3 rounded" />
-                        <h3 class="fw-bold text-primary">Créer mon compte</h3>
-                        <p class="text-muted">Rejoignez Hippocampe Import-Export</p>
+<div class="container-fluid d-flex align-items-center justify-content-center min-vh-100" style="background: radial-gradient(circle at center, rgba(38,103,255,0.05), transparent);">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-8 col-lg-6 col-xl-5">
+            <div class="glass-panel p-5 animate__animated animate__fadeInUp">
+                <div class="text-center mb-5">
+                    <img src="images/logo.jpg" alt="Logo" height="70" class="mb-3 rounded shadow-sm" />
+                    <h3 class="fw-bold text-gradient">Créer mon compte</h3>
+                    <p class="text-muted small text-uppercase fw-bold" style="letter-spacing: 1px;">Hippocampe Import-Export</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="alert alert-danger border-0 d-flex align-items-center mb-4 shadow-sm">
+                        <i class="bi bi-exclamation-circle-fill me-3 fs-5"></i>
+                        <div>
+                            <strong>Erreur</strong>
+                            <div class="small">@_errorMessage</div>
+                        </div>
+                    </div>
+                }
+
+                <EditForm Model="@_registerModel" OnValidSubmit="HandleRegistration">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="row g-3">
+                        <!-- Identité -->
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted fw-bold">Prénom</label>
+                            <InputText @bind-Value="_registerModel.Prenom" class="form-control bg-white border-0 shadow-sm" placeholder="John" />
+                            <ValidationMessage For="@(() => _registerModel.Prenom)" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted fw-bold">Nom</label>
+                            <InputText @bind-Value="_registerModel.Nom" class="form-control bg-white border-0 shadow-sm" placeholder="Doe" />
+                            <ValidationMessage For="@(() => _registerModel.Nom)" />
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label small text-muted fw-bold">Email (Identifiant)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-0 shadow-sm ps-3 text-muted"><i class="bi bi-envelope"></i></span>
+                                <InputText @bind-Value="_registerModel.Email" class="form-control bg-white border-0 shadow-sm" type="email" placeholder="name@example.com" />
+                            </div>
+                            <ValidationMessage For="@(() => _registerModel.Email)" />
+                        </div>
+
+                        <!-- Mots de passe -->
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted fw-bold">Mot de passe</label>
+                            <div class="input-group shadow-sm rounded">
+                                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-lock"></i></span>
+                                <input type="@(_showPassword ? "text" : "password")" 
+                                       class="form-control bg-white border-0" 
+                                       placeholder="••••••••"
+                                       @bind="_registerModel.Password" />
+                                <button class="btn btn-white bg-white border-0 text-muted" type="button" 
+                                        @onclick="() => _showPassword = !_showPassword">
+                                    <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                                </button>
+                            </div>
+                            <ValidationMessage For="@(() => _registerModel.Password)" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted fw-bold">Confirmation</label>
+                            <div class="input-group shadow-sm rounded">
+                                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-lock-fill"></i></span>
+                                <input type="@(_showConfirmPassword ? "text" : "password")" 
+                                       class="form-control bg-white border-0" 
+                                       placeholder="••••••••"
+                                       @bind="_registerModel.ConfirmPassword" />
+                                <button class="btn btn-white bg-white border-0 text-muted" type="button" 
+                                        @onclick="() => _showConfirmPassword = !_showConfirmPassword">
+                                    <i class="bi @(_showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                                </button>
+                            </div>
+                            <ValidationMessage For="@(() => _registerModel.ConfirmPassword)" />
+                        </div>
+
+                        <div class="col-12 my-2">
+                             <div class="d-flex align-items-center text-muted small">
+                                <hr class="flex-grow-1" />
+                                <span class="mx-3 fw-bold text-uppercase" style="font-size: 0.7rem;">Coordonnées</span>
+                                <hr class="flex-grow-1" />
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small text-muted fw-bold">Téléphone</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-phone"></i></span>
+                                <InputText @bind-Value="_registerModel.Telephone" class="form-control bg-white border-0" placeholder="+33 6 12 34 56 78" />
+                            </div>
+                            <ValidationMessage For="@(() => _registerModel.Telephone)" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small text-muted fw-bold">Adresse</label>
+                            <InputText @bind-Value="_registerModel.Adresse" class="form-control bg-white border-0 shadow-sm" />
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted fw-bold">Code Postal</label>
+                            <InputText @bind-Value="_registerModel.CodePostal" class="form-control bg-white border-0 shadow-sm" />
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted fw-bold">Ville</label>
+                            <InputText @bind-Value="_registerModel.Ville" class="form-control bg-white border-0 shadow-sm" />
+                        </div>
+                         <div class="col-md-4">
+                            <label class="form-label small text-muted fw-bold">Pays</label>
+                            <InputText @bind-Value="_registerModel.Pays" class="form-control bg-white border-0 shadow-sm" />
+                        </div>
                     </div>
 
-                    @if (!string.IsNullOrEmpty(_errorMessage))
-                    {
-                        <div class="alert alert-danger">
-                            <i class="bi bi-exclamation-circle me-2"></i>@_errorMessage
+                    <div class="d-grid gap-3 mt-5">
+                        <button type="submit" class="btn btn-primary btn-lg shadow-lg hover-scale" disabled="@_isBusy">
+                            @if (_isBusy) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                            CRÉER MON COMPTE
+                        </button>
+                        <div class="text-center">
+                            <span class="text-muted">Déjà inscrit ?</span> 
+                            <a href="login" class="text-primary fw-bold text-decoration-none hover-underline">Se connecter</a>
                         </div>
-                    }
-
-                    <EditForm Model="@_registerModel" OnValidSubmit="HandleRegistration">
-                        <DataAnnotationsValidator />
-                        
-                        <div class="row g-3">
-                            <!-- Identité -->
-                            <div class="col-md-6">
-                                <label class="form-label">Prénom *</label>
-                                <InputText @bind-Value="_registerModel.Prenom" class="form-control" />
-                                <ValidationMessage For="@(() => _registerModel.Prenom)" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Nom *</label>
-                                <InputText @bind-Value="_registerModel.Nom" class="form-control" />
-                                <ValidationMessage For="@(() => _registerModel.Nom)" />
-                            </div>
-                            
-                            <div class="col-12">
-                                <label class="form-label">Email (Identifiant) *</label>
-                                <InputText @bind-Value="_registerModel.Email" class="form-control" type="email" />
-                                <ValidationMessage For="@(() => _registerModel.Email)" />
-                            </div>
-
-                            <!-- Mots de passe avec option Voir/Cacher -->
-							<div class="col-md-6">
-								<label class="form-label">Mot de passe *</label>
-								<div class="input-group">
-									<input type="@(_showPassword ? "text" : "password")" 
-										   class="form-control" 
-										   @bind="_registerModel.Password" />
-										   
-									<!-- MODIFICATION ICI -->
-									<button class="btn btn-outline-secondary" type="button" 
-											@onclick="() => _showPassword = !_showPassword"
-											title="@(_showPassword ? "Masquer" : "Afficher")">
-										@(_showPassword ? "🙈" : "👁️")
-									</button>
-									<!-- FIN MODIFICATION -->
-									
-								</div>
-								<ValidationMessage For="@(() => _registerModel.Password)" />
-							</div>
-
-							<div class="col-md-6">
-								<label class="form-label">Confirmation *</label>
-								<div class="input-group">
-									<input type="@(_showConfirmPassword ? "text" : "password")" 
-										   class="form-control" 
-										   @bind="_registerModel.ConfirmPassword" />
-										   
-									<!-- MODIFICATION ICI -->
-									<button class="btn btn-outline-secondary" type="button" 
-											@onclick="() => _showConfirmPassword = !_showConfirmPassword"
-											title="@(_showConfirmPassword ? "Masquer" : "Afficher")">
-										@(_showConfirmPassword ? "🙈" : "👁️")
-									</button>
-									<!-- FIN MODIFICATION -->
-
-								</div>
-								<ValidationMessage For="@(() => _registerModel.ConfirmPassword)" />
-							</div>
-
-                            <div class="col-12">
-                                <hr class="text-muted" />
-                                <h6 class="text-muted">Coordonnées</h6>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Téléphone *</label>
-                                <InputText @bind-Value="_registerModel.Telephone" class="form-control" />
-                                <ValidationMessage For="@(() => _registerModel.Telephone)" />
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Adresse</label>
-                                <InputText @bind-Value="_registerModel.Adresse" class="form-control" />
-                            </div>
-                            
-                            <!-- Ajout du Code Postal -->
-                            <div class="col-md-4">
-                                <label class="form-label">Code Postal</label>
-                                <InputText @bind-Value="_registerModel.CodePostal" class="form-control" />
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <label class="form-label">Ville</label>
-                                <InputText @bind-Value="_registerModel.Ville" class="form-control" />
-                            </div>
-                             <div class="col-md-4">
-                                <label class="form-label">Pays</label>
-                                <InputText @bind-Value="_registerModel.Pays" class="form-control" />
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg" disabled="@_isBusy">
-                                @if (_isBusy) { <span class="spinner-border spinner-border-sm me-2"></span> }
-                                S'inscrire
-                            </button>
-                            <a href="login" class="btn btn-outline-secondary">J'ai déjà un compte</a>
-                        </div>
-                    </EditForm>
-
-                </div>
+                    </div>
+                </EditForm>
+            </div>
+             <div class="text-center mt-4 text-muted small">
+                &copy; @DateTime.Now.Year Hippocampe Import-Export. Tous droits réservés.
             </div>
         </div>
     </div>

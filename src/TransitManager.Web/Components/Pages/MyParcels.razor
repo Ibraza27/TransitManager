@@ -228,6 +228,21 @@
     .table-hover .row-retard:hover {
         background-color: #ffe0e3 !important;
     }
+    
+    /* Dark mode - row-retard */
+    html[data-theme="dark"] .row-retard {
+        background-color: rgba(239, 68, 68, 0.2) !important;
+    }
+    html[data-theme="dark"] .row-retard td {
+        color: #fca5a5 !important;
+    }
+    html[data-theme="dark"] .table-hover .row-retard:hover {
+        background-color: rgba(239, 68, 68, 0.3) !important;
+    }
+    html[data-theme="dark"] .row-retard td .text-dark,
+    html[data-theme="dark"] .row-retard td .fw-bold {
+        color: #fca5a5 !important;
+    }
 </style>
 @code {
     private IEnumerable<ColisListItemDto> _allParcels = new List<ColisListItemDto>();
@@ -328,7 +343,7 @@
     // Méthode pour la classe CSS de la ligne
     private string GetRowClass(ColisListItemDto colis)
     {
-        if (colis.HasMissingDocuments) return "table-danger";
+        if (colis.HasMissingDocuments) return "table-warning";
         return IsColisEnRetard(colis) ? "row-retard" : "";
     }
     private string GetStatusBadgeClass(StatutColis status)

@@ -2,59 +2,92 @@
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-3 px-md-4 d-flex justify-content-between align-items-center">
+<div class="glass-container">
+    <!-- Floating Glass Sidebar -->
+    <aside class="glass-panel sidebar-glass @(_isCollapsed ? "collapsed" : "")">
+        <!-- Fixed Logo Header -->
+        <div class="sidebar-header">
+            <!-- Mobile Close Button -->
+            <button class="btn btn-sm mobile-close-btn rounded-circle shadow d-md-none" 
+                    onclick="document.querySelector('.sidebar-glass').classList.remove('show')">
+                <i class="bi bi-x-lg"></i>
+            </button>
             
-            <!-- TITRE ENTREPRISE RESPONSIVE -->
-            <div class="d-flex align-items-center overflow-hidden">
-                <!-- Version Mobile (Petit écran) : Titre complet (non tronqué) -->
-                <h6 class="d-block d-md-none mb-0 fw-bold text-primary">
-                    HIPPOCAMPE IMPORT-EXPORT
-                </h6>
-                <!-- Version PC (Écran moyen+) : Titre ajusté -->
-                <h5 class="d-none d-md-block mb-0 fw-bold text-primary" style="letter-spacing: 1px;">
-                    HIPPOCAMPE IMPORT-EXPORT
-                </h5>
+            <!-- Company Branding -->
+            <div class="text-center py-2">
+                <img src="images/logo.jpg" alt="Logo" class="sidebar-logo img-fluid rounded shadow-sm mb-2" />
+                <h6 class="fw-bold mb-0 sidebar-brand-name">HIPPOCAMPE</h6>
+                <small class="sidebar-brand-sub">Import-Export</small>
+            </div>
+            
+            <!-- App Title -->
+            <div class="d-flex align-items-center gap-2 mt-3 app-title">
+                <i class="bi bi-box-seam-fill app-icon"></i>
+                <span class="fw-bold">TRANSIT MANAGER</span>
+            </div>
+        </div>
+        <!-- Scrollable Nav Body -->
+        <div class="sidebar-body">
+            <NavMenu />
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+        <!-- Floating Glass Header -->
+        <div class="glass-panel top-bar-glass">
+            <div class="d-flex align-items-center gap-3">
+                <!-- Mobile Toggler -->
+                <button class="btn btn-light mobile-toggler d-md-none shadow-sm" onclick="document.querySelector('.sidebar-glass').classList.toggle('show')">
+                    <i class="bi bi-list"></i>
+                </button>
+                
+                <!-- Desktop Toggler -->
+                <button class="btn btn-light bg-white border-0 shadow-sm rounded-circle d-none d-md-flex align-items-center justify-content-center" 
+                        style="width: 32px; height: 32px;"
+                        onclick="toggleSidebar()">
+                    <i class="bi bi-list-nested"></i>
+                </button>
+
+                <h5 class="m-0 fw-bold text-gradient d-none d-md-block">HIPPOCAMPE IMPORT-EXPORT</h5>
             </div>
 
-            <!-- SECTION UTILISATEUR RESPONSIVE -->
-			<AuthorizeView>
-				<Authorized Context="AuthContext">
-					<div class="d-flex align-items-center gap-2">
-						
-						<!-- C'EST ICI QUE DOIT ÊTRE LA CLOCHE -->
-						<NotificationCenter @rendermode="RenderMode.InteractiveServer" />
-						<!-- FIN CLOCHE -->
+            <!-- User Actions -->
+            <div class="d-flex align-items-center gap-3">
+                 <!-- Theme Toggle -->
+                 <button class="btn btn-sm btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center" 
+                         style="width: 32px; height: 32px;"
+                         onclick="toggleTheme()"
+                         title="Changer de thème">
+                    <i class="bi bi-circle-half"></i>
+                 </button>
 
-						<span class="d-none d-md-inline fw-medium text-secondary">
-							👋 @AuthContext.User.Identity?.Name
-						</span>
-						
-						<form action="/account/logout" method="post" class="d-inline">
-							<AntiforgeryToken />
-							<!-- Bouton Mobile : Avec émoji -->
-							<button type="submit" class="btn btn-outline-danger btn-sm d-md-none" title="Déconnexion">
-								🚪
-							</button>
-							<!-- Bouton PC : Texte complet -->
-							<button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 d-none d-md-inline-block">
-								🚪 Déconnexion
-							</button>
-						</form>
-					</div>
-				</Authorized>
-				<NotAuthorized>
-					<a href="/login" class="btn btn-primary btn-sm rounded-pill px-3">Connexion</a>
-				</NotAuthorized>
-			</AuthorizeView>
+                 <AuthorizeView>
+                    <Authorized Context="AuthContext">
+                        <NotificationCenter @rendermode="RenderMode.InteractiveServer" />
+                        
+                        <div class="username-pill d-flex align-items-center gap-2 px-3 py-1 rounded-pill">
+                            <span class="fw-medium small">
+                                @AuthContext.User.Identity?.Name
+                            </span>
+                        </div>
+
+                        <form action="/account/logout" method="post">
+                            <AntiforgeryToken />
+                            <button type="submit" class="btn btn-sm btn-light text-danger rounded-circle shadow-sm" title="Déconnexion" style="width: 32px; height: 32px; display: flex; align-items-center; justify-content: center;">
+                                <i class="bi bi-power"></i>
+                            </button>
+                        </form>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/login" class="btn btn-primary btn-sm rounded-pill px-4">Connexion</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
         </div>
 
-        <article class="content px-3 px-md-4">
+        <!-- Content Body -->
+        <article class="content">
             @Body
         </article>
     </main>
@@ -62,6 +95,13 @@
 
 @code {
     [Inject] private IApiService ApiService { get; set; } = default!;
+    
+    private bool _isCollapsed = false;
+
+    private void ToggleSidebar()
+    {
+        _isCollapsed = !_isCollapsed;
+    }
 
     private async Task Logout()
     {

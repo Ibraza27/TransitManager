@@ -275,7 +275,32 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach(var line in quote.Lines)
+                        @foreach(var line in quote.Lines)
+                        {
+                            @if(line.Type == QuoteLineType.Title)
+                            {
+                                <tr class="table-secondary">
+                                    <td colspan="7" class="fw-bold py-2">@line.Description</td>
+                                </tr>
+                            }
+                            else if(line.Type == QuoteLineType.Text)
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-muted py-2">@line.Description</td>
+                                </tr>
+                            }
+                            else if (line.Type == QuoteLineType.Subtotal)
+                            {
+                                <tr class="fw-bold border-top">
+                                    <td colspan="2">@(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description)</td>
+                                    <td class="text-end"></td>
+                                    <td class="text-center"></td>
+                                    <td class="text-end">@line.TotalHT.ToString("N2") €</td>
+                                    <td class="text-end"></td>
+                                    <td class="text-end fw-bold">@line.TotalHT.ToString("N2") €</td>
+                                </tr>
+                            }
+                            else
                             {
                                 <tr>
                                     <td>@line.Description</td>
@@ -287,6 +312,7 @@
                                     <td class="text-end fw-bold">@line.TotalHT.ToString("N0")</td>
                                 </tr>
                             }
+                        }
                         </tbody>
                     </table>
                 </div>
@@ -412,14 +438,39 @@
                     <tbody>
                         @foreach (var line in quote.Lines)
                         {
-                            <tr>
-                                <td class="ps-4 py-3 fw-medium">@line.Description</td>
-                                <td class="ps-4 py-3">@(line.Date.HasValue ? line.Date.Value.ToString("dd/MM/yyyy") : "-")</td>
-                                <td class="text-end py-3">@line.Quantity @line.Unit</td>
-                                <td class="text-end py-3">@line.UnitPrice.ToString("N2") €</td>
-                                <td class="text-end py-3">@line.VATRate %</td>
-                                <td class="text-end py-3 pe-4">@line.TotalHT.ToString("N2") €</td>
-                            </tr>
+                            @if(line.Type == QuoteLineType.Title)
+                            {
+                                <tr class="bg-light">
+                                    <td colspan="6" class="fw-bold text-uppercase py-2 ps-4">@line.Description</td>
+                                </tr>
+                            }
+                            else if(line.Type == QuoteLineType.Text)
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-muted py-2 ps-4">@line.Description</td>
+                                </tr>
+                            }
+                            else if (line.Type == QuoteLineType.Subtotal)
+                            {
+                                <tr class="fw-bold border-top">
+                                    <td class="ps-4 py-3" colspan="2">@(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description)</td>
+                                    <td class="text-end py-3"></td>
+                                    <td class="text-end py-3">@line.TotalHT.ToString("N2") €</td>
+                                    <td class="text-end py-3"></td>
+                                    <td class="text-end py-3 pe-4 fw-bold">@line.TotalHT.ToString("N2") €</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td class="ps-4 py-3 fw-medium">@line.Description</td>
+                                    <td class="ps-4 py-3">@(line.Date.HasValue ? line.Date.Value.ToString("dd/MM/yyyy") : "-")</td>
+                                    <td class="text-end py-3">@line.Quantity @line.Unit</td>
+                                    <td class="text-end py-3">@line.UnitPrice.ToString("N2") €</td>
+                                    <td class="text-end py-3">@line.VATRate %</td>
+                                    <td class="text-end py-3 pe-4">@line.TotalHT.ToString("N2") €</td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>

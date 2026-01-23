@@ -109,7 +109,7 @@
                     {
                         @foreach (var v in FilteredVehicles)
                         {
-                            <tr class="@(v.HasMissingDocuments ? "table-danger" : "")">
+                            <tr class="@(v.HasMissingDocuments ? "table-warning" : "")">
                                 <td class="ps-4 fw-bold font-monospace text-primary">@v.Immatriculation</td>
                                 <td>
                                     <div class="fw-bold">@v.ClientNomComplet</div>

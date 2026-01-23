@@ -160,12 +160,13 @@
                 <InputFile OnChange="OnFileSelected" style="display: none;" />
             </label>
 
-            <input type="text" class="form-control border-start-0" 
+            <textarea class="form-control border-start-0 discussion-textarea" 
+                   rows="1"
                    placeholder="Écrivez un message..." 
                    @bind="_newMessageText" 
                    @bind:event="oninput"
-                   @onkeyup="HandleKeyUp"
-                   disabled="@_isSending" />
+                   @onkeydown="HandleKeyDown"
+                   disabled="@_isSending"></textarea>
             
             <button class="btn btn-primary px-3" @onclick="SendMessage" 
                     disabled="@( (string.IsNullOrWhiteSpace(_newMessageText) && _selectedFile == null) || _isSending)">
@@ -527,7 +528,13 @@
     }
 
     private void OnFileSelected(InputFileChangeEventArgs e) { if (e.File.Size > 10 * 1024 * 1024) { JSRuntime.InvokeVoidAsync("alert", "Trop gros"); return; } _selectedFile = e.File; }
-    private async Task HandleKeyUp(KeyboardEventArgs e) { if (e.Key == "Enter") await SendMessage(); else if (_isConnected) await _hubConnection.InvokeAsync("SendTyping", EntityId.ToString(), _currentUserName, _isInternal); }
+    private async Task HandleKeyDown(KeyboardEventArgs e) { 
+        if (e.Key == "Enter" && !e.ShiftKey) { 
+            await SendMessage(); 
+        } else if (_isConnected) { 
+            await _hubConnection.InvokeAsync("SendTyping", EntityId.ToString(), _currentUserName, _isInternal); 
+        } 
+    }
     private async Task ScrollToBottom() { try { await Task.Delay(50); await JSRuntime.InvokeVoidAsync("chatHelpers.scrollToBottom", _chatContainerId); _unreadCountBelow = 0; } catch {} }
     private async Task ScrollToMessage(Guid id) { try { await Task.Delay(50); await JSRuntime.InvokeVoidAsync("chatHelpers.scrollToMessage", _chatContainerId, $"msg-{id}"); } catch {} }
     private string GetBubbleClass(MessageDto msg) => msg.IsInternal ? "message-internal" : (msg.EstMoi ? "message-mine" : "message-other");

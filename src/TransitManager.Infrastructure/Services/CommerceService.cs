@@ -219,14 +219,28 @@ namespace TransitManager.Infrastructure.Services
             var newLines = new List<QuoteLine>();
             decimal grossHT = 0;
             decimal grossTVA = 0;
+            decimal runningSubtotal = 0;
 
             foreach (var lineDto in dto.Lines)
             {
-                var lineTotalHT = lineDto.Quantity * lineDto.UnitPrice;
-                var lineTVA = lineTotalHT * (lineDto.VATRate / 100m);
+                decimal lineTotalHT = 0;
                 
-                grossHT += lineTotalHT;
-                grossTVA += lineTVA;
+                if (lineDto.Type == QuoteLineType.Subtotal)
+                {
+                    lineTotalHT = runningSubtotal;
+                    runningSubtotal = 0; // Reset after usage
+                    // Subtotal lines do NOT contribute to GrossHT (Quote Total)
+                }
+                else if (lineDto.Type == QuoteLineType.Product)
+                {
+                    lineTotalHT = lineDto.Quantity * lineDto.UnitPrice;
+                    var lineTVA = lineTotalHT * (lineDto.VATRate / 100m);
+                    
+                    grossHT += lineTotalHT;
+                    grossTVA += lineTVA;
+                    runningSubtotal += lineTotalHT;
+                }
+                // Title and Text have 0 TotalHT and don't affect totals
 
                 newLines.Add(new QuoteLine
                 {

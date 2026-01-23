@@ -111,26 +111,43 @@
                         <table class="table table-striped table-hover mb-0">
                             <thead class="table-dark">
                                 <tr>
-                                    <th class="py-3 ps-4">Description</th>
-                                    <th class="py-3 text-center">Date</th>
-                                    <th class="text-end py-3">Qté</th>
-                                    <th class="text-center py-3">Unité</th>
-                                    <th class="text-end py-3">Prix</th>
-                                    <th class="text-end py-3">TVA</th>
-                                    <th class="text-end py-3 pe-4">Total</th>
+                                    <th class="py-3 ps-4" style="width: 50%;">Description</th>
+                                    <th class="py-3 text-center" style="width: 100px;">Date</th>
+                                    <th class="text-end py-3" style="width: 80px;">Qté</th>
+                                    <th class="text-center py-3" style="width: 60px;">Unité</th>
+                                    <th class="text-end py-3" style="width: 100px;">Prix</th>
+                                    <th class="text-end py-3" style="width: 80px;">TVA</th>
+                                    <th class="text-end py-3 pe-4" style="width: 100px;">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var line in Model.Lines)
                                 {
-                                    <tr>
-                                        <td class="ps-4 py-3 fw-medium">@line.Description</td>
-                                        <td class="text-center py-3">@line.Date?.ToString("dd/MM")</td>
-                                        <td class="text-end py-3">@line.Quantity</td>
-                                        <td class="text-center py-3">@line.Unit</td>
-                                        <td class="text-end py-3">@line.UnitPrice.ToString("N2")</td>
-                                        <td class="text-end py-3">@line.VATRate%</td>
-                                        <td class="text-end py-3 pe-4">@((line.Quantity * line.UnitPrice).ToString("N2"))</td>
+                                    <tr class="@(line.Type == QuoteLineType.Subtotal ? "fw-bold border-bottom border-dark" : "")" style="@(line.Type == QuoteLineType.Subtotal ? "border-top: 2px solid #dee2e6;" : "")">
+                                        @if(line.Type == QuoteLineType.Title)
+                                        {
+                                            <td colspan="7" class="ps-4 py-3 text-uppercase fw-bold">@line.Description</td>
+                                        }
+                                        else if (line.Type == QuoteLineType.Text)
+                                        {
+                                            <td colspan="7" class="ps-4 py-3 text-wrap">@line.Description</td>
+                                        }
+                                        else if (line.Type == QuoteLineType.Subtotal)
+                                        {
+                                            <td class="ps-4 py-3 fw-bold">Sous-total</td>
+                                            <td colspan="5"></td> <!-- Empty columns -->
+                                            <td class="text-end py-3 pe-4 fw-bold">@line.TotalHT.ToString("N2") €</td>
+                                        }
+                                        else
+                                        {
+                                            <td class="ps-4 py-3 fw-medium">@line.Description</td>
+                                            <td class="text-center py-3">@line.Date?.ToString("dd/MM")</td>
+                                            <td class="text-end py-3">@line.Quantity.ToString("0.##")</td>
+                                            <td class="text-center py-3">@line.Unit</td>
+                                            <td class="text-end py-3">@line.UnitPrice.ToString("N2")</td>
+                                            <td class="text-end py-3">@line.VATRate%</td>
+                                            <td class="text-end py-3 pe-4">@((line.Quantity * line.UnitPrice).ToString("N2"))</td>
+                                        }
                                     </tr>
                                 }
                             </tbody>
@@ -190,52 +207,55 @@
         <div class="d-flex flex-column flex-lg-row flex-grow-1 overflow-hidden h-100">
              
              <!-- Main Content (Left) -->
-             <div class="flex-grow-1 p-3 p-md-4 overflow-auto bg-light">
-                 <div class="bg-white shadow-sm rounded p-3 p-md-4 mb-4">
-                     <!-- Client & Info -->
-                     <div class="row g-3 mb-4">
-                         <div class="col-12 col-md-5">
-                             <label class="form-label text-muted small fw-bold text-uppercase">Client</label>
-                             <ClientAutocomplete 
-                                 SelectedClient="@SelectedClient" 
-                                 OnClientSelected="HandleClientSelected" />
-                         </div>
-                         <div class="col-12 col-md-3 mb-3">
-                               <label class="form-label text-muted small fw-bold text-uppercase">Validité</label>
-                               <input type="date" class="form-control" @bind="Model.DateValidity" />
-                         </div>
-                         <div class="col-12 mb-3">
-                            <label class="form-label">Modalités de paiement</label>
-                             <textarea class="form-control" rows="2" @bind="Model.PaymentTerms"></textarea>
-                        </div>
+             <div class="flex-grow-1 p-0 bg-light" style="overflow-y: auto; overflow-x: visible;">
+                 <!-- Client & Info (Inline, No Card) -->
+                 <div class="row g-2 mx-2 my-2 p-2 bg-white border-bottom">
+                     <div class="col-md-5">
+                         <label class="form-label small fw-bold mb-1">Client</label>
+                         <ClientAutocomplete 
+                             SelectedClient="@SelectedClient" 
+                             OnClientSelected="HandleClientSelected" />
+                     </div>
+                     <div class="col-md-3">
+                           <label class="form-label small fw-bold mb-1">Validité</label>
+                           <input type="date" class="form-control form-control-sm" @bind="Model.DateValidity" />
+                     </div>
+                     <div class="col-12">
+                        <label class="form-label small mb-1">Modalités de paiement</label>
+                         <textarea class="form-control form-control-sm" rows="1" @bind="Model.PaymentTerms"></textarea>
                     </div>
                 </div>     
                      <!-- Lines -->
-                     <div class="table-responsive mb-4 bg-white rounded shadow-sm p-2" style="min-height: 200px;">
-                         <table class="table table-borderless align-middle mb-0">
-                             <thead class="border-bottom">
-                                 <tr class="text-uppercase small text-muted">
-                                     <th style="width: 40%;">Description</th>
-                                     <th class="text-center" style="width: 100px;">Date</th>
+                     <div class="mx-2 mb-2 bg-white" style="min-height: 200px;">
+                         <table class="table table-sm table-borderless align-middle mb-0" style="font-size: 0.85rem;">
+                             <thead class="border-bottom bg-light" style="font-size: 0.75rem;">
+                                 <tr class="text-uppercase text-muted">
+                                     <th style="width: 20px;"></th>
+                                     <th style="min-width: 250px;">Description</th>
+                                     <th class="text-center" style="width: 110px;">Date</th>
                                      <th class="text-center" style="width: 80px;">Qté</th>
                                      <th class="text-center" style="width: 60px;">U</th>
-                                     <th class="text-center" style="width: 100px;">Prix</th>
-                                     <th class="text-center" style="width: 80px;">TVA</th>
+                                     <th class="text-center" style="width: 95px;">Prix</th>
+                                     <th class="text-center" style="width: 75px;">TVA</th>
                                      <th class="text-end" style="width: 100px;">Total</th>
-                                     <th style="width: 60px;"></th>
+                                     <th style="width: 40px;"></th>
                                  </tr>
                              </thead>
                              <tbody class="sortable-list">
-                                 @{ int index = 0; }
-                                 @foreach (var line in Model.Lines)
+                                @foreach (var (line, index) in Model.Lines.Select((l, i) => (l, i)))
                                 {
                                     var localIndex = index;
                                     <tr class="@(line.Type == QuoteLineType.Subtotal ? "fw-bold border-bottom border-dark" : "")" 
-                                        style="@(line.Type == QuoteLineType.Subtotal ? "border-top: 2px solid #dee2e6;" : "") cursor: move;"
+                                        style="@(line.Type == QuoteLineType.Subtotal ? "border-top: 2px solid #dee2e6;" : "")"
                                         draggable="true"
                                         @ondragstart="@(() => HandleDragStart(localIndex))"
                                         @ondragover:preventDefault
                                         @ondrop="@(() => HandleDrop(localIndex))">
+                                        
+                                        <!-- Drag Handle -->
+                                        <td class="align-middle text-center text-muted" style="cursor: grab;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </td>
                                         
                                         <!-- Description Column -->
                                         @if(line.Type == QuoteLineType.Title)
@@ -295,7 +315,7 @@
                                             <button class="btn btn-link text-danger p-0" title="Supprimer" @onclick="() => RemoveLine(line)"><i class="bi bi-trash small"></i></button>
                                         </td>
                                     </tr>
-                                    @{ index++; }
+                                    <!-- End of Row -->
                                 }
                              </tbody>
                          </table>
@@ -329,7 +349,7 @@
                  </div>
              
              <!-- Right Sidebar (Totals & Discount) - Stacked on Mobile -->
-             <div class="bg-white border-start-lg border-bottom border-lg-0-bottom p-4 overflow-auto sidebar-totals" >
+             <div class="bg-white border-start-lg border-bottom border-lg-0-bottom p-3 overflow-auto sidebar-totals" style="flex: 0 0 250px; min-width: 250px;">
                  <!-- Wrapper for Desktop width constraint -->
                  <div class="d-lg-block">
                      
@@ -522,6 +542,9 @@
 
                     // SNAPSHOT
                     OriginalModelJson = JsonSerializer.Serialize(Model);
+                    
+                    // Force subtotal recalculation for UI
+                    UpdateSubtotals();
                 }
             }
             else
@@ -616,7 +639,7 @@
     {
         // Re-calculate all Subtotal lines
         decimal runningTotal = 0;
-        foreach(var line in Model.Lines) // Assume logic relies on list order. Should ensure sort first if needed.
+        foreach(var line in Model.Lines)
         {
             if (line.Type == QuoteLineType.Product)
             {
@@ -625,8 +648,8 @@
             else if (line.Type == QuoteLineType.Subtotal)
             {
                 line.TotalHT = runningTotal;
-                line.UnitPrice = runningTotal; // Hack to persist? No, we use clean fields.
-                runningTotal = 0; // Reset after subtotal? Usually yes.
+                // DO NOT set UnitPrice to TotalHT, it confuses the display
+                runningTotal = 0; // Reset after subtotal
             }
         }
     }
@@ -637,13 +660,7 @@
         Model.ClientId = client?.Id ?? Guid.Empty;
     }
 
-    private async Task OpenNewProductDialog(QuoteLineDto line)
-    {
-        if (await JS.InvokeAsync<bool>("confirm", "Voulez-vous ouvrir la gestion des produits ? Pensez à sauvegarder votre devis avant."))
-        {
-            NavManager.NavigateTo("/admin/commerce/products");
-        }
-    }
+
 
     private void HandleProductSelected(QuoteLineDto line, ProductDto product)
     {

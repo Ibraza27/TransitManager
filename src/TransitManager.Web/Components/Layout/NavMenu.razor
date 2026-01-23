@@ -1,28 +1,10 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand text-truncate" style="font-size: 0.9rem;" href="">TRANSIT MANAGER</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
+﻿<div class="d-flex flex-column gap-1">
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    
-    <!-- SECTION LOGO ET MARQUE (Style WPF) -->
-    <div class="text-center py-4 mb-2" style="background-color: rgba(0,0,0,0.2);">
-        <img src="images/logo.jpg" alt="Logo" 
-             class="img-fluid rounded mb-2 shadow-sm" 
-             style="max-height: 100px; border: 2px solid white;" />
-        
-        <h5 class="text-white fw-bold mb-0" style="letter-spacing: 1px;">HIPPOCAMPE</h5>
-        <small class="text-white-50 text-uppercase" style="font-size: 0.7rem;">Import-Export</small>
-    </div>
-
-    <nav class="flex-column">
-        <div class="nav-item px-3">
+    <nav class="nav flex-column gap-1" onclick="if(window.innerWidth < 768) document.querySelector('.sidebar-glass').classList.remove('show')">
+        <div class="nav-item">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Accueil
+                <i class="bi bi-grid-fill nav-icon"></i> 
+                <span>Tableau de bord</span>
             </NavLink>
         </div>
 
@@ -30,28 +12,28 @@
             <Authorized>
                 <AuthorizeView Roles="Client">
                     <Authorized Context="ClientAuth">
-                        <div class="nav-item px-3">
+                        <div class="nav-item">
                             <NavLink class="nav-link" href="profile">
-                                <span class="bi bi-person-circle" aria-hidden="true"></span> Mon Profil
+                                <i class="bi bi-person-circle nav-icon"></i> <span>Mon Profil</span>
                             </NavLink>
                         </div>
                     </Authorized>
                 </AuthorizeView>
 
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="my-parcels">
-                        <span class="bi bi-box-seam-fill" aria-hidden="true"></span> Mes Colis
+                        <i class="bi bi-box-seam nav-icon"></i> <span>Mes Colis</span>
                     </NavLink>
                 </div>
                 
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="my-vehicles">
-                        <span class="bi bi-car-front-fill" aria-hidden="true"></span> Mes Véhicules
+                        <i class="bi bi-car-front nav-icon"></i> <span>Mes Véhicules</span>
                     </NavLink>
                 </div>				
-				<div class="nav-item px-3">
+				<div class="nav-item">
 					<NavLink class="nav-link" href="my-containers">
-						<span class="bi bi-box-fill" aria-hidden="true"></span> Conteneurs
+						<i class="bi bi-collection nav-icon"></i> <span>Conteneurs</span>
 					</NavLink>
 				</div>								
             </Authorized>
@@ -59,54 +41,58 @@
         
         <AuthorizeView Roles="Administrateur">
             <Authorized>
-                <div class="nav-item px-3">
+                <div class="nav-item mt-3 mb-1">
+                    <span class="text-uppercase small fw-bold text-muted px-3" style="font-size: 0.7rem;">Administration</span>
+                </div>
+
+                <div class="nav-item">
                     <NavLink class="nav-link" href="clients">
-                        <span class="bi bi-people-fill" aria-hidden="true"></span> Clients
+                        <i class="bi bi-people-fill nav-icon"></i> <span>Clients</span>
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="users">
-                        <span class="bi bi-people" aria-hidden="true"></span> Utilisateurs
+                        <i class="bi bi-person-badge nav-icon"></i> <span>Utilisateurs</span>
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="finance">
-                        <span class="bi bi-cash-stack" aria-hidden="true"></span> Finance
+                        <i class="bi bi-graph-up-arrow nav-icon"></i> <span>Finance</span>
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="audit">
-                        <span class="bi bi-shield-check me-2" aria-hidden="true"></span> Audit
+                        <i class="bi bi-clipboard-pulse nav-icon"></i> <span>Audit</span>
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="admin/commerce/products">
-                        <span class="bi bi-box-seam me-2" aria-hidden="true"></span> Produits
+                        <i class="bi bi-tags nav-icon"></i> <span>Produits</span>
                     </NavLink>
                 </div>
-                <!-- Commerce (Admin) -->
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="admin/commerce/quotes">
-                        <span class="bi bi-receipt me-2" aria-hidden="true"></span> Facturation (Z)
+                        <i class="bi bi-receipt nav-icon"></i> <span>Facturation</span>
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="admin/settings">
-                        <span class="bi bi-gear-fill me-2" aria-hidden="true"></span> Paramètres
+                        <i class="bi bi-gear nav-icon"></i> <span>Paramètres</span>
                     </NavLink>
                 </div>
-                 <div class="nav-item px-3">
+                 <div class="nav-item">
                     <NavLink class="nav-link" href="admin/sav">
-                        <span class="bi bi-shield-check me-2" aria-hidden="true"></span> SAV / Qualité
+                        <i class="bi bi-life-preserver nav-icon"></i> <span>SAV / Qualité</span>
                     </NavLink>
                 </div>
             </Authorized>
         </AuthorizeView>
+
         <AuthorizeView Roles="Client">
             <Authorized>
-                 <div class="nav-item px-3">
+                 <div class="nav-item">
                     <NavLink class="nav-link" href="finance">
-                        <span class="bi bi-wallet2" aria-hidden="true"></span> Mes Finances
+                        <i class="bi bi-wallet2 nav-icon"></i> <span>Mes Finances</span>
                     </NavLink>
                 </div>
             </Authorized>
@@ -115,11 +101,5 @@
 </div>
 
 @code {
-    private bool collapseNavMenu = true;
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
+    // No code needed, toggling is handled by MainLayout & CSS
 }

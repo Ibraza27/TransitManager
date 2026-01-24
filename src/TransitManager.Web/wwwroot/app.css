@@ -53,6 +53,32 @@
     --transition-slow: 0.4s ease;
 }
 
+/* Hide number input spinners globally */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* Drag and drop styling */
+tr[draggable="true"] {
+    cursor: grab;
+}
+
+tr[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+/* Textarea auto-grow for description */
+textarea.form-control {
+    field-sizing: content;
+    min-height: 31px;
+}
+
 /* --- Dark Mode Theme (Comprehensive) --- */
 html[data-theme="dark"] {
     --bg-body: #0a0f1a;
@@ -385,6 +411,106 @@ html[data-theme="dark"] textarea::placeholder {
 html[data-theme="dark"] span:not([class*="badge"]):not([class*="btn"]),
 html[data-theme="dark"] div:not([class*="bg-"]):not(.btn) {
     color: inherit;
+}
+
+/* Dark mode - Table rows (title/secondary) */
+html[data-theme="dark"] .table-secondary,
+html[data-theme="dark"] .table-secondary>td,
+html[data-theme="dark"] .table-secondary>th {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .table-light,
+html[data-theme="dark"] .table-light>td,
+html[data-theme="dark"] .table-light>th {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .bg-light {
+    background-color: #1e293b !important;
+}
+
+/* Dark mode - table row hover states */
+/* Dark mode - table hover states */
+html[data-theme="dark"] .table-secondary:hover,
+html[data-theme="dark"] .table-secondary:hover>td,
+html[data-theme="dark"] tr.table-secondary:hover,
+html[data-theme="dark"] tr.table-secondary:hover td,
+html[data-theme="dark"] tr.table-secondary:hover *,
+html[data-theme="dark"] tr.table-secondary.active,
+html[data-theme="dark"] tr.table-secondary:active,
+html[data-theme="dark"] tr.table-secondary:focus {
+    background-color: #374151 !important;
+    /* Standard Dark Hover */
+    color: #ffffff !important;
+    /* Force White Text */
+    position: relative;
+    /* CRITICAL for z-index */
+    z-index: 10;
+    /* Ensure text is on top */
+}
+
+/* SUPER SPECIFIC FIX FOR SELECTED STATE MASKING TEXT */
+html[data-theme="dark"] tr.table-secondary.active td,
+html[data-theme="dark"] tr.table-secondary[aria-selected="true"] td,
+html[data-theme="dark"] tr.table-secondary.selected td {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+    position: relative;
+    z-index: 20;
+}
+
+/* Ensure Table Secondary (Titles) are readable in dark mode normal state */
+html[data-theme="dark"] .table-secondary,
+html[data-theme="dark"] .table-secondary td,
+html[data-theme="dark"] .table-secondary th {
+    background-color: #1e293b !important;
+    color: #f8f9fa !important;
+    --bs-table-color: #f8f9fa;
+}
+
+html[data-theme="dark"] .table-hover tbody tr:hover,
+html[data-theme="dark"] .table-hover tbody tr:hover td,
+html[data-theme="dark"] .table tbody tr:hover,
+html[data-theme="dark"] .table tbody tr:hover td,
+html[data-theme="dark"] table tr:hover,
+html[data-theme="dark"] table tr:hover td,
+html[data-theme="dark"] table tr:hover>* {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+}
+
+/* Delete button red */
+.btn-link.text-danger {
+    color: #dc3545 !important;
+}
+
+.btn-link.text-danger:hover {
+    color: #ff4d5e !important;
+}
+
+html[data-theme="dark"] .btn-link.text-danger {
+    color: #dc3545 !important;
+}
+
+html[data-theme="dark"] .btn-link.text-danger:hover {
+    color: #ff4d5e !important;
+}
+
+/* Public Quote Fullscreen Reset */
+#printableArea {
+    width: 100vw;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: var(--bg-body);
+}
+
+@media (max-width: 768px) {
+    #printableArea>div {
+        padding: 0 !important;
+    }
 }
 
 /* Reset & Base */

@@ -164,8 +164,14 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<QuoteDto> CreateOrUpdateQuoteAsync(UpsertQuoteDto dto)
         {
-            try { System.IO.File.AppendAllText("commerce_debug.txt", $"[{DateTime.Now}] INPUT: Id={dto.Id}, ClientId={dto.ClientId}, LinesCount={dto.Lines?.Count} \n"); } catch {}
-            
+            // DEBUG: Log incoming payload
+            try 
+            {
+                var debugLines = dto.Lines.Select((l, i) => new { Index=i, Pos=l.Position, Type=l.Type, Desc=l.Description, Qty=l.Quantity, Price=l.UnitPrice }).ToList();
+                var logMsg = $"[{DateTime.Now}] QuoteID={dto.Id} \nLines: {System.Text.Json.JsonSerializer.Serialize(debugLines)}\n";
+                System.IO.File.AppendAllText("commerce_debug_deep.txt", logMsg);
+            } catch {}
+
             Quote quote;
             if (dto.Id.HasValue)
             {
@@ -221,7 +227,9 @@ namespace TransitManager.Infrastructure.Services
             decimal grossTVA = 0;
             decimal runningSubtotal = 0;
 
-            foreach (var lineDto in dto.Lines)
+            // TRUST LIST ORDER for calculation (Frontend sends list in visual order)
+            int loopIndex = 0;
+            foreach (var lineDto in dto.Lines) 
             {
                 decimal lineTotalHT = 0;
                 
@@ -229,7 +237,6 @@ namespace TransitManager.Infrastructure.Services
                 {
                     lineTotalHT = runningSubtotal;
                     runningSubtotal = 0; // Reset after usage
-                    // Subtotal lines do NOT contribute to GrossHT (Quote Total)
                 }
                 else if (lineDto.Type == QuoteLineType.Product)
                 {
@@ -240,22 +247,37 @@ namespace TransitManager.Infrastructure.Services
                     grossTVA += lineTVA;
                     runningSubtotal += lineTotalHT;
                 }
-                // Title and Text have 0 TotalHT and don't affect totals
+
+                // DEFENSIVE: Ensure UnitPrice/Quantity are consistent for Subtotals
+                // This prevents issues if any system recalculates Total as Qty * Price
+                decimal finalUnitPrice = lineDto.UnitPrice;
+                decimal finalQuantity = lineDto.Quantity;
+
+                if (lineDto.Type == QuoteLineType.Subtotal)
+                {
+                    finalUnitPrice = lineTotalHT;
+                    finalQuantity = 1;
+                }
 
                 newLines.Add(new QuoteLine
                 {
                     ProductId = lineDto.ProductId,
                     Description = lineDto.Description,
                     Date = lineDto.Date,
-                    Quantity = lineDto.Quantity,
+                    Quantity = finalQuantity,
                     Unit = lineDto.Unit,
-                    UnitPrice = lineDto.UnitPrice,
+                    UnitPrice = finalUnitPrice,
                     VATRate = lineDto.VATRate,
                     TotalHT = lineTotalHT,
                     Type = lineDto.Type,
-                    Position = lineDto.Position
+                    Position = loopIndex++ // Force sequential position based on list order
                 });
+
+                 // DEBUG LOG
+                try { System.IO.File.AppendAllText("commerce_debug_loop.txt", $"Line[{loopIndex-1}]: Type={lineDto.Type}, Amt={lineTotalHT}, RunSub={runningSubtotal}\n"); } catch {}
             }
+
+
 
             quote.Lines = newLines;
 
@@ -332,22 +354,48 @@ namespace TransitManager.Infrastructure.Services
                     {
                         try { System.IO.File.AppendAllText("commerce_debug.txt", $"[{DateTime.Now}] RECOVERING LINES for {quote.Id}\n"); } catch {}
                         
+                        // IMPORTANT: Must re-calculate runningSubtotal here too!
+                        decimal recoverRunningSubtotal = 0;
+                        int recoverIndex = 0;
+
                         foreach (var lineDto in dto.Lines)
                         {
-                            var lineTotalHT = lineDto.Quantity * lineDto.UnitPrice;
+                            decimal lineTotalHT = 0;
+
+                            if (lineDto.Type == QuoteLineType.Subtotal)
+                            {
+                                lineTotalHT = recoverRunningSubtotal;
+                                recoverRunningSubtotal = 0;
+                            }
+                            else if (lineDto.Type == QuoteLineType.Product)
+                            {
+                                lineTotalHT = lineDto.Quantity * lineDto.UnitPrice;
+                                recoverRunningSubtotal += lineTotalHT;
+                            }
+
+                            // DEFENSIVE: consistency for Subtotals
+                            decimal finalUnitPrice = lineDto.UnitPrice;
+                            decimal finalQuantity = lineDto.Quantity;
+
+                            if (lineDto.Type == QuoteLineType.Subtotal)
+                            {
+                                finalUnitPrice = lineTotalHT;
+                                finalQuantity = 1;
+                            }
+
                             var line = new QuoteLine
                             {
                                 QuoteId = savedQuote.Id,
                                 ProductId = lineDto.ProductId,
                                 Description = lineDto.Description,
                                 Date = lineDto.Date,
-                                Quantity = lineDto.Quantity,
+                                Quantity = finalQuantity,
                                 Unit = lineDto.Unit,
-                                UnitPrice = lineDto.UnitPrice,
+                                UnitPrice = finalUnitPrice,
                                 VATRate = lineDto.VATRate,
                                 TotalHT = lineTotalHT,
                                 Type = lineDto.Type,
-                                Position = lineDto.Position
+                                Position = recoverIndex++
                             };
                             _context.QuoteLines.Add(line);
                         }

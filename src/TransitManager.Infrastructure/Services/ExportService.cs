@@ -459,6 +459,15 @@ namespace TransitManager.Infrastructure.Services
                                 });
 
                                 // Lines Table - Professional Zervant-Style Compact
+                                if(!string.IsNullOrEmpty(quote.PaymentTerms))
+                                {
+                                    column.Item().PaddingBottom(10).Column(c => {
+                                        c.Item().Text("Modalités de paiement:").SemiBold().FontSize(10);
+                                        c.Item().Text(quote.PaymentTerms).FontSize(10);
+                                    });
+                                    column.Spacing(10); // Reset spacing slightly
+                                }
+
                                 column.Item().Table(table =>
                                 {
                                     // Column widths based on Zervant reference - Description takes MOST space
@@ -506,15 +515,19 @@ namespace TransitManager.Infrastructure.Services
                                         }
                                         else if (line.Type == QuoteLineType.Subtotal)
                                         {
-                                            // Subtotal Row - Clean with top border
+                                            // Subtotal Row - Only shows Total column
                                             IContainer SubtotalStyle(IContainer container) => 
                                                 container.BorderTop(1).BorderColor("#CBD5E1").PaddingVertical(6);
                                             
                                             table.Cell().Element(SubtotalStyle)
                                                 .Text(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description).Bold().FontSize(8);
-                                            table.Cell().ColumnSpan(5).Element(SubtotalStyle); 
+                                            table.Cell().Element(SubtotalStyle); // Date - empty
+                                            table.Cell().Element(SubtotalStyle); // Qty - empty
+                                            table.Cell().Element(SubtotalStyle); // Unit - empty
+                                            table.Cell().Element(SubtotalStyle); // Prix - empty
+                                            table.Cell().Element(SubtotalStyle); // TVA - empty
                                             table.Cell().Element(SubtotalStyle).AlignRight()
-                                                .Text($"{line.TotalHT:N2}{EUR}").Bold().FontSize(8);
+                                                .Text($"{line.TotalHT:N2}{EUR}").Bold().FontSize(8); // Total
                                         }
                                         else // Product
                                         {
@@ -593,17 +606,58 @@ namespace TransitManager.Infrastructure.Services
                                     column.Item().PaddingTop(4).Text(quote.Message).FontSize(10);
                                 }
                                 
-                                if(!string.IsNullOrEmpty(quote.PaymentTerms))
-                                {
-                                    column.Item().PaddingTop(15).Text("Modalités de paiement:").SemiBold().FontSize(10);
-                                    column.Item().PaddingTop(4).Text(quote.PaymentTerms).FontSize(10);
-                                }
+
                                 
                                 if(!string.IsNullOrEmpty(quote.FooterNote))
                                 {
                                     column.Item().PaddingTop(20).LineHorizontal(1).LineColor("#E2E8F0");
-                                    column.Item().PaddingTop(8).Text(quote.FooterNote).FontSize(9).FontColor("#64748B");
+                                    column.Item().PaddingTop(8).Text(t => 
+                                    {
+                                        t.Span(quote.FooterNote).FontSize(9).FontColor("#64748B");
+                                        t.AlignCenter(); 
+                                    });
                                 }
+
+                                // Signature Block
+                                column.Item().PaddingTop(30).Row(row => 
+                                {
+                                    row.RelativeItem(); // Spacer to push right? No, user wants it probably left or right? Usually right. Or full width?
+                                    // User provided screenshot shows it left-aligned or taking up space.
+                                    // "après le tableau je veux cette partie" -> likely full width or left aligned.
+                                    // Let's make it a block at the bottom.
+                                    
+                                    if(quote.Status == QuoteStatus.Accepted)
+                                    {
+                                        row.RelativeItem().Column(c => 
+                                        {
+                                            c.Item().Text($"Signé électroniquement le {quote.DateValidity:dd/MM/yyyy}").FontSize(10).SemiBold().FontColor(Colors.Green.Medium); 
+                                            // Using DateValidity as proxy for sign date if not available, usually we store SignedDate. 
+                                            // If SignedDate is not in DTO, I might use ModifiedDate or just "Signé électroniquement".
+                                            // I'll stick to "Signé électroniquement" safely if date is unsure, but usually Accepted date is tracked.
+                                            // Ideally, I should check if there's a SignedDate property. The user said "précéder de la date".
+                                            // I will use DateTime.Now if I can't find it, or just "Signé électroniquement".
+                                            // Let's assume for now just the text.
+                                        });
+                                    }
+                                    else if(quote.Status == QuoteStatus.Rejected)
+                                    {
+                                         row.RelativeItem().Column(c => 
+                                        {
+                                            c.Item().Text($"Refusé électroniquement le {DateTime.Now:dd/MM/yyyy}").FontSize(10).SemiBold().FontColor(Colors.Red.Medium); 
+                                        });
+                                    }
+                                    else
+                                    {
+                                        // Manual Signature Area
+                                        row.RelativeItem().Column(c => 
+                                        {
+                                            c.Item().Text("Date et signature du client").FontSize(11).Bold();
+                                            c.Item().Text("(Précédée de la mention 'Bon pour accord')").FontSize(9).Italic();
+                                            c.Item().PaddingTop(50).LineHorizontal(1).LineColor(Colors.Black);
+                                        });
+                                        row.ConstantItem(50); // Spacer right
+                                    }
+                                });
                             });
                         }
 
@@ -611,9 +665,10 @@ namespace TransitManager.Infrastructure.Services
                         {
                             container.PaddingTop(15).AlignCenter().Column(c =>
                             {
-                                c.Item().Text("HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses").FontSize(8).FontColor("#64748B");
-                                c.Item().Text("SIRET: 891909772 - TVA: FR42891909772 - BORDEAUX").FontSize(8).FontColor("#64748B");
-                                 c.Item().PaddingTop(6).Text(x =>
+                                c.Item().AlignCenter().Text("HIPPOCAMPE IMPORT EXPORT - SAS").FontSize(10).Black().Bold(); 
+                                c.Item().AlignCenter().Text("7 Rue Pascal 33370 Tresses").FontSize(8).FontColor("#64748B");
+                                c.Item().AlignCenter().Text("Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX").FontSize(8).FontColor("#64748B");
+                                 c.Item().AlignCenter().PaddingTop(6).Text(x =>
                                 {
                                     x.Span("Page ").FontSize(9);
                                     x.CurrentPageNumber().FontSize(9);

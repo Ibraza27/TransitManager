@@ -5,13 +5,15 @@
 @inject IApiService ApiService
 
 <div class="position-relative">
-    <input type="text" 
+    <textarea 
            class="form-control form-control-sm" 
            placeholder="Description" 
+           rows="1"
+           style="resize: none; overflow-y: hidden; min-height: 31px; height: auto;"
            value="@Description"
-           @oninput="OnInput"
+           @oninput="OnInputWithResize"
            @onfocusin="() => ShowDropdown = true" 
-           @onfocusout="OnFocusOut" />
+           @onfocusout="OnFocusOut"></textarea>
 
     @if (ShowDropdown)
     {
@@ -69,7 +71,7 @@
         _debounceTimer.Elapsed += async (sender, args) => await SearchAsync();
     }
 
-    private async Task OnInput(ChangeEventArgs e)
+    private async Task OnInputWithResize(ChangeEventArgs e)
     {
         var val = e.Value?.ToString() ?? "";
         Description = val;
@@ -80,6 +82,11 @@
         else Results.Clear();
         
         ShowDropdown = true;
+    }
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        await OnInputWithResize(e);
     }
 
     private async Task SearchAsync()

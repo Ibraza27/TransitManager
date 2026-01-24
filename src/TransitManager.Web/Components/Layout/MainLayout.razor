@@ -1,6 +1,8 @@
 @inherits LayoutComponentBase
 @inject CustomAuthenticationStateProvider AuthStateProvider
+
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
 <div class="glass-container">
     <!-- Floating Glass Sidebar -->
@@ -45,7 +47,7 @@
                 <!-- Desktop Toggler -->
                 <button class="btn btn-light bg-white border-0 shadow-sm rounded-circle d-none d-md-flex align-items-center justify-content-center" 
                         style="width: 32px; height: 32px;"
-                        onclick="toggleSidebar()">
+                        @onclick="ToggleSidebar">
                     <i class="bi bi-list-nested"></i>
                 </button>
 
@@ -97,10 +99,46 @@
     [Inject] private IApiService ApiService { get; set; } = default!;
     
     private bool _isCollapsed = false;
+    private bool _initialized = false;
 
-    private void ToggleSidebar()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var storedState = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sidebar_collapsed_state");
+                if (!string.IsNullOrEmpty(storedState) && bool.TryParse(storedState, out bool isCollapsed))
+                {
+                    if (_isCollapsed != isCollapsed)
+                    {
+                        _isCollapsed = isCollapsed;
+                        StateHasChanged();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading sidebar state: {ex.Message}");
+            }
+            finally
+            {
+                _initialized = true;
+            }
+        }
+    }
+
+    private async Task ToggleSidebar()
     {
         _isCollapsed = !_isCollapsed;
+        try 
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "sidebar_collapsed_state", _isCollapsed.ToString());
+        }
+        catch (Exception ex)
+        {
+             Console.WriteLine($"Error saving sidebar state: {ex.Message}");
+        }
     }
 
     private async Task Logout()

@@ -1,0 +1,26 @@
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string Title { get; set; } = "GENERATION DU DOCUMENT...";
+    [Parameter] public string Message { get; set; } = "Notre système est en train de générer votre document. Prière de patienter, cela ne prendra que quelques secondes.";
+}
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white py-3 justify-content-center border-0">
+                     <h5 class="modal-title fw-bold text-uppercase fs-6">@Title</h5>
+                </div>
+                <div class="modal-body p-5 text-center">
+                    <div class="spinner-border text-success mb-4" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    
+                    <p class="fw-bold text-uppercase mb-2">VOTRE DOCUMENT EST EN TRAIN D'ÊTRE GÉNÉRÉ</p>
+                    <p class="text-secondary small">@Message</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}

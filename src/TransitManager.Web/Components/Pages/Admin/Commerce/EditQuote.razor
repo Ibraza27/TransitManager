@@ -28,6 +28,9 @@
         <div class="d-flex gap-2 flex-wrap">
             @if (IsPreviewMode)
             {
+                <button class="btn btn-secondary btn-sm" @onclick="SaveDraft">
+                    <i class="bi bi-save me-2"></i>Enregistrer le brouillon
+                </button>
                 <button class="btn btn-secondary btn-sm" @onclick="TogglePreview">
                     <i class="bi bi-arrow-left me-2"></i>Éditer
                 </button>
@@ -417,111 +420,134 @@
                               }
                           </div>
                          
-                         <!-- Add Line Dropdown -->
-                         <div class="p-2 dropdown">
-                            <button class="btn btn-dark btn-sm rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-plus-lg me-1"></i> Ajouter une ligne
-                            </button>
-                            <ul class="dropdown-menu shadow">
-                                <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Product)"><i class="bi bi-box-seam me-2"></i>Produit</button></li>
-                                <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Title)"><i class="bi bi-type-h1 me-2"></i>Titre de section</button></li>
-                                <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Text)"><i class="bi bi-file-text me-2"></i>Texte libre</button></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><button class="dropdown-item fw-bold" @onclick="() => AddLine(QuoteLineType.Subtotal)"><i class="bi bi-calculator me-2"></i>Sous-total</button></li>
-                            </ul>
-                         </div>
-                     </div>
-                     
-                     <!-- Footer Notes -->
-                     <div class="mt-5">
-                         <div class="mb-3">
-                             <div class="d-flex justify-content-between">
-                                 <label class="form-label fw-bold small">Notes</label>
-                                 <span class="text-muted small">@((Model.FooterNote?.Length ?? 0))/1000</span>
+                          <!-- Add Line Dropdown (SPLIT BUTTON) -->
+                          <div class="p-2 dropdown">
+                             <div class="btn-group">
+                                 <button class="btn btn-dark btn-sm rounded-start-pill ps-3" type="button" @onclick="() => AddLine(QuoteLineType.Product)">
+                                     <i class="bi bi-plus-lg me-1"></i> Ajouter une ligne
+                                 </button>
+                                 <button type="button" class="btn btn-dark btn-sm dropdown-toggle dropdown-toggle-split rounded-end-pill pe-3" data-bs-toggle="dropdown" aria-expanded="false">
+                                     <span class="visually-hidden">Toggle Dropdown</span>
+                                 </button>
+                                 <ul class="dropdown-menu shadow">
+                                     <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Product)"><i class="bi bi-box-seam me-2"></i>Produit</button></li>
+                                     <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Title)"><i class="bi bi-type-h1 me-2"></i>Titre de section</button></li>
+                                     <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Text)"><i class="bi bi-file-text me-2"></i>Texte libre</button></li>
+                                     <li><hr class="dropdown-divider"></li>
+                                     <li><button class="dropdown-item fw-bold" @onclick="() => AddLine(QuoteLineType.Subtotal)"><i class="bi bi-calculator me-2"></i>Sous-total</button></li>
+                                 </ul>
                              </div>
-                             <textarea class="form-control" rows="3" @bind="Model.FooterNote"></textarea>
-                         </div>
-                     </div>
+                          </div>
+                      </div>
+                      
+                      <!-- Footer Notes -->
+                      <div class="mt-5">
+                          <div class="mb-3">
+                              <div class="d-flex justify-content-between">
+                                  <label class="form-label fw-bold small">Notes</label>
+                                  <span class="text-muted small">@((Model.FooterNote?.Length ?? 0))/1000</span>
+                              </div>
+                              <textarea class="form-control" rows="3" @bind="Model.FooterNote"></textarea>
+                          </div>
+                      </div>
 
-                 </div>
-             
-             <!-- Right Sidebar (Totals & Discount) - Stacked on Mobile -->
-             <div class="bg-white border-start-lg border-bottom border-lg-0-bottom p-3 overflow-auto sidebar-totals" style="flex: 0 0 250px; min-width: 250px;">
-                 <!-- Wrapper for Desktop width constraint -->
-                 <div class="d-lg-block">
-                     
-                     <!-- On Desktop, we want this to be fixed width. On mobile, full width. -->
-                     <!-- Since we are in a flex-row container on desktop, we can force width via style media query or simple class utility if available. 
-                          But style attribute logic is easier here. -->
-                     <!-- Actually, the parent div handles the flex sizing. Let's make this inner content clean. -->
-                     
-                     <h6 class="fw-bold mb-4">Calculs et Remises</h6>
-                     
-                     <div class="card bg-light border-0 p-3 mb-4">
-                         <div class="row g-2">
-                             <div class="col-6">
-                                  <label class="small text-muted">Type</label>
-                                  <select class="form-select form-select-sm" @bind="Model.DiscountType">
-                                      <option value="@DiscountType.Percent">%</option>
-                                      <option value="@DiscountType.Amount">EUR</option>
-                                  </select>
-                             </div>
-                             <div class="col-6">
-                                 <label class="small text-muted">Valeur</label>
-                                 <input type="number" class="form-control form-control-sm" @bind="Model.DiscountValue" />
-                             </div>
-                         </div>
-                         <div class="mt-2 text-end text-danger small fw-bold">
-                             -@DiscountAmount.ToString("N2") €
-                         </div>
-                     </div>
-                     
-                     <!-- Totals Display -->
-                     <div class="d-flex justify-content-between mb-2">
-                         <span class="text-muted">Total HT</span>
-                         <span class="fw-bold">@RawTotalHT.ToString("N2") €</span>
-                     </div>
-                      <div class="d-flex justify-content-between mb-2 text-danger">
-                         <span class="text-muted">Remise</span>
-                         <span class="fw-bold">-@DiscountAmount.ToString("N2") €</span>
-                     </div>
-                     <div class="d-flex justify-content-between mb-2">
-                         <span class="text-muted">Net HT</span>
-                         <span class="fw-bold">@NetHT.ToString("N2") €</span>
-                     </div>
-                     <div class="d-flex justify-content-between mb-2">
-                         <span class="text-muted">TVA</span>
-                         <span class="fw-bold">@TotalTVA.ToString("N2") €</span>
-                     </div>
-                     
-                     <hr />
-                     
-                     <div class="d-flex justify-content-between mb-2">
-                         <span class="fw-bold fs-5">Total TTC</span>
-                         <span class="fw-bold fs-5 text-success">@TotalTTC.ToString("N2") €</span>
-                     </div>
-                     
-                      <div class="mt-4">
-                         <label class="form-label small fw-bold text-muted">Paiement</label>
-                         <select class="form-select form-select-sm mb-2" @bind="Model.PaymentTerms">
-                             <option value="">Choisir...</option>
-                             <option value="Comptant">Comptant</option>
-                             <option value="30 jours net">30 jours net</option>
-                             <option value="A réception">À réception</option>
-                             <option value="50% acompte, solde à la livraison">50% acompte, solde à la livraison</option>
-                         </select>
-                     </div>
-                 </div>
-             </div>
-        </div>
+                  </div>
+              
+              <!-- Right Sidebar (Totals & Discount) - Stacked on Mobile -->
+              <div class="bg-white border-start-lg border-bottom border-lg-0-bottom p-3 overflow-auto sidebar-totals" style="flex: 0 0 250px; min-width: 250px;">
+                  <!-- Wrapper for Desktop width constraint -->
+                  <div class="d-lg-block">
+                      
+                      <!-- On Desktop, we want this to be fixed width. On mobile, full width. -->
+                      <!-- Since we are in a flex-row container on desktop, we can force width via style media query or simple class utility if available. 
+                           But style attribute logic is easier here. -->
+                      <!-- Actually, the parent div handles the flex sizing. Let's make this inner content clean. -->
+                      
+                      <h6 class="fw-bold mb-4">Calculs et Remises</h6>
+                      
+                      <div class="card bg-light border-0 p-3 mb-4">
+                          <div class="row g-2">
+                              <div class="col-6">
+                                   <label class="small text-muted">Type</label>
+                                   <select class="form-select form-select-sm" @bind="Model.DiscountType">
+                                       <option value="@DiscountType.Percent">%</option>
+                                       <option value="@DiscountType.Amount">EUR</option>
+                                   </select>
+                              </div>
+                              <div class="col-6">
+                                  <label class="small text-muted">Valeur</label>
+                                  <input type="number" class="form-control form-control-sm" @bind="Model.DiscountValue" />
+                              </div>
+                          </div>
+                          <div class="mt-2 text-end text-danger small fw-bold">
+                              -@DiscountAmount.ToString("N2") €
+                          </div>
+                      </div>
+                      
+                      <!-- Totals Display -->
+                      <div class="d-flex justify-content-between mb-2">
+                          <span class="text-muted">Total HT</span>
+                          <span class="fw-bold">@RawTotalHT.ToString("N2") €</span>
+                      </div>
+                       <div class="d-flex justify-content-between mb-2 text-danger">
+                          <span class="text-muted">Remise</span>
+                          <span class="fw-bold">-@DiscountAmount.ToString("N2") €</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-2">
+                          <span class="text-muted">Net HT</span>
+                          <span class="fw-bold">@NetHT.ToString("N2") €</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-2">
+                          <span class="text-muted">TVA</span>
+                          <span class="fw-bold">@TotalTVA.ToString("N2") €</span>
+                      </div>
+                      
+                      <hr />
+                      
+                      <div class="d-flex justify-content-between mb-2">
+                          <span class="fw-bold fs-5">Total TTC</span>
+                          <span class="fw-bold fs-5 text-success">@TotalTTC.ToString("N2") €</span>
+                      </div>
+                      
+                       <div class="mt-4">
+                          <label class="form-label small fw-bold text-muted">Paiement</label>
+                          <select class="form-select form-select-sm mb-2" @bind="Model.PaymentTerms">
+                              <option value="">Choisir...</option>
+                              <option value="Comptant">Comptant</option>
+                              <option value="30 jours net">30 jours net</option>
+                              <option value="A réception">À réception</option>
+                              <option value="50% acompte, solde à la livraison">50% acompte, solde à la livraison</option>
+                          </select>
+                      </div>
+                  </div>
+              </div>
+         </div>
     }
 </div>
 
 <ProductDialog @ref="_productDialog" OnProductCreated="HandleNewProductCreated" />
 
+<!-- MODALS -->
+<ConfirmationModal 
+    IsVisible="@_showUnsavedModal"
+    Title="CONFIRMATION"
+    Message="Vous êtes en train de quitter l'éditeur sans avoir enregistré les modifications. Souhaitez-vous sauvegarder les modifications avant de partir ?"
+    ConfirmText="Enregistrer"
+    ConfirmButtonClass="btn-success"
+    CancelText="Partir sans enregistrer"
+    OnConfirm="ConfirmSaveAndExit" 
+    OnCancel="ConfirmExitWithoutSave" 
+    OnClose="@(() => _showUnsavedModal = false)" />
+
+<LoadingModal IsVisible="@IsLoadingPdf" />
+
+
 @code {
     private ProductDialog _productDialog;
     private QuoteLineDto _activeLineForCreation;
+
+    // Modal State
+    private bool _showUnsavedModal = false;
 
     private void OpenNewProductDialog(QuoteLineDto line)
     {
@@ -555,7 +581,7 @@
     private bool IsLoading = true;
     private bool IsSaving = false;
     private bool IsPreviewMode = false;
-    private bool IsLoadingPdf = false; // New state
+    private bool IsLoadingPdf = false; 
     private QuoteStatus CurrentStatus = QuoteStatus.Draft;
     private string OriginalModelJson = ""; // Snapshot for Revert
 
@@ -824,12 +850,50 @@
         }
     }
 
+    // --- DIRTY CHECKING & EXIT LOGIC ---
+
+    private bool IsDirty()
+    {
+         var currentJson = JsonSerializer.Serialize(Model);
+         return currentJson != OriginalModelJson;
+    }
+
+    private void Cancel()
+    {
+        if (IsDirty())
+        {
+            _showUnsavedModal = true;
+        }
+        else
+        {
+            NavManager.NavigateTo("/admin/commerce/quotes");
+        }
+    }
+
+    private async Task ConfirmSaveAndExit()
+    {
+        if (await Save())
+        {
+            _showUnsavedModal = false;
+            NavManager.NavigateTo("/admin/commerce/quotes");
+        }
+    }
+
+    private void ConfirmExitWithoutSave()
+    {
+        _showUnsavedModal = false;
+        NavManager.NavigateTo("/admin/commerce/quotes");
+    }
+
+    // -----------------------------------
+
     private async Task SaveDraft()
     {
         if (await Save())
         {
              // Model.Id is guaranteed by Save()
              await ApiService.UpdateQuoteStatusAsync(Model.Id!.Value, QuoteStatus.Draft);
+             await JS.InvokeVoidAsync("alert", "Brouillon enregistré avec succès.");
              NavManager.NavigateTo("/admin/commerce/quotes");
         }
     }
@@ -877,6 +941,10 @@
             Model.Id = result.Id;
             if(!Id.HasValue) { Id = result.Id; } // Update local ID binding
             CurrentStatus = result.Status;
+            
+            // Update Snapshot
+            OriginalModelJson = JsonSerializer.Serialize(Model);
+
             return true;
         }
         catch (Exception ex)
@@ -893,44 +961,60 @@
     
      private async Task SendEmail()
     {
-         if (await Save())
+         if (Model.Id == null) return;
+         
+         if (SelectedClient == null || string.IsNullOrEmpty(SelectedClient.Email))
          {
-             try
-             {
-                 await ApiService.SendQuoteByEmailAsync(Model.Id!.Value);
-                 await ApiService.UpdateQuoteStatusAsync(Model.Id!.Value, QuoteStatus.Sent);
-                 
-                 await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
-                 NavManager.NavigateTo("/admin/commerce/quotes");
-             }
-             catch(Exception ex)
-             {
-                 await JS.InvokeVoidAsync("alert", $"Erreur lors de l'envoi: {ex.Message}");
-             }
+             await JS.InvokeVoidAsync("alert", "Le client n'a pas d'adresse email définie.");
+             return;
+         }
+
+          IsLoadingPdf = true;
+          StateHasChanged();
+
+         try
+         {
+             await ApiService.SendQuoteByEmailAsync(Model.Id.Value);
+             IsLoadingPdf = false;
+             StateHasChanged();
+             await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
+         }
+         catch(Exception ex)
+         {
+              IsLoadingPdf = false;
+              StateHasChanged();
+              Console.WriteLine(ex);
+              await JS.InvokeVoidAsync("alert", "Erreur lors de l'envoi de l'email.");
+         }
+         finally
+         {
+             IsLoadingPdf = false;
+             StateHasChanged();
          }
     }
 
     private async Task DownloadPdf()
     {
-         if (!Id.HasValue || Model.Id == null) 
-         {
-             // Try to save first
-             if(!await Save()) return;
-         }
-         
          if (Model.Id == null) return;
-         
          IsLoadingPdf = true;
          StateHasChanged();
          try
          {
-             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id!.Value);
-             using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
-             await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{Model.Reference ?? "Brouillon"}.pdf", streamRef);
+             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id.Value);
+             var fileName = $"Devis_{Model.Reference ?? "Brouillon"}.pdf";
+             
+             IsLoadingPdf = false;
+             StateHasChanged();
+             
+             using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
+             await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
          }
-         catch (Exception ex)
+         catch(Exception ex)
          {
-             await JS.InvokeVoidAsync("alert", "Erreur lors du téléchargement du PDF: " + ex.Message);
+             IsLoadingPdf = false;
+             StateHasChanged();
+             Console.WriteLine(ex);
+             await JS.InvokeVoidAsync("alert", "Erreur lors du téléchargement du PDF.");
          }
          finally
          {
@@ -941,64 +1025,33 @@
 
     private async Task PrintPdf()
     {
-         if (!Id.HasValue || Model.Id == null) 
-         {
-             if(!await Save()) return;
-         }
-         
-         if (Model.Id == null) return;
-         
-         IsLoadingPdf = true; // Use same spinner state for now
+        if (Model.Id == null) return;
+         IsLoadingPdf = true;
          StateHasChanged();
-         try
-         {
-             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id!.Value);
-             using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
-             await JS.InvokeVoidAsync("openPdfInNewTab", streamRef);
-         }
-         catch (Exception ex)
-         {
-             await JS.InvokeVoidAsync("alert", "Erreur lors de l'impression: " + ex.Message);
-         }
-         finally
-         {
+        try 
+        {
+             var pdfBytes = await ApiService.GetQuotePdfAsync(Model.Id.Value);
              IsLoadingPdf = false;
              StateHasChanged();
-         }
+             
+             using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
+             await JS.InvokeVoidAsync("printFileFromStream", streamRef);
+        }
+        catch(Exception ex)
+        {
+             IsLoadingPdf = false;
+             StateHasChanged();
+             Console.WriteLine(ex);
+             await JS.InvokeVoidAsync("alert", "Erreur lors de l'impression.");
+        }
+        finally
+        {
+             IsLoadingPdf = false;
+             StateHasChanged();
+        }
     }
 
-    private async Task Cancel()
-    {
-        // If it looks like a new draft (auto-draft or just created), delete it on cancel
-        if (IsAutoDraft || (Id.HasValue && CurrentStatus == QuoteStatus.Draft && (Model.DateCreated ?? DateTime.MinValue) > DateTime.UtcNow.AddMinutes(-30))) // Heuristic: Created recently
-        {
-             try 
-             {
-                 if (Id.HasValue) await ApiService.DeleteQuoteAsync(Id.Value);
-             }
-             catch {} // Ignore errors on cleanup
-        }
-        else if (!string.IsNullOrEmpty(OriginalModelJson))
-        {
-            // REVERT Logic: If we modified an existing quote (or draft) and saved intermediate changes (e.g. for preview)
-            // we should revert to the original state.
-            try 
-            {
-                var original = JsonSerializer.Deserialize<UpsertQuoteDto>(OriginalModelJson);
-                if (original != null)
-                {
-                    // Restore original state to DB
-                    await ApiService.CreateOrUpdateQuoteAsync(original);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error reverting quote: " + ex.Message);
-            }
-        }
 
-        NavManager.NavigateTo("/admin/commerce/quotes");
-    }
     
     private string GetStatusName(QuoteStatus status) => status switch
     {

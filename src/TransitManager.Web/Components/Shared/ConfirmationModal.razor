@@ -1,0 +1,53 @@
+@code {
+    [Parameter] public string Title { get; set; } = "Confirmation";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public string ConfirmText { get; set; } = "Confirmer";
+    [Parameter] public string CancelText { get; set; } = "Annuler";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
+    
+    // Style customization
+    [Parameter] public string ConfirmButtonClass { get; set; } = "btn-primary";
+
+    private async Task HandleConfirm()
+    {
+        await OnConfirm.InvokeAsync();
+    }
+
+    private async Task HandleCancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleClose()
+    {
+        if (OnClose.HasDelegate)
+            await OnClose.InvokeAsync();
+        else
+            await OnCancel.InvokeAsync();
+    }
+}
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white py-3">
+                    <h5 class="modal-title fw-bold text-uppercase fs-6">@Title</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="HandleClose"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="fw-bold text-uppercase mb-3">@Title ?</p>
+                    <p class="text-secondary">@Message</p>
+                </div>
+                <div class="modal-footer justify-content-center border-0 pb-4">
+                    <button type="button" class="btn @ConfirmButtonClass px-4 rounded-pill" @onclick="HandleConfirm">@ConfirmText</button>
+                    <button type="button" class="btn btn-link text-secondary text-decoration-none" @onclick="HandleCancel">@CancelText</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

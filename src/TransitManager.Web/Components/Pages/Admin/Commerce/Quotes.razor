@@ -163,6 +163,8 @@
     </div>
 }
 
+<LoadingModal IsVisible="@IsLoadingPdf" />
+
 <style>
     .active-quote {
         background-color: #f0f7ff !important;
@@ -208,6 +210,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><a class="dropdown-item" href="/admin/commerce/quotes/edit/@quote.Id"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
+                            <li><button class="dropdown-item" @onclick="() => DuplicateQuote(quote)"><i class="bi bi-files me-2"></i>Dupliquer</button></li>
                             
                             <li>
                                 <button class="dropdown-item" @onclick="() => DownloadPdf(quote)" disabled="@IsLoadingPdf">
@@ -626,6 +629,8 @@
 
     private async Task SendEmail(QuoteDto quote)
     {
+         IsLoadingPdf = true;
+         StateHasChanged();
         try
         {
             await ApiService.SendQuoteByEmailAsync(quote.Id);
@@ -637,14 +642,22 @@
             
             var index = QuoteList.FindIndex(q => q.Id == quote.Id);
             if (index >= 0) QuoteList[index] = quote;
-
-            StateHasChanged(); // Force update history
             
+            IsLoadingPdf = false;
+            StateHasChanged();
+
             await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
         }
         catch (Exception ex)
         {
+            IsLoadingPdf = false;
+            StateHasChanged();
             await JS.InvokeVoidAsync("alert", $"Erreur lors de l'envoi: {ex.Message}");
+        }
+        finally
+        {
+            IsLoadingPdf = false;
+            StateHasChanged();
         }
     }
 
@@ -661,11 +674,17 @@
              
              var pdfBytes = await ApiService.GetQuotePdfAsync(quote.Id);
              if (pdfBytes.Length == 0) throw new Exception("PDF vide");
+             
+             IsLoadingPdf = false;
+             StateHasChanged();
+             
              using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(pdfBytes));
              await JS.InvokeVoidAsync("downloadFileFromStream", $"Devis_{quote.Reference}.pdf", streamRef);
         }
         catch (Exception ex)
         {
+            IsLoadingPdf = false;
+            StateHasChanged();
             await JS.InvokeVoidAsync("alert", $"Erreur lors du téléchargement: {ex.Message}");
         }
         finally
@@ -680,6 +699,71 @@
     {
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", quote.PublicUrl);
         await JS.InvokeVoidAsync("alert", "Lien copié !");
+    }
+    
+    private async Task DuplicateQuote(QuoteDto original)
+    {
+         IsLoadingPdf = true;
+         StateHasChanged();
+        try
+        {
+            var fullQuote = await ApiService.GetQuoteByIdAsync(original.Id);
+            if (fullQuote == null) 
+            {
+                 IsLoadingPdf = false;
+                 StateHasChanged();
+                 await JS.InvokeVoidAsync("alert", "Impossible de récupérer le devis original.");
+                 return;
+            }
+            
+            var newQuote = new UpsertQuoteDto
+            {
+                Id = null,
+                ClientId = fullQuote.ClientId,
+                DateValidity = DateTime.UtcNow.AddDays(30),
+                DateCreated = DateTime.UtcNow,
+                Message = fullQuote.Message,
+                FooterNote = fullQuote.FooterNote,
+                PaymentTerms = fullQuote.PaymentTerms,
+                DiscountValue = fullQuote.DiscountValue,
+                DiscountType = fullQuote.DiscountType,
+                DiscountBase = fullQuote.DiscountBase,
+                DiscountScope = fullQuote.DiscountScope,
+                Lines = fullQuote.Lines.Select(l => new QuoteLineDto
+                {
+                    Type = l.Type,
+                    Date = l.Date, 
+                    Description = l.Description,
+                    Quantity = l.Quantity,
+                    Unit = l.Unit,
+                    UnitPrice = l.UnitPrice,
+                    VATRate = l.VATRate,
+                    Position = l.Position
+                }).ToList()
+            };
+
+            var result = await ApiService.CreateOrUpdateQuoteAsync(newQuote);
+            
+            IsLoadingPdf = false;
+            StateHasChanged();
+            
+            if(result != null)
+            {
+                // Navigate to edit the new quote
+                NavManager.NavigateTo($"/admin/commerce/quotes/edit/{result.Id}");
+            }
+        }
+        catch(Exception ex)
+        {
+             IsLoadingPdf = false;
+             StateHasChanged();
+             await JS.InvokeVoidAsync("alert", "Erreur lors de la duplication: " + ex.Message);
+        }
+        finally
+        {
+             IsLoadingPdf = false;
+             StateHasChanged();
+        }
     }
     
     private async Task DeleteQuote(QuoteDto quote)

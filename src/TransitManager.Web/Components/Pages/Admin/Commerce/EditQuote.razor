@@ -238,99 +238,184 @@
                 </div>     
                      <!-- Lines -->
                      <div class="mx-2 mb-2 bg-white" style="min-height: 200px;">
-                         <table class="table table-sm table-borderless align-middle mb-0" style="font-size: 0.85rem;">
-                             <thead class="border-bottom bg-light" style="font-size: 0.75rem;">
-                                 <tr class="text-uppercase text-muted">
-                                     <th style="width: 50px;"></th><!-- ↑/↓ -->
-                                     <th style="min-width: 200px;">Description</th>
-                                     <th class="text-center" style="width: 100px;">Date</th>
-                                     <th class="text-center" style="width: 70px;">Qté</th>
-                                     <th class="text-center" style="width: 55px;">U</th>
-                                     <th class="text-center" style="width: 90px;">Prix</th>
-                                     <th class="text-center" style="width: 90px;">TVA</th>
-                                     <th class="text-end" style="width: 100px;">Total</th>
-                                     <th style="width: 30px;"></th><!-- ✕ -->
-                                 </tr>
-                             </thead>
-                             <tbody class="sortable-list">
-                                @foreach (var (line, index) in Model.Lines.Select((l, i) => (l, i)))
-                                {
-                                    var localIndex = index;
-                                    <tr class="@(line.Type == QuoteLineType.Subtotal ? "fw-bold border-bottom border-dark" : "")" 
-                                        style="@(line.Type == QuoteLineType.Subtotal ? "border-top: 2px solid #dee2e6;" : "")"
-                                        draggable="true"
-                                        @ondragstart="@(() => HandleDragStart(localIndex))"
-                                        @ondragover:preventDefault
-                                        @ondrop="@(() => HandleDrop(localIndex))">
-                                        
-                                        <!-- Move Buttons -->
-                                        <td class="align-middle text-center" style="white-space: nowrap;">
-                                            <button class="btn btn-link text-secondary p-0" title="Monter" @onclick="() => MoveLine(line, -1)" disabled="@(index == 0)"><i class="bi bi-arrow-up-short"></i></button>
-                                            <button class="btn btn-link text-secondary p-0" title="Descendre" @onclick="() => MoveLine(line, 1)" disabled="@(index == Model.Lines.Count - 1)"><i class="bi bi-arrow-down-short"></i></button>
-                                        </td>
-                                        
-                                        <!-- Description Column -->
-                                        @if(line.Type == QuoteLineType.Title)
-                                        {
-                                            <td colspan="7" class="py-2">
-                                                <input type="text" class="form-control fw-bold border-0 fs-6" placeholder="TITRE DE SECTION" @bind="line.Description" style="background: transparent;" />
-                                            </td>
-                                        }
-                                        else if (line.Type == QuoteLineType.Text)
-                                        {
-                                             <td colspan="7" class="py-2">
-                                                <textarea class="form-control border-0" rows="1" placeholder="Texte libre..." @bind="line.Description" style="height: auto; resize: none; overflow: hidden; background: transparent;"></textarea>
-                                            </td>
-                                        }
-                                        else 
-                                        {
-                                            /* Product or Subtotal */
-                                            <td class="py-2">
-                                                @if(line.Type == QuoteLineType.Product)
-                                                {
+                          <!-- DESKTOP TABLE VIEW -->
+                          <div class="d-none d-md-block">
+                              <table class="table table-sm table-borderless align-middle mb-0" style="font-size: 0.85rem;">
+                                  <thead class="border-bottom bg-light" style="font-size: 0.75rem;">
+                                      <tr class="text-uppercase text-muted">
+                                          <th style="width: 50px;"></th><!-- ↑/↓ -->
+                                          <th style="min-width: 200px;">Description</th>
+                                          <th class="text-center" style="width: 100px;">Date</th>
+                                          <th class="text-center" style="width: 70px;">Qté</th>
+                                          <th class="text-center" style="width: 55px;">U</th>
+                                          <th class="text-center" style="width: 90px;">Prix</th>
+                                          <th class="text-center" style="width: 90px;">TVA</th>
+                                          <th class="text-end" style="width: 100px;">Total</th>
+                                          <th style="width: 30px;"></th><!-- ✕ -->
+                                      </tr>
+                                  </thead>
+                                  <tbody class="sortable-list">
+                                     @foreach (var (line, index) in Model.Lines.Select((l, i) => (l, i)))
+                                     {
+                                         var localIndex = index;
+                                         <tr class="@(line.Type == QuoteLineType.Subtotal ? "fw-bold border-bottom border-dark" : "")" 
+                                             style="@(line.Type == QuoteLineType.Subtotal ? "border-top: 2px solid #dee2e6;" : "")"
+                                             draggable="true"
+                                             @ondragstart="@(() => HandleDragStart(localIndex))"
+                                             @ondragover:preventDefault
+                                             @ondrop="@(() => HandleDrop(localIndex))">
+                                             
+                                             <!-- Move Buttons -->
+                                             <td class="align-middle text-center" style="white-space: nowrap;">
+                                                 <button class="btn btn-link text-secondary p-0" title="Monter" @onclick="() => MoveLine(line, -1)" disabled="@(index == 0)"><i class="bi bi-arrow-up-short"></i></button>
+                                                 <button class="btn btn-link text-secondary p-0" title="Descendre" @onclick="() => MoveLine(line, 1)" disabled="@(index == Model.Lines.Count - 1)"><i class="bi bi-arrow-down-short"></i></button>
+                                             </td>
+                                             
+                                             <!-- Description Column -->
+                                             @if(line.Type == QuoteLineType.Title)
+                                             {
+                                                 <td colspan="7" class="py-2">
+                                                     <input type="text" class="form-control fw-bold border-0 fs-6" placeholder="TITRE DE SECTION" @bind="line.Description" style="background: transparent;" />
+                                                 </td>
+                                             }
+                                             else if (line.Type == QuoteLineType.Text)
+                                             {
+                                                  <td colspan="7" class="py-2">
+                                                     <textarea class="form-control border-0" rows="1" placeholder="Texte libre..." @bind="line.Description" style="height: auto; resize: none; overflow: hidden; background: transparent;"></textarea>
+                                                 </td>
+                                             }
+                                             else 
+                                             {
+                                                 /* Product or Subtotal */
+                                                 <td class="py-2">
+                                                     @if(line.Type == QuoteLineType.Product)
+                                                     {
+                                                         <ProductAutocomplete 
+                                                             @bind-Description="line.Description" 
+                                                             OnProductSelected="@((p) => HandleProductSelected(line, p))"
+                                                             OnCreateNew="() => OpenNewProductDialog(line)" />
+                                                     }
+                                                     else // Subtotal
+                                                     {
+                                                         <div class="d-flex align-items-center h-100 fw-bold">
+                                                             <span>Sous-total</span>
+                                                         </div>
+                                                     }
+                                                 </td>
+                                                 
+                                                 @if(line.Type == QuoteLineType.Product)
+                                                 {
+                                                     <td><input type="date" class="form-control form-control-sm border-0 text-center" @bind="line.Date" /></td>
+                                                     <td><input type="number" class="form-control form-control-sm border-0 text-center" @bind="line.Quantity" @bind:after="UpdateSubtotals" step="0.01" /></td>
+                                                     <td><input type="text" class="form-control form-control-sm border-0 text-center" @bind="line.Unit" /></td>
+                                                     <td><input type="number" class="form-control form-control-sm border-0 text-end" @bind="line.UnitPrice" @bind:after="UpdateSubtotals" step="0.01" /></td>
+                                                     <td>
+                                                         <input type="number" class="form-control form-control-sm border-0 text-end" style="-moz-appearance: textfield;" @bind="line.VATRate" step="0.1" />
+                                                         <style>input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }</style>
+                                                     </td>
+                                                     <!-- FORCE RECALC DISPLAY -->
+                                                     <td class="text-end fw-bold small py-3">@((line.Quantity * line.UnitPrice).ToString("N2")) €</td>
+                                                 }
+                                                 else if (line.Type == QuoteLineType.Subtotal)
+                                                 {
+                                                     <td colspan="4"></td> <!-- Empty Date/Qté/U/Prix -->
+                                                     <td class="text-end fw-bold py-2"></td> <!-- TVA empty -->
+                                                     <td class="text-end fw-bold fs-6 py-2">@line.TotalHT.ToString("N2") €</td>
+                                                 }
+                                             }
+                                             <!-- Delete button -->
+                                             <td class="align-middle text-center">
+                                                 <button class="btn btn-link text-danger p-0" title="Supprimer" @onclick="() => RemoveLine(line)"><i class="bi bi-x-lg"></i></button>
+                                             </td>
+     
+                                         </tr>
+                                         <!-- End of Row -->
+                                     }
+                                  </tbody>
+                              </table>
+                          </div>
+
+                          <!-- MOBILE CARD VIEW -->
+                          <div class="d-md-none">
+                              @foreach (var (line, index) in Model.Lines.Select((l, i) => (l, i)))
+                              {
+                                  <div class="card mb-2 shadow-sm border-0 @(line.Type == QuoteLineType.Subtotal ? "bg-light border-top border-2" : "")">
+                                      <div class="card-body p-2">
+                                          <!-- Header: Delete & Controls -->
+                                          <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-secondary" @onclick="() => MoveLine(line, -1)" disabled="@(index == 0)">
+                                                        <i class="bi bi-arrow-up-short"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-secondary" @onclick="() => MoveLine(line, 1)" disabled="@(index == Model.Lines.Count - 1)">
+                                                        <i class="bi bi-arrow-down-short"></i>
+                                                    </button>
+                                                </div>
+                                                <button class="btn btn-link text-danger p-0" @onclick="() => RemoveLine(line)">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                          </div>
+
+                                          <!-- Content -->
+                                          @if(line.Type == QuoteLineType.Title)
+                                          {
+                                              <input type="text" class="form-control fw-bold border-0 fs-6 bg-light mb-2" placeholder="TITRE DE SECTION" @bind="line.Description" />
+                                          }
+                                          else if (line.Type == QuoteLineType.Text)
+                                          {
+                                              <textarea class="form-control border-0 bg-light mb-2" rows="2" placeholder="Texte libre..." @bind="line.Description"></textarea>
+                                          }
+                                          else if (line.Type == QuoteLineType.Product)
+                                          {
+                                               <div class="mb-2">
+                                                    <label class="small text-muted fw-bold">Description</label>
                                                     <ProductAutocomplete 
                                                         @bind-Description="line.Description" 
                                                         OnProductSelected="@((p) => HandleProductSelected(line, p))"
                                                         OnCreateNew="() => OpenNewProductDialog(line)" />
-                                                }
-                                                else // Subtotal
-                                                {
-                                                    <div class="d-flex align-items-center h-100 fw-bold">
-                                                        <span>Sous-total</span>
-                                                    </div>
-                                                }
-                                            </td>
-                                            
-                                            @if(line.Type == QuoteLineType.Product)
-                                            {
-                                                <td><input type="date" class="form-control form-control-sm border-0 text-center" @bind="line.Date" /></td>
-                                                <td><input type="number" class="form-control form-control-sm border-0 text-center" @bind="line.Quantity" @bind:after="UpdateSubtotals" step="0.01" /></td>
-                                                <td><input type="text" class="form-control form-control-sm border-0 text-center" @bind="line.Unit" /></td>
-                                                <td><input type="number" class="form-control form-control-sm border-0 text-end" @bind="line.UnitPrice" @bind:after="UpdateSubtotals" step="0.01" /></td>
-                                                <td>
-                                                    <input type="number" class="form-control form-control-sm border-0 text-end" style="-moz-appearance: textfield;" @bind="line.VATRate" step="0.1" />
-                                                    <style>input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }</style>
-                                                </td>
-                                                <!-- FORCE RECALC DISPLAY -->
-                                                <td class="text-end fw-bold small py-3">@((line.Quantity * line.UnitPrice).ToString("N2")) €</td>
-                                            }
-                                            else if (line.Type == QuoteLineType.Subtotal)
-                                            {
-                                                <td colspan="4"></td> <!-- Empty Date/Qté/U/Prix -->
-                                                <td class="text-end fw-bold py-2"></td> <!-- TVA empty -->
-                                                <td class="text-end fw-bold fs-6 py-2">@line.TotalHT.ToString("N2") €</td>
-                                            }
-                                        }
-                                        <!-- Delete button -->
-                                        <td class="align-middle text-center">
-                                            <button class="btn btn-link text-danger p-0" title="Supprimer" @onclick="() => RemoveLine(line)"><i class="bi bi-x-lg"></i></button>
-                                        </td>
+                                               </div>
+                                               
+                                               <div class="row g-2 mb-2">
+                                                   <div class="col-4">
+                                                       <label class="small text-muted fw-bold">Date</label>
+                                                       <input type="date" class="form-control form-control-sm" @bind="line.Date" />
+                                                   </div>
+                                                   <div class="col-4">
+                                                       <label class="small text-muted fw-bold">Qté</label>
+                                                       <input type="number" class="form-control form-control-sm" @bind="line.Quantity" @bind:after="UpdateSubtotals" step="0.01" />
+                                                   </div>
+                                                   <div class="col-4">
+                                                       <label class="small text-muted fw-bold">Unité</label>
+                                                        <input type="text" class="form-control form-control-sm" @bind="line.Unit" />
+                                                   </div>
+                                               </div>
 
-                                    </tr>
-                                    <!-- End of Row -->
-                                }
-                             </tbody>
-                         </table>
+                                               <div class="row g-2 align-items-end">
+                                                   <div class="col-4">
+                                                       <label class="small text-muted fw-bold">Prix U.</label>
+                                                       <input type="number" class="form-control form-control-sm" @bind="line.UnitPrice" @bind:after="UpdateSubtotals" step="0.01" />
+                                                   </div>
+                                                   <div class="col-3">
+                                                       <label class="small text-muted fw-bold">TVA %</label>
+                                                        <input type="number" class="form-control form-control-sm" @bind="line.VATRate" step="0.1" />
+                                                   </div>
+                                                   <div class="col-5 text-end">
+                                                       <label class="small text-muted fw-bold d-block">Total HT</label>
+                                                       <span class="fw-bold text-primary fs-5">@((line.Quantity * line.UnitPrice).ToString("N2")) €</span>
+                                                   </div>
+                                               </div>
+                                          }
+                                          else if (line.Type == QuoteLineType.Subtotal)
+                                          {
+                                              <div class="d-flex justify-content-between align-items-center">
+                                                  <span class="fw-bold text-uppercase">Sous-total</span>
+                                                  <span class="fw-bold fs-5">@line.TotalHT.ToString("N2") €</span>
+                                              </div>
+                                          }
+                                      </div>
+                                  </div>
+                              }
+                          </div>
                          
                          <!-- Add Line Dropdown -->
                          <div class="p-2 dropdown">

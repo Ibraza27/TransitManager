@@ -81,6 +81,7 @@ namespace TransitManager.Web.Services
 		// Ajoutez ces signatures dans l'interface IApiService
 		Task<IEnumerable<Document>> GetDocumentsByEntityAsync(string entityType, Guid entityId);
 		Task<Document?> UploadDocumentAsync(IBrowserFile file, TypeDocument type, Guid? clientId, Guid? vehiculeId, Guid? colisId, Guid? conteneurId);
+        Task<(Guid Id, string Name)?> UploadTempDocumentAsync(IBrowserFile file); // NEW
 		Task<byte[]> DownloadDocumentAsync(Guid id); // Retourne les bytes pour le téléchargement JS
 		Task<bool> DeleteDocumentAsync(Guid id);
         Task<Document?> UpdateDocumentAsync(Guid id, UpdateDocumentDto dto);
@@ -163,7 +164,7 @@ namespace TransitManager.Web.Services
         Task<QuoteDto> CreateOrUpdateQuoteAsync(UpsertQuoteDto dto);
         Task UpdateQuoteStatusAsync(Guid id, QuoteStatus status, string? reason = null);
         Task DeleteQuoteAsync(Guid id);
-        Task SendQuoteByEmailAsync(Guid id);
+        Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, bool copyToSender = false, List<Guid>? attachmentIds = null);
         
         // Public Token Access
         Task<QuoteDto> GetPublicQuoteAsync(Guid token);

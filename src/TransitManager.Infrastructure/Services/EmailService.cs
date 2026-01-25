@@ -15,7 +15,7 @@ namespace TransitManager.Infrastructure.Services
             _configuration = configuration;
         }
 
-        public async Task SendEmailAsync(string to, string subject, string htmlMessage)
+        public async Task SendEmailAsync(string to, string subject, string htmlMessage, List<(string Name, byte[] Content)>? attachments = null)
         {
             try
             {
@@ -29,6 +29,18 @@ namespace TransitManager.Infrastructure.Services
                 {
                     HtmlBody = htmlMessage
                 };
+
+                if (attachments != null)
+                {
+                    foreach (var att in attachments)
+                    {
+                        if (att.Content != null && att.Content.Length > 0 && !string.IsNullOrEmpty(att.Name))
+                        {
+                            bodyBuilder.Attachments.Add(att.Name, att.Content);
+                        }
+                    }
+                }
+
                 email.Body = bodyBuilder.ToMessageBody();
 
                 using var smtp = new SmtpClient();

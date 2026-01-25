@@ -1,0 +1,333 @@
+@using TransitManager.Core.DTOs.Commerce
+@using Microsoft.AspNetCore.Components.Forms
+@using TransitManager.Web.Services
+@inject IJSRuntime JS
+@inject IApiService ApiService
+
+<!-- Modal -->
+<div class="modal fade" id="sendEmailModal" tabindex="-1" aria-labelledby="sendEmailLabel" aria-hidden="true" data-bs-backdrop="static" style="z-index: 2000;">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);">
+                <h5 class="modal-title fw-bold" id="sendEmailLabel"><i class="bi bi-envelope-paper me-2"></i>ENVOYER PAR E-MAIL</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body p-4">
+                
+                @if(_isSending)
+                {
+                    <div class="text-center py-5">
+                         <div class="spinner-border text-primary mb-3" role="status"></div>
+                         <p class="text-muted">Envoi en cours...</p>
+                    </div>
+                }
+                else
+                {
+                    <!-- Destinataire(s) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Destinataire(s)</label>
+                        <div class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center" style="min-height: 42px;">
+                            @foreach(var email in _recipients)
+                            {
+                                <span class="badge bg-primary d-flex align-items-center gap-1 py-2 px-3">
+                                    @email
+                                    <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6em;" @onclick="() => RemoveRecipient(email)"></button>
+                                </span>
+                            }
+                            <input type="email" class="border-0 flex-grow-1" style="outline: none; min-width: 200px;" 
+                                   placeholder="Ajouter un email..." 
+                                   @bind="_newRecipientInput" 
+                                   @bind:event="oninput"
+                                   @onkeydown="HandleRecipientKeyDown" />
+                        </div>
+                        <div class="mt-1">
+                            <a href="javascript:void(0)" class="small text-decoration-none" @onclick="ToggleCc">Cc</a>
+                            <a href="javascript:void(0)" class="small text-decoration-none ms-2" @onclick="ToggleBcc">Bcc</a>
+                        </div>
+                        @if(_showCc)
+                        {
+                            <div class="mt-2">
+                                <input type="text" class="form-control form-control-sm" placeholder="Cc (séparer par virgule)" @bind="_ccEmails" />
+                            </div>
+                        }
+                        @if(_showBcc)
+                        {
+                            <div class="mt-2">
+                                <input type="text" class="form-control form-control-sm" placeholder="Bcc (séparer par virgule)" @bind="_bccEmails" />
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Copie Contact -->
+                    <div class="form-check mb-3 p-2 border rounded bg-light">
+                        <input class="form-check-input" type="checkbox" id="copyContact" @bind="_emailDto.CopyToSender">
+                        <label class="form-check-label small" for="copyContact">
+                            <i class="bi bi-envelope-plus me-1"></i>Recevoir une copie (contact@hippocampeimportexport.com)
+                        </label>
+                    </div>
+
+                    <!-- Sujet -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Sujet</label>
+                        <input type="text" class="form-control" @bind="_emailDto.Subject" />
+                    </div>
+
+                    <!-- Message -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold d-flex justify-content-between">
+                            <span>Message<span class="text-muted fw-normal ms-1">(@_emailDto.Body?.Length/5000)</span></span>
+                        </label>
+                        <textarea class="form-control" rows="8" @bind="_emailDto.Body" maxlength="5000"></textarea>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="saveTemplate" @bind="_saveAsTemplate">
+                            <label class="form-check-label small" for="saveTemplate">
+                                Enregistrer comme modèle de message
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Pièces jointes -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Pièces jointes</label>
+                        <div class="border rounded p-3 bg-light">
+                            @foreach(var att in _attachments)
+                            {
+                                <div class="d-flex align-items-center mb-2">
+                                    @if(att.IsUploading)
+                                    {
+                                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                    }
+                                    else if (att.IsDefault || att.TempId.HasValue)
+                                    {
+                                         <span class="badge bg-success rounded-pill me-2">
+                                            <i class="bi bi-check-circle me-1"></i>
+                                        </span>
+                                    }
+                                    else 
+                                    {
+                                         <span class="badge bg-warning text-dark rounded-pill me-2">
+                                            <i class="bi bi-exclamation-circle me-1"></i>
+                                        </span>
+                                    }
+
+                                    <span class="flex-grow-1 small @(att.IsUploading ? "text-muted fst-italic" : "")">
+                                        @att.FileName
+                                        @if(att.IsUploading) { <span>(Téléchargement...)</span> }
+                                    </span>
+                                    
+                                    @if(!att.IsDefault)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-link text-danger p-0" @onclick="() => RemoveAttachment(att)">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                            <div class="mt-2">
+                                <InputFile OnChange="OnFileSelected" class="form-control form-control-sm" multiple />
+                                <small class="text-muted">Formats acceptés: PDF, Images, Documents (max 5MB)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info text-dark py-2 small border-0">
+                        <i class="bi bi-info-circle me-2"></i>Le détail du devis sera inclus dans le corps de l'email.
+                    </div>
+                }
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-link text-secondary" data-bs-dismiss="modal" @onclick="CloseModal" disabled="@_isSending">Annuler</button>
+                <button type="button" class="btn btn-primary px-4 rounded-pill" @onclick="SendEmail" disabled="@(_isSending || !_recipients.Any())">
+                    @if (_isSending) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                    <i class="bi bi-send-fill me-2"></i>Envoyer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string RecipientEmail { get; set; } = "";
+    [Parameter] public string QuoteReference { get; set; } = "";
+    [Parameter] public EventCallback<SendQuoteEmailDto> OnSend { get; set; }
+
+    private SendQuoteEmailDto _emailDto = new();
+    private bool _isSending = false;
+    private bool _isVisible = false;
+    private bool _showCc = false;
+    private bool _showBcc = false;
+    private bool _saveAsTemplate = false;
+    private string _newRecipientInput = "";
+    private string _ccEmails = "";
+    private string _bccEmails = "";
+    
+    private List<string> _recipients = new();
+    private List<AttachmentItem> _attachments = new();
+
+    private const string DefaultBody = @"Bonjour,
+
+Vous trouverez ci-joint votre devis.
+
+Nous vous remercions d'avoir fait appel à nos services et nous restons à votre entière disposition.
+
+Cordialement,
+
+Hippocampe Import-Export.";
+
+    public void Open(string defaultSubject, string defaultBody, string? recipientOverride = null)
+    {
+        _recipients = new List<string>();
+        if (!string.IsNullOrWhiteSpace(recipientOverride))
+             _recipients.Add(recipientOverride);
+        else if (!string.IsNullOrWhiteSpace(RecipientEmail))
+            _recipients.Add(RecipientEmail);
+        
+        _emailDto = new SendQuoteEmailDto 
+        { 
+            Subject = defaultSubject, 
+            Body = string.IsNullOrWhiteSpace(defaultBody) ? DefaultBody : defaultBody,
+            CopyToSender = false // Unchecked by default
+        };
+        
+        _attachments = new List<AttachmentItem> 
+        { 
+            new AttachmentItem { FileName = $"DEVIS {QuoteReference} - HIPPOCAMPE IMPORT EXPORT.pdf", IsDefault = true } 
+        };
+        
+        _isSending = false;
+        _isVisible = true;
+        _showCc = false;
+        _showBcc = false;
+        _ccEmails = "";
+        _bccEmails = "";
+        _newRecipientInput = "";
+        StateHasChanged();
+    }
+
+    private void ToggleCc() => _showCc = !_showCc;
+    private void ToggleBcc() => _showBcc = !_showBcc;
+
+    private void HandleRecipientKeyDown(KeyboardEventArgs e)
+    {
+        if ((e.Key == "Enter" || e.Key == "Tab" || e.Key == ",") && !string.IsNullOrWhiteSpace(_newRecipientInput))
+        {
+            var email = _newRecipientInput.Trim().TrimEnd(',');
+            if (!string.IsNullOrWhiteSpace(email) && email.Contains("@") && !_recipients.Contains(email))
+            {
+                _recipients.Add(email);
+            }
+            _newRecipientInput = "";
+        }
+    }
+
+    private void RemoveRecipient(string email) => _recipients.Remove(email);
+    private void RemoveAttachment(AttachmentItem att) => _attachments.Remove(att);
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles(5))
+        {
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                await JS.InvokeVoidAsync("alert", $"Le fichier '{file.Name}' dépasse 5MB.");
+                continue;
+            }
+
+            var newItem = new AttachmentItem 
+            { 
+                FileName = file.Name, 
+                File = file, 
+                IsUploading = true 
+            };
+            _attachments.Add(newItem);
+            
+            // Trigger upload async
+            await UploadAttachment(newItem);
+        }
+    }
+
+    private async Task UploadAttachment(AttachmentItem item)
+    {
+        if (item.File == null) return;
+        
+        StateHasChanged(); // Show spinner
+        
+        var result = await ApiService.UploadTempDocumentAsync(item.File);
+        
+        if (result.HasValue)
+        {
+            item.TempId = result.Value.Id;
+            item.FileName = result.Value.Name; // Update with sanitized name if needed
+            item.IsUploading = false;
+        }
+        else
+        {
+             // Handle error
+             item.IsUploading = false;
+             await JS.InvokeVoidAsync("alert", $"Erreur lors du téléchargement de {item.FileName}.");
+             _attachments.Remove(item);
+        }
+        StateHasChanged();
+    }
+
+    private async Task SendEmail()
+    {
+        // Check pending uploads
+        if (_attachments.Any(a => a.IsUploading))
+        {
+            bool proceed = await JS.InvokeAsync<bool>("confirm", "Certains fichiers sont encore en cours de téléchargement. Voulez-vous envoyer l'email sans eux ?");
+            if (!proceed) return;
+        }
+
+        // Add any typed but not submitted email
+        if (!string.IsNullOrWhiteSpace(_newRecipientInput) && _newRecipientInput.Contains("@"))
+        {
+            _recipients.Add(_newRecipientInput.Trim());
+            _newRecipientInput = "";
+        }
+
+        if (!_recipients.Any()) return;
+
+        _isSending = true;
+        StateHasChanged();
+
+        // Populate DTO
+        _emailDto.Recipients = string.Join(",", _recipients);
+        _emailDto.Cc = _ccEmails;
+        _emailDto.Bcc = _bccEmails;
+        
+        // Attachments
+        _emailDto.TempAttachmentIds = _attachments
+            .Where(a => a.TempId.HasValue)
+            .Select(a => a.TempId.Value)
+            .ToList();
+        
+        try 
+        {
+            await OnSend.InvokeAsync(_emailDto);
+            
+            // Auto close modal on success
+            await JS.InvokeVoidAsync("hideModal", "sendEmailModal");
+            _isVisible = false;
+        }
+        finally
+        {
+            _isSending = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseModal()
+    {
+        _isVisible = false;
+    }
+
+    private class AttachmentItem
+    {
+        public string FileName { get; set; } = "";
+        public bool IsDefault { get; set; }
+        public bool IsUploading { get; set; }
+        public Guid? TempId { get; set; }
+        public IBrowserFile? File { get; set; }
+    }
+}

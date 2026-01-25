@@ -4,6 +4,6 @@ namespace TransitManager.Core.Interfaces
 {
     public interface IEmailService
     {
-        Task SendEmailAsync(string to, string subject, string htmlMessage);
+        Task SendEmailAsync(string to, string subject, string htmlMessage, List<(string Name, byte[] Content)>? attachments = null);
     }
 }

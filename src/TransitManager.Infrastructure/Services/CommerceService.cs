@@ -17,12 +17,21 @@ namespace TransitManager.Infrastructure.Services
         private readonly TransitContext _context;
         private readonly IEmailService _emailService;
         private readonly IExportService _exportService;
+        private readonly ISettingsService _settingsService;
+        private readonly IDocumentService _documentService;
 
-        public CommerceService(TransitContext context, IEmailService emailService, IExportService exportService)
+        public CommerceService(
+            TransitContext context,
+            IEmailService emailService,
+            IExportService exportService,
+            ISettingsService settingsService,
+            IDocumentService documentService)
         {
             _context = context;
             _emailService = emailService;
             _exportService = exportService;
+            _settingsService = settingsService;
+            _documentService = documentService;
         }
 
         // --- Products ---
@@ -476,30 +485,74 @@ namespace TransitManager.Infrastructure.Services
             return await _exportService.GenerateQuotePdfAsync(quote);
         }
 
-        public async Task SendQuoteByEmailAsync(Guid id)
+        public async Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null)
         {
-            var quote = await _context.Quotes.Include(q => q.Client).FirstOrDefaultAsync(q => q.Id == id);
+            var quote = await _context.Quotes.Include(q => q.Client).Include(q => q.Lines).FirstOrDefaultAsync(q => q.Id == id);
             if (quote == null) throw new Exception("Devis introuvable");
             if (quote.Client == null || string.IsNullOrEmpty(quote.Client.Email)) throw new Exception("Le client n'a pas d'adresse email valide");
 
-            // FIXED: Use the specific domain requested
+            // Load Settings
+            var company = await _settingsService.GetSettingAsync<TransitManager.Core.DTOs.Settings.CompanyProfileDto>("CompanyProfile", new());
+            
+            // Generate PDF
+            var pdfBytes = await _exportService.GenerateQuotePdfAsync(MapToDto(quote));
+            var pdfName = $"Devis_{quote.Reference}.pdf";
+
+            // Prepare Attachments
+            var attachments = new List<(string Name, byte[] Content)>();
+            attachments.Add((pdfName, pdfBytes));
+
+            // Load Additional Attachments (Temp Files)
+            if (attachmentIds != null && attachmentIds.Any())
+            {
+                foreach (var attId in attachmentIds)
+                {
+                    try 
+                    {
+                        var tempFile = await _documentService.GetTempDocumentAsync(attId);
+                        if (tempFile != null)
+                        {
+                            using var ms = new MemoryStream();
+                            await tempFile.Value.FileStream.CopyToAsync(ms);
+                            attachments.Add((tempFile.Value.FileName, ms.ToArray()));
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        Console.WriteLine($"Error loading temp attachment {attId}: {ex.Message}");
+                    }
+                }
+            }
+
+            // Public Link
             var publicUrl = $"https://hippocampetransitmanager.com/portal/quote/{quote.PublicToken}";
             
-            var subject = $"Devis {quote.Reference} - HIPPOCAMPE IMPORT EXPORT";
-            
-            // FIXED: New Company Info and Template
-            var body = $@"
+            // Build Final HTML Content
+            // 1. Determine User Message (Custom or Default)
+            string userMessagePart;
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                // Preserve newlines if plain text
+                userMessagePart = body.Contains("<") && body.Contains(">") ? body : body.Replace("\n", "<br/>");
+            }
+            else
+            {
+                userMessagePart = $@"
+                    <p>Bonjour,</p>
+                    <p>Vous trouverez ci-joint votre devis <strong>{quote.Reference}</strong>.</p>
+                    <p>Nous vous remercions d'avoir fait appel à nos services et nous restons à votre entière disposition pour toute question.</p>";
+            }
+
+            // 2. Wrap in Standard Template
+            var finalHtml = $@"
 <div style='font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;'>
     <div style='text-align: center; margin-bottom: 20px;'>
-       <!-- Logo if available online -->
-       <h2 style='color: #2c3e50;'>HIPPOCAMPE IMPORT EXPORT</h2>
+       <h2 style='color: #2c3e50;'>{company.CompanyName}</h2>
     </div>
     
-    <p>Bonjour,</p>
-    
-    <p>Vous trouverez ci-joint votre devis <strong>{quote.Reference}</strong>.</p>
-    
-    <p>Nous vous remercions d'avoir fait appel à nos services et nous restons à votre entière disposition pour toute question.</p>
+    <div style='margin-bottom: 30px;'>
+        {userMessagePart}
+    </div>
     
     <div style='background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #e9ecef;'>
         <h3 style='margin-top: 0;'>Détails du devis</h3>
@@ -533,15 +586,22 @@ namespace TransitManager.Infrastructure.Services
     <p>Cordialement,</p>
     
     <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #555;'>
-        <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
-        7 Rue Pascal 33370 Tresses<br/>
-        Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX<br/>
+        <strong>{company.CompanyName} - {company.LegalStatus}</strong><br/>
+        {company.Address}<br/>
+        {company.ZipCode} {company.City}<br/>
+        Tél: {company.Phone}<br/>
     </div>
 </div>";
 
+            // Default Subject
+            if (string.IsNullOrWhiteSpace(subject))
+            {
+                subject = $"Devis {quote.Reference} - {company.CompanyName}";
+            }
+
             try
             {
-                await _emailService.SendEmailAsync(quote.Client.Email, subject, body);
+                await _emailService.SendEmailAsync(quote.Client.Email, subject, finalHtml, attachments);
                 
                 // Update status if Draft -> Sent
                 if (quote.Status == QuoteStatus.Draft)
@@ -570,7 +630,7 @@ namespace TransitManager.Infrastructure.Services
                     Details = $"L'envoi du devis par email a échoué: {ex.Message}" 
                 });
                 await _context.SaveChangesAsync();
-                throw; // Re-throw to alert user
+                throw; 
             }
         }
 

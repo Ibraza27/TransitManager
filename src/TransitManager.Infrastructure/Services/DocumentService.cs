@@ -581,6 +581,44 @@ namespace TransitManager.Infrastructure.Services
             return await query.OrderByDescending(d => d.DateCreation).ToListAsync();
         }
 
+        // --- Gestion des Fichiers Temporaires ---
+
+        public async Task<Guid> UploadTempDocumentAsync(Stream fileStream, string fileName)
+        {
+            var tempDir = Path.Combine(_storageRootPath, "Temp");
+            if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
+
+            var tempId = Guid.NewGuid();
+            var sanitizedName = SanitizeFileName(fileName);
+            var safeName = $"{tempId}_{sanitizedName}";
+            var fullPath = Path.Combine(tempDir, safeName);
+
+            using (var fileOutput = new FileStream(fullPath, FileMode.Create))
+            {
+                await fileStream.CopyToAsync(fileOutput);
+            }
+
+            return tempId;
+        }
+
+        public async Task<(Stream FileStream, string FileName)?> GetTempDocumentAsync(Guid id)
+        {
+             var tempDir = Path.Combine(_storageRootPath, "Temp");
+             if (!Directory.Exists(tempDir)) return null;
+
+             // Find file starting with id
+             var file = Directory.GetFiles(tempDir, $"{id}_*").FirstOrDefault();
+             if (file == null) return null;
+
+             var fileName = Path.GetFileName(file);
+             // Remove ID prefix for original name restoration (approximate)
+             // Format: {id}_{name}
+             var originalName = fileName.Substring(id.ToString().Length + 1); // +1 underscore
+
+             var stream = new FileStream(file, FileMode.Open, FileAccess.Read);
+             return (stream, originalName);
+        }
+
         private static string SanitizeFileName(string name)
         {
             var invalidChars = Path.GetInvalidFileNameChars();

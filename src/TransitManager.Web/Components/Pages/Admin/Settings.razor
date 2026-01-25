@@ -1,66 +1,408 @@
 @page "/admin/settings"
 @using Microsoft.AspNetCore.Authorization
+@using TransitManager.Core.DTOs.Settings
 @using TransitManager.Infrastructure.Services
+@using TransitManager.Core.Interfaces
 @attribute [Authorize(Roles = "Administrateur")]
 @inject ISettingsService SettingsService
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Paramètres - Hippocampe</PageTitle>
 
-<div class="container mt-4">
-    <h2 class="mb-4"><i class="bi bi-gear-fill me-2"></i>Paramètres Globaux</h2>
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0 fw-bold text-gradient"><i class="bi bi-gear-fill me-2"></i>Paramètres</h2>
+        @if(_isSaved) {
+             <span class="text-success fw-bold animation-fade-in"><i class="bi bi-check-circle me-1"></i>Enregistré !</span>
+        }
+    </div>
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-white fw-bold">Tarification</div>
-        <div class="card-body">
-            @if (_isLoading)
+    <!-- TABS NAVIGATION -->
+    <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+             <button class="nav-link @(activeTab == "company" ? "active fw-bold" : "")" @onclick="@(() => activeTab = "company")">
+                 <i class="bi bi-building me-2"></i>Coordonnées
+             </button>
+        </li>
+        <li class="nav-item" role="presentation">
+             <button class="nav-link @(activeTab == "billing" ? "active fw-bold" : "")" @onclick="@(() => activeTab = "billing")">
+                 <i class="bi bi-receipt me-2"></i>Facturation
+             </button>
+        </li>
+        <li class="nav-item" role="presentation">
+             <button class="nav-link @(activeTab == "payment" ? "active fw-bold" : "")" @onclick="@(() => activeTab = "payment")">
+                 <i class="bi bi-credit-card me-2"></i>Moyens de Paiement
+             </button>
+        </li>
+         <li class="nav-item" role="presentation">
+             <button class="nav-link @(activeTab == "pricing" ? "active fw-bold" : "")" @onclick="@(() => activeTab = "pricing")">
+                 <i class="bi bi-tags me-2"></i>Tarification
+             </button>
+        </li>
+    </ul>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    }
+    else
+    {
+        <div class="tab-content">
+            
+            <!-- ONGLET 1: COORDONNEES -->
+            @if(activeTab == "company")
             {
-                <div class="text-center py-3"><div class="spinner-border text-primary"></div></div>
-            }
-            else
-            {
-                <div class="mb-3">
-                    <label class="form-label">Prix au mètre cube (€/m³)</label>
-                    <input type="number" step="0.01" class="form-control" @bind="_pricePerM3" />
-                    <div class="form-text">Ce tarif est utilisé pour le calcul automatique du prix des véhicules.</div>
+                <div class="card shadow-sm border-0 animation-slide-up">
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <!-- Logo -->
+                            <div class="col-md-4 text-center">
+                                <label class="form-label fw-bold d-block mb-3">Logo de l'entreprise</label>
+                                <div class="position-relative d-inline-block">
+                                    @if(!string.IsNullOrEmpty(_companyProfile.LogoUrl))
+                                    {
+                                        <img src="@_companyProfile.LogoUrl" alt="Logo Entreprise" class="img-thumbnail mb-3" style="max-height: 150px;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-light d-flex align-items-center justify-content-center rounded border" style="width: 150px; height: 150px;">
+                                            <span class="text-muted small">Aucun logo</span>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="mt-2">
+                                     <div class="input-group input-group-sm mb-2">
+                                         <InputFile OnChange="UploadLogo" class="form-control" accept=".jpg,.jpeg,.png" />
+                                     </div>
+                                     <input type="text" class="form-control form-control-sm mb-2" placeholder="URL du Logo" @bind="_companyProfile.LogoUrl" />
+                                </div>
+                            </div>
+                            
+                            <!-- Form Fields -->
+                            <div class="col-md-8">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Nom de l'entreprise</label>
+                                        <input type="text" class="form-control" @bind="_companyProfile.CompanyName" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Email de contact</label>
+                                        <input type="email" class="form-control" @bind="_companyProfile.Email" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Téléphone</label>
+                                        <input type="text" class="form-control" @bind="_companyProfile.Phone" />
+                                    </div>
+                                     <div class="col-md-6">
+                                        <label class="form-label">Mobile</label>
+                                        <input type="text" class="form-control" @bind="_companyProfile.Mobile" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Pays</label>
+                                        <input type="text" class="form-control" @bind="_companyProfile.Country" />
+                                    </div>
+
+                                    <div class="col-12"><hr /></div>
+
+                                    <div class="col-12">
+                                         <label class="form-label">Adresse</label>
+                                         <input type="text" class="form-control" @bind="_companyProfile.Address" />
+                                    </div>
+                                    <div class="col-md-4">
+                                         <label class="form-label">Code Postal</label>
+                                         <input type="text" class="form-control" @bind="_companyProfile.ZipCode" />
+                                    </div>
+                                    <div class="col-md-8">
+                                         <label class="form-label">Ville</label>
+                                         <input type="text" class="form-control" @bind="_companyProfile.City" />
+                                    </div>
+
+                                    <div class="col-12"><hr /></div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">Numéro SIRET</label>
+                                        <input type="text" class="form-control bg-light" @bind="_companyProfile.Siret" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Numéro TVA</label>
+                                        <input type="text" class="form-control bg-light" @bind="_companyProfile.TvaNumber" />
+                                    </div>
+                                     <div class="col-md-6">
+                                        <label class="form-label">RCS</label>
+                                        <input type="text" class="form-control" @bind="_companyProfile.Rcs" />
+                                    </div>
+                                     <div class="col-md-6">
+                                        <label class="form-label">Statut Juridique</label>
+                                        <input type="text" class="form-control" @bind="_companyProfile.LegalStatus" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <button class="btn btn-primary" @onclick="SaveSettings" disabled="@_isSaving">
+            }
+
+            <!-- ONGLET 2: FACTURATION -->
+            @if(activeTab == "billing")
+            {
+                <div class="card shadow-sm border-0 animation-slide-up">
+                     <div class="card-body p-4">
+                         <h5 class="fw-bold mb-4 text-secondary">Réglages par défaut des Devis</h5>
+                         
+                         <div class="row g-4">
+                             <div class="col-md-6">
+                                 <label class="form-label fw-bold">Validité des devis (jours)</label>
+                                 <input type="number" class="form-control" @bind="_billingSettings.DefaultQuoteValidityDays" />
+                             </div>
+                              <div class="col-md-6">
+                                 <label class="form-label fw-bold">Conditions de paiement par défaut</label>
+                                 <select class="form-select" @bind="_billingSettings.DefaultPaymentTerms">
+                                     <option value="Comptant">Comptant</option>
+                                     <option value="30 jours net">30 jours net</option>
+                                     <option value="A réception">À réception</option>
+                                     <option value="50% acompte, solde à la livraison">50% acompte, solde à la livraison</option>
+                                 </select>
+                             </div>
+
+                             <div class="col-12">
+                                 <label class="form-label fw-bold">Message personnalisé par défaut</label>
+                                 <textarea class="form-control" rows="3" @bind="_billingSettings.DefaultCustomMessage" placeholder="Texte libre affiché avant les modalités de paiement..."></textarea>
+                                 <div class="form-text">Ce message apparaîtra sur les devis avant les conditions de paiement.</div>
+                             </div>
+                             
+                             <div class="col-12">
+                                 <label class="form-label fw-bold">Note de bas de page (Devis & Factures)</label>
+                                 <textarea class="form-control" rows="4" @bind="_billingSettings.DefaultFooterNote"></textarea>
+                                 <div class="form-text">Ce texte apparaîtra en bas de tous vos nouveaux documents.</div>
+                             </div>
+
+                             <div class="col-12">
+                                 <div class="form-check form-switch p-3 bg-light rounded border">
+                                     <input class="form-check-input" type="checkbox" id="cgvSwitch" @bind="_billingSettings.ShowGeneralConditions">
+                                     <label class="form-check-label fw-bold" for="cgvSwitch">Afficher les Conditions Générales de Vente</label>
+                                 </div>
+                             </div>
+                             
+                             @if(_billingSettings.ShowGeneralConditions)
+                             {
+                                 <div class="col-12">
+                                     <label class="form-label">Texte des CGV</label>
+                                     <textarea class="form-control" rows="6" @bind="_billingSettings.GeneralConditionsText" placeholder="Copiez-collez vos CGV ici..."></textarea>
+                                 </div>
+                             }
+                         </div>
+                     </div>
+                </div>
+            }
+
+            <!-- ONGLET 3: MOYENS DE PAIEMENT -->
+            @if(activeTab == "payment")
+            {
+                 <div class="card shadow-sm border-0 animation-slide-up">
+                     <div class="card-body p-4">
+                         <div class="d-flex justify-content-between align-items-center mb-4">
+                             <h5 class="fw-bold text-secondary mb-0">Comptes Bancaires (RIB)</h5>
+                             <button class="btn btn-outline-primary btn-sm" @onclick="AddBankAccount"><i class="bi bi-plus-lg me-1"></i>Ajouter</button>
+                         </div>
+                         
+                         @if(!_bankDetailsList.Any())
+                         {
+                             <div class="alert alert-info">Aucun moyen de paiement configuré. Ajoutez un RIB pour qu'il apparaisse sur vos factures.</div>
+                         }
+                         
+                         <div class="accordion" id="accordionBanks">
+                             @foreach(var (bank, index) in _bankDetailsList.Select((b, i) => (b, i)))
+                             {
+                                 <div class="accordion-item mb-3 border rounded overflow-hidden">
+                                     <h2 class="accordion-header">
+                                         <button class="accordion-button @(index == 0 ? "" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#bankCollapse@index">
+                                             <span class="fw-bold me-2">@bank.BankName</span>
+                                             @if(bank.IsDefault) { <span class="badge bg-success">Par défaut</span> }
+                                         </button>
+                                     </h2>
+                                     <div id="bankCollapse@index" class="accordion-collapse collapse @(index == 0 ? "show" : "")" data-bs-parent="#accordionBanks">
+                                         <div class="accordion-body bg-light">
+                                             <div class="row g-3">
+                                                 <div class="col-md-6">
+                                                     <label class="form-label small">Nom de la Banque</label>
+                                                     <input type="text" class="form-control" @bind="bank.BankName" />
+                                                 </div>
+                                                  <div class="col-md-6">
+                                                     <label class="form-label small">Titulaire du compte</label>
+                                                     <input type="text" class="form-control" @bind="bank.AccountHolder" />
+                                                 </div>
+                                                 <div class="col-md-8">
+                                                     <label class="form-label small">IBAN</label>
+                                                     <input type="text" class="form-control font-monospace" @bind="bank.Iban" />
+                                                 </div>
+                                                  <div class="col-md-4">
+                                                     <label class="form-label small">BIC/SWIFT</label>
+                                                     <input type="text" class="form-control font-monospace" @bind="bank.Bic" />
+                                                 </div>
+                                                 <div class="col-12 d-flex justify-content-between align-items-center mt-3">
+                                                      <div class="form-check">
+                                                          <input class="form-check-input" type="radio" name="defaultBank" checked="@bank.IsDefault" @onchange="@(() => SetDefaultBank(bank))">
+                                                          <label class="form-check-label">Définir comme compte par défaut</label>
+                                                      </div>
+                                                      <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveBank(bank)">Supprimer</button>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             }
+                         </div>
+                     </div>
+                 </div>
+            }
+
+            <!-- ONGLET 4: TARIFICATION (Existant) -->
+            @if(activeTab == "pricing")
+            {
+               <div class="card shadow-sm border-0 animation-slide-up">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-4 text-secondary">Configuration des Tarifs</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Prix au mètre cube (€/m³)</label>
+                            <input type="number" step="0.01" class="form-control form-control-lg" @bind="_pricePerM3" />
+                            <div class="form-text">Ce tarif est utilisé pour le calcul automatique du prix des véhicules et colis.</div>
+                        </div>
+                    </div>
+                </div> 
+            }
+
+            <!-- BOUTON SAVE FLOTTANT SI MODIFIÉ -->
+            <div class="fixed-bottom p-3 bg-white border-top shadow-lg d-flex justify-content-end gap-2" style="z-index: 1030; left: var(--sidebar-width, 250px);">
+                 <button class="btn btn-primary px-4 rounded-pill shadow-sm" @onclick="SaveSettings" disabled="@_isSaving">
                     @if (_isSaving)
                     {
                         <span class="spinner-border spinner-border-sm me-2"></span>
                     }
-                    <i class="bi bi-save me-2"></i> Enregistrer
+                    <i class="bi bi-save me-2"></i> Enregistrer les modifications
                 </button>
-            }
-            @if (_isSaved)
-            {
-                <div class="alert alert-success mt-3 mb-0">Paramètres enregistrés avec succès.</div>
-            }
+            </div>
+            <div style="height: 100px;"></div> <!-- Spacer -->
         </div>
-    </div>
+    }
 </div>
 
 @code {
     private bool _isLoading = true;
     private bool _isSaving = false;
     private bool _isSaved = false;
+    private string activeTab = "company";
+
+    // Models
+    private CompanyProfileDto _companyProfile = new();
+    private BillingSettingsDto _billingSettings = new();
+    private List<BankDetailsDto> _bankDetailsList = new();
     private decimal _pricePerM3 = 150;
 
     protected override async Task OnInitializedAsync()
     {
-        var priceStr = await SettingsService.GetSettingAsync("PricePerCubicMeter", "150");
-        if (decimal.TryParse(priceStr, out var p)) _pricePerM3 = p;
+        // Load All Settings in Parallel
+        var taskCompany = SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
+        var taskBilling = SettingsService.GetSettingAsync<BillingSettingsDto>("BillingSettings", new());
+        var taskBanks = SettingsService.GetSettingAsync<List<BankDetailsDto>>("BankDetails", new());
+        var taskPrice = SettingsService.GetSettingAsync("PricePerCubicMeter", "150");
+
+        await Task.WhenAll(taskCompany, taskBilling, taskBanks, taskPrice);
+
+        _companyProfile = await taskCompany;
+        _billingSettings = await taskBilling;
+        _bankDetailsList = await taskBanks;
+        if (!_bankDetailsList.Any()) 
+        {
+            // Add default bank logic if empty
+             _bankDetailsList.Add(new BankDetailsDto());
+        }
+
+        if (decimal.TryParse(await taskPrice, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var p)) 
+            _pricePerM3 = p;
+
         _isLoading = false;
+    }
+
+    private void AddBankAccount()
+    {
+        _bankDetailsList.Add(new BankDetailsDto { IsDefault = !_bankDetailsList.Any() });
+    }
+
+    private void RemoveBank(BankDetailsDto bank)
+    {
+        _bankDetailsList.Remove(bank);
+        if(!_bankDetailsList.Any(b => b.IsDefault) && _bankDetailsList.Any())
+        {
+            _bankDetailsList.First().IsDefault = true;
+        }
+    }
+
+    private void SetDefaultBank(BankDetailsDto bank)
+    {
+        foreach(var b in _bankDetailsList) b.IsDefault = false;
+        bank.IsDefault = true;
     }
 
     private async Task SaveSettings()
     {
         _isSaving = true;
         _isSaved = false;
-        await SettingsService.UpdateSettingAsync("PricePerCubicMeter", _pricePerM3.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        // Simulate delay for feedback
-        await Task.Delay(500);
+
+        // Save All
+        var task1 = SettingsService.SaveSettingAsync("CompanyProfile", _companyProfile);
+        var task2 = SettingsService.SaveSettingAsync("BillingSettings", _billingSettings);
+        var task3 = SettingsService.SaveSettingAsync("BankDetails", _bankDetailsList);
+        var task4 = SettingsService.UpdateSettingAsync("PricePerCubicMeter", _pricePerM3.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+        await Task.WhenAll(task1, task2, task3, task4);
+
+        await Task.Delay(500); // Visual feedback
         _isSaving = false;
         _isSaved = true;
+        
+        // Auto hide success msg
+        _ = Task.Delay(3000).ContinueWith(_ => InvokeAsync(() => { _isSaved = false; StateHasChanged(); }));
+    }
+
+    [Inject] private HttpClient Http { get; set; }
+
+    private async Task UploadLogo(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            if (file.Size > 2 * 1024 * 1024)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Le fichier est trop volumineux (Max 2MB).");
+                return;
+            }
+
+            try 
+            {
+                using var content = new MultipartFormDataContent();
+                using var stream = file.OpenReadStream(2 * 1024 * 1024);
+                using var streamContent = new StreamContent(stream);
+                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                content.Add(streamContent, "file", file.Name);
+
+                var response = await Http.PostAsync("api/settings/upload-logo", content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var newUrl = await response.Content.ReadAsStringAsync();
+                    _companyProfile.LogoUrl = newUrl.Trim('"'); // Remove quotes if JSON string
+                    StateHasChanged();
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de l'upload.");
+                }
+            }
+            catch (Exception ex)
+            {
+                 Console.WriteLine(ex);
+                 await JSRuntime.InvokeVoidAsync("alert", "Erreur technique upload.");
+            }
+        }
     }
 }
+

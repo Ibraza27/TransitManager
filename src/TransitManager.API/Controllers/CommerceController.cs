@@ -81,9 +81,9 @@ namespace TransitManager.API.Controllers
 
         [HttpPost("quotes/{id}/email")]
         [Authorize(Roles = "Administrateur")]
-        public async Task<IActionResult> SendQuoteEmail(Guid id)
+        public async Task<IActionResult> SendQuoteEmail(Guid id, [FromBody] SendQuoteEmailDto request)
         {
-            await _commerceService.SendQuoteByEmailAsync(id);
+            await _commerceService.SendQuoteByEmailAsync(id, request.Subject, request.Body, request.TempAttachmentIds);
             return Ok();
         }
 

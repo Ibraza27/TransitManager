@@ -1541,14 +1541,15 @@ namespace TransitManager.Web.Services
              await _httpClient.DeleteAsync($"api/commerce/quotes/{id}");
         }
 
-        public async Task SendQuoteByEmailAsync(Guid id)
+        public async Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, bool copyToSender = false, List<Guid>? attachmentIds = null)
         {
-             var response = await _httpClient.PostAsync($"api/commerce/quotes/{id}/email", null);
-             if (!response.IsSuccessStatusCode)
-             {
-                 var content = await response.Content.ReadAsStringAsync();
-                 throw new Exception($"Erreur envoi email: {content}");
-             }
+            var request = new SendQuoteEmailDto { Subject = subject, Body = body, CopyToSender = copyToSender, TempAttachmentIds = attachmentIds };
+            var response = await _httpClient.PostAsJsonAsync($"api/commerce/quotes/{id}/email", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error sending email: {response.StatusCode} - {error}");
+            }
         }
 
         // Public
@@ -1573,5 +1574,31 @@ namespace TransitManager.Web.Services
              await _httpClient.PostAsJsonAsync($"api/commerce/public/quote/{token}/request-changes", comment);
         }
 
+        public async Task<(Guid Id, string Name)?> UploadTempDocumentAsync(IBrowserFile file)
+        {
+            try
+            {
+                using var content = new MultipartFormDataContent();
+                var fileContent = new StreamContent(file.OpenReadStream(524288000)); // 500MB max
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                content.Add(fileContent, "file", file.Name);
+
+                var response = await _httpClient.PostAsync("api/documents/upload-temp", content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                    if (result.TryGetProperty("id", out var idProp) && result.TryGetProperty("name", out var nameProp))
+                    {
+                        return (idProp.GetGuid(), nameProp.GetString() ?? file.Name);
+                    }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Error uploading temp file: {ex.Message}");
+                return null;
+            }
+        }
     }
 }

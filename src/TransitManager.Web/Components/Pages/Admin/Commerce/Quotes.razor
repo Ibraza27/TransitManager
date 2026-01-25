@@ -3,9 +3,11 @@
 @using TransitManager.Core.DTOs.Commerce
 @using TransitManager.Core.Enums
 @using TransitManager.Web.Services
+@using TransitManager.Core.DTOs.Settings
 @inject IApiService ApiService
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
+@inject TransitManager.Core.Interfaces.ISettingsService SettingsService
 @attribute [Authorize(Roles = "Administrateur")]
 
 <div class="d-flex flex-column" style="height: calc(100vh - 3.5rem);">
@@ -99,7 +101,7 @@
                  <!-- Pagination simplified -->
                 <div class="p-2 border-top text-center d-flex justify-content-between align-items-center">
                     <button class="btn btn-sm btn-outline-secondary" disabled="@(CurrentPage == 1)" @onclick="PreviousPage"><i class="bi bi-chevron-left"></i></button>
-                    <small>Page @CurrentPage / @TotalPages (@TotalCount)</small>
+                    <small>Page @CurrentPage sur @(Math.Max(1, TotalPages))</small>
                     <button class="btn btn-sm btn-outline-secondary" disabled="@(CurrentPage == TotalPages)" @onclick="NextPage"><i class="bi bi-chevron-right"></i></button>
                 </div>
             }
@@ -158,7 +160,7 @@
                         <a href="/admin/commerce/quotes/edit/@PreviewQuote.Id" class="btn btn-secondary btn-sm" target="_blank">
                             <i class="bi bi-pencil me-2"></i>Modifier
                         </a>
-                         <button class="btn btn-primary btn-sm" @onclick="() => SendEmail(PreviewQuote)">
+                         <button class="btn btn-primary btn-sm" @onclick="() => OpenEmailModal(PreviewQuote)">
                             <i class="bi bi-send me-2"></i>Envoyer
                         </button>
                         <button class="btn btn-outline-dark btn-sm" @onclick="() => DownloadPdf(PreviewQuote)">
@@ -187,6 +189,14 @@
     .timeline { list-style: none; padding-left: 0; }
     .timeline li { position: relative; padding-left: 20px; margin-bottom: 10px; }
     .timeline li:before { content: '•'; position: absolute; left: 0; font-weight: bold; }
+    
+    /* Fix hover functionality for title rows */
+    .table-hover tbody tr.title-row:hover > td,
+    .table-hover tbody tr.title-row:hover {
+        background-color: #d3d4d5 !important; 
+        color: #000 !important;
+        --bs-table-accent-bg: #d3d4d5 !important;
+    }
 </style>
 
 @code {
@@ -241,7 +251,7 @@
                             
                             @if(quote.Status != QuoteStatus.Draft)
                             {
-                                <li><a class="dropdown-item" href="#" @onclick="() => SendEmail(quote)" @onclick:preventDefault><i class="bi bi-envelope me-2"></i>Envoyer par Email</a></li>
+                                <li><a class="dropdown-item" href="#" @onclick="() => OpenEmailModal(quote)" @onclick:preventDefault><i class="bi bi-envelope me-2"></i>Envoyer par Email</a></li>
                             }
                             
                             <li><hr class="dropdown-divider"></li>
@@ -253,7 +263,7 @@
                         @if(quote.Status == QuoteStatus.Draft)
                         {
                              <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenAdminPreview(quote)" @onclick:stopPropagation><i class="bi bi-eye me-1"></i>Voir</button>
-                             <button class="btn btn-primary btn-sm" @onclick="() => SendEmail(quote)" @onclick:stopPropagation><i class="bi bi-send me-1"></i>Envoyer</button>
+                             <button class="btn btn-primary btn-sm" @onclick="() => OpenEmailModal(quote)" @onclick:stopPropagation><i class="bi bi-send me-1"></i>Envoyer</button>
                         }
                         else 
                         {
@@ -275,7 +285,16 @@
                     </div>
                 </div>
 
-                <!-- Payment Terms (Moved) -->
+                <!-- Message (Moved Up) -->
+                 @if (!string.IsNullOrEmpty(quote.Message))
+                {
+                    <div class="alert alert-light border mb-3">
+                        <h6 class="fw-bold text-muted text-uppercase small">Message</h6>
+                        <p class="text-pre-wrap small mb-0">@quote.Message</p>
+                    </div>
+                }
+
+                <!-- Payment Terms (Moved Down) -->
                 @if (!string.IsNullOrEmpty(quote.PaymentTerms))
                 {
                     <div class="mb-3">
@@ -304,8 +323,8 @@
                         {
                             @if(line.Type == QuoteLineType.Title)
                             {
-                                <tr class="table-secondary">
-                                    <td colspan="7" class="fw-bold py-2">@line.Description</td>
+                                <tr class="title-row" style="background-color: #e2e3e5;">
+                                    <td colspan="7" class="fw-bold py-2" style="color: black !important;">@line.Description</td>
                                 </tr>
                             }
                             else if(line.Type == QuoteLineType.Text)
@@ -339,13 +358,7 @@
                     </table>
                 </div>
                 
-                 @if (!string.IsNullOrEmpty(quote.Message))
-                {
-                    <div class="alert alert-light border mb-3">
-                        <h6 class="fw-bold text-muted text-uppercase small">Message</h6>
-                        <p class="text-pre-wrap small mb-0">@quote.Message</p>
-                    </div>
-                }
+
 
 
 
@@ -438,7 +451,16 @@
                 </div>
             </div>
 
-            <!-- Payment Terms (Moved) -->
+            <!-- Message (Moved Up) -->
+            @if (!string.IsNullOrEmpty(quote.Message))
+            {
+                <div class="mb-4">
+                    <h6 class="fw-bold text-secondary text-uppercase small mb-2">Message</h6>
+                    <p class="text-pre-wrap small text-muted">@quote.Message</p>
+                </div>
+            }
+
+            <!-- Payment Terms (Moved Down) -->
             @if (!string.IsNullOrEmpty(quote.PaymentTerms))
             {
                     <div class="mb-4">
@@ -467,8 +489,8 @@
                         {
                             @if(line.Type == QuoteLineType.Title)
                             {
-                                <tr class="table-secondary">
-                                    <td colspan="6" class="fw-bold text-uppercase py-2 ps-4">@line.Description</td>
+                                <tr class="table-secondary title-row">
+                                    <td colspan="6" class="fw-bold text-uppercase py-2 ps-4 text-dark">@line.Description</td>
                                 </tr>
                             }
                             else if(line.Type == QuoteLineType.Text)
@@ -504,13 +526,7 @@
             <!-- Footers & Totals -->
             <div class="row">
                 <div class="col-md-7">
-                        @if (!string.IsNullOrEmpty(quote.Message))
-                    {
-                        <div class="mb-4">
-                            <h6 class="fw-bold text-secondary text-uppercase small mb-2">Message</h6>
-                            <p class="text-pre-wrap small text-muted">@quote.Message</p>
-                        </div>
-                    }
+
 
                 </div>
                 <div class="col-md-5">
@@ -549,6 +565,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _companyProfile = await SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
         await LoadList();
     }
 
@@ -640,25 +657,44 @@
         ShowMobileModal = false;
     }
 
-    private async Task SendEmail(QuoteDto quote)
+    // Email Modal Variables
+    private TransitManager.Web.Components.Shared.SendEmailModal _emailModal;
+    private QuoteDto _emailTargetQuote;
+    private CompanyProfileDto _companyProfile = new();
+
+    private async Task OpenEmailModal(QuoteDto quote)
     {
-         IsLoadingPdf = true;
-         StateHasChanged();
+        if (string.IsNullOrEmpty(quote.ClientEmail))
+        {
+            await JS.InvokeVoidAsync("alert", "Le client n'a pas d'adresse email définie.");
+            return;
+        }
+        
+        _emailTargetQuote = quote;
+        var subject = $"Devis {quote.Reference} - {_companyProfile.CompanyName} - {quote.TotalTTC:N2} EUR";
+        _emailModal.Open(subject, "", quote.ClientEmail);
+        await JS.InvokeVoidAsync("showModal", "sendEmailModal");
+    }
+
+    private async Task SendQuoteEmailConfirmed(SendQuoteEmailDto dto)
+    {
+        if (_emailTargetQuote == null) return;
+        IsLoadingPdf = true;
+        StateHasChanged();
         try
         {
-            await ApiService.SendQuoteByEmailAsync(quote.Id);
-            await ApiService.UpdateQuoteStatusAsync(quote.Id, QuoteStatus.Sent);
+            await ApiService.SendQuoteByEmailAsync(_emailTargetQuote.Id, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds);
+            await ApiService.UpdateQuoteStatusAsync(_emailTargetQuote.Id, QuoteStatus.Sent);
             
-            // Dynamic Update
-            quote.Status = QuoteStatus.Sent;
-            quote.DateSent = DateTime.UtcNow; // Local update for history
+            _emailTargetQuote.Status = QuoteStatus.Sent;
+            _emailTargetQuote.DateSent = DateTime.UtcNow;
             
-            var index = QuoteList.FindIndex(q => q.Id == quote.Id);
-            if (index >= 0) QuoteList[index] = quote;
+            var index = QuoteList.FindIndex(q => q.Id == _emailTargetQuote.Id);
+            if (index >= 0) QuoteList[index] = _emailTargetQuote;
             
             IsLoadingPdf = false;
             StateHasChanged();
-
+            await JS.InvokeVoidAsync("hideModal", "sendEmailModal");
             await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
         }
         catch (Exception ex)
@@ -666,11 +702,6 @@
             IsLoadingPdf = false;
             StateHasChanged();
             await JS.InvokeVoidAsync("alert", $"Erreur lors de l'envoi: {ex.Message}");
-        }
-        finally
-        {
-            IsLoadingPdf = false;
-            StateHasChanged();
         }
     }
 
@@ -838,4 +869,11 @@
             await JS.InvokeVoidAsync("alert", "Erreur mise à jour statut: " + ex.Message);
         }
     }
+
+    // Merged into top OnInitializedAsync
 }
+
+<TransitManager.Web.Components.Shared.SendEmailModal @ref="_emailModal" 
+    RecipientEmail="@(_emailTargetQuote?.ClientEmail ?? "")" 
+    QuoteReference="@(_emailTargetQuote?.Reference ?? "")" 
+    OnSend="SendQuoteEmailConfirmed" />

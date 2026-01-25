@@ -131,6 +131,28 @@ namespace TransitManager.API.Controllers
             }
         }
 
+        // POST: api/documents/upload-temp
+        [HttpPost("upload-temp")]
+        [RequestSizeLimit(524288000)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 524288000)]
+        public async Task<IActionResult> UploadTemp([FromForm] IFormFile file)
+        {
+             if (file == null || file.Length == 0)
+                return BadRequest("Aucun fichier fourni.");
+
+             try
+             {
+                 using var stream = file.OpenReadStream();
+                 var tempId = await _documentService.UploadTempDocumentAsync(stream, file.FileName);
+                 return Ok(new { id = tempId, name = file.FileName });
+             }
+             catch (Exception ex)
+             {
+                 _logger.LogError(ex, "Erreur lors de l'upload temporaire.");
+                 return StatusCode(500, $"Erreur interne : {ex.Message}");
+             }
+        }
+
         // DELETE: api/documents/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)

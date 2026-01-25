@@ -43,5 +43,9 @@ namespace TransitManager.Core.Interfaces
         
         // Documents Financiers
         Task<IEnumerable<Document>> GetFinancialDocumentsAsync(int? year, int? month, TypeDocument? type, Guid? clientId = null);
+        
+        // Fichiers Temporaires
+        Task<Guid> UploadTempDocumentAsync(Stream fileStream, string fileName);
+        Task<(Stream FileStream, string FileName)?> GetTempDocumentAsync(Guid id);
     }
 }

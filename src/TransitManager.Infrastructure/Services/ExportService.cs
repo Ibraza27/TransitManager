@@ -24,6 +24,7 @@ namespace TransitManager.Infrastructure.Services
     public class ExportService : IExportService
     {
         private readonly string _storageRootPath;
+        private readonly ISettingsService _settingsService;
 
         static ExportService()
         {
@@ -31,11 +32,26 @@ namespace TransitManager.Infrastructure.Services
             QuestPDF.Settings.License = LicenseType.Community;
         }
 
-        public ExportService(IConfiguration configuration)
+        public ExportService(IConfiguration configuration, ISettingsService settingsService)
         {
+            _settingsService = settingsService;
             // On récupère le chemin de stockage défini dans appsettings.json
-            // ou on utilise un chemin par défaut relatif Ã  l'exécution.
+            // ou on utilise un chemin par défaut relatif à l'exécution.
             _storageRootPath = configuration["FileStorage:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Storage");
+        }
+
+        // ... Excel Exports omitted for brevity (unchanged) ...
+        
+        // Helper to get Company Profile
+        private async Task<TransitManager.Core.DTOs.Settings.CompanyProfileDto> GetCompanyProfileAsync()
+        {
+             return await _settingsService.GetSettingAsync<TransitManager.Core.DTOs.Settings.CompanyProfileDto>("CompanyProfile", new());
+        }
+        
+        // Helper to get Bank Details
+        private async Task<List<TransitManager.Core.DTOs.Settings.BankDetailsDto>> GetBankDetailsAsync()
+        {
+             return await _settingsService.GetSettingAsync<List<TransitManager.Core.DTOs.Settings.BankDetailsDto>>("BankDetails", new());
         }
 
         public async Task<byte[]> ExportClientsToExcelAsync(IEnumerable<Client> clients)
@@ -369,21 +385,28 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<byte[]> GenerateQuotePdfAsync(QuoteDto quote)
         {
-             // Tenter de récupérer le logo
-             string logoPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images", "logo.jpg");
+             var company = await GetCompanyProfileAsync();
+             var banks = await GetBankDetailsAsync();
+             var defaultBank = banks.FirstOrDefault(b => b.IsDefault) ?? banks.FirstOrDefault();
+             var billingSettings = await _settingsService.GetSettingAsync("BillingSettings", new TransitManager.Core.DTOs.Settings.BillingSettingsDto());
+
+             // Logo Resolution
+             string logoPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", company.LogoUrl.TrimStart('/'));
+             // Helper to find logo content root if needed
              if (!File.Exists(logoPath))
              {
-                 var devPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.jpg"); 
-                 if (File.Exists(devPath)) logoPath = devPath;
-                 else 
+                 var tryPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", company.LogoUrl.TrimStart('/'));
+                 if(File.Exists(tryPath)) logoPath = tryPath;
+                 else
                  {
-                     devPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../TransitManager.Web/wwwroot/images/logo.jpg"));
-                     if (File.Exists(devPath)) logoPath = devPath;
+                      // Fallback logic
+                      var devPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../TransitManager.Web/wwwroot/", company.LogoUrl.TrimStart('/')));
+                      if (File.Exists(devPath)) logoPath = devPath;
                  }
              }
 
-            // Currency symbol - use proper Unicode
-            const string EUR = " \u20AC"; // Proper Euro symbol
+            // Currency symbol
+            const string EUR = " \u20AC"; 
 
             return await Task.Run(() =>
             {
@@ -415,16 +438,17 @@ namespace TransitManager.Infrastructure.Services
                                     }
                                     else
                                     {
-                                         column.Item().Text("HIPPOCAMPE").FontSize(22).Bold().FontColor(Colors.Blue.Darken2);
+                                         column.Item().Text(company.CompanyName.ToUpper()).FontSize(20).Bold().FontColor(Colors.Blue.Darken2);
                                     }
                                     
-                                    column.Item().PaddingTop(8).Text("HIPPOCAMPE IMPORT EXPORT - SAS").FontSize(9).Bold();
-                                    column.Item().Text("7 Rue Pascal, 33370 Tresses").FontSize(9);
-                                    column.Item().Text("Tél: 09 81 72 45 40").FontSize(9);
-                                    column.Item().Text("Email: contact@hippocampeimportexport.com").FontSize(9);
+                                    column.Item().PaddingTop(8).Text(company.CompanyName).FontSize(9).Bold();
+                                    column.Item().Text($"{company.Address}, {company.ZipCode} {company.City}").FontSize(9);
+                                    column.Item().Text($"Pays: {company.Country}").FontSize(9);
+                                    if(!string.IsNullOrEmpty(company.Phone)) column.Item().Text($"Tél: {company.Phone}").FontSize(9);
+                                    column.Item().Text($"Email: {company.Email}").FontSize(9);
                                 });
 
-                                // Quote Info Right - Styled Box
+                                // Quote Info Right
                                 row.ConstantItem(180).AlignRight().Column(column =>
                                 {
                                     column.Item().AlignRight().Text("DEVIS").FontSize(28).SemiBold().FontColor(Colors.Grey.Darken3);
@@ -441,7 +465,7 @@ namespace TransitManager.Infrastructure.Services
                             {
                                 column.Spacing(25);
 
-                                // Client Section - Right aligned box with nice styling
+                                // Client Section
                                 column.Item().Row(r => 
                                 {
                                     r.RelativeItem(); // Spacer
@@ -458,28 +482,35 @@ namespace TransitManager.Infrastructure.Services
                                     });
                                 });
 
-                                // Lines Table - Professional Zervant-Style Compact
-                                if(!string.IsNullOrEmpty(quote.PaymentTerms))
+                                // Custom Free Text Message (Before Payment Terms)
+                                if(!string.IsNullOrEmpty(quote.Message))
                                 {
                                     column.Item().PaddingBottom(10).Column(c => {
+                                        c.Item().Text(quote.Message).FontSize(10);
+                                    });
+                                }
+
+                                // Payment Terms
+                                if(!string.IsNullOrEmpty(quote.PaymentTerms))
+                                {
+                                    column.Item().PaddingBottom(5).Column(c => {
                                         c.Item().Text("Modalités de paiement:").SemiBold().FontSize(10);
                                         c.Item().Text(quote.PaymentTerms).FontSize(10);
                                     });
-                                    column.Spacing(10); // Reset spacing slightly
                                 }
 
+                                // Lines Table
                                 column.Item().Table(table =>
                                 {
-                                    // Column widths based on Zervant reference - Description takes MOST space
                                     table.ColumnsDefinition(columns =>
                                     {
-                                        columns.RelativeColumn(10f);  // Description - LARGE
-                                        columns.ConstantColumn(62);   // Date - compact
-                                        columns.ConstantColumn(32);   // Qty - small
-                                        columns.ConstantColumn(30);   // Unit - very small
-                                        columns.ConstantColumn(55);   // Price - compact
-                                        columns.ConstantColumn(42);   // VAT - compact
-                                        columns.ConstantColumn(58);   // Total - compact
+                                        columns.RelativeColumn(10f);
+                                        columns.ConstantColumn(62);
+                                        columns.ConstantColumn(32);
+                                        columns.ConstantColumn(30);
+                                        columns.ConstantColumn(55);
+                                        columns.ConstantColumn(42);
+                                        columns.ConstantColumn(58);
                                     });
 
                                     table.Header(header =>
@@ -492,13 +523,9 @@ namespace TransitManager.Infrastructure.Services
                                         header.Cell().Element(HeaderStyle).AlignRight().Text("TVA");
                                         header.Cell().Element(HeaderStyle).AlignRight().Text("Montant");
                                         
-                                        static IContainer HeaderStyle(IContainer container)
-                                        {
-                                            // Dark header (Dark Grey/Blue -> #2C3E50)
-                                            return container.DefaultTextStyle(x => x.SemiBold().FontSize(8).FontColor(Colors.White))
-                                                            .Background("#2C3E50")
-                                                            .PaddingVertical(6).PaddingHorizontal(4);
-                                        }
+                                        static IContainer HeaderStyle(IContainer container) => 
+                                            container.DefaultTextStyle(x => x.SemiBold().FontSize(8).FontColor(Colors.White))
+                                                     .Background("#2C3E50").PaddingVertical(6).PaddingHorizontal(4);
                                     });
 
                                     foreach (var line in quote.Lines.OrderBy(l => l.Position))
@@ -515,21 +542,12 @@ namespace TransitManager.Infrastructure.Services
                                         }
                                         else if (line.Type == QuoteLineType.Subtotal)
                                         {
-                                            // Subtotal Row - Only shows Total column
-                                            IContainer SubtotalStyle(IContainer container) => 
-                                                container.BorderTop(1).BorderColor("#CBD5E1").PaddingVertical(6);
-                                            
-                                            table.Cell().Element(SubtotalStyle)
-                                                .Text(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description).Bold().FontSize(8);
-                                            table.Cell().Element(SubtotalStyle); // Date - empty
-                                            table.Cell().Element(SubtotalStyle); // Qty - empty
-                                            table.Cell().Element(SubtotalStyle); // Unit - empty
-                                            table.Cell().Element(SubtotalStyle); // Prix - empty
-                                            table.Cell().Element(SubtotalStyle); // TVA - empty
-                                            table.Cell().Element(SubtotalStyle).AlignRight()
-                                                .Text($"{line.TotalHT:N2}{EUR}").Bold().FontSize(8); // Total
+                                            IContainer SubtotalStyle(IContainer container) => container.BorderTop(1).BorderColor("#CBD5E1").PaddingVertical(6);
+                                            table.Cell().Element(SubtotalStyle).Text(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description).Bold().FontSize(8);
+                                            table.Cell().Element(SubtotalStyle); table.Cell().Element(SubtotalStyle); table.Cell().Element(SubtotalStyle); table.Cell().Element(SubtotalStyle); table.Cell().Element(SubtotalStyle); 
+                                            table.Cell().Element(SubtotalStyle).AlignRight().Text($"{line.TotalHT:N2}{EUR}").Bold().FontSize(8);
                                         }
-                                        else // Product
+                                        else 
                                         {
                                             table.Cell().Element(CellStyle).Text(line.Description).FontSize(8);
                                             table.Cell().Element(CellStyle).AlignCenter().Text(line.Date?.ToString("dd.MM.yyyy") ?? "").FontSize(8);
@@ -540,124 +558,76 @@ namespace TransitManager.Infrastructure.Services
                                             table.Cell().Element(CellStyle).AlignRight().Text($"{line.TotalHT:N2}{EUR}").FontSize(8);
                                         }
 
-                                        static IContainer CellStyle(IContainer container)
-                                        {
-                                            // Minimal vertical padding for compact look
-                                            return container.BorderBottom(1).BorderColor("#E2E8F0")
-                                                           .PaddingVertical(5).PaddingHorizontal(4);
-                                        }
+                                        static IContainer CellStyle(IContainer container) => container.BorderBottom(1).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(4);
                                     }
                                 });
 
-                                // Totals Section - Professional Right-aligned box
+                                // Totals
                                 column.Item().AlignRight().Width(280).PaddingTop(10).Column(col =>
                                 {
-                                    // Regular totals
-                                    col.Item().Row(row =>
-                                    {
-                                        row.RelativeItem().Text("Total HT").FontSize(10);
-                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalHT:N2}{EUR}").FontSize(10);
-                                    });
-
-                                    // VAT breakdown by rate if available
-                                    var vatRates = quote.Lines
-                                        .Where(l => l.Type == QuoteLineType.Product)
-                                        .GroupBy(l => l.VATRate)
-                                        .Where(g => g.Key > 0);
-                                    
-                                    foreach (var vatGroup in vatRates)
-                                    {
-                                        var vatAmount = vatGroup.Sum(l => l.TotalHT * l.VATRate / 100);
-                                        col.Item().PaddingTop(4).Row(row =>
-                                        {
-                                            row.RelativeItem().Text($"TVA {vatGroup.Key:0.00} %").FontSize(10);
-                                            row.ConstantItem(100).AlignRight().Text($"{vatAmount:N2}{EUR}").FontSize(10);
-                                        });
-                                    }
-
-                                    if (!vatRates.Any())
-                                    {
-                                        col.Item().PaddingTop(4).Row(row =>
-                                        {
-                                            row.RelativeItem().Text("TVA").FontSize(10);
-                                            row.ConstantItem(100).AlignRight().Text($"{quote.TotalTVA:N2}{EUR}").FontSize(10);
-                                        });
-                                    }
-
-                                    // TVA totale line
-                                    col.Item().PaddingTop(4).BorderBottom(1).BorderColor("#CBD5E1").PaddingBottom(8).Row(row =>
-                                    {
-                                        row.RelativeItem().Text("TVA totale").FontSize(10);
-                                        row.ConstantItem(100).AlignRight().Text($"{quote.TotalTVA:N2}{EUR}").FontSize(10);
-                                    });
-
-                                    // Total TTC - Emphasized
-                                    col.Item().PaddingTop(12).Row(row =>
-                                    {
-                                        row.RelativeItem().Text("Total TTC").SemiBold().FontSize(13);
-                                        row.ConstantItem(120).AlignRight().Text($"{quote.TotalTTC:N2}{EUR}").SemiBold().FontSize(13);
-                                    });
+                                    col.Item().Row(row => { row.RelativeItem().Text("Total HT").FontSize(10); row.ConstantItem(100).AlignRight().Text($"{quote.TotalHT:N2}{EUR}").FontSize(10); });
+                                    col.Item().PaddingTop(4).BorderBottom(1).BorderColor("#CBD5E1").PaddingBottom(8).Row(row => { row.RelativeItem().Text("TVA").FontSize(10); row.ConstantItem(100).AlignRight().Text($"{quote.TotalTVA:N2}{EUR}").FontSize(10); });
+                                    col.Item().PaddingTop(12).Row(row => { row.RelativeItem().Text("Total TTC").SemiBold().FontSize(13); row.ConstantItem(120).AlignRight().Text($"{quote.TotalTTC:N2}{EUR}").SemiBold().FontSize(13); });
                                 });
                                 
                                 // Footer Notes
-                                if(!string.IsNullOrEmpty(quote.Message))
-                                {
-                                    column.Item().PaddingTop(25).Text("Message:").SemiBold().FontSize(10);
-                                    column.Item().PaddingTop(4).Text(quote.Message).FontSize(10);
-                                }
-                                
 
                                 
+                                // Dynamic Footer Note (from quote or settings)
                                 if(!string.IsNullOrEmpty(quote.FooterNote))
                                 {
                                     column.Item().PaddingTop(20).LineHorizontal(1).LineColor("#E2E8F0");
-                                    column.Item().PaddingTop(8).Text(t => 
-                                    {
-                                        t.Span(quote.FooterNote).FontSize(9).FontColor("#64748B");
-                                        t.AlignCenter(); 
-                                    });
+                                    column.Item().PaddingTop(8).Text(t => { t.Span(quote.FooterNote).FontSize(9).FontColor("#64748B"); t.AlignCenter(); });
                                 }
 
-                                // Signature Block
+                                // BANK DETAILS & SIGNATURE
                                 column.Item().PaddingTop(30).Row(row => 
                                 {
-                                    row.RelativeItem(); // Spacer to push right? No, user wants it probably left or right? Usually right. Or full width?
-                                    // User provided screenshot shows it left-aligned or taking up space.
-                                    // "après le tableau je veux cette partie" -> likely full width or left aligned.
-                                    // Let's make it a block at the bottom.
-                                    
-                                    if(quote.Status == QuoteStatus.Accepted)
-                                    {
-                                        row.RelativeItem().Column(c => 
+                                     // Spacer Left (Signature only on right)
+                                     row.RelativeItem(); 
+                                     row.ConstantItem(20); 
+
+                                     // Signature Right
+                                     row.RelativeItem().Column(c => 
+                                     {
+                                        if(quote.Status == QuoteStatus.Accepted)
                                         {
                                             c.Item().Text($"Signé électroniquement le {quote.DateValidity:dd/MM/yyyy}").FontSize(10).SemiBold().FontColor(Colors.Green.Medium); 
-                                            // Using DateValidity as proxy for sign date if not available, usually we store SignedDate. 
-                                            // If SignedDate is not in DTO, I might use ModifiedDate or just "Signé électroniquement".
-                                            // I'll stick to "Signé électroniquement" safely if date is unsure, but usually Accepted date is tracked.
-                                            // Ideally, I should check if there's a SignedDate property. The user said "précéder de la date".
-                                            // I will use DateTime.Now if I can't find it, or just "Signé électroniquement".
-                                            // Let's assume for now just the text.
-                                        });
-                                    }
-                                    else if(quote.Status == QuoteStatus.Rejected)
-                                    {
-                                         row.RelativeItem().Column(c => 
-                                        {
-                                            c.Item().Text($"Refusé électroniquement le {DateTime.Now:dd/MM/yyyy}").FontSize(10).SemiBold().FontColor(Colors.Red.Medium); 
-                                        });
-                                    }
-                                    else
-                                    {
-                                        // Manual Signature Area
-                                        row.RelativeItem().Column(c => 
+                                        }
+                                        else 
                                         {
                                             c.Item().Text("Date et signature du client").FontSize(11).Bold();
                                             c.Item().Text("(Précédée de la mention 'Bon pour accord')").FontSize(9).Italic();
                                             c.Item().PaddingTop(50).LineHorizontal(1).LineColor(Colors.Black);
-                                        });
-                                        row.ConstantItem(50); // Spacer right
-                                    }
+                                        }
+                                     });
                                 });
+
+                                // Bank Details at the very bottom - Enhanced Styling
+                                if(defaultBank != null)
+                                {
+                                    column.Item().PaddingTop(30).Element(container => 
+                                    {
+                                        container.Background("#F0F9FF").Border(2).BorderColor("#0369A1").Padding(15).Column(c => {
+                                             c.Item().Text("COORDONNÉES BANCAIRES").Bold().FontSize(12).FontColor("#0369A1");
+                                             c.Item().PaddingTop(10).Row(r => {
+                                                 r.RelativeItem().Column(sub => {
+                                                     sub.Item().Text("Banque").FontSize(8).FontColor("#64748B");
+                                                     sub.Item().Text(defaultBank.BankName).FontSize(10).Bold();
+                                                     sub.Item().PaddingTop(8).Text("Titulaire du compte").FontSize(8).FontColor("#64748B");
+                                                     sub.Item().Text(defaultBank.AccountHolder).FontSize(10).Bold();
+                                                 });
+                                                 r.ConstantItem(20);
+                                                 r.RelativeItem().Column(sub => {
+                                                     sub.Item().Text("IBAN").FontSize(8).FontColor("#64748B");
+                                                     sub.Item().Text(defaultBank.Iban).FontSize(11).Bold().FontFamily(Fonts.CourierNew);
+                                                     sub.Item().PaddingTop(8).Text("BIC / SWIFT").FontSize(8).FontColor("#64748B");
+                                                     sub.Item().Text(defaultBank.Bic).FontSize(10).Bold().FontFamily(Fonts.CourierNew);
+                                                 });
+                                             });
+                                        });
+                                    });
+                                }
                             });
                         }
 
@@ -665,9 +635,9 @@ namespace TransitManager.Infrastructure.Services
                         {
                             container.PaddingTop(15).AlignCenter().Column(c =>
                             {
-                                c.Item().AlignCenter().Text("HIPPOCAMPE IMPORT EXPORT - SAS").FontSize(10).Black().Bold(); 
-                                c.Item().AlignCenter().Text("7 Rue Pascal 33370 Tresses").FontSize(8).FontColor("#64748B");
-                                c.Item().AlignCenter().Text("Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX").FontSize(8).FontColor("#64748B");
+                                c.Item().AlignCenter().Text($"{company.CompanyName} - {company.LegalStatus}").FontSize(10).Black().Bold(); 
+                                c.Item().AlignCenter().Text($"{company.Address} {company.ZipCode} {company.City}").FontSize(8).FontColor("#64748B");
+                                c.Item().AlignCenter().Text($"SIRET: {company.Siret} - TVA: {company.TvaNumber} - RCS: {company.Rcs}").FontSize(8).FontColor("#64748B");
                                  c.Item().AlignCenter().PaddingTop(6).Text(x =>
                                 {
                                     x.Span("Page ").FontSize(9);

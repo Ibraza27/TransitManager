@@ -13,6 +13,9 @@
 @inject IApiService ApiService
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
+@using TransitManager.Core.Interfaces
+@inject ISettingsService SettingsService
+@using TransitManager.Core.DTOs.Settings
 @attribute [Authorize(Roles = "Administrateur")]
 
 <div class="d-flex h-100 flex-column" style="height: calc(100vh - 60px);">
@@ -34,7 +37,7 @@
                 <button class="btn btn-secondary btn-sm" @onclick="TogglePreview">
                     <i class="bi bi-arrow-left me-2"></i>Éditer
                 </button>
-                 <button class="btn btn-primary btn-sm" @onclick="SendEmail">
+                 <button class="btn btn-primary btn-sm" @onclick="OpenEmailModal">
                     <i class="bi bi-envelope-fill me-2"></i>Envoyer
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" @onclick="DownloadPdf" disabled="@IsLoadingPdf">
@@ -73,15 +76,22 @@
                     <!-- Reuse the same Preview Content structure but adjusted padding -->
                      <!-- Header -->
                     <div class="row mb-5 border-bottom pb-4">
-                        <div class="col-12 col-md-7 mb-3 mb-md-0">
-                                <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
-                                <!-- ... -->
+                         <div class="col-12 col-md-7 mb-3 mb-md-0">
+                                @if(!string.IsNullOrEmpty(_companyProfile.LogoUrl))
+                                {
+                                    <img src="@_companyProfile.LogoUrl" alt="@_companyProfile.CompanyName" style="max-height: 80px;" class="mb-3" />
+                                }
+                                else
+                                {
+                                     <h3 class="fw-bold text-primary">@_companyProfile.CompanyName</h3>
+                                }
                                 <div class="small text-muted">
-                                    <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
-                                    7 Rue Pascal, 33370 TRESSES<br/>
-                                    Email: contact@hippocampeimportexport.com
+                                    <strong>@_companyProfile.CompanyName - @_companyProfile.LegalStatus</strong><br/>
+                                    @_companyProfile.Address, @_companyProfile.ZipCode @_companyProfile.City<br/>
+                                    Email: @_companyProfile.Email <br/>
+                                    Tél: @_companyProfile.Phone
                                 </div>
-                        </div>
+                         </div>
                         <div class="col-12 col-md-5 text-md-end">
                             <h2 class="fw-bold text-uppercase text-secondary mb-3">Devis</h2>
                             <h4 class="fw-bold fs-3">@(Model.Reference ?? "BROUILLON")</h4>
@@ -109,7 +119,16 @@
                         </div>
                     </div>
 
-                    <!-- Payment Terms (Moved) -->
+                     <!-- Message (Moved Up) -->
+                    @if(!string.IsNullOrEmpty(Model.Message))
+                    {
+                        <div class="mb-4">
+                             <!-- Removed "Message:" prefix as per previous fix request, just content -->
+                             <p class="text-pre-wrap small text-muted">@Model.Message</p>
+                        </div>
+                    }
+
+                    <!-- Payment Terms (Moved Down) -->
                     @if(!string.IsNullOrEmpty(Model.PaymentTerms))
                     {
                         <div class="mb-4">
@@ -187,9 +206,9 @@
                             
                          <!-- Address Block (Added) -->
                          <div class="mt-4 pt-3 text-center small text-muted border-top">
-                             <div class="fw-bold text-dark" style="font-size: 1em;">HIPPOCAMPE IMPORT EXPORT - SAS</div>
-                             <div>7 Rue Pascal 33370 Tresses</div>
-                             <div>Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX</div>
+                             <div class="fw-bold text-dark" style="font-size: 1em;">@_companyProfile.CompanyName - @_companyProfile.LegalStatus</div>
+                             <div>@_companyProfile.Address @_companyProfile.ZipCode @_companyProfile.City</div>
+                             <div>SIRET: @_companyProfile.Siret - TVA: @_companyProfile.TvaNumber - RCS: @_companyProfile.Rcs</div>
                          </div>
                     </div>
                 </div>
@@ -199,7 +218,7 @@
              <div class="fixed-bottom bg-white border-top p-3 shadow-lg d-print-none animation-slide-up action-bar-floating" style="z-index: 1040;">
                  <h6 class="fw-bold mb-3 d-none d-md-block">Actions</h6>
                  <div class="d-grid gap-2 d-md-block">
-                     <button class="btn btn-success mb-2 mb-md-0 me-md-2" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver (Simul)</button>
+                     <button class="btn btn-success mb-2 mb-md-0 me-md-2" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver</button>
                      <div class="d-flex gap-2 d-md-inline-flex">
                          <button class="btn btn-outline-dark flex-grow-1" @onclick="DownloadPdf" disabled="@IsLoadingPdf">
                             @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>PDF...</span> }
@@ -209,7 +228,7 @@
                             <i class="bi bi-printer"></i> Imprimer
                          </button>
                      </div>
-                     <button class="btn btn-outline-primary mt-2 mt-md-0 ms-md-2" @onclick="SendEmail"><i class="bi bi-envelope me-2"></i>Envoyer</button>
+                     <button class="btn btn-outline-primary mt-2 mt-md-0 ms-md-2" @onclick="OpenEmailModal"><i class="bi bi-envelope me-2"></i>Envoyer</button>
                  </div>
              </div>
              <div style="height: 180px;"></div>
@@ -234,10 +253,14 @@
                            <label class="form-label small fw-bold mb-1">Validité</label>
                            <input type="date" class="form-control form-control-sm" @bind="Model.DateValidity" />
                      </div>
-                     <div class="col-12">
-                        <label class="form-label small mb-1">Modalités de paiement</label>
-                         <textarea class="form-control form-control-sm" rows="1" @bind="Model.PaymentTerms"></textarea>
-                    </div>
+                      <div class="col-12">
+                         <label class="form-label small mb-1">Message</label>
+                          <textarea class="form-control form-control-sm" rows="2" @bind="Model.Message" placeholder="Message libre..."></textarea>
+                     </div>
+                      <div class="col-12">
+                         <label class="form-label small mb-1">Modalités de paiement</label>
+                          <textarea class="form-control form-control-sm" rows="1" @bind="Model.PaymentTerms"></textarea>
+                     </div>
                 </div>     
                      <!-- Lines -->
                      <div class="mx-2 mb-2 bg-white" style="min-height: 200px;">
@@ -585,6 +608,10 @@
     private QuoteStatus CurrentStatus = QuoteStatus.Draft;
     private string OriginalModelJson = ""; // Snapshot for Revert
 
+    private SendEmailModal _emailModal;
+    private CompanyProfileDto _companyProfile = new();
+    private BillingSettingsDto _billingSettings = new();
+
     // --- Computed Properties for UI ---
     
     private decimal RawTotalHT => Model.Lines.Sum(l => l.Quantity * l.UnitPrice);
@@ -627,6 +654,10 @@
         IsLoading = true;
         try 
         {
+            // Load Settings
+            _companyProfile = await SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
+            _billingSettings = await SettingsService.GetSettingAsync<BillingSettingsDto>("BillingSettings", new());
+
             if (Id.HasValue)
             {
                 var quote = await ApiService.GetQuoteByIdAsync(Id.Value);
@@ -675,8 +706,10 @@
                 // NEW QUOTE: Auto-save as Draft immediately to get an ID
                 Model = new UpsertQuoteDto
                 {
-                    DateValidity = DateTime.UtcNow.AddDays(30),
-                    DateCreated = DateTime.UtcNow
+                    DateValidity = DateTime.UtcNow.AddDays(_billingSettings.DefaultQuoteValidityDays > 0 ? _billingSettings.DefaultQuoteValidityDays : 30),
+                    DateCreated = DateTime.UtcNow,
+                    PaymentTerms = _billingSettings.DefaultPaymentTerms,
+                    FooterNote = !string.IsNullOrEmpty(_billingSettings.DefaultFooterNote) ? _billingSettings.DefaultFooterNote : "SOUS RESERVE DU VOLUME FINAL RECEPTIONNE A QUAI..."
                 };
                 AddLine();
                 // Model.ClientId is null by default
@@ -858,15 +891,15 @@
          return currentJson != OriginalModelJson;
     }
 
-    private void Cancel()
+    private async Task Cancel()
     {
-        if (IsDirty())
+        if (IsDirty() && !IsAutoDraft)
         {
             _showUnsavedModal = true;
         }
         else
         {
-            NavManager.NavigateTo("/admin/commerce/quotes");
+            await ExitAndCleanup();
         }
     }
 
@@ -879,9 +912,25 @@
         }
     }
 
-    private void ConfirmExitWithoutSave()
+    private async Task ConfirmExitWithoutSave()
     {
         _showUnsavedModal = false;
+        await ExitAndCleanup();
+    }
+
+    private async Task ExitAndCleanup()
+    {
+        if (IsAutoDraft && Model.Id.HasValue)
+        {
+            try 
+            {
+                await ApiService.DeleteQuoteAsync(Model.Id.Value);
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"Error deleting auto-draft: {ex.Message}");
+            }
+        }
         NavManager.NavigateTo("/admin/commerce/quotes");
     }
 
@@ -1064,7 +1113,52 @@
         QuoteStatus.Deleted => "Supprimé",
         _ => status.ToString()
     };
+
+
+
+    private async Task OpenEmailModal()
+    {
+         if (Model.Id == null) return;
+         
+         if (SelectedClient == null || string.IsNullOrEmpty(SelectedClient.Email))
+         {
+             await JS.InvokeVoidAsync("alert", "Le client n'a pas d'adresse email définie.");
+             return;
+         }
+
+         var subject = $"Devis {Model.Reference} - {_companyProfile.CompanyName}";
+         var body = "Bonjour,\n\nVeuillez trouver ci-joint votre devis.\n\nCordialement,";
+         
+         _emailModal.Open(subject, "", SelectedClient.Email); 
+         await JS.InvokeVoidAsync("showModal", "sendEmailModal");
+    }
+
+    private async Task SendQuoteEmailConfirmed(SendQuoteEmailDto dto)
+    {
+        if (Id == null) return;
+        
+        IsLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            await ApiService.SendQuoteByEmailAsync(Id.Value, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds);
+            
+            await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
+            
+            CurrentStatus = QuoteStatus.Sent; 
+            NavManager.NavigateTo("/admin/commerce/quotes");
+        }
+        catch (Exception ex)
+        {
+            IsLoading = false;
+            StateHasChanged();
+            Console.WriteLine(ex);
+            await JS.InvokeVoidAsync("alert", "Erreur lors de l'envoi de l'email : " + ex.Message);
+        }
+    }
 }
+<SendEmailModal @ref="_emailModal" RecipientEmail="@(SelectedClient?.Email ?? "")" QuoteReference="@(Model.Reference ?? "")" OnSend="SendQuoteEmailConfirmed" />
 
 <style>
     /* Responsive Sidebar Width */

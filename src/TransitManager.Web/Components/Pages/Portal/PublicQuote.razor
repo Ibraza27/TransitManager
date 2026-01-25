@@ -47,8 +47,8 @@
                 </div>
             </div>
 
-            <div class="mb-0 d-flex justify-content-center" style="min-height: 100vh; width: 100vw; margin: 0; padding: 0; background-color: #0a0f1a;" id="printableArea">
-                <div class="bg-white p-4 p-md-5 my-0 my-md-4 mx-4 mx-md-auto shadow-lg rounded-0 rounded-md-3" style="width: 100%; max-width: 1100px; min-height: 100vh; font-size: 0.85rem;">
+            <div class="mb-0 d-flex justify-content-center p-3 p-md-0" style="min-height: 100vh; width: 100vw; margin: 0; background-color: #0a0f1a;" id="printableArea">
+                <div class="bg-white p-4 p-md-5 my-0 my-md-4 mx-0 mx-md-auto shadow-lg rounded-3" style="width: 100%; max-width: 1100px; min-height: 800px; font-size: 0.85rem;">
                     
                     <!-- Header with Company Info & Logo -->
                     <div class="row mb-5 border-bottom pb-4">
@@ -87,7 +87,15 @@
                         </div>
                     </div>
 
-                    <!-- Payment Terms (Moved) -->
+                    <!-- Message (Moved Up) -->
+                    @if (!string.IsNullOrEmpty(Quote.Message))
+                    {
+                        <div class="mb-4">
+                            <p class="text-pre-wrap small text-muted">@Quote.Message</p>
+                        </div>
+                    }
+
+                    <!-- Payment Terms (Moved Down) -->
                     @if (!string.IsNullOrEmpty(Quote.PaymentTerms))
                     {
                          <div class="mb-4">
@@ -142,13 +150,7 @@
                      <!-- Footers & Totals -->
                     <div class="row">
                         <div class="col-md-7">
-                             @if (!string.IsNullOrEmpty(Quote.Message))
-                            {
-                                <div class="mb-4">
-                                    <h6 class="fw-bold text-secondary text-uppercase small mb-2">Message</h6>
-                                    <p class="text-pre-wrap small text-muted">@Quote.Message</p>
-                                </div>
-                            }
+
                             
 
 

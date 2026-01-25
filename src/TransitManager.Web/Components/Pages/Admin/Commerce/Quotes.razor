@@ -53,15 +53,28 @@
                                 <!-- Reference Click: Sets selection AND opens Modal explicitly -->
                                 <span class="fw-bold text-primary text-decoration-underline" @onclick="() => SelectQuote(quote, true)" @onclick:stopPropagation>@quote.Reference</span>
                                 <div @onclick:stopPropagation>
-                                    <select class="form-select form-select-sm py-0 ps-2 pe-4 @GetStatusClass(quote.Status)" 
-                                            style="height: 24px; font-size: 0.75rem; width: auto;"
-                                            value="@quote.Status"
-                                            @onchange="@(e => OnStatusChanged(quote, e))">
-                                        @foreach (var s in Enum.GetValues<QuoteStatus>())
-                                        {
-                                            <option value="@s">@GetStatusName(s)</option>
-                                        }
-                                    </select>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm badge rounded-pill border-0 dropdown-toggle @GetStatusClass(quote.Status)" 
+                                                type="button" 
+                                                data-bs-toggle="dropdown" 
+                                                aria-expanded="false"
+                                                @onclick:stopPropagation>
+                                            @GetStatusName(quote.Status)
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                                            @foreach (var s in Enum.GetValues<QuoteStatus>())
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item @(s == quote.Status ? "active" : "")" 
+                                                       href="#" 
+                                                       @onclick="() => UpdateQuoteStatus(quote, s)"
+                                                       @onclick:preventDefault>
+                                                        @GetStatusName(s)
+                                                    </a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                             <div class="small text-muted mb-2">
@@ -367,12 +380,12 @@
                 <!-- HISTORY TIMELINE (Moved to Bottom) -->
                 <h6 class="text-uppercase small fw-bold text-muted mb-3 mt-4">Historique</h6>
                 <ul class="timeline small ps-3">
-                    @foreach(var history in quote.History)
+                     @foreach(var history in quote.History)
                     {
                          <li>
                              <small class="text-muted d-block">@history.Date.ToLocalTime().ToString("g")</small>
                              <strong>@history.Action</strong>
-                             <div class="text-muted">@history.Details</div>
+                             <div class="text-muted text-pre-wrap">@history.Details</div>
                              <small class="text-secondary fst-italic">@history.User</small>
                          </li>
                     }
@@ -794,6 +807,7 @@
         QuoteStatus.Viewed => "Vu",
         QuoteStatus.Accepted => "Accepté",
         QuoteStatus.Rejected => "Refusé",
+        QuoteStatus.ChangeRequested => "Modification demandée",
         QuoteStatus.Converted => "Converti",
         QuoteStatus.Deleted => "Supprimé",
         _ => status.ToString()
@@ -805,23 +819,23 @@
         QuoteStatus.Sent => "bg-primary-subtle text-primary",
         QuoteStatus.Accepted => "bg-success-subtle text-success",
         QuoteStatus.Rejected => "bg-danger-subtle text-danger",
+        QuoteStatus.ChangeRequested => "bg-warning-subtle text-warning",
         _ => "bg-light text-dark"
     };
-    private async Task OnStatusChanged(QuoteDto quote, ChangeEventArgs e)
+    private async Task UpdateQuoteStatus(QuoteDto quote, QuoteStatus newStatus)
     {
-        if (Enum.TryParse<QuoteStatus>(e.Value?.ToString(), out var newStatus))
+        if (quote.Status == newStatus) return; // No change
+
+        var oldStatus = quote.Status;
+        quote.Status = newStatus; // Optimistic update
+        try 
         {
-            var oldStatus = quote.Status;
-            quote.Status = newStatus; // Optimistic update
-            try 
-            {
-                await ApiService.UpdateQuoteStatusAsync(quote.Id, newStatus);
-            }
-            catch(Exception ex)
-            {
-                quote.Status = oldStatus; // Revert
-                await JS.InvokeVoidAsync("alert", "Erreur mise à jour statut: " + ex.Message);
-            }
+            await ApiService.UpdateQuoteStatusAsync(quote.Id, newStatus);
+        }
+        catch(Exception ex)
+        {
+            quote.Status = oldStatus; // Revert
+            await JS.InvokeVoidAsync("alert", "Erreur mise à jour statut: " + ex.Message);
         }
     }
 }

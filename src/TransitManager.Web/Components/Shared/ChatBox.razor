@@ -161,8 +161,8 @@
             </label>
 
             <textarea class="form-control border-start-0 discussion-textarea" 
-                   rows="1"
-                   placeholder="Écrivez un message..." 
+                   style="field-sizing: content; min-height: 40px; max-height: 200px;"
+                   placeholder="Écrivez un message... (Entrée pour nouvelle ligne, Ctrl+Entrée pour envoyer)" 
                    @bind="_newMessageText" 
                    @bind:event="oninput"
                    @onkeydown="HandleKeyDown"
@@ -529,7 +529,7 @@
 
     private void OnFileSelected(InputFileChangeEventArgs e) { if (e.File.Size > 10 * 1024 * 1024) { JSRuntime.InvokeVoidAsync("alert", "Trop gros"); return; } _selectedFile = e.File; }
     private async Task HandleKeyDown(KeyboardEventArgs e) { 
-        if (e.Key == "Enter" && !e.ShiftKey) { 
+        if (e.Key == "Enter" && e.CtrlKey) { 
             await SendMessage(); 
         } else if (_isConnected) { 
             await _hubConnection.InvokeAsync("SendTyping", EntityId.ToString(), _currentUserName, _isInternal); 

@@ -95,7 +95,21 @@
             opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none;
         }
         .loading-overlay.active { opacity: 1; pointer-events: all; }
+
+        /* Dark Mode Overrides for Login Page */
+        html[data-theme="dark"] body { background-color: #0a0f1a; }
+        html[data-theme="dark"] .card { background-color: #151d2e; color: #e2e8f0; }
+        html[data-theme="dark"] .card-header-custom { background-color: #1e293b; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        html[data-theme="dark"] .card-header-custom:hover { background-color: #263345; }
+        html[data-theme="dark"] .company-name { color: #60a5fa; } /* Primary Light */
+        html[data-theme="dark"] .text-muted { color: #94a3b8 !important; }
+        html[data-theme="dark"] .form-control { background-color: #1e293b; border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
+        html[data-theme="dark"] .input-group-text { background-color: #1e293b; border-color: rgba(255,255,255,0.1); color: #94a3b8; }
+        html[data-theme="dark"] .bg-white { background-color: #1e293b !important; }
+        html[data-theme="dark"] .text-dark { color: #e2e8f0 !important; }
+        html[data-theme="dark"] .text-secondary { color: #cbd5e1 !important; }
     </style>
+    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
 </head>
 <body>
     <!-- Overlay Chargement -->
@@ -254,6 +268,14 @@
     </div>
 
     <script>
+        // Apply theme immediately
+        (function() {
+            var theme = localStorage.getItem('theme');
+            if (theme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+
         function togglePassword() {
             var x = document.getElementById("password");
             var icon = document.getElementById("eyeIcon");

@@ -1568,5 +1568,10 @@ namespace TransitManager.Web.Services
              await _httpClient.PostAsJsonAsync($"api/commerce/public/quote/{token}/reject", reason);
         }
 
+        public async Task RequestChangesPublicQuoteAsync(Guid token, string comment)
+        {
+             await _httpClient.PostAsJsonAsync($"api/commerce/public/quote/{token}/request-changes", comment);
+        }
+
     }
 }

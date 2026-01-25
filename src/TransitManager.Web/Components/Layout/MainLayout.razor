@@ -6,12 +6,12 @@
 
 <div class="glass-container">
     <!-- Floating Glass Sidebar -->
-    <aside class="glass-panel sidebar-glass @(_isCollapsed ? "collapsed" : "")">
+    <aside class="glass-panel sidebar-glass @(_isCollapsed ? "collapsed" : "") @(_isMobileMenuOpen ? "show" : "")">
         <!-- Fixed Logo Header -->
         <div class="sidebar-header">
             <!-- Mobile Close Button -->
             <button class="btn btn-sm mobile-close-btn rounded-circle shadow d-md-none" 
-                    onclick="document.querySelector('.sidebar-glass').classList.remove('show')">
+                    @onclick="() => _isMobileMenuOpen = false">
                 <i class="bi bi-x-lg"></i>
             </button>
             
@@ -40,18 +40,18 @@
         <div class="glass-panel top-bar-glass">
             <div class="d-flex align-items-center gap-3">
                 <!-- Mobile Toggler -->
-                <button class="btn btn-light mobile-toggler d-md-none shadow-sm" onclick="document.querySelector('.sidebar-glass').classList.toggle('show')">
-                    <i class="bi bi-list"></i>
+                <button class="btn btn-light mobile-toggler d-md-none shadow-sm" @onclick="ToggleMobileMenu">
+                    <i class="bi @(_isMobileMenuOpen ? "bi-x-lg" : "bi-list") transition-icon"></i>
                 </button>
                 
                 <!-- Desktop Toggler -->
                 <button class="btn btn-light bg-white border-0 shadow-sm rounded-circle d-none d-md-flex align-items-center justify-content-center" 
                         style="width: 32px; height: 32px;"
                         @onclick="ToggleSidebar">
-                    <i class="bi bi-list-nested"></i>
+                    <i class="bi @(_isCollapsed ? "bi-list" : "bi-text-indent-right") transition-icon"></i>
                 </button>
 
-                <h5 class="m-0 fw-bold text-gradient d-none d-md-block">HIPPOCAMPE IMPORT-EXPORT</h5>
+                <h5 class="m-0 fw-bold text-gradient d-none d-md-block" style="outline: none;">HIPPOCAMPE IMPORT-EXPORT</h5>
             </div>
 
             <!-- User Actions -->
@@ -99,7 +99,22 @@
     [Inject] private IApiService ApiService { get; set; } = default!;
     
     private bool _isCollapsed = false;
+    private bool _isMobileMenuOpen = false;
     private bool _initialized = false;
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (_isMobileMenuOpen)
+        {
+            _isMobileMenuOpen = false;
+            StateHasChanged();
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -128,6 +143,11 @@
         }
     }
 
+    private void ToggleMobileMenu()
+    {
+        _isMobileMenuOpen = !_isMobileMenuOpen;
+    }
+
     private async Task ToggleSidebar()
     {
         _isCollapsed = !_isCollapsed;
@@ -146,5 +166,10 @@
         await ApiService.LogoutAsync();
         await AuthStateProvider.MarkUserAsLoggedOut();
         NavigationManager.NavigateTo("/login", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }

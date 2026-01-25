@@ -7,6 +7,7 @@ namespace TransitManager.Core.Enums
         Viewed,     // Vu par le client
         Accepted,   // Accepté
         Rejected,   // Refusé
+        ChangeRequested, // Modification demandée
         Converted,  // Converti en facture
         Deleted     // Supprimé (Corbeille)
     }

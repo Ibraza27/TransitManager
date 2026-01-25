@@ -6,6 +6,7 @@
 @using Microsoft.JSInterop
 @inject IApiService ApiService
 @inject IJSRuntime JS
+@using TransitManager.Web.Components.Shared
 
 <div class="d-flex flex-column min-vh-100" style="background-color: #0a0f1a;">
     <!-- Navbar simplified for Public View - FULL WIDTH -->
@@ -198,6 +199,20 @@
                             }
                         </div>
                     }
+                    else if(Quote.Status == QuoteStatus.ChangeRequested)
+                    {
+                          <div class="alert alert-warning mt-5 text-center">
+                            <h5 class="fw-bold"><i class="bi bi-pencil-square me-2"></i>Demande de modification envoyée</h5>
+                             @if(Quote.History.Any(h => h.Action == "Modification demandée"))
+                            {
+                                var lastRequest = Quote.History.OrderByDescending(h => h.Date).FirstOrDefault(h => h.Action == "Modification demandée");
+                                if(lastRequest != null)
+                                {
+                                    <div class="mt-2 fst-italic">" @lastRequest.Details "</div>
+                                }
+                            }
+                        </div>
+                    }
 
                     <!-- Legal Footer -->
                     <div class="mt-5 text-center text-muted small pt-5 border-top">
@@ -236,6 +251,17 @@
         }
     </div>
 </div>
+
+<CommentModal 
+    IsVisible="@IsCommentModalVisible" 
+    Title="@CommentModalTitle" 
+    Message="@CommentModalMessage" 
+    ConfirmText="Envoyer" 
+    ConfirmButtonClass="@CommentModalButtonClass"
+    OnConfirm="OnCommentModalConfirm" 
+    OnCancel="OnCommentModalCancel" />
+
+<LoadingModal IsVisible="@IsLoadingPdf" Title="TRAITEMENT EN COURS..." Message="Veuillez patienter..." />
 
 <style>
     .text-pre-wrap { white-space: pre-wrap; }
@@ -318,8 +344,12 @@
             if (bytes.Length > 0)
             {
                 using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(bytes));
-                await JS.InvokeVoidAsync("openPdfInNewTab", streamRef);
+                await JS.InvokeVoidAsync("printFileFromStream", streamRef);
             }
+        }
+        catch (Exception ex)
+        {
+             await JS.InvokeVoidAsync("alert", "Erreur lors de l'impression : " + ex.Message);
         }
         finally
         {
@@ -335,40 +365,124 @@
         bool confirmed = await JS.InvokeAsync<bool>("confirm", "En cliquant sur OK, vous acceptez ce devis. Cette action vaut signature numérique.");
         if (confirmed)
         {
-            await ApiService.AcceptPublicQuoteAsync(Token);
-            Quote.Status = QuoteStatus.Accepted;
-            await JS.InvokeVoidAsync("scroll", 0, 0); // Scroll to top to see success message
-            await JS.InvokeVoidAsync("alert", "Merci ! Le devis a été accepté.");
+             IsLoadingPdf = true;
+             StateHasChanged();
+             try
+             {
+                await ApiService.AcceptPublicQuoteAsync(Token);
+                Quote.Status = QuoteStatus.Accepted;
+                await JS.InvokeVoidAsync("scroll", 0, 0); // Scroll to top to see success message
+                await JS.InvokeVoidAsync("alert", "Merci ! Le devis a été accepté.");
+             }
+             catch(Exception ex)
+             {
+                 await JS.InvokeVoidAsync("alert", "Erreur : " + ex.Message);
+             }
+             finally
+             {
+                IsLoadingPdf = false;
+                StateHasChanged();
+             }
         }
     }
 
-    private async Task Reject()
+    // --- Comment Modal Logic ---
+    private bool IsCommentModalVisible = false;
+    private string CommentModalTitle = "";
+    private string CommentModalMessage = "";
+    private string CommentModalButtonClass = "btn-primary";
+    private Func<string, Task>? OnCommentConfirmAction;
+
+    private void OpenCommentModal(string title, string message, string btnClass, Func<string, Task> action)
+    {
+        CommentModalTitle = title;
+        CommentModalMessage = message;
+        CommentModalButtonClass = btnClass;
+        OnCommentConfirmAction = action;
+        IsCommentModalVisible = true;
+    }
+
+    private async Task OnCommentModalConfirm(string comment)
+    {
+        IsCommentModalVisible = false;
+        if (OnCommentConfirmAction != null)
+        {
+            await OnCommentConfirmAction(comment);
+        }
+    }
+
+    private void OnCommentModalCancel()
+    {
+        IsCommentModalVisible = false;
+    }
+
+    private void Reject()
     {
          if (Quote == null) return;
-         
-         string reason = await JS.InvokeAsync<string>("prompt", "Indiquez le motif du refus (optionnel) :");
-         // Prompt returns null on cancel, empty string on OK with no text
-         if (reason != null) 
+         OpenCommentModal(
+             "Refuser le devis", 
+             "Indiquez le motif du refus (optionnel) :", 
+             "btn-danger",
+             async (reason) => await ProcessReject(reason)
+         );
+    }
+
+    private async Task ProcessReject(string reason)
+    {
+         IsLoadingPdf = true;
+         StateHasChanged();
+         try
          {
              await ApiService.RejectPublicQuoteAsync(Token, reason ?? "");
              Quote.Status = QuoteStatus.Rejected;
              Quote.RejectionReason = reason;
              await JS.InvokeVoidAsync("scroll", 0, 0);
          }
+         catch(Exception ex)
+         {
+             await JS.InvokeVoidAsync("alert", "Erreur : " + ex.Message);
+         }
+         finally
+         {
+            IsLoadingPdf = false;
+            StateHasChanged();
+         }
     }
 
-    private async Task RequestChanges()
+    private void RequestChanges()
     {
-         string comment = await JS.InvokeAsync<string>("prompt", "Décrivez les modifications souhaitées :");
-         if (!string.IsNullOrWhiteSpace(comment))
+         if (Quote == null) return;
+         OpenCommentModal(
+             "Demander une modification", 
+             "Décrivez les modifications souhaitées :", 
+             "btn-warning text-dark",
+             async (comment) => await ProcessRequestChanges(comment)
+         );
+    }
+
+    private async Task ProcessRequestChanges(string comment)
+    {
+         IsLoadingPdf = true;
+         StateHasChanged();
+         try
          {
-             // For now, we tread request changes as a rejection with specific reason to keep workflow simple
-             // OR we could implement a specific status. Given requirements, lets send a message.
-             // Since we dont have a specific endpoint for comments yet, we simulate it via Reject/Email or just Alert for MVP as per request "accompagné d'un commentaire"
+             await ApiService.RequestChangesPublicQuoteAsync(Token, comment);
+             Quote.Status = QuoteStatus.ChangeRequested;
              
-             // Ideally: Send email to admin. for NOW:
-              await JS.InvokeVoidAsync("alert", "Votre demande a été envoyée à l'équipe. Nous vous recontacterons rapidement.");
-              // In real implementaion, call an API to send email to Admin with this content.
+             // Reload to get fresh history
+             Quote = await ApiService.GetPublicQuoteAsync(Token);
+             
+             await JS.InvokeVoidAsync("scroll", 0, 0);
+             await JS.InvokeVoidAsync("alert", "Votre demande a été envoyée à l'équipe. Nous vous recontacterons rapidement.");
+         }
+         catch(Exception ex)
+         {
+             await JS.InvokeVoidAsync("alert", "Erreur : " + ex.Message);
+         }
+         finally
+         {
+            IsLoadingPdf = false;
+            StateHasChanged();
          }
     }
 }

@@ -150,14 +150,30 @@ namespace TransitManager.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> RejectPublicQuote(Guid token, [FromBody] string reason)
         {
-            var quote = await _commerceService.GetQuoteByTokenAsync(token);
-            if (quote == null) return NotFound();
+             var quote = await _commerceService.GetQuoteByTokenAsync(token);
+             if (quote == null) return NotFound();
 
-            if (quote.Status == QuoteStatus.Accepted)
-                return BadRequest("Quote already accepted.");
+             if (quote.Status == QuoteStatus.Accepted)
+                 return BadRequest("Quote already accepted.");
 
-            await _commerceService.UpdateQuoteStatusAsync(quote.Id, QuoteStatus.Rejected, reason);
-            return Ok();
+             await _commerceService.UpdateQuoteStatusAsync(quote.Id, QuoteStatus.Rejected, reason);
+             return Ok();
+        }
+
+        [HttpPost("public/quote/{token}/request-changes")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RequestChangesPublicQuote(Guid token, [FromBody] string comment)
+        {
+             var quote = await _commerceService.GetQuoteByTokenAsync(token);
+             if (quote == null) return NotFound();
+
+             if (quote.Status == QuoteStatus.Accepted)
+                 return BadRequest("Quote already accepted.");
+
+             // We use UpdateQuoteStatusAsync to handle status change and history logging
+             // The service should ideally handle the "ChangeRequested" status and history note
+             await _commerceService.UpdateQuoteStatusAsync(quote.Id, QuoteStatus.ChangeRequested, comment);
+             return Ok();
         }
     }
 }

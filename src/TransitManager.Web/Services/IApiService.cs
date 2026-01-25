@@ -169,5 +169,6 @@ namespace TransitManager.Web.Services
         Task<QuoteDto> GetPublicQuoteAsync(Guid token);
         Task AcceptPublicQuoteAsync(Guid token);
         Task RejectPublicQuoteAsync(Guid token, string reason);
+        Task RequestChangesPublicQuoteAsync(Guid token, string comment);
     }
 }

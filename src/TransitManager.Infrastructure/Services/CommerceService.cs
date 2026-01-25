@@ -439,11 +439,14 @@ namespace TransitManager.Infrastructure.Services
                 QuoteStatus.Accepted => "Accepté",
                 QuoteStatus.Rejected => "Refusé",
                 QuoteStatus.Draft => "Brouillon",
+                QuoteStatus.ChangeRequested => "Modification demandée",
                 _ => "Modifié"
             };
 
-            var historyDetails = $"Statut passé à {action}";
-            if (rejectionReason != null) historyDetails += $" ({rejectionReason})";
+            var historyDetails = status == QuoteStatus.ChangeRequested ? $"Demande de modification" : $"Statut passé à {action}";
+            if (rejectionReason != null && status == QuoteStatus.ChangeRequested) historyDetails += $": {rejectionReason}";
+            else if (rejectionReason != null) historyDetails += $" ({rejectionReason})";
+            
             if (status == QuoteStatus.Draft) historyDetails = "Devis remis en brouillon";
 
             _context.QuoteHistories.Add(new QuoteHistory 

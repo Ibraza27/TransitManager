@@ -1,0 +1,54 @@
+@code {
+    [Parameter] public string Title { get; set; } = "Commentaire";
+    [Parameter] public string Message { get; set; } = "Veuillez saisir votre commentaire :";
+    [Parameter] public string PlaceHolder { get; set; } = "";
+    [Parameter] public string ConfirmText { get; set; } = "Envoyer";
+    [Parameter] public string CancelText { get; set; } = "Annuler";
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<string> OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    
+    // Style customization
+    [Parameter] public string ConfirmButtonClass { get; set; } = "btn-primary";
+
+    private string _inputValue = "";
+
+    protected override void OnParametersSet()
+    {
+        if (!IsVisible) _inputValue = ""; // Reset on close
+    }
+
+    private async Task HandleConfirm()
+    {
+        await OnConfirm.InvokeAsync(_inputValue);
+        _inputValue = ""; // Clear after send
+    }
+
+    private async Task HandleCancel()
+    {
+        await OnCancel.InvokeAsync();
+        _inputValue = "";
+    }
+}
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white py-3">
+                    <h5 class="modal-title fw-bold text-uppercase fs-6">@Title</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="HandleCancel"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-2 fw-medium">@Message</p>
+                    <textarea class="form-control" rows="5" placeholder="@PlaceHolder" @bind="_inputValue"></textarea>
+                </div>
+                <div class="modal-footer justify-content-center border-0 pb-4">
+                    <button type="button" class="btn @ConfirmButtonClass px-4 rounded-pill" @onclick="HandleConfirm" disabled="@string.IsNullOrWhiteSpace(_inputValue)">@ConfirmText</button>
+                    <button type="button" class="btn btn-link text-secondary text-decoration-none" @onclick="HandleCancel">@CancelText</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

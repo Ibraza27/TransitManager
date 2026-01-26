@@ -175,5 +175,142 @@ namespace TransitManager.API.Controllers
              await _commerceService.UpdateQuoteStatusAsync(quote.Id, QuoteStatus.ChangeRequested, comment);
              return Ok();
         }
+
+        // --- Invoices ---
+
+        [HttpGet("invoices")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> GetInvoices([FromQuery] string? search, [FromQuery] Guid? clientId, [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            var result = await _commerceService.GetInvoicesAsync(search, clientId, status, page, pageSize);
+            foreach(var item in result.Items)
+            {
+                // item.PublicUrl = ... (if needed)
+            }
+            return Ok(result);
+        }
+
+        [HttpGet("invoices/{id}")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> GetInvoice(Guid id)
+        {
+            var result = await _commerceService.GetInvoiceByIdAsync(id);
+            if (result == null) return NotFound();
+            return Ok(result);
+        }
+
+        [HttpPost("invoices")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            try
+            {
+                var result = await _commerceService.CreateInvoiceAsync(dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPut("invoices/{id}")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> UpdateInvoice(Guid id, [FromBody] UpdateInvoiceDto dto)
+        {
+            if (id != dto.Id) return BadRequest("ID mismatch");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            try
+            {
+                var result = await _commerceService.UpdateInvoiceAsync(dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("invoices/{id}/status")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> UpdateInvoiceStatus(Guid id, [FromQuery] InvoiceStatus status)
+        {
+            var success = await _commerceService.UpdateInvoiceStatusAsync(id, status);
+            if (!success) return NotFound();
+            return Ok();
+        }
+
+        [HttpDelete("invoices/{id}")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> DeleteInvoice(Guid id)
+        {
+            var success = await _commerceService.DeleteInvoiceAsync(id);
+            if (!success) return NotFound();
+            return NoContent();
+        }
+
+        [HttpPost("quotes/{id}/convert")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> ConvertQuoteToInvoice(Guid id)
+        {
+            try
+            {
+                var invoice = await _commerceService.ConvertQuoteToInvoiceAsync(id);
+                return Ok(invoice);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("invoices/{id}/email")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> SendInvoiceEmail(Guid id, [FromBody] SendQuoteEmailDto request)
+        {
+            // Reusing SendQuoteEmailDto for convenience as it has Subject/Body/Attachments
+            await _commerceService.SendInvoiceByEmailAsync(id, request.Subject, request.Body, request.TempAttachmentIds);
+            return Ok();
+        }
+
+        [HttpPost("invoices/{id}/reminder")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> SendInvoiceReminder(Guid id, [FromBody] SendQuoteEmailDto request)
+        {
+            await _commerceService.SendPaymentReminderAsync(id, request.Subject, request.Body, request.TempAttachmentIds);
+            return Ok();
+        }
+
+        [HttpGet("invoices/{id}/pdf")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DownloadInvoicePdf(Guid id, [FromQuery] Guid? token = null)
+        {
+             if (token.HasValue)
+            {
+                var invoice = await _commerceService.GetInvoiceByTokenAsync(token.Value);
+                if (invoice == null || invoice.Id != id) return Unauthorized();
+            }
+            else
+            {
+                if (!User.Identity.IsAuthenticated || !User.IsInRole("Administrateur")) return Unauthorized();
+            }
+
+            var invoiceDto = await _commerceService.GetInvoiceByIdAsync(id);
+            if (invoiceDto == null) return NotFound();
+
+            var pdfBytes = await _commerceService.GenerateInvoicePdfAsync(invoiceDto);
+            return File(pdfBytes, "application/pdf", $"Facture_{invoiceDto.Reference}.pdf");
+        }
+        
+        // Public Access for Invoice (View Online)
+        [HttpGet("public/invoice/{token}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPublicInvoice(Guid token)
+        {
+            var result = await _commerceService.GetInvoiceByTokenAsync(token);
+            if (result == null) return NotFound();
+            return Ok(result);
+        }
     }
 }

@@ -235,6 +235,11 @@
                             <li><a class="dropdown-item" href="/admin/commerce/quotes/edit/@quote.Id"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
                             <li><button class="dropdown-item" @onclick="() => DuplicateQuote(quote)"><i class="bi bi-files me-2"></i>Dupliquer</button></li>
                             
+                             @if(quote.Status == QuoteStatus.Accepted)
+                            {
+                                <li><button class="dropdown-item text-warning" @onclick="() => ConvertToInvoice(quote)"><i class="bi bi-arrow-repeat me-2"></i>Convertir en Facture</button></li>
+                            }
+
                             <li>
                                 <button class="dropdown-item" @onclick="() => DownloadPdf(quote)" disabled="@IsLoadingPdf">
                                     @if(IsLoadingPdf && LoadingQuoteId == quote.Id)
@@ -807,6 +812,22 @@
         {
              IsLoadingPdf = false;
              StateHasChanged();
+        }
+    }
+
+    private async Task ConvertToInvoice(QuoteDto quote)
+    {
+        if(await JS.InvokeAsync<bool>("confirm", $"Convertir le devis {quote.Reference} en facture ?"))
+        {
+            if(await ApiService.ConvertQuoteToInvoiceAsync(quote.Id))
+            {
+                await JS.InvokeVoidAsync("alert", "Devis converti !");
+                NavManager.NavigateTo("/admin/commerce/invoices");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Erreur lors de la conversion.");
+            }
         }
     }
     

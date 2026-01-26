@@ -42,6 +42,11 @@ namespace TransitManager.Infrastructure.Data
         public DbSet<ReceptionControl> ReceptionControls { get; set; } = null!;
         public DbSet<ReceptionIssue> ReceptionIssues { get; set; } = null!;
 
+        // Invoicing
+        public DbSet<Invoice> Invoices { get; set; } = null!;
+        public DbSet<InvoiceLine> InvoiceLines { get; set; } = null!;
+        public DbSet<InvoiceHistory> InvoiceHistories { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

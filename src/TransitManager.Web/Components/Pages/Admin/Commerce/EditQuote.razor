@@ -532,19 +532,20 @@
                           <span class="fw-bold fs-5 text-success">@TotalTTC.ToString("N2") €</span>
                       </div>
                       
-                       <div class="mt-4">
-                          <label class="form-label small fw-bold text-muted">Paiement</label>
-                          <select class="form-select form-select-sm mb-2" @bind="Model.PaymentTerms">
-                              <option value="">Choisir...</option>
-                              <option value="Comptant">Comptant</option>
-                              <option value="30 jours net">30 jours net</option>
-                              <option value="A réception">À réception</option>
-                              <option value="50% acompte, solde à la livraison">50% acompte, solde à la livraison</option>
-                          </select>
-                      </div>
+                  <div class="mt-4 d-grid gap-2">
+                      <button class="btn btn-primary" @onclick="() => Save()">Enregistrer</button>
+                      @if(CurrentStatus == QuoteStatus.Draft)
+                      {
+                        <button class="btn btn-success" @onclick="() => Finalize(QuoteStatus.Accepted)">Approuver</button>
+                      }
+                      else if(CurrentStatus == QuoteStatus.Accepted)
+                      {
+                          <button class="btn btn-warning" @onclick="ConvertToInvoice">Convertir en Facture</button>
+                      }
                   </div>
-              </div>
-         </div>
+             </div>
+        </div>
+    </div>
     }
 </div>
 
@@ -566,6 +567,29 @@
 
 
 @code {
+    private async Task ConvertToInvoice()
+    {
+        if (!Id.HasValue) return;
+        if(await JS.InvokeAsync<bool>("confirm", "Convertir ce devis en facture ?"))
+        {
+             // Convert
+             if(await ApiService.ConvertQuoteToInvoiceAsync(Id.Value))
+             {
+                 await JS.InvokeVoidAsync("alert", "Devis converti avec succès !");
+                 // Redirect to invoice list or the new invoice? 
+                 // The API currently returns the invoice DTO or boolean. 
+                 // If ApiService returns bool, we don't know the new ID easily unless we fetch list or update API.
+                 // Ideally ApiService.ConvertQuoteToInvoiceAsync should return Guid? or InvoiceDto.
+                 // My ApiService implementation returns bool (Step 3186).
+                 // I should check Invoices list or just navigate there.
+                 NavManager.NavigateTo("/admin/commerce/invoices");
+             }
+             else
+             {
+                 await JS.InvokeVoidAsync("alert", "Erreur lors de la conversion.");
+             }
+        }
+    }
     private ProductDialog _productDialog;
     private QuoteLineDto _activeLineForCreation;
 

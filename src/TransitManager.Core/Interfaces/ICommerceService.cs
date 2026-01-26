@@ -23,5 +23,18 @@ namespace TransitManager.Core.Interfaces
         Task<bool> DeleteQuoteAsync(Guid id);
         Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null);
         Task<byte[]> GenerateQuotePdfAsync(QuoteDto quote);
+
+        // Invoices
+        Task<PagedResult<InvoiceDto>> GetInvoicesAsync(string? search, Guid? clientId, string? status, int page = 1, int pageSize = 20);
+        Task<InvoiceDto?> GetInvoiceByIdAsync(Guid id);
+        Task<InvoiceDto?> GetInvoiceByTokenAsync(Guid token); // Public access
+        Task<InvoiceDto> CreateInvoiceAsync(CreateInvoiceDto dto);
+        Task<InvoiceDto> UpdateInvoiceAsync(UpdateInvoiceDto dto);
+        Task<bool> UpdateInvoiceStatusAsync(Guid id, InvoiceStatus status);
+        Task<bool> DeleteInvoiceAsync(Guid id);
+        Task<InvoiceDto> ConvertQuoteToInvoiceAsync(Guid quoteId);
+        Task SendInvoiceByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null);
+        Task SendPaymentReminderAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null);
+        Task<byte[]> GenerateInvoicePdfAsync(InvoiceDto invoice);
     }
 }

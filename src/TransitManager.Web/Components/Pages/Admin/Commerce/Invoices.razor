@@ -1,0 +1,357 @@
+@page "/admin/commerce/invoices"
+@using Microsoft.AspNetCore.Authorization
+@using TransitManager.Core.DTOs.Commerce
+@using TransitManager.Core.Enums
+@using TransitManager.Web.Services
+@using TransitManager.Core.DTOs.Settings
+@inject IApiService ApiService
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+@inject TransitManager.Core.Interfaces.ISettingsService SettingsService
+@attribute [Authorize(Roles = "Administrateur")]
+
+<div class="d-flex flex-column" style="height: calc(100vh - 3.5rem);">
+    <!-- Header Responsive -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+        <h3 class="mb-0">Factures</h3>
+        <div class="d-flex gap-2">
+            <a href="/admin/commerce/invoices/new" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-2"></i>Nouvelle Facture
+            </a>
+             <div class="input-group input-group-sm" style="max-width: 250px;">
+                <input type="text" class="form-control" placeholder="Rechercher..." @bind="SearchTerm" @bind:event="oninput" @onkeyup="LoadInvoices" />
+                <button class="btn btn-outline-secondary" @onclick="LoadInvoices"><i class="bi bi-search"></i></button>
+            </div>
+            <select class="form-select form-select-sm" style="max-width: 150px;" @bind="FilterStatus" @bind:after="LoadInvoices">
+                <option value="">Tous statuts</option>
+                @foreach(var status in Enum.GetValues<InvoiceStatus>())
+                {
+                    <option value="@status">@status</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <!-- Responsive Split View Layout -->
+    <div class="row g-0 flex-grow-1 overflow-hidden" style="min-height: 0;">
+        
+        <!-- List Column -->
+        <div class="col-12 col-lg-4 col-xl-3 border-end h-100 overflow-auto bg-white d-flex flex-column">
+            @if (IsLoadingList)
+            {
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary spinner-border-sm"></div>
+                </div>
+            }
+            else if (InvoiceList.Any())
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var invoice in InvoiceList)
+                    {
+                        <div class="list-group-item list-group-item-action @(SelectedInvoice?.Id == invoice.Id ? "active-invoice" : "") p-3 border-bottom cursor-pointer" @onclick="() => SelectInvoice(invoice, false)">
+                            <div class="d-flex w-100 justify-content-between mb-1">
+                                <span class="fw-bold text-primary text-decoration-underline" @onclick="() => SelectInvoice(invoice, true)" @onclick:stopPropagation>@invoice.Reference</span>
+                                <div @onclick:stopPropagation>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm badge rounded-pill border-0 dropdown-toggle @GetStatusClass(invoice.Status)" 
+                                                type="button" data-bs-toggle="dropdown">
+                                            @invoice.Status
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                                            @foreach (var s in Enum.GetValues<InvoiceStatus>())
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item @(s == invoice.Status ? "active" : "")" 
+                                                       href="#" 
+                                                       @onclick="() => UpdateInvoiceStatus(invoice, s)"
+                                                       @onclick:preventDefault>
+                                                        @s
+                                                    </a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="small text-muted mb-2">
+                                <div class="fw-bold text-dark">@invoice.ClientName @invoice.ClientFirstname</div>
+                                <div class="text-truncate">@invoice.ClientEmail</div>
+                            </div>
+                            <div class="d-flex w-100 justify-content-between align-items-center mt-2 border-top pt-2">
+                                <small class="text-muted">@invoice.DateCreated.ToString("dd/MM/yyyy")</small>
+                                <span class="fw-bold text-primary">@invoice.TotalTTC.ToString("C2")</span>
+                            </div>
+                        </div>
+                    }
+                    
+                    @if (CurrentPage < TotalPages)
+                    {
+                         <button class="btn btn-light w-100 py-3 text-primary fw-bold" @onclick="LoadMore">Charger plus...</button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="p-4 text-center text-muted">Aucune facture trouvée.</div>
+            }
+        </div>
+
+        <!-- Detail Column -->
+        <div class="d-none d-lg-block col-lg-8 col-xl-9 h-100 overflow-auto bg-light p-4">
+            @if (SelectedInvoice != null)
+            {
+                <div class="bg-white shadow rounded-3 h-100 d-flex flex-column" style="min-height: 600px;">
+                    @RenderInvoiceDetail(SelectedInvoice)
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted opacity-50">
+                    <i class="bi bi-file-earmark-text display-1 mb-3"></i>
+                    <h4>Sélectionnez une facture pour voir les détails</h4>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Modal -->
+@if (ShowMobileModal && SelectedInvoice != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-fullscreen-sm-down modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Détails Facture</h5>
+                    <button type="button" class="btn-close" @onclick="CloseMobileModal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    @RenderInvoiceDetail(SelectedInvoice, true)
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<LoadingModal IsVisible="@IsLoadingPdf" />
+
+<style>
+    .active-invoice {
+        background-color: #f0f7ff !important;
+        border-left: 4px solid #0d6efd !important;
+    }
+    .text-pre-wrap { white-space: pre-wrap; }
+    .timeline { list-style: none; padding-left: 0; }
+    .timeline li { position: relative; padding-left: 20px; margin-bottom: 10px; }
+    .timeline li:before { content: '•'; position: absolute; left: 0; font-weight: bold; }
+    .table-hover tbody tr.title-row:hover > td,
+    .table-hover tbody tr.title-row:hover {
+        background-color: #d3d4d5 !important; 
+        color: #000 !important;
+        --bs-table-accent-bg: #d3d4d5 !important;
+    }
+</style>
+
+@code {
+    private List<InvoiceDto> InvoiceList = new();
+    private InvoiceDto? SelectedInvoice;
+    private bool IsLoadingList = true;
+    
+    private string SearchTerm = "";
+    private string? FilterStatus = null;
+    private int CurrentPage = 1;
+    private int TotalPages = 1;
+    private bool ShowMobileModal = false;
+    private bool IsLoadingPdf = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadList();
+    }
+
+    private async Task LoadInvoices() => await LoadList();
+
+    private async Task LoadList(bool append = false)
+    {
+        if (!append) IsLoadingList = true;
+        try
+        {
+            var result = await ApiService.GetInvoicesAsync(SearchTerm, null, FilterStatus, CurrentPage);
+            if (append) InvoiceList.AddRange(result.Items);
+            else InvoiceList = result.Items.ToList();
+            
+            TotalPages = result.TotalPages;
+
+            if (!append && SelectedInvoice == null && InvoiceList.Any())
+                SelectedInvoice = InvoiceList.First();
+            else if (SelectedInvoice != null)
+            {
+                var refreshed = InvoiceList.FirstOrDefault(i => i.Id == SelectedInvoice.Id);
+                if (refreshed != null) SelectedInvoice = refreshed;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LoadList Error: {ex.Message}");
+        }
+        finally { IsLoadingList = false; }
+    }
+    
+    private async Task LoadMore()
+    {
+        CurrentPage++;
+        await LoadList(true);
+    }
+
+    private void SelectInvoice(InvoiceDto invoice, bool openModal = false)
+    {
+        SelectedInvoice = invoice;
+        ShowMobileModal = openModal;
+    }
+
+    private void CloseMobileModal() => ShowMobileModal = false;
+
+    private async Task UpdateInvoiceStatus(InvoiceDto invoice, InvoiceStatus status)
+    {
+        if(await ApiService.UpdateInvoiceStatusAsync(invoice.Id, status))
+        {
+            invoice.Status = status;
+        }
+    }
+
+    private RenderFragment RenderInvoiceDetail(InvoiceDto invoice, bool isMobile = false) => __builder =>
+    {
+        <div class="@(isMobile ? "p-3" : "h-100 d-flex flex-column")">
+             <!-- Top Actions -->
+            <div class="d-flex justify-content-between align-items-start mb-4 border-bottom pb-3 pt-3 px-3">
+                <div>
+                     <h2 class="fw-bold mb-1">@invoice.Reference</h2>
+                     <div class="d-flex align-items-center gap-2 text-muted">
+                        <small>Date: @invoice.DateCreated.ToLocalTime().ToString("dd/MM/yyyy")</small>
+                         <span class="badge rounded-pill @GetStatusClass(invoice.Status)">@invoice.Status</span>
+                     </div>
+                     <div class="small text-muted">Échéance: @invoice.DueDate.ToString("dd/MM/yyyy")</div>
+                </div>
+                 <div class="d-flex gap-2">
+                     <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">Actions</button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><a class="dropdown-item" href="/admin/commerce/invoices/edit/@invoice.Id"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
+                            <li><button class="dropdown-item" @onclick="() => DownloadPdf(invoice)"><i class="bi bi-file-pdf me-2"></i>Télécharger PDF</button></li>
+                            <li><button class="dropdown-item" @onclick="() => SendReminder(invoice)"><i class="bi bi-bell-fill me-2"></i>Envoyer Rappel</button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button class="dropdown-item text-danger" @onclick="() => DeleteInvoice(invoice)"><i class="bi bi-trash me-2"></i>Supprimer</button></li>
+                        </ul>
+                    </div>
+                 </div>
+            </div>
+
+            <!-- Content -->
+             <div class="flex-grow-1 overflow-auto px-4">
+                 <!-- Client -->
+                <div class="card mb-4 border-0 bg-light">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted text-uppercase small fw-bold">Client</h6>
+                        <div class="fs-5 fw-bold">@invoice.ClientName @invoice.ClientFirstname</div>
+                         <div class="text-secondary"><i class="bi bi-envelope me-2"></i>@invoice.ClientEmail</div>
+                    </div>
+                </div>
+
+                <!-- Lines -->
+                <h6 class="text-uppercase small fw-bold text-muted mb-3">Détails</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Description</th>
+                                <th class="text-end">Qté</th>
+                                <th class="text-end">P.U.</th>
+                                <th class="text-end">Total HT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach(var line in invoice.Lines.OrderBy(l => l.Position))
+                        {
+                            @if(line.Type == QuoteLineType.Title) {
+                                <tr class="table-secondary fw-bold"><td colspan="4">@line.Description</td></tr>
+                            } else if (line.Type == QuoteLineType.Subtotal) {
+                                <tr class="fw-bold border-top"><td colspan="3">Sous-total</td><td class="text-end">@line.TotalHT.ToString("N2")</td></tr>
+                            } else if (line.Type != QuoteLineType.Text) {
+                                <tr>
+                                    <td>@line.Description</td>
+                                    <td class="text-end">@line.Quantity</td>
+                                    <td class="text-end">@line.UnitPrice.ToString("N2")</td>
+                                    <td class="text-end fw-bold">@line.TotalHT.ToString("N2")</td>
+                                </tr>
+                            }
+                        }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Totals -->
+                <div class="row justify-content-end mb-4">
+                    <div class="col-md-5">
+                        <table class="table table-sm table-borderless">
+                            <tr><td class="text-end">Total HT</td><td class="text-end fw-bold">@invoice.TotalHT.ToString("N2") €</td></tr>
+                            <tr><td class="text-end">TVA</td><td class="text-end">@invoice.TotalTVA.ToString("N2") €</td></tr>
+                            <tr class="border-top"><td class="text-end fs-5 fw-bold">Total TTC</td><td class="text-end fs-5 fw-bold text-primary">@invoice.TotalTTC.ToString("N2") €</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <h6 class="text-uppercase small fw-bold text-muted mb-3 mt-4">Historique</h6>
+                <ul class="timeline small ps-3">
+                     @foreach(var history in invoice.History)
+                    {
+                         <li>
+                             <small class="text-muted d-block">@history.Date.ToLocalTime().ToString("g")</small>
+                             <strong>@history.Action</strong>
+                             <div class="text-muted text-pre-wrap">@history.Details</div>
+                         </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    };
+
+    private string GetStatusClass(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Paid => "bg-success text-white",
+        InvoiceStatus.Sent => "bg-info text-white",
+        InvoiceStatus.Draft => "bg-secondary text-white",
+        InvoiceStatus.Overdue => "bg-danger text-white",
+         _ => "bg-light text-dark border"
+    };
+
+    private async Task DownloadPdf(InvoiceDto invoice)
+    {
+        IsLoadingPdf = true;
+        // ... Call API
+        try {
+            var bytes = await ApiService.GetInvoiceByIdAsync(invoice.Id); // Placeholder for PDF logic
+             // Actual: use js download
+             await JS.InvokeVoidAsync("alert", "Téléchargement PDF à implémenter complètement");
+        } catch {}
+        IsLoadingPdf = false;
+    }
+
+    private async Task SendReminder(InvoiceDto invoice)
+    {
+         if(await ApiService.SendInvoiceReminderAsync(invoice.Id, null, null, null))
+             await JS.InvokeVoidAsync("alert", "Rappel envoyé !");
+    }
+
+    private async Task DeleteInvoice(InvoiceDto invoice)
+    {
+        if(await JS.InvokeAsync<bool>("confirm", "Supprimer cette facture ?"))
+        {
+            if(await ApiService.DeleteInvoiceAsync(invoice.Id))
+            {
+                InvoiceList.Remove(invoice);
+                SelectedInvoice = null;
+            }
+        }
+    }
+}

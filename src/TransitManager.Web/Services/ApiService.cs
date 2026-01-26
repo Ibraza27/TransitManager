@@ -770,7 +770,116 @@ namespace TransitManager.Web.Services
 			}
 		}
 
-		public async Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials)
+        // --- Invoices ---
+
+        public async Task<PagedResult<InvoiceDto>> GetInvoicesAsync(string? search, Guid? clientId, string? status, int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };
+                if (!string.IsNullOrWhiteSpace(search)) query.Add($"search={Uri.EscapeDataString(search)}");
+                if (clientId.HasValue) query.Add($"clientId={clientId}");
+                if (!string.IsNullOrWhiteSpace(status)) query.Add($"status={status}");
+                
+                return await _httpClient.GetFromJsonAsync<PagedResult<InvoiceDto>>($"api/commerce/invoices?{string.Join("&", query)}", _jsonOptions) 
+                       ?? new PagedResult<InvoiceDto>();
+            }
+            catch { return new PagedResult<InvoiceDto>(); }
+        }
+
+        public async Task<InvoiceDto?> GetInvoiceByIdAsync(Guid id)
+        {
+            try { return await _httpClient.GetFromJsonAsync<InvoiceDto>($"api/commerce/invoices/{id}", _jsonOptions); }
+            catch { return null; }
+        }
+
+        public async Task<InvoiceDto?> CreateInvoiceAsync(CreateInvoiceDto dto)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/commerce/invoices", dto, _jsonOptions);
+                if (response.IsSuccessStatusCode)
+                    return await response.Content.ReadFromJsonAsync<InvoiceDto>(_jsonOptions);
+                return null;
+            }
+            catch { return null; }
+        }
+
+        public async Task<InvoiceDto?> UpdateInvoiceAsync(UpdateInvoiceDto dto)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync($"api/commerce/invoices/{dto.Id}", dto, _jsonOptions);
+                if (response.IsSuccessStatusCode)
+                    return await response.Content.ReadFromJsonAsync<InvoiceDto>(_jsonOptions);
+                return null;
+            }
+            catch { return null; }
+        }
+
+        public async Task<bool> ConvertQuoteToInvoiceAsync(Guid quoteId)
+        {
+             try
+             {
+                 var response = await _httpClient.PostAsync($"api/commerce/quotes/{quoteId}/convert", null);
+                 // We could return the new InvoiceDto but usually we just want to know if it worked and maybe redirect or show list
+                 return response.IsSuccessStatusCode;
+             }
+             catch { return false; }
+        }
+
+        public async Task<bool> UpdateInvoiceStatusAsync(Guid id, InvoiceStatus status)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/commerce/invoices/{id}/status?status={status}", null);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> DeleteInvoiceAsync(Guid id)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/commerce/invoices/{id}");
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> SendInvoiceEmailAsync(Guid id, string? subject, string? body, List<Guid>? attachments)
+        {
+            try
+            {
+                var dto = new SendQuoteEmailDto 
+                { 
+                    Subject = subject, 
+                    Body = body, 
+                    TempAttachmentIds = attachments 
+                };
+                var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/email", dto, _jsonOptions);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> SendInvoiceReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments)
+        {
+            try
+            {
+                 var dto = new SendQuoteEmailDto 
+                { 
+                    Subject = subject, 
+                    Body = body, 
+                    TempAttachmentIds = attachments 
+                };
+                var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/reminder", dto, _jsonOptions);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+		    public async Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials)
 		{
 			var url = $"api/conteneurs/{id}/export/pdf?includeFinancials={includeFinancials}";
 			Console.WriteLine($"Step 3: [WEB SERVICE] Préparation de la requête GET vers : {url}");
@@ -1599,6 +1708,16 @@ namespace TransitManager.Web.Services
                 Console.WriteLine($"[ApiService] Error uploading temp file: {ex.Message}");
                 return null;
             }
+        }
+        public async Task<byte[]> GenerateQuotePdfAsync(Guid quoteId, Guid? token = null)
+        {
+            try
+            {
+                var url = $"api/commerce/quotes/{quoteId}/pdf";
+                if(token.HasValue) url += $"?token={token}";
+                return await _httpClient.GetByteArrayAsync(url);
+            }
+            catch { return Array.Empty<byte>(); }
         }
     }
 }

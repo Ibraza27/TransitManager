@@ -47,14 +47,14 @@
                 </div>
             </div>
 
-            <div class="mb-0 d-flex justify-content-center p-3 p-md-0" style="min-height: 100vh; width: 100vw; margin: 0; background-color: #0a0f1a;" id="printableArea">
-                <div class="bg-white p-4 p-md-5 my-0 my-md-4 mx-0 mx-md-auto shadow-lg rounded-3" style="width: 100%; max-width: 1100px; min-height: 800px; font-size: 0.85rem;">
+            <div class="mb-0 d-flex justify-content-center" style="min-height: 100vh; width: 100vw; margin: 0; padding: 0; background-color: #0a0f1a;" id="printableArea">
+                <!-- Wrapper Logic from Admin Preview -->
+                <div class="p-4 bg-white my-3 my-md-4 mx-3 mx-md-auto shadow-lg rounded-3" style="width: 100%; max-width: 1100px; min-height: 800px; font-size: 0.85rem;">
                     
                     <!-- Header with Company Info & Logo -->
                     <div class="row mb-5 border-bottom pb-4">
                         <div class="col-12 col-md-7 mb-3 mb-md-0">
-                             <!-- Logo Placeholder -->
-                             <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
+                                <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
                             
                             <div class="small text-muted">
                                 <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
@@ -74,7 +74,7 @@
                         </div>
                     </div>
 
-                    <!-- Client Info Box (Centered/Right styled like Zervant) -->
+                    <!-- Client Info Box -->
                     <div class="row mb-5 justify-content-end">
                         <div class="col-md-6">
                             <div class="p-4 bg-light rounded-3 border">
@@ -91,14 +91,15 @@
                     @if (!string.IsNullOrEmpty(Quote.Message))
                     {
                         <div class="mb-4">
-                            <p class="text-pre-wrap small text-muted">@Quote.Message</p>
+                             <h6 class="fw-bold text-secondary text-uppercase small mb-2">Message</h6>
+                             <p class="text-pre-wrap small text-muted">@Quote.Message</p>
                         </div>
                     }
 
                     <!-- Payment Terms (Moved Down) -->
                     @if (!string.IsNullOrEmpty(Quote.PaymentTerms))
                     {
-                         <div class="mb-4">
+                            <div class="mb-4">
                             <h6 class="fw-bold text-secondary text-uppercase small mb-2">Modalités de Paiement</h6>
                             <p class="small text-muted">@Quote.PaymentTerms</p>
                         </div>
@@ -110,6 +111,7 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th class="py-3 ps-4">Description</th>
+                                    <th class="py-3 ps-4">Date</th>
                                     <th class="text-end py-3">Quantité</th>
                                     <th class="text-end py-3">Prix Unit.</th>
                                     <th class="text-end py-3">TVA</th>
@@ -117,46 +119,50 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                    @foreach (var line in Quote.Lines)
+                                @foreach (var line in Quote.Lines)
+                                {
+                                    @if(line.Type == QuoteLineType.Title)
                                     {
-                                        <tr class="@(line.Type == QuoteLineType.Subtotal ? "fw-bold" : "")" style="@(line.Type == QuoteLineType.Subtotal ? "border-bottom: 2px solid #000 !important;" : "")">
-                                            @if(line.Type == QuoteLineType.Title)
-                                            {
-                                                <td colspan="5" class="ps-4 py-3 fw-bold text-uppercase table-secondary">@line.Description</td>
-                                            }
-                                            else if(line.Type == QuoteLineType.Text)
-                                            {
-                                                <td colspan="5" class="ps-4 py-2 text-muted">@line.Description</td>
-                                            }
-                                            else if(line.Type == QuoteLineType.Subtotal)
-                                            {
-                                                <td colspan="4" class="ps-4 py-3 fw-bold">Sous-total</td>
-                                                <td class="text-end py-3 pe-4 fw-bold">@line.TotalHT.ToString("N2") €</td>
-                                            }
-                                            else
-                                            {
-                                                <td class="ps-4 py-3 fw-medium">@line.Description</td>
-                                                <td class="text-end py-3 text-nowrap">@line.Quantity @line.Unit</td>
-                                                <td class="text-end py-3 text-nowrap">@line.UnitPrice.ToString("N2") €</td>
-                                                <td class="text-end py-3 text-nowrap">@line.VATRate %</td>
-                                                <td class="text-end py-3 pe-4 text-nowrap">@line.TotalHT.ToString("N2") €</td>
-                                            }
+                                        <tr class="table-secondary title-row" style="background-color: #e2e3e5;">
+                                            <td colspan="6" class="fw-bold text-uppercase py-2 ps-4" style="color: black !important;">@line.Description</td>
                                         </tr>
                                     }
+                                    else if(line.Type == QuoteLineType.Text)
+                                    {
+                                        <tr>
+                                            <td colspan="6" class="text-muted py-2 ps-4">@line.Description</td>
+                                        </tr>
+                                    }
+                                    else if (line.Type == QuoteLineType.Subtotal)
+                                    {
+                                        <tr class="fw-bold border-top">
+                                            <td class="ps-4 py-3" colspan="2">@(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description)</td>
+                                            <td colspan="3"></td>
+                                            <td class="text-end py-3 pe-4 fw-bold">@line.TotalHT.ToString("N2") €</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td class="ps-4 py-3 fw-medium">@line.Description</td>
+                                            <td class="ps-4 py-3">@(line.Date.HasValue ? line.Date.Value.ToString("dd/MM/yyyy") : "-")</td>
+                                            <td class="text-end py-3 text-nowrap">@line.Quantity @line.Unit</td>
+                                            <td class="text-end py-3 text-nowrap">@line.UnitPrice.ToString("N2") €</td>
+                                            <td class="text-end py-3 text-nowrap">@line.VATRate %</td>
+                                            <td class="text-end py-3 pe-4 text-nowrap">@line.TotalHT.ToString("N2") €</td>
+                                        </tr>
+                                    }
+                                }
                             </tbody>
                         </table>
                     </div>
 
-                     <!-- Footers & Totals -->
+                    <!-- Footers & Totals -->
                     <div class="row">
                         <div class="col-md-7">
-
-                            
-
-
                         </div>
                         <div class="col-md-5">
-                             <table class="table table-sm table-borderless">
+                                <table class="table table-sm table-borderless">
                                 <tr>
                                     <td class="text-end text-muted">Total HT</td>
                                     <td class="text-end fw-bold">@Quote.TotalHT.ToString("N2") €</td>
@@ -173,15 +179,16 @@
                         </div>
                     </div>
 
-                     @if (!string.IsNullOrEmpty(Quote.FooterNote))
+                    @if (!string.IsNullOrEmpty(Quote.FooterNote))
                     {
-                        <div class="mb-5 mt-4 text-center border-top pt-3">
-                             <h6 class="fw-bold text-secondary text-uppercase small mb-2">Note de bas de page</h6>
-                             <p class="small text-muted mb-0">@Quote.FooterNote</p>
+                        <div class="mt-4 text-center border-top pt-3">
+                                <h6 class="fw-bold text-secondary text-uppercase small mb-2">Note de bas de page</h6>
+                                <p class="small text-muted mb-0">@Quote.FooterNote</p>
                         </div>
                     }
-                
-                    @if(Quote.Status == QuoteStatus.Accepted)
+                    
+                    <!-- Added Status Banners for Public View Context -->
+                     @if(Quote.Status == QuoteStatus.Accepted)
                     {
                         <div class="alert alert-success mt-5 d-flex align-items-center justify-content-center gap-3 py-4">
                             <i class="bi bi-check-circle-fill fs-2"></i>
@@ -218,10 +225,9 @@
 
                     <!-- Legal Footer -->
                     <div class="mt-5 text-center text-muted small pt-5 border-top">
-                         HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses<br/>
-                         Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX
+                            HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses<br/>
+                            Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX
                     </div>
-
                 </div>
             </div>
             

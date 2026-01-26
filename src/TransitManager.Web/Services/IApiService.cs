@@ -171,5 +171,17 @@ namespace TransitManager.Web.Services
         Task AcceptPublicQuoteAsync(Guid token);
         Task RejectPublicQuoteAsync(Guid token, string reason);
         Task RequestChangesPublicQuoteAsync(Guid token, string comment);
+        Task<byte[]> GenerateQuotePdfAsync(Guid quoteId, Guid? token = null);
+
+        // Invoices
+        Task<PagedResult<InvoiceDto>> GetInvoicesAsync(string? search, Guid? clientId, string? status, int page = 1, int pageSize = 20);
+        Task<InvoiceDto?> GetInvoiceByIdAsync(Guid id);
+        Task<InvoiceDto?> CreateInvoiceAsync(CreateInvoiceDto dto);
+        Task<InvoiceDto?> UpdateInvoiceAsync(UpdateInvoiceDto dto);
+        Task<bool> ConvertQuoteToInvoiceAsync(Guid quoteId);
+        Task<bool> UpdateInvoiceStatusAsync(Guid id, InvoiceStatus status);
+        Task<bool> DeleteInvoiceAsync(Guid id);
+        Task<bool> SendInvoiceEmailAsync(Guid id, string? subject, string? body, List<Guid>? attachments);
+        Task<bool> SendInvoiceReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments);
     }
 }

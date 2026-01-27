@@ -17,6 +17,12 @@ window.openPdfInNewTab = async (contentStreamReference) => {
     window.open(url, '_blank');
 }
 
+window.createBlobUrl = async (contentStreamReference, contentType) => {
+    const arrayBuffer = await contentStreamReference.arrayBuffer();
+    const blob = new Blob([arrayBuffer], { type: contentType });
+    return URL.createObjectURL(blob);
+}
+
 // Bootstrap Modal helpers for Blazor
 window.showModal = (modalId) => {
     const modalElement = document.getElementById(modalId);

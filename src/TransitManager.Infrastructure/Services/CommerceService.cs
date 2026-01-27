@@ -9,6 +9,7 @@ using TransitManager.Core.Entities.Commerce;
 using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
+using TransitManager.Core.DTOs.Settings;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -794,6 +795,12 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<InvoiceDto> CreateInvoiceAsync(CreateInvoiceDto dto)
         {
+            var settings = await _settingsService.GetSettingAsync<InvoiceSettingsDto>("InvoiceSettings", new());
+
+            // Apply defaults if not provided in DTO
+            if (string.IsNullOrWhiteSpace(dto.PaymentTerms)) dto.PaymentTerms = settings.DefaultPaymentTerms;
+            if (string.IsNullOrWhiteSpace(dto.FooterNote)) dto.FooterNote = settings.DefaultFooterNote;
+
             var invoice = new Invoice
             {
                 Reference = await GenerateInvoiceReferenceAsync(),
@@ -932,8 +939,8 @@ namespace TransitManager.Infrastructure.Services
             var quote = await _context.Quotes.Include(q => q.Lines).FirstOrDefaultAsync(q => q.Id == quoteId);
             if (quote == null) throw new Exception("Devis introuvable");
 
-            // Check if already converted? (Optional, but good practice)
-            
+            var settings = await _settingsService.GetSettingAsync<InvoiceSettingsDto>("InvoiceSettings", new());
+
             var invoice = new Invoice
             {
                 Reference = await GenerateInvoiceReferenceAsync(),
@@ -943,8 +950,8 @@ namespace TransitManager.Infrastructure.Services
                 DueDate = DateTime.UtcNow.AddDays(30), // Default 30 days
                 Status = InvoiceStatus.Draft,
                 Message = quote.Message,
-                PaymentTerms = quote.PaymentTerms,
-                FooterNote = quote.FooterNote,
+                PaymentTerms = string.IsNullOrWhiteSpace(quote.PaymentTerms) ? settings.DefaultPaymentTerms : quote.PaymentTerms,
+                FooterNote = string.IsNullOrWhiteSpace(quote.FooterNote) ? settings.DefaultFooterNote : quote.FooterNote,
                 DiscountValue = quote.DiscountValue,
                 DiscountType = quote.DiscountType,
                 DiscountBase = quote.DiscountBase,
@@ -1031,7 +1038,10 @@ namespace TransitManager.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(subject)) subject = $"Facture {invoice.Reference} - {company.CompanyName}";
             if (string.IsNullOrWhiteSpace(body)) body = "Veuillez trouver ci-joint votre facture.";
 
-            await _emailService.SendEmailAsync(invoice.Client.Email, subject, body, attachments);
+            var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";
+            var fullBody = $"{body}<br/><br/>Vous pouvez consulter et régler votre facture en ligne ici : <a href='{publicLink}'>{publicLink}</a>";
+
+            await _emailService.SendEmailAsync(invoice.Client.Email, subject, fullBody, attachments);
 
             if (invoice.Status == InvoiceStatus.Draft)
             {
@@ -1058,7 +1068,10 @@ namespace TransitManager.Infrastructure.Services
              if (string.IsNullOrWhiteSpace(subject)) subject = $"Rappel de paiement - Facture {invoice.Reference}";
              if (string.IsNullOrWhiteSpace(body)) body = "Ceci est un rappel de paiement.";
 
-             await _emailService.SendEmailAsync(invoice.Client.Email, subject, body, attachments);
+             var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";
+             var fullBody = $"{body}<br/><br/>Vous pouvez consulter votre facture en ligne ici : <a href='{publicLink}'>{publicLink}</a>";
+
+             await _emailService.SendEmailAsync(invoice.Client.Email, subject, fullBody, attachments);
 
              invoice.ReminderCount++;
              invoice.LastReminderSent = DateTime.UtcNow;

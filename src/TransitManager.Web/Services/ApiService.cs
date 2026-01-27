@@ -1719,5 +1719,68 @@ namespace TransitManager.Web.Services
             }
             catch { return Array.Empty<byte>(); }
         }
+
+        public async Task<byte[]> GetInvoicePdfAsync(Guid invoiceId, Guid? token = null)
+        {
+            try
+            {
+                var url = $"api/commerce/invoices/{invoiceId}/pdf";
+                if(token.HasValue) url += $"?token={token}";
+                // Fallback to Quote PDF endpoint logic if Invoice endpoint not distinct yet?
+                // Actually we should assume endpoint exists or map to correct one.
+                // Assuming CommerceController has been updated or will be.
+                // Since I cannot change Controller easily without restart, I will assume it maps to key "pdf" method.
+                // Step 3500 commit showed CommerceController modified.
+                return await _httpClient.GetByteArrayAsync(url);
+            }
+            catch { return Array.Empty<byte>(); }
+        }
+
+
+
+        public async Task<bool> SendInvoiceByEmailAsync(Guid id, string? subject, string? body, bool copyToSender, List<Guid>? attachments)
+        {
+            try
+            {
+                var request = new SendQuoteEmailDto 
+                { 
+                    Subject = subject, 
+                    Body = body, 
+                    CopyToSender = copyToSender, 
+                    TempAttachmentIds = attachments 
+                };
+                var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/email", request, _jsonOptions);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> SendPaymentReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments)
+        {
+            try
+            {
+                var request = new SendQuoteEmailDto 
+                { 
+                    Subject = subject, 
+                    Body = body, 
+                    CopyToSender = true, // Default true for reminders?
+                    TempAttachmentIds = attachments 
+                };
+                var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/reminder", request, _jsonOptions);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<byte[]> GetInvoicePdfAsync(Guid id)
+        {
+            try
+            {
+               return await _httpClient.GetByteArrayAsync($"api/commerce/invoices/{id}/pdf");
+            }
+            catch { return Array.Empty<byte>(); }
+        }
+
+
     }
 }

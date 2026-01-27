@@ -43,4 +43,20 @@ namespace TransitManager.Core.DTOs.Settings
         public string AccountHolder { get; set; } = "HIPPOCAMPE IMPORT EXPORT";
         public bool IsDefault { get; set; } = true;
     }
+    public class InvoiceSettingsDto
+    {
+        public string DefaultTitle { get; set; } = "FACTURE";
+        public string DefaultMessage { get; set; } = "";
+        public string DefaultFooterNote { get; set; } = "TVA non applicable- article 293 B du CGI"; 
+        public string DefaultPaymentTerms { get; set; } = "30 jours";
+        public int LatePaymentPenaltyPercent { get; set; } = 10;
+        public bool ShowGeneralConditions { get; set; } = false;
+        public string GeneralConditionsText { get; set; } = "";
+        
+        // UI Toggles
+        public bool ShowClientRef { get; set; } = false;
+        public bool ShowDiscount { get; set; } = true;
+        public bool ShowPaymentTerms { get; set; } = true;
+        public bool ShowLatePenalty { get; set; } = true;
+    }
 }

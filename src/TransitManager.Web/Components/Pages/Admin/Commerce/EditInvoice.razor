@@ -20,7 +20,7 @@
             <div>
                  <h4 class="mb-0 fw-bold">@(Id.HasValue ? $"Facture {ExistingRef}" : "Nouvelle Facture")</h4>
                  <div class="d-flex align-items-center gap-2 small">
-                     <span class="badge rounded-pill @GetStatusClass(CurrentStatus)">@CurrentStatus</span>
+                     <span class="badge rounded-pill @GetStatusClass(CurrentStatus)">@GetStatusName(CurrentStatus)</span>
                      @if(IsSaving) { <span class="text-warning ms-2"><span class="spinner-border spinner-border-sm me-1"></span>Enregistrement...</span> }
                      else if (IsDirty()) { <span class="text-muted fst-italic ms-2">modifié</span> }
                  </div>
@@ -45,129 +45,42 @@
     else if (IsPreviewMode)
     {
          <!-- PREVIEW MODE (Read Only) -->
-         <div class="bg-white shadow-sm p-5 overflow-auto mx-auto" style="max-width: 900px; min-height: 1000px;">
-             <!-- Identical to Invoice PDF Layout Preview -->
-                <div class="row mb-5 border-bottom pb-4">
-                <div class="col-7">
-                        <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
-                    
-                    <div class="small text-muted">
-                        <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
-                        @_companyProfile.Address<br/>
-                        @_companyProfile.ZipCode @_companyProfile.City<br/>
-                        France<br/>
-                        <br/>
-                        Tél: @_companyProfile.Phone<br/>
-                        Email: @_companyProfile.Email
-                    </div>
-                </div>
-                <div class="col-5 text-end">
-                    <h2 class="fw-bold text-uppercase text-secondary mb-3">Facture</h2>
-                    <h4 class="fw-bold fs-3">@ExistingRef</h4>
-                    <div class="text-muted mt-2">Date: @Model.DateCreated.ToString("dd/MM/yyyy")</div>
-                    <div class="text-danger fw-bold">Échéance: @Model.DueDate.ToString("dd/MM/yyyy")</div>
-                </div>
-            </div>
-
-            <!-- Client Info -->
-             <div class="row mb-5 justify-content-end">
-                <div class="col-md-6">
-                    <div class="p-4 bg-light rounded-3 border">
-                        <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
-                         @if(SelectedClient != null)
-                        {
-                            <div class="fs-5 fw-bold text-dark">@SelectedClient.Nom @SelectedClient.Prenom</div>
-                            <div class="text-muted">@SelectedClient.AdressePrincipale @SelectedClient.CodePostal @SelectedClient.Ville</div>
-                            <div class="text-muted">@SelectedClient.Email</div>
-                        }
-                        else
-                        {
-                            <div class="text-muted fst-italic">Aucun client sélectionné</div>
-                        }
-                    </div>
-                </div>
-            </div>
-
-             <!-- Message -->
-            @if(!string.IsNullOrEmpty(Model.Message))
-            {
-                <div class="mb-4">
-                     <p class="text-pre-wrap small text-muted">@Model.Message</p>
-                </div>
-            }
-
-            <!-- Line Items -->
-            <div class="table-responsive mb-5">
-                <table class="table table-striped table-hover mb-0">
-                    <thead class="table-dark">
-                        <tr>
-                            <th class="py-3 ps-4" style="width: 50%;">Description</th>
-                            <th class="py-3 text-center" style="width: 100px;">Date</th>
-                            <th class="text-end py-3" style="width: 80px;">Qté</th>
-                            <th class="text-center py-3" style="width: 60px;">Unité</th>
-                            <th class="text-end py-3" style="width: 100px;">Prix</th>
-                            <th class="text-end py-3" style="width: 80px;">TVA</th>
-                            <th class="text-end py-3 pe-4" style="width: 100px;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var line in Model.Lines)
-                        {
-                            <tr class="@(line.Type == QuoteLineType.Subtotal ? "fw-bold border-bottom border-dark" : "")">
-                                @if(line.Type == QuoteLineType.Title)
-                                {
-                                    <td colspan="7" class="ps-4 py-3 text-uppercase fw-bold table-secondary">@line.Description</td>
-                                }
-                                else if (line.Type == QuoteLineType.Text)
-                                {
-                                    <td colspan="7" class="ps-4 py-3 text-wrap">@line.Description</td>
-                                }
-                                else if (line.Type == QuoteLineType.Subtotal)
-                                {
-                                    <td class="ps-4 py-3 fw-bold">Sous-total</td>
-                                    <td colspan="5"></td> 
-                                    <td class="text-end py-3 pe-4 fw-bold">@line.TotalHT.ToString("N2") €</td>
-                                }
-                                else
-                                {
-                                    <td class="ps-4 py-3 fw-medium">@line.Description</td>
-                                    <td class="text-center py-3">@line.Date?.ToString("dd/MM")</td>
-                                    <td class="text-end py-3">@line.Quantity.ToString("0.##")</td>
-                                    <td class="text-center py-3">@line.Unit</td>
-                                    <td class="text-end py-3">@line.UnitPrice.ToString("N2")</td>
-                                    <td class="text-end py-3">@line.VATRate%</td>
-                                    <td class="text-end py-3 pe-4">@((line.Quantity * line.UnitPrice).ToString("N2"))</td>
-                                }
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Totals -->
-            <div class="row justify-content-end mb-4">
-                <div class="col-md-5">
-                    <table class="table table-sm table-borderless">
-                         <tr><td class="text-end text-muted">Total HT</td><td class="text-end fw-bold">@RawTotalHT.ToString("N2") €</td></tr>
-                         <tr><td class="text-end text-muted">Remise</td><td class="text-end text-danger fw-bold">-@DiscountAmount.ToString("N2") €</td></tr>
-                         <tr><td class="text-end text-muted">Net HT</td><td class="text-end fw-bold">@NetHT.ToString("N2") €</td></tr>
-                         <tr><td class="text-end text-muted">TVA</td><td class="text-end">@TotalTVA.ToString("N2") €</td></tr>
-                         <tr class="border-top"><td class="text-end fs-5 fw-bold">Total TTC</td><td class="text-end fs-5 fw-bold text-primary">@TotalTTC.ToString("N2") €</td></tr>
-                    </table>
-                </div>
-            </div>
-            
-            <!-- Footer -->
-            <div class="mt-auto pt-5">
-                 @if(!string.IsNullOrEmpty(Model.FooterNote))
-                {
-                    <div class="small text-muted border-top pt-2 text-center">@Model.FooterNote</div>
-                }
-                 <div class="mt-4 pt-3 text-center small text-muted border-top">
-                     <div class="fw-bold text-dark">@_companyProfile.CompanyName - @_companyProfile.LegalStatus</div>
-                     <div>SIRET: @_companyProfile.Siret - TVA: @_companyProfile.TvaNumber</div>
+         <div class="d-flex flex-column h-100">
+             <!-- Preview Actions Toolbar -->
+             <div class="bg-dark text-white p-3 d-flex justify-content-between align-items-center mb-3 rounded-3 mx-auto" style="max-width: 900px;">
+                 <div class="d-flex align-items-center gap-3">
+                     <span class="fw-bold">Aperçu PDF</span>
                  </div>
-            </div>
+                 <div class="d-flex gap-2">
+                     <button class="btn btn-light btn-sm" @onclick="OpenSendModal">
+                         <i class="bi bi-envelope-fill me-2"></i>Envoyer par e-mail
+                     </button>
+                     <button class="btn btn-outline-light btn-sm" @onclick="DownloadPdf">
+                         <i class="bi bi-file-pdf me-2"></i>Télécharger PDF
+                     </button>
+                      @if(CurrentStatus == InvoiceStatus.Draft)
+                     {
+                         <button class="btn btn-success btn-sm" @onclick="FinalizeInvoice">
+                             <i class="bi bi-check-lg me-2"></i>Approuver et fermer
+                         </button>
+                     }
+                 </div>
+             </div>
+
+             <!-- PDF Viewer (Iframe) -->
+             <div class="bg-white shadow-sm mx-auto flex-grow-1 border w-100" style="max-width: 900px; height: 800px;">
+                 @if(string.IsNullOrEmpty(PdfBlobUrl))
+                 {
+                     <div class="d-flex justify-content-center align-items-center h-100">
+                         <div class="spinner-border text-secondary"></div>
+                         <span class="ms-2">Génération de l'aperçu...</span>
+                     </div>
+                 }
+                 else
+                 {
+                     <iframe src="@PdfBlobUrl" class="w-100 h-100 border-0"></iframe>
+                 }
+             </div>
          </div>
     }
     else
@@ -329,6 +242,7 @@
 
 <ProductDialog @ref="_productDialog" OnProductCreated="HandleNewProductCreated" />
 <ConfirmationModal IsVisible="@_showUnsavedModal" Title="Quitter ?" Message="Sauvegarder les modifications ?" OnConfirm="ConfirmSaveAndExit" OnCancel="ConfirmExitWithoutSave" OnClose="@(() => _showUnsavedModal = false)" />
+<SendInvoiceModal @ref="_sendModal" OnSend="SendInvoiceEmail" RecipientEmail="@(SelectedClient?.Email ?? "")" InvoiceReference="@(ExistingRef)" />
 
 @code {
     [Parameter] public Guid? Id { get; set; }
@@ -464,7 +378,78 @@
     private void HandleNewProductCreated(ProductDto p) { /* ... */ }
 
     private void HandleClientSelected(Client c) { SelectedClient = c; Model.ClientId = c?.Id ?? Guid.Empty; }
-    private void TogglePreview() { IsPreviewMode = !IsPreviewMode; }
+
+    private SendInvoiceModal _sendModal;
+    private string PdfBlobUrl = "";
+
+    private async Task TogglePreview() 
+    { 
+        IsPreviewMode = !IsPreviewMode;
+        if(IsPreviewMode) await LoadPdfPreview();
+    }
+    
+    private async Task LoadPdfPreview()
+    {
+        PdfBlobUrl = "";
+        StateHasChanged();
+        if(!Id.HasValue) return;
+        
+        // Ensure Saved first if dirty? For now assume user saved.
+        
+        try 
+        {
+             var pdfBytes = await ApiService.GetInvoicePdfAsync(Id.Value);
+             using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
+             PdfBlobUrl = await JS.InvokeAsync<string>("createBlobUrl", streamRef, "application/pdf");
+             StateHasChanged();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine(ex);
+             await JS.InvokeVoidAsync("alert", "Erreur lors du chargement de l'aperçu PDF.");
+        }
+    }
+
+    private void OpenSendModal()
+    {
+         var subject = $"Facture {ExistingRef} - {_companyProfile.CompanyName} - {TotalTTC:C2}";
+         var body = "Bonjour,\n\nVous trouverez ci-joint votre facture. Nous vous remercions d'avoir choisi notre solution !\n\nCordialement,";
+         _sendModal.Open(subject, body, SelectedClient?.Email ?? "");
+    }
+    
+    private async Task SendInvoiceEmail(SendQuoteEmailDto dto)
+    {
+        if(!Id.HasValue) return;
+        try 
+        {
+             await ApiService.SendInvoiceByEmailAsync(Id.Value, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds);
+             await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
+             if(CurrentStatus == InvoiceStatus.Draft) 
+             {
+                 CurrentStatus = InvoiceStatus.Sent; 
+                 // Update status silently?
+                 await ApiService.UpdateInvoiceStatusAsync(Id.Value, InvoiceStatus.Sent);
+             }
+        }
+         catch(Exception ex)
+        {
+             Console.WriteLine(ex);
+             await JS.InvokeVoidAsync("alert", "Erreur lors de l'envoi.");
+        }
+    }
+
+    private async Task DownloadPdf()
+    {
+          if(!Id.HasValue) return;
+          try {
+             var pdfBytes = await ApiService.GetInvoicePdfAsync(Id.Value);
+             using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
+             await JS.InvokeVoidAsync("downloadFileFromStream", $"Facture_{ExistingRef}.pdf", streamRef);
+          } catch(Exception ex) {
+              await JS.InvokeVoidAsync("alert", "Erreur téléchargement.");
+          }
+    }
+
     private void GoBack() { NavManager.NavigateTo("/admin/commerce/invoices"); }
     
     private bool IsDirty() => JsonSerializer.Serialize(Model) != OriginalModelJson;
@@ -529,17 +514,23 @@
         await Save(false);
         if(Id.HasValue)
         {
-            // Open send modal or just mark as sent?
-            // Ask user confirmation
-            if(await JS.InvokeAsync<bool>("confirm", "Finaliser et marquer comme Envoyée ?"))
-            {
-                await ApiService.UpdateInvoiceStatusAsync(Id.Value, InvoiceStatus.Sent);
-                CurrentStatus = InvoiceStatus.Sent;
-            }
+             await ApiService.UpdateInvoiceStatusAsync(Id.Value, InvoiceStatus.Sent);
+             CurrentStatus = InvoiceStatus.Sent;
+             NavManager.NavigateTo("/admin/commerce/invoices");
         }
     }
 
-    private string GetStatusClass(InvoiceStatus s) => s switch { InvoiceStatus.Draft => "bg-secondary", InvoiceStatus.Sent => "bg-info", InvoiceStatus.Paid => "bg-success", _ => "bg-dark" };
+    private string GetStatusClass(InvoiceStatus s) => s switch { InvoiceStatus.Draft => "bg-secondary", InvoiceStatus.Sent => "bg-info", InvoiceStatus.Paid => "bg-success", InvoiceStatus.Overdue => "bg-danger", InvoiceStatus.Cancelled => "bg-dark", _ => "bg-dark" };
+    
+    private string GetStatusName(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Draft => "Brouillon",
+        InvoiceStatus.Sent => "Envoyée",
+        InvoiceStatus.Paid => "Payée",
+        InvoiceStatus.Overdue => "En retard",
+        InvoiceStatus.Cancelled => "Annulée",
+        _ => status.ToString()
+    };
     
     // --- View Models ---
     public class InvoiceViewModel

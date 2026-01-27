@@ -25,13 +25,18 @@
              </button>
         </li>
         <li class="nav-item" role="presentation">
+             <button class="nav-link @(activeTab == "invoices" ? "active fw-bold" : "")" @onclick="@(() => activeTab = "invoices")">
+                 <i class="bi bi-file-earmark-text me-2"></i>Paramètres des factures
+             </button>
+        </li>
+        <li class="nav-item" role="presentation">
              <button class="nav-link @(activeTab == "billing" ? "active fw-bold" : "")" @onclick="@(() => activeTab = "billing")">
-                 <i class="bi bi-receipt me-2"></i>Facturation
+                 <i class="bi bi-receipt me-2"></i>Paramètres des devis
              </button>
         </li>
         <li class="nav-item" role="presentation">
              <button class="nav-link @(activeTab == "payment" ? "active fw-bold" : "")" @onclick="@(() => activeTab = "payment")">
-                 <i class="bi bi-credit-card me-2"></i>Moyens de Paiement
+                 <i class="bi bi-credit-card me-2"></i>Paramètres des reçus (Paiement)
              </button>
         </li>
          <li class="nav-item" role="presentation">
@@ -139,6 +144,97 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            }
+
+            <!-- ONGLET 1.5: PARAMETRES FACTURES -->
+            @if(activeTab == "invoices")
+            {
+                <div class="card shadow-sm border-0 animation-slide-up">
+                     <div class="card-body p-4">
+                         <h5 class="fw-bold mb-4 text-secondary">Réglages par défaut</h5>
+                         
+                         <div class="row g-4">
+                             <div class="col-md-6">
+                                 <label class="form-label fw-bold">Type de facture</label>
+                                 <select class="form-select">
+                                     <option>Ventes</option>
+                                 </select>
+                             </div>
+                             <div class="col-md-6">
+                                 <label class="form-label fw-bold">Afficher colonnes</label>
+                                 <select class="form-select">
+                                     <option>Date, Qté, Unité, Prix, TVA, Montant</option>
+                                 </select>
+                             </div>
+                             <div class="col-md-6">
+                                 <label class="form-label fw-bold">Devise</label>
+                                 <select class="form-select"><option>EUR (Euro)</option></select>
+                             </div>
+                             <div class="col-md-6">
+                                 <label class="form-label fw-bold">Langue de facturation</label>
+                                 <select class="form-select"><option>Français</option></select>
+                             </div>
+
+                             <div class="col-12"><hr /></div>
+
+                             <div class="col-md-6">
+                                 <label class="form-label fw-bold">Titre du document</label>
+                                 <input type="text" class="form-control" @bind="_invoiceSettings.DefaultTitle" />
+                             </div>
+                              <div class="col-md-6">
+                                 <label class="form-label fw-bold">Conditions de paiement</label>
+                                 <select class="form-select" @bind="_invoiceSettings.DefaultPaymentTerms">
+                                     <option value="Comptant">Comptant</option>
+                                     <option value="30 jours">30 jours</option>
+                                     <option value="30 jours fin de mois">30 jours fin de mois</option>
+                                     <option value="45 jours fin de mois">45 jours fin de mois</option>
+                                 </select>
+                             </div>
+                             
+                             <div class="col-md-6">
+                                  <label class="form-label fw-bold">Intérêts de retard</label>
+                                  <div class="input-group">
+                                      <input type="number" class="form-control" @bind="_invoiceSettings.LatePaymentPenaltyPercent" />
+                                      <span class="input-group-text">%</span>
+                                  </div>
+                             </div>
+
+                             <div class="col-12">
+                                 <label class="form-label fw-bold">Paramètres d'affichage</label>
+                                 <div class="d-flex flex-column gap-2">
+                                     <div class="form-check form-switch">
+                                         <input class="form-check-input" type="checkbox" @bind="_invoiceSettings.ShowDiscount">
+                                         <label class="form-check-label">Paramètres de remise (Afficher)</label>
+                                     </div>
+                                      <div class="form-check form-switch">
+                                         <input class="form-check-input" type="checkbox" @bind="_invoiceSettings.ShowClientRef">
+                                         <label class="form-check-label">Référence client (Afficher)</label>
+                                     </div>
+                                 </div>
+                             </div>
+
+                             <div class="col-12">
+                                 <label class="form-label fw-bold">Note de bas de page</label>
+                                 <textarea class="form-control" rows="2" @bind="_invoiceSettings.DefaultFooterNote"></textarea>
+                                 <div class="d-flex justify-content-between">
+                                      <div class="form-text">Limité à 250 caractères.</div>
+                                      <span class="d-flex align-items-center form-text">TVA non applicable- article 293 B du CGI</span>
+                                 </div>
+                             </div>
+
+                             <div class="col-12">
+                                 <div class="form-check form-switch p-3 bg-light rounded border">
+                                     <input class="form-check-input" type="checkbox" @bind="_invoiceSettings.ShowGeneralConditions">
+                                     <label class="form-check-label fw-bold">Conditions générales de vente (Afficher)</label>
+                                 </div>
+                                 @if(_invoiceSettings.ShowGeneralConditions)
+                                 {
+                                     <textarea class="form-control mt-2" rows="6" @bind="_invoiceSettings.GeneralConditionsText" placeholder="Article 1..."></textarea>
+                                 }
+                             </div>
+                         </div>
+                     </div>
                 </div>
             }
 
@@ -290,11 +386,12 @@
     private bool _isLoading = true;
     private bool _isSaving = false;
     private bool _isSaved = false;
-    private string activeTab = "company";
+    private string activeTab = "invoices";
 
     // Models
     private CompanyProfileDto _companyProfile = new();
     private BillingSettingsDto _billingSettings = new();
+    private InvoiceSettingsDto _invoiceSettings = new();
     private List<BankDetailsDto> _bankDetailsList = new();
     private decimal _pricePerM3 = 150;
 
@@ -303,13 +400,15 @@
         // Load All Settings in Parallel
         var taskCompany = SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
         var taskBilling = SettingsService.GetSettingAsync<BillingSettingsDto>("BillingSettings", new());
+        var taskInvoice = SettingsService.GetSettingAsync<InvoiceSettingsDto>("InvoiceSettings", new());
         var taskBanks = SettingsService.GetSettingAsync<List<BankDetailsDto>>("BankDetails", new());
         var taskPrice = SettingsService.GetSettingAsync("PricePerCubicMeter", "150");
 
-        await Task.WhenAll(taskCompany, taskBilling, taskBanks, taskPrice);
+        await Task.WhenAll(taskCompany, taskBilling, taskInvoice, taskBanks, taskPrice);
 
         _companyProfile = await taskCompany;
         _billingSettings = await taskBilling;
+        _invoiceSettings = await taskInvoice;
         _bankDetailsList = await taskBanks;
         if (!_bankDetailsList.Any()) 
         {
@@ -353,8 +452,9 @@
         var task2 = SettingsService.SaveSettingAsync("BillingSettings", _billingSettings);
         var task3 = SettingsService.SaveSettingAsync("BankDetails", _bankDetailsList);
         var task4 = SettingsService.UpdateSettingAsync("PricePerCubicMeter", _pricePerM3.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var task5 = SettingsService.SaveSettingAsync("InvoiceSettings", _invoiceSettings);
 
-        await Task.WhenAll(task1, task2, task3, task4);
+        await Task.WhenAll(task1, task2, task3, task4, task5);
 
         await Task.Delay(500); // Visual feedback
         _isSaving = false;

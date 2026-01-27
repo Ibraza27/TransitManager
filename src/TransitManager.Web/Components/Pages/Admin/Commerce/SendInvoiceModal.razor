@@ -1,0 +1,150 @@
+@using TransitManager.Core.DTOs.Commerce
+@using TransitManager.Web.Services
+@inject IApiService ApiService
+@inject IJSRuntime JS
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">ENVOYER PAR E-MAIL</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label">Destinataire(s)</label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <span class="form-control bg-light">@RecipientEmail <i class="bi bi-x ms-2 cursor-pointer"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="mb-3 row">
+                        <div class="col-sm-9 offset-sm-3">
+                             <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @bind="CopyToSender" id="ccSender">
+                                <label class="form-check-label" for="ccSender">
+                                    Recevoir une copie
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label">Sujet</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" @bind="Subject" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label">Message</label>
+                        <div class="col-sm-9">
+                            <textarea class="form-control" rows="6" @bind="Body"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label">Pièces jointes</label>
+                        <div class="col-sm-9">
+                            <!-- Default Invoice PDF -->
+                             <div class="d-flex align-items-center text-success mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <span>@InvoiceReference - HIPPOCAMPE IMPORT EXPORT.pdf</span>
+                            </div>
+                            
+                            <!-- Additional Attachments -->
+                            @foreach(var file in Attachments)
+                            {
+                                 <div class="d-flex align-items-center mb-1">
+                                    <i class="bi bi-paperclip me-2"></i>
+                                    <span>@file.Name</span>
+                                    <button class="btn btn-link text-danger p-0 ms-2" @onclick="() => RemoveAttachment(file)"><i class="bi bi-x"></i></button>
+                                </div>
+                            }
+
+                             <InputFile OnChange="HandleFileSelected" class="form-control mt-2" />
+                             @if(IsUploading) { <span class="text-muted small">Chargement...</span> }
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-light" @onclick="Close">Annuler</button>
+                    <button type="button" class="btn btn-success" @onclick="Send" disabled="@IsSending">
+                        @if(IsSending) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        Envoyer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string RecipientEmail { get; set; } = "";
+    [Parameter] public string InvoiceReference { get; set; } = "";
+    [Parameter] public EventCallback<SendQuoteEmailDto> OnSend { get; set; }
+
+    private bool IsVisible = false;
+    private bool IsSending = false;
+    private bool IsUploading = false;
+    
+    private string Subject = "";
+    private string Body = "";
+    private bool CopyToSender = false;
+    
+    private List<(Guid Id, string Name)> Attachments = new();
+
+    public void Open(string subject, string body, string email)
+    {
+        Subject = subject;
+        Body = body;
+        RecipientEmail = email;
+        Attachments.Clear();
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    private void Close()
+    {
+        IsVisible = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        IsUploading = true;
+        foreach (var file in e.GetMultipleFiles(3))
+        {
+            var result = await ApiService.UploadTempDocumentAsync(file);
+            if(result != null) Attachments.Add(result.Value);
+        }
+        IsUploading = false;
+    }
+    
+    private void RemoveAttachment((Guid Id, string Name) file)
+    {
+        Attachments.Remove(file);
+    }
+
+    private async Task Send()
+    {
+        IsSending = true;
+         try
+        {
+             var dto = new SendQuoteEmailDto 
+             { 
+                 Subject = Subject, 
+                 Body = Body, 
+                 CopyToSender = CopyToSender,
+                 TempAttachmentIds = Attachments.Select(a => a.Id).ToList()
+             };
+             await OnSend.InvokeAsync(dto);
+             Close();
+        }
+        finally { IsSending = false; }
+    }
+}

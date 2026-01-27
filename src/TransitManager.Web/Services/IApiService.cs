@@ -181,7 +181,8 @@ namespace TransitManager.Web.Services
         Task<bool> ConvertQuoteToInvoiceAsync(Guid quoteId);
         Task<bool> UpdateInvoiceStatusAsync(Guid id, InvoiceStatus status);
         Task<bool> DeleteInvoiceAsync(Guid id);
-        Task<bool> SendInvoiceEmailAsync(Guid id, string? subject, string? body, List<Guid>? attachments);
-        Task<bool> SendInvoiceReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments);
+        Task<bool> SendInvoiceByEmailAsync(Guid id, string? subject, string? body, bool copyToSender, List<Guid>? attachments);
+        Task<bool> SendPaymentReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments);
+        Task<byte[]> GetInvoicePdfAsync(Guid id);
     }
 }

@@ -803,7 +803,8 @@ namespace TransitManager.Infrastructure.Services
                 Message = dto.Message,
                 PaymentTerms = dto.PaymentTerms,
                 FooterNote = dto.FooterNote,
-                Status = InvoiceStatus.Draft
+                Status = InvoiceStatus.Draft,
+                PublicToken = Guid.NewGuid()
             };
             
             _context.Invoices.Add(invoice);
@@ -950,7 +951,8 @@ namespace TransitManager.Infrastructure.Services
                 DiscountScope = quote.DiscountScope,
                 TotalHT = quote.TotalHT,
                 TotalTVA = quote.TotalTVA,
-                TotalTTC = quote.TotalTTC
+                TotalTTC = quote.TotalTTC,
+                PublicToken = Guid.NewGuid()
             };
 
             // Copy Lines

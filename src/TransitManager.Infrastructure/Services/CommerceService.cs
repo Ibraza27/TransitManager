@@ -1229,13 +1229,18 @@ namespace TransitManager.Infrastructure.Services
              }
 
              // Rich Reminder Body (Improved Layout)
+             // Determine if we need a greeting (avoid duplicate Bonjour)
+             var hasGreeting = !string.IsNullOrWhiteSpace(body) && 
+                 (body.ToLower().Contains("bonjour") || body.ToLower().Contains("madame") || body.ToLower().Contains("monsieur"));
+             var greetingHtml = hasGreeting ? "" : "<p>Bonjour,</p>";
+             
              var htmlBody = $@"
 <div style='font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;'>
     <div style='text-align: center; margin-bottom: 20px;'>
        <h2 style='color: #dc3545;'>Rappel de Paiement</h2>
     </div>
     
-    <p>Bonjour,</p>
+    {greetingHtml}
     
     <div style='margin-bottom: 30px;'>
         {userMessagePart}

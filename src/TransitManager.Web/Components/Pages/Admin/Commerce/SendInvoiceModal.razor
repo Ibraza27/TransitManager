@@ -1,83 +1,137 @@
 @using TransitManager.Core.DTOs.Commerce
+@using Microsoft.AspNetCore.Components.Forms
 @using TransitManager.Web.Services
-@inject IApiService ApiService
 @inject IJSRuntime JS
+@inject IApiService ApiService
 
 @if (IsVisible)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 2050;">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title">ENVOYER PAR E-MAIL</h5>
+                    <h5 class="modal-title fw-bold"><i class="bi bi-envelope me-2"></i>ENVOYER PAR E-MAIL</h5>
                     <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3 row">
-                        <label class="col-sm-3 col-form-label">Destinataire(s)</label>
-                        <div class="col-sm-9">
-                            <input type="text" class="form-control mb-2" @bind="Recipients" placeholder="Séparez les emails par des virgules" />
-                            <input type="text" class="form-control" placeholder="Ajouter copie (CC)..." @bind="CCEmail" />
-                        </div>
-                    </div>
-                     <div class="mb-3 row">
-                        <div class="col-sm-9 offset-sm-3">
-                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" @bind="CopyToSender" id="ccSender">
-                                <label class="form-check-label" for="ccSender">
-                                    Recevoir une copie
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+                <div class="modal-body p-4">
                     
-                    <div class="mb-3 row">
-                        <label class="col-sm-3 col-form-label">Sujet</label>
-                        <div class="col-sm-9">
-                            <input type="text" class="form-control" @bind="Subject" />
+                    @if(_isSending)
+                    {
+                        <div class="text-center py-5">
+                             <div class="spinner-border text-primary mb-3" role="status"></div>
+                             <p class="text-muted">Envoi en cours...</p>
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <!-- Destinataire(s) avec chips -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Destinataire(s)</label>
+                            <div class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center" style="min-height: 42px;">
+                                @foreach(var email in _recipients)
+                                {
+                                    <span class="badge bg-primary d-flex align-items-center gap-1 py-2 px-3">
+                                        @email
+                                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6em;" @onclick="() => RemoveRecipient(email)"></button>
+                                    </span>
+                                }
+                                <input type="email" class="border-0 flex-grow-1" style="outline: none; min-width: 200px;" 
+                                       placeholder="Ajouter un email..." 
+                                       @bind="_newRecipientInput" 
+                                       @bind:event="oninput"
+                                       @onkeydown="HandleRecipientKeyDown" />
+                            </div>
+                            <div class="mt-1">
+                                <a href="javascript:void(0)" class="small text-decoration-none" @onclick="ToggleCc">Cc</a>
+                                <a href="javascript:void(0)" class="small text-decoration-none ms-2" @onclick="ToggleBcc">Bcc</a>
+                            </div>
+                            @if(_showCc)
+                            {
+                                <div class="mt-2">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Cc (séparer par virgule)" @bind="_ccEmails" />
+                                </div>
+                            }
+                            @if(_showBcc)
+                            {
+                                <div class="mt-2">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Bcc (séparer par virgule)" @bind="_bccEmails" />
+                                </div>
+                            }
+                        </div>
 
-                    <div class="mb-3 row">
-                        <label class="col-sm-3 col-form-label">Message</label>
-                        <div class="col-sm-9">
-                            <textarea class="form-control" rows="6" @bind="Body"></textarea>
+                        <!-- Copie Contact avec email affiché -->
+                        <div class="form-check mb-3 p-2 border rounded bg-light">
+                            <input class="form-check-input" type="checkbox" id="copyContactInv" @bind="_copyToSender">
+                            <label class="form-check-label small" for="copyContactInv">
+                                <i class="bi bi-envelope-plus me-1"></i>Recevoir une copie (@_companyEmail)
+                            </label>
+                        </div>
+
+                        <!-- Sujet -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Sujet</label>
+                            <input type="text" class="form-control" @bind="_subject" />
+                        </div>
+
+                        <!-- Message -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Message</label>
+                            <textarea class="form-control" rows="6" @bind="_body"></textarea>
                             <div class="mt-2 text-end">
                                 <button class="btn btn-outline-secondary btn-sm" @onclick="SaveAsTemplate"><i class="bi bi-save me-1"></i>Enregistrer comme modèle</button>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="mb-3 row">
-                        <label class="col-sm-3 col-form-label">Pièces jointes</label>
-                        <div class="col-sm-9">
-                            <!-- Default Invoice PDF -->
-                             <div class="d-flex align-items-center text-success mb-2">
-                                <i class="bi bi-check-circle-fill me-2"></i>
-                                <span>@InvoiceReference - HIPPOCAMPE IMPORT EXPORT.pdf</span>
-                            </div>
-                            
-                            <!-- Additional Attachments -->
-                            @foreach(var file in Attachments)
-                            {
-                                 <div class="d-flex align-items-center mb-1">
-                                    <i class="bi bi-paperclip me-2"></i>
-                                    <span>@file.Name</span>
-                                    <button class="btn btn-link text-danger p-0 ms-2" @onclick="() => RemoveAttachment(file)"><i class="bi bi-x"></i></button>
+                        <!-- Pièces jointes -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Pièces jointes</label>
+                            <div class="border rounded p-3 bg-light">
+                                @foreach(var att in _attachments)
+                                {
+                                    <div class="d-flex align-items-center mb-2">
+                                        @if(att.IsUploading)
+                                        {
+                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                        }
+                                        else if (att.IsDefault || att.TempId.HasValue)
+                                        {
+                                             <span class="badge bg-success rounded-pill me-2">
+                                                <i class="bi bi-check-circle me-1"></i>
+                                            </span>
+                                        }
+                                        else 
+                                        {
+                                             <span class="badge bg-warning text-dark rounded-pill me-2">
+                                                <i class="bi bi-exclamation-circle me-1"></i>
+                                            </span>
+                                        }
+
+                                        <span class="flex-grow-1 small @(att.IsUploading ? "text-muted fst-italic" : "")">
+                                            @att.FileName
+                                            @if(att.IsUploading) { <span>(Téléchargement...)</span> }
+                                        </span>
+                                        
+                                        @if(!att.IsDefault)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-link text-danger p-0" @onclick="() => RemoveAttachment(att)">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                <div class="mt-2">
+                                    <InputFile OnChange="OnFileSelected" class="form-control form-control-sm" multiple />
+                                    <small class="text-muted">Formats acceptés: PDF, Images, Documents (max 5MB)</small>
                                 </div>
-                            }
-
-                             <InputFile OnChange="HandleFileSelected" class="form-control mt-2" />
-                             @if(IsUploading) { <span class="text-muted small">Chargement...</span> }
+                            </div>
                         </div>
-                    </div>
-
+                    }
                 </div>
-                <div class="modal-footer border-top-0">
-                    <button type="button" class="btn btn-light" @onclick="Close">Annuler</button>
-                    <button type="button" class="btn btn-success" @onclick="Send" disabled="@IsSending">
-                        @if(IsSending) { <span class="spinner-border spinner-border-sm me-2"></span> }
-                        Envoyer
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-link text-secondary" @onclick="Close" disabled="@_isSending">Annuler</button>
+                    <button type="button" class="btn btn-success px-4 rounded-pill" @onclick="Send" disabled="@(_isSending || !_recipients.Any())">
+                        @if (_isSending) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        <i class="bi bi-send-fill me-2"></i>Envoyer
                     </button>
                 </div>
             </div>
@@ -91,25 +145,26 @@
     [Parameter] public EventCallback<SendQuoteEmailDto> OnSend { get; set; }
 
     private bool IsVisible = false;
-    private bool IsSending = false;
-    private bool IsUploading = false;
+    private bool _isSending = false;
+    private bool _showCc = false;
+    private bool _showBcc = false;
+    private bool _copyToSender = false;
+    private string _newRecipientInput = "";
+    private string _ccEmails = "";
+    private string _bccEmails = "";
+    private string _subject = "";
+    private string _body = "";
+    private string _companyEmail = "contact@hippocampeimportexport.com";
     
-    // Internal state for editable recipients
-    private string Recipients = "";
-
-    private string Subject = "";
-    private string Body = "";
-    private bool CopyToSender = false;
-    private string CCEmail = ""; // New CC Property
-    
-    private List<(Guid Id, string Name)> Attachments = new();
+    private List<string> _recipients = new();
+    private List<AttachmentItem> _attachments = new();
 
     private async Task SaveAsTemplate()
     {
         try {
-            await JS.InvokeVoidAsync("localStorage.setItem", "InvoiceEmailSubject", Subject);
-            await JS.InvokeVoidAsync("localStorage.setItem", "InvoiceEmailBody", Body);
-            await JS.InvokeVoidAsync("alert", "Modèle enregistré avec succès (localement).");
+            await JS.InvokeVoidAsync("localStorage.setItem", "InvoiceEmailSubject", _subject);
+            await JS.InvokeVoidAsync("localStorage.setItem", "InvoiceEmailBody", _body);
+            await JS.InvokeVoidAsync("alert", "Modèle enregistré avec succès !");
         } catch(Exception ex) {
             await JS.InvokeVoidAsync("alert", "Erreur lors de l'enregistrement: " + ex.Message);
         }
@@ -117,17 +172,98 @@
 
     public async Task Open(string subject, string body, string email)
     {
-        // Load template first
-        await LoadTemplate();
+        // Load saved template
+        try {
+            var savedSubject = await JS.InvokeAsync<string>("localStorage.getItem", "InvoiceEmailSubject");
+            var savedBody = await JS.InvokeAsync<string>("localStorage.getItem", "InvoiceEmailBody");
+            _subject = !string.IsNullOrEmpty(savedSubject) ? savedSubject : subject;
+            _body = !string.IsNullOrEmpty(savedBody) ? savedBody : body;
+        } catch {
+            _subject = subject;
+            _body = body;
+        }
         
-        // Use template values if available, otherwise use passed values
-        if (string.IsNullOrEmpty(Subject)) Subject = subject;
-        if (string.IsNullOrEmpty(Body)) Body = body;
+        _recipients = new List<string>();
+        if (!string.IsNullOrWhiteSpace(email))
+            _recipients.Add(email);
+            
+        _attachments = new List<AttachmentItem> 
+        { 
+            new AttachmentItem { FileName = $"Facture_{InvoiceReference}.pdf", IsDefault = true } 
+        };
         
-        RecipientEmail = email;
-        Recipients = email; // Initialize editable field
-        Attachments.Clear();
+        _isSending = false;
+        _showCc = false;
+        _showBcc = false;
+        _ccEmails = "";
+        _bccEmails = "";
+        _newRecipientInput = "";
+        _copyToSender = false;
         IsVisible = true;
+        StateHasChanged();
+    }
+
+    private void ToggleCc() => _showCc = !_showCc;
+    private void ToggleBcc() => _showBcc = !_showBcc;
+
+    private void HandleRecipientKeyDown(KeyboardEventArgs e)
+    {
+        if ((e.Key == "Enter" || e.Key == "Tab" || e.Key == ",") && !string.IsNullOrWhiteSpace(_newRecipientInput))
+        {
+            var email = _newRecipientInput.Trim().TrimEnd(',');
+            if (!string.IsNullOrWhiteSpace(email) && email.Contains("@") && !_recipients.Contains(email))
+            {
+                _recipients.Add(email);
+            }
+            _newRecipientInput = "";
+        }
+    }
+
+    private void RemoveRecipient(string email) => _recipients.Remove(email);
+    private void RemoveAttachment(AttachmentItem att) => _attachments.Remove(att);
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles(5))
+        {
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                await JS.InvokeVoidAsync("alert", $"Le fichier '{file.Name}' dépasse 5MB.");
+                continue;
+            }
+
+            var newItem = new AttachmentItem 
+            { 
+                FileName = file.Name, 
+                File = file, 
+                IsUploading = true 
+            };
+            _attachments.Add(newItem);
+            
+            await UploadAttachment(newItem);
+        }
+    }
+
+    private async Task UploadAttachment(AttachmentItem item)
+    {
+        if (item.File == null) return;
+        
+        StateHasChanged();
+        
+        var result = await ApiService.UploadTempDocumentAsync(item.File);
+        
+        if (result.HasValue)
+        {
+            item.TempId = result.Value.Id;
+            item.FileName = result.Value.Name;
+            item.IsUploading = false;
+        }
+        else
+        {
+             item.IsUploading = false;
+             await JS.InvokeVoidAsync("alert", $"Erreur lors du téléchargement de {item.FileName}.");
+             _attachments.Remove(item);
+        }
         StateHasChanged();
     }
 
@@ -137,54 +273,54 @@
         StateHasChanged();
     }
 
-    private async Task HandleFileSelected(InputFileChangeEventArgs e)
-    {
-        IsUploading = true;
-        foreach (var file in e.GetMultipleFiles(3))
-        {
-            var result = await ApiService.UploadTempDocumentAsync(file);
-            if(result != null) Attachments.Add(result.Value);
-        }
-        IsUploading = false;
-    }
-    
-    private void RemoveAttachment((Guid Id, string Name) file)
-    {
-        Attachments.Remove(file);
-    }
-
     private async Task Send()
     {
-        IsSending = true;
-         try
+        // Check pending uploads
+        if (_attachments.Any(a => a.IsUploading))
+        {
+            bool proceed = await JS.InvokeAsync<bool>("confirm", "Certains fichiers sont encore en cours de téléchargement. Voulez-vous envoyer l'email sans eux ?");
+            if (!proceed) return;
+        }
+
+        // Add any typed but not submitted email
+        if (!string.IsNullOrWhiteSpace(_newRecipientInput) && _newRecipientInput.Contains("@"))
+        {
+            _recipients.Add(_newRecipientInput.Trim());
+            _newRecipientInput = "";
+        }
+
+        if (!_recipients.Any()) return;
+
+        _isSending = true;
+        StateHasChanged();
+
+        try
         {
              var dto = new SendQuoteEmailDto 
              { 
-                 Subject = Subject, 
-                 Body = Body, 
-                 Recipients = Recipients, // Pass updated recipients
-                 CopyToSender = CopyToSender,
-                 Cc = CCEmail, 
-                 TempAttachmentIds = Attachments.Select(a => a.Id).ToList()
+                 Subject = _subject, 
+                 Body = _body, 
+                 Recipients = string.Join(",", _recipients),
+                 CopyToSender = _copyToSender,
+                 Cc = _ccEmails, 
+                 Bcc = _bccEmails,
+                 TempAttachmentIds = _attachments
+                     .Where(a => a.TempId.HasValue)
+                     .Select(a => a.TempId.Value)
+                     .ToList()
              };
              await OnSend.InvokeAsync(dto);
              Close();
         }
-        finally { IsSending = false; }
+        finally { _isSending = false; }
     }
 
-    protected override async Task OnInitializedAsync()
+    private class AttachmentItem
     {
-        await LoadTemplate();
-    }
-
-    private async Task LoadTemplate()
-    {
-        try {
-            var subject = await JS.InvokeAsync<string>("localStorage.getItem", "InvoiceEmailSubject");
-            var body = await JS.InvokeAsync<string>("localStorage.getItem", "InvoiceEmailBody");
-            if (!string.IsNullOrEmpty(subject)) Subject = subject;
-            if (!string.IsNullOrEmpty(body)) Body = body;
-        } catch {}
+        public string FileName { get; set; } = "";
+        public bool IsDefault { get; set; }
+        public bool IsUploading { get; set; }
+        public Guid? TempId { get; set; }
+        public IBrowserFile? File { get; set; }
     }
 }

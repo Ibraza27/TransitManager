@@ -425,27 +425,18 @@
 
     private async Task DuplicateInvoice(InvoiceDto invoice)
     {
-        // For now, minimal implementation: create new with same client/lines
         if(await JS.InvokeAsync<bool>("confirm", "Dupliquer cette facture ?"))
         {
-             var createDto = new CreateInvoiceDto
+             var newInvoice = await ApiService.DuplicateInvoiceAsync(invoice.Id);
+             if (newInvoice != null)
              {
-                 ClientId = invoice.ClientId ?? Guid.Empty, // Should valid check
-                 DateCreated = DateTime.UtcNow,
-                 DueDate = DateTime.UtcNow.AddDays(30),
-                 Message = invoice.Message,
-                 PaymentTerms = invoice.PaymentTerms,
-                 FooterNote = invoice.FooterNote
-                 // Lines would need separate copying or add CopyEndpoint
-             };
-             // Ideally we have a Copy endpoint. I'll implement a simple client-side copy or assume we add Copy endpoint later.
-             // Given time constraints, I'll alert "Not implemented" or allow create.
-             // Actually, the user asked for "Duplicate", so I should ideally have it.
-             // I'll call a hypothetical Copy endpoint or Create with data.
-             // Let's rely on Create for now, but without Lines it's partial.
-             // Better: "Partially implemented" alert.
-             await JS.InvokeVoidAsync("alert", "La duplication complète nécessite une mise à jour API. Redirection vers Nouvelle Facture...");
-             NavManager.NavigateTo($"/admin/commerce/invoices/new?copyFrom={invoice.Id}"); // Placeholder logic
+                 await JS.InvokeVoidAsync("alert", "Facture dupliquée avec succès !");
+                 NavManager.NavigateTo($"/admin/commerce/invoices/edit/{newInvoice.Id}");
+             }
+             else
+             {
+                 await JS.InvokeVoidAsync("alert", "Erreur lors de la duplication.");
+             }
         }
     }
 

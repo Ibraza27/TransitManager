@@ -793,6 +793,27 @@ namespace TransitManager.Web.Services
             catch { return null; }
         }
 
+        public async Task<InvoiceDto?> GetPublicInvoiceAsync(Guid token)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<InvoiceDto>($"api/commerce/public/invoice/{token}", _jsonOptions);
+            }
+            catch { return null; }
+        }
+
+        public async Task<InvoiceDto?> DuplicateInvoiceAsync(Guid id)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/commerce/invoices/{id}/duplicate", null);
+                if (response.IsSuccessStatusCode)
+                    return await response.Content.ReadFromJsonAsync<InvoiceDto>(_jsonOptions);
+                return null;
+            }
+            catch { return null; }
+        }
+
         public async Task<InvoiceDto?> CreateInvoiceAsync(CreateInvoiceDto dto)
         {
             try
@@ -848,7 +869,7 @@ namespace TransitManager.Web.Services
             catch { return false; }
         }
 
-        public async Task<bool> SendInvoiceEmailAsync(Guid id, string? subject, string? body, List<Guid>? attachments)
+        public async Task<bool> SendInvoiceEmailAsync(Guid id, string? subject, string? body, List<Guid>? attachments, List<string>? cc = null)
         {
             try
             {
@@ -856,7 +877,8 @@ namespace TransitManager.Web.Services
                 { 
                     Subject = subject, 
                     Body = body, 
-                    TempAttachmentIds = attachments 
+                    TempAttachmentIds = attachments,
+                    Cc = cc != null && cc.Any() ? string.Join(",", cc) : null
                 };
                 var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/email", dto, _jsonOptions);
                 return response.IsSuccessStatusCode;
@@ -864,7 +886,7 @@ namespace TransitManager.Web.Services
             catch { return false; }
         }
 
-        public async Task<bool> SendInvoiceReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments)
+        public async Task<bool> SendPaymentReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments, List<string>? cc = null)
         {
             try
             {
@@ -872,7 +894,8 @@ namespace TransitManager.Web.Services
                 { 
                     Subject = subject, 
                     Body = body, 
-                    TempAttachmentIds = attachments 
+                    TempAttachmentIds = attachments,
+                    Cc = cc != null && cc.Any() ? string.Join(",", cc) : null
                 };
                 var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/reminder", dto, _jsonOptions);
                 return response.IsSuccessStatusCode;
@@ -1738,7 +1761,7 @@ namespace TransitManager.Web.Services
 
 
 
-        public async Task<bool> SendInvoiceByEmailAsync(Guid id, string? subject, string? body, bool copyToSender, List<Guid>? attachments)
+        public async Task<bool> SendInvoiceByEmailAsync(Guid id, string? subject, string? body, bool copyToSender, List<Guid>? attachments, List<string>? cc = null)
         {
             try
             {
@@ -1747,7 +1770,8 @@ namespace TransitManager.Web.Services
                     Subject = subject, 
                     Body = body, 
                     CopyToSender = copyToSender, 
-                    TempAttachmentIds = attachments 
+                    TempAttachmentIds = attachments,
+                    Cc = cc != null && cc.Any() ? string.Join(",", cc) : null
                 };
                 var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/email", request, _jsonOptions);
                 return response.IsSuccessStatusCode;

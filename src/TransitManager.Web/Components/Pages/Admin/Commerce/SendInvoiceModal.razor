@@ -105,9 +105,13 @@
 
     private async Task SaveAsTemplate()
     {
-        // Placeholder for saving template logic - needs backend support or local storage
-        // For now, just show a success message or non-op
-        await JS.InvokeVoidAsync("alert", "Fonctionnalité 'Enregistrer comme modèle' sera disponible dans une prochaine mise à jour.");
+        try {
+            await JS.InvokeVoidAsync("localStorage.setItem", "InvoiceEmailSubject", Subject);
+            await JS.InvokeVoidAsync("localStorage.setItem", "InvoiceEmailBody", Body);
+            await JS.InvokeVoidAsync("alert", "Modèle enregistré avec succès (localement).");
+        } catch(Exception ex) {
+            await JS.InvokeVoidAsync("alert", "Erreur lors de l'enregistrement: " + ex.Message);
+        }
     }
 
     public void Open(string subject, string body, string email)
@@ -152,11 +156,27 @@
                  Subject = Subject, 
                  Body = Body, 
                  CopyToSender = CopyToSender,
+                 Cc = CCEmail, // Pass CC string
                  TempAttachmentIds = Attachments.Select(a => a.Id).ToList()
              };
              await OnSend.InvokeAsync(dto);
              Close();
         }
         finally { IsSending = false; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplate();
+    }
+
+    private async Task LoadTemplate()
+    {
+        try {
+            var subject = await JS.InvokeAsync<string>("localStorage.getItem", "InvoiceEmailSubject");
+            var body = await JS.InvokeAsync<string>("localStorage.getItem", "InvoiceEmailBody");
+            if (!string.IsNullOrEmpty(subject)) Subject = subject;
+            if (!string.IsNullOrEmpty(body)) Body = body;
+        } catch {}
     }
 }

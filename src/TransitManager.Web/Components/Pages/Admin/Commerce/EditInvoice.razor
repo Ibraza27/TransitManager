@@ -76,7 +76,7 @@
                  {
                      <div class="d-flex justify-content-center align-items-center h-100">
                          <div class="spinner-border text-secondary"></div>
-                         <span class="ms-2">Génération de l'aperçu...</span>
+                         <span class="ms-2">Chargement de l'aperçu...</span>
                      </div>
                  }
                  else
@@ -335,7 +335,8 @@
                      Lines = invoice.Lines.Select(l => new InvoiceLineVM {
                          Id = l.Id, Description=l.Description, Quantity=l.Quantity, UnitPoint=l.UnitPrice, 
                          UnitPrice=l.UnitPrice, VATRate=l.VATRate, Type=l.Type, Date=l.Date, Unit=l.Unit 
-                     }).ToList()
+                     }).ToList(),
+                     PublicToken = invoice.PublicToken
                  };
                   if(invoice.ClientId.HasValue) SelectedClient = await ApiService.GetClientByIdAsync(invoice.ClientId.Value);
              }
@@ -395,23 +396,21 @@
     
     private async Task LoadPdfPreview()
     {
-        PdfBlobUrl = "";
+        // Switch to HTML Preview using Public Link
+        PdfBlobUrl = ""; 
         StateHasChanged();
+        
         if(!Id.HasValue) return;
         
-        // Ensure Saved first if dirty? For now assume user saved.
-        
-        try 
+        // Use Public Link
+        if(Model.PublicToken != Guid.Empty)
         {
-             var pdfBytes = await ApiService.GetInvoicePdfAsync(Id.Value);
-             using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
-             PdfBlobUrl = await JS.InvokeAsync<string>("createBlobUrl", streamRef, "application/pdf");
-             StateHasChanged();
+             // Use absolute or relative path? Relative is safer for iframe in same domain.
+             PdfBlobUrl = $"/portal/invoice/{Model.PublicToken}";
         }
-        catch(Exception ex)
+        else
         {
-            Console.WriteLine(ex);
-             await JS.InvokeVoidAsync("alert", "Erreur lors du chargement de l'aperçu PDF.");
+             await JS.InvokeVoidAsync("alert", "Token public manquant. Impossible d'afficher l'aperçu.");
         }
     }
 
@@ -582,6 +581,7 @@
         public decimal DiscountValue { get; set; }
         public DiscountBase DiscountBase { get; set; }
         public DiscountScope DiscountScope { get; set; }
+        public Guid PublicToken { get; set; }
         public List<InvoiceLineVM> Lines { get; set; } = new();
     }
 

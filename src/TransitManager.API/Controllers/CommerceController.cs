@@ -223,7 +223,7 @@ namespace TransitManager.API.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
-                var result = await _commerceService.UpdateInvoiceAsync(dto);
+                var result = await _commerceService.UpdateInvoiceAsync(id, dto);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -245,8 +245,7 @@ namespace TransitManager.API.Controllers
         [Authorize(Roles = "Administrateur")]
         public async Task<IActionResult> DeleteInvoice(Guid id)
         {
-            var success = await _commerceService.DeleteInvoiceAsync(id);
-            if (!success) return NotFound();
+            await _commerceService.DeleteInvoiceAsync(id);
             return NoContent();
         }
 
@@ -265,12 +264,34 @@ namespace TransitManager.API.Controllers
             }
         }
 
+        [HttpPost("invoices/{id}/duplicate")]
+        [Authorize(Roles = "Administrateur")]
+        public async Task<IActionResult> DuplicateInvoice(Guid id)
+        {
+            try
+            {
+                var invoice = await _commerceService.DuplicateInvoiceAsync(id);
+                return Ok(invoice);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpPost("invoices/{id}/email")]
         [Authorize(Roles = "Administrateur")]
         public async Task<IActionResult> SendInvoiceEmail(Guid id, [FromBody] SendQuoteEmailDto request)
         {
-            // Reusing SendQuoteEmailDto for convenience as it has Subject/Body/Attachments
-            await _commerceService.SendInvoiceByEmailAsync(id, request.Subject, request.Body, request.TempAttachmentIds);
+            List<string>? ccList = null;
+            if(!string.IsNullOrWhiteSpace(request.Cc))
+            {
+                ccList = request.Cc.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(e => e.Trim())
+                                   .ToList();
+            }
+
+            await _commerceService.SendInvoiceByEmailAsync(id, request.Subject, request.Body, ccList);
             return Ok();
         }
 
@@ -278,7 +299,14 @@ namespace TransitManager.API.Controllers
         [Authorize(Roles = "Administrateur")]
         public async Task<IActionResult> SendInvoiceReminder(Guid id, [FromBody] SendQuoteEmailDto request)
         {
-            await _commerceService.SendPaymentReminderAsync(id, request.Subject, request.Body, request.TempAttachmentIds);
+            List<string>? ccList = null;
+            if(!string.IsNullOrWhiteSpace(request.Cc))
+            {
+                ccList = request.Cc.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(e => e.Trim())
+                                   .ToList();
+            }
+            await _commerceService.SendPaymentReminderAsync(id, request.Subject, request.Body, request.TempAttachmentIds, ccList);
             return Ok();
         }
 

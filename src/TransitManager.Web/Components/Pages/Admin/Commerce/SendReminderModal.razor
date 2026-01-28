@@ -16,9 +16,10 @@
                     <div class="mb-3 row">
                         <label class="col-sm-3 col-form-label">Destinataire(s)</label>
                         <div class="col-sm-9">
-                            <div class="input-group">
+                            <div class="input-group mb-2">
                                 <span class="form-control bg-light">@RecipientEmail <i class="bi bi-x ms-2 cursor-pointer"></i></span>
                             </div>
+                            <input type="text" class="form-control" placeholder="Ajouter autre destinataire (CC)..." @bind="CCEmail" />
                         </div>
                     </div>
                      <div class="mb-3 row">
@@ -84,11 +85,17 @@
     private string Subject = "";
     private string Body = "";
     private bool CopyToSender = false;
+    private string CCEmail = "";
 
     private async Task SaveAsTemplate()
     {
-        // Placeholder Logic
-         await JS.InvokeVoidAsync("alert", "Fonctionnalité 'Enregistrer comme modèle' sera disponible dans une prochaine mise à jour.");
+        try {
+            await JS.InvokeVoidAsync("localStorage.setItem", "InvoiceReminderSubject", Subject);
+            await JS.InvokeVoidAsync("localStorage.setItem", "InvoiceReminderBody", Body);
+            await JS.InvokeVoidAsync("alert", "Modèle de rappel enregistré avec succès (localement).");
+        } catch(Exception ex) {
+            await JS.InvokeVoidAsync("alert", "Erreur lors de l'enregistrement: " + ex.Message);
+        }
     }
 
     public void Open(string subject, string body, string email)
@@ -116,11 +123,27 @@
                  Subject = Subject, 
                  Body = Body, 
                  CopyToSender = CopyToSender,
+                 Cc = CCEmail,
                  TempAttachmentIds = new List<Guid>() // Typically no extra attachments for reminders, just the PDF
              };
              await OnSend.InvokeAsync(dto);
              Close();
         }
         finally { IsSending = false; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplate();
+    }
+
+    private async Task LoadTemplate()
+    {
+        try {
+            var subject = await JS.InvokeAsync<string>("localStorage.getItem", "InvoiceReminderSubject");
+            var body = await JS.InvokeAsync<string>("localStorage.getItem", "InvoiceReminderBody");
+            if (!string.IsNullOrEmpty(subject)) Subject = subject;
+            if (!string.IsNullOrEmpty(body)) Body = body;
+        } catch {}
     }
 }

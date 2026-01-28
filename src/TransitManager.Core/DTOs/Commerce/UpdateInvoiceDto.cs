@@ -27,6 +27,11 @@ namespace TransitManager.Core.DTOs.Commerce
         public string? PaymentTerms { get; set; }
         public string? FooterNote { get; set; }
 
+        public decimal DiscountValue { get; set; }
+        public DiscountType DiscountType { get; set; }
+        public DiscountBase DiscountBase { get; set; }
+        public DiscountScope DiscountScope { get; set; }
+
         public InvoiceStatus Status { get; set; }
         
         public List<UpdateInvoiceLineDto> Lines { get; set; } = new();

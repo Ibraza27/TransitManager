@@ -1,0 +1,239 @@
+@page "/portal/invoice/{Token:guid}"
+@layout Layout.EmptyLayout
+@using TransitManager.Core.DTOs.Commerce
+@using TransitManager.Core.Enums
+@using TransitManager.Web.Services
+@using Microsoft.JSInterop
+@inject IApiService ApiService
+@inject IJSRuntime JS
+@using TransitManager.Web.Components.Shared
+
+<div class="d-flex flex-column min-vh-100" style="background-color: #0a0f1a;">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm px-2 px-md-4">
+        <a class="navbar-brand fw-bold" href="#">HIPPOCAMPE</a>
+         <div class="ms-auto d-flex gap-2">
+             <a href="/login" class="btn btn-outline-light btn-sm">Se connecter</a>
+             <a href="/register" class="btn btn-primary btn-sm">Créer un compte</a>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-0 py-0 flex-grow-1">
+        @if (IsLoading)
+        {
+             <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+        }
+        else if (Invoice == null)
+        {
+            <div class="alert alert-danger shadow-sm text-center">
+                <h4>Facture introuvable ou lien expiré.</h4>
+                <p>Veuillez contacter l'administrateur si vous pensez qu'il s'agit d'une erreur.</p>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2 p-3">
+                <h4 class="mb-0 text-white">Facture @Invoice.Reference</h4>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-light btn-sm fw-bold border-2" @onclick="Print" disabled="@IsLoadingPdf">
+                         @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>Impression...</span> }
+                         else { <i class="bi bi-printer me-2"></i><span>Imprimer</span> }
+                    </button>
+                    <button class="btn btn-outline-light btn-sm fw-bold border-2" @onclick="DownloadPdf" disabled="@IsLoadingPdf">
+                         @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>PDF...</span> }
+                         else { <i class="bi bi-download me-2"></i><span>PDF</span> }
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-0 d-flex justify-content-center" style="min-height: 100vh; width: 100vw; margin: 0; padding: 0; background-color: #0a0f1a;" id="printableArea">
+                <div class="p-4 bg-white my-3 my-md-4 mx-3 mx-md-auto shadow-lg rounded-3" style="width: 100%; max-width: 1100px; min-height: 800px; font-size: 0.85rem;">
+                    
+                    <!-- Header -->
+                    <div class="row mb-5 border-bottom pb-4">
+                        <div class="col-12 col-md-7 mb-3 mb-md-0">
+                                <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
+                            <div class="small text-muted">
+                                <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
+                                7 Rue Pascal, 33370 TRESSES<br/>
+                                Tél: 09 81 72 45 40 - Email: contact@hippocampeimportexport.com
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-5 text-md-end">
+                            <h2 class="fw-bold text-uppercase text-secondary mb-3">Facture</h2>
+                            <h4 class="fw-bold fs-3">@Invoice.Reference</h4>
+                            <div class="text-muted mt-2">Date: @Invoice.DateCreated.ToString("dd/MM/yyyy")</div>
+                            <div class="text-danger fw-bold">Echéance: @Invoice.DueDate.ToString("dd/MM/yyyy")</div>
+                        </div>
+                    </div>
+
+                    <!-- Client -->
+                    <div class="row mb-5 justify-content-end">
+                        <div class="col-md-6">
+                            <div class="p-4 bg-light rounded-3 border">
+                                <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
+                                <div class="fs-5 fw-bold text-dark">@Invoice.ClientName @Invoice.ClientFirstname</div>
+                                <div class="text-muted">@Invoice.ClientAddress</div>
+                                <div class="text-muted">@Invoice.ClientPhone</div>
+                                <div class="text-muted"><a href="mailto:@Invoice.ClientEmail">@Invoice.ClientEmail</a></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message -->
+                    @if (!string.IsNullOrEmpty(Invoice.Message))
+                    {
+                        <div class="mb-4">
+                             <h6 class="fw-bold text-secondary text-uppercase small mb-2">Message</h6>
+                             <p class="text-pre-wrap small text-muted">@Invoice.Message</p>
+                        </div>
+                    }
+
+                    <!-- Terms -->
+                     @if (!string.IsNullOrEmpty(Invoice.PaymentTerms))
+                    {
+                        <div class="mb-4">
+                             <h6 class="fw-bold text-secondary text-uppercase small mb-2">Modalités de Paiement</h6>
+                             <p class="text-pre-wrap small text-muted">@Invoice.PaymentTerms</p>
+                        </div>
+                    }
+
+                    <!-- Lines -->
+                    <div class="table-responsive mb-5">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="py-3 ps-4">Description</th>
+                                    <th class="py-3 ps-4">Date</th>
+                                    <th class="text-end py-3">Quantité</th>
+                                    <th class="text-end py-3">Prix Unit.</th>
+                                    <th class="text-end py-3">TVA</th>
+                                    <th class="text-end py-3 pe-4">Total HT</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in Invoice.Lines)
+                                {
+                                    @if(line.Type == QuoteLineType.Title)
+                                    {
+                                        <tr class="table-secondary title-row" style="background-color: #e2e3e5;">
+                                            <td colspan="6" class="fw-bold text-uppercase py-2 ps-4" style="color: black !important;">@line.Description</td>
+                                        </tr>
+                                    }
+                                    else if(line.Type == QuoteLineType.Text)
+                                    {
+                                        <tr>
+                                            <td colspan="6" class="text-muted py-2 ps-4">@line.Description</td>
+                                        </tr>
+                                    }
+                                    else if (line.Type == QuoteLineType.Subtotal)
+                                    {
+                                        <tr class="fw-bold border-top">
+                                            <td class="ps-4 py-3" colspan="2">@(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description)</td>
+                                            <td colspan="3"></td>
+                                            <td class="text-end py-3 pe-4 fw-bold">@line.TotalHT.ToString("N2") €</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td class="ps-4 py-3 fw-medium">@line.Description</td>
+                                            <td class="ps-4 py-3">@(line.Date.HasValue ? line.Date.Value.ToString("dd/MM/yyyy") : "-")</td>
+                                            <td class="text-end py-3 text-nowrap">@line.Quantity @line.Unit</td>
+                                            <td class="text-end py-3 text-nowrap">@line.UnitPrice.ToString("N2") €</td>
+                                            <td class="text-end py-3 text-nowrap">@line.VATRate %</td>
+                                            <td class="text-end py-3 pe-4 text-nowrap">@line.TotalHT.ToString("N2") €</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Totals -->
+                    <div class="row">
+                        <div class="col-md-7"></div>
+                        <div class="col-md-5">
+                                <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="text-end text-muted">Total HT</td>
+                                    <td class="text-end fw-bold">@Invoice.TotalHT.ToString("N2") €</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-end text-muted">TVA</td>
+                                    <td class="text-end fw-bold">@Invoice.TotalTVA.ToString("N2") €</td>
+                                </tr>
+                                <tr class="border-top border-dark">
+                                    <td class="text-end fs-4 fw-bold pt-3">Total TTC</td>
+                                    <td class="text-end fs-4 fw-bold pt-3 text-primary">@Invoice.TotalTTC.ToString("C2")</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                     @if (!string.IsNullOrEmpty(Invoice.FooterNote))
+                    {
+                        <div class="mt-4 text-center border-top pt-3">
+                                <h6 class="fw-bold text-secondary text-uppercase small mb-2">Note de bas de page</h6>
+                                <p class="small text-muted mb-0">@Invoice.FooterNote</p>
+                        </div>
+                    }
+
+                    <div class="mt-5 text-center text-muted small pt-5 border-top">
+                            HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses<br/>
+                            Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<LoadingModal IsVisible="@IsLoadingPdf" Title="TRAITEMENT EN COURS..." Message="Veuillez patienter..." />
+
+<style>
+    .text-pre-wrap { white-space: pre-wrap; }
+    body, html {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        overflow-x: hidden !important;
+        background-color: #0a0f1a !important;
+    }
+</style>
+
+@code {
+    [Parameter] public Guid Token { get; set; }
+    private InvoiceDto? Invoice;
+    private bool IsLoading = true;
+    private bool IsLoadingPdf = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+        try
+        {
+            Invoice = await ApiService.GetPublicInvoiceAsync(Token);
+        }
+        catch { Invoice = null; }
+        finally { IsLoading = false; }
+    }
+
+    private async Task DownloadPdf()
+    {
+        if (Invoice == null) return;
+        IsLoadingPdf = true;
+        try {
+            var bytes = await ApiService.GetInvoicePdfAsync(Invoice.Id);
+            using var streamRef = new DotNetStreamReference(new System.IO.MemoryStream(bytes));
+            await JS.InvokeVoidAsync("downloadFileFromStream", $"Facture_{Invoice.Reference}.pdf", streamRef);
+        } catch(Exception ex) { await JS.InvokeVoidAsync("alert", "Erreur: " + ex.Message); }
+        finally { IsLoadingPdf = false; }
+    }
+
+    private async Task Print()
+    {
+        if (Invoice == null) return;
+        // Simple print using browser for now or stream logic
+        await JS.InvokeVoidAsync("print"); 
+    }
+}

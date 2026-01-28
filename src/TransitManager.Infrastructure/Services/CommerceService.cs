@@ -10,6 +10,7 @@ using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
 using TransitManager.Core.DTOs.Settings;
+using Microsoft.Extensions.Configuration;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -20,19 +21,22 @@ namespace TransitManager.Infrastructure.Services
         private readonly IExportService _exportService;
         private readonly ISettingsService _settingsService;
         private readonly IDocumentService _documentService;
+        private readonly IConfiguration _config;
 
         public CommerceService(
             TransitContext context,
             IEmailService emailService,
             IExportService exportService,
             ISettingsService settingsService,
-            IDocumentService documentService)
+            IDocumentService documentService,
+            IConfiguration config)
         {
             _context = context;
             _emailService = emailService;
             _exportService = exportService;
             _settingsService = settingsService;
             _documentService = documentService;
+            _config = config;
         }
 
         // --- Products ---
@@ -925,13 +929,68 @@ namespace TransitManager.Infrastructure.Services
             return true;
         }
 
-        public async Task<bool> DeleteInvoiceAsync(Guid id)
+        public async Task DeleteInvoiceAsync(Guid id)
         {
              var invoice = await _context.Invoices.FindAsync(id);
-             if (invoice == null) return false;
-             _context.Invoices.Remove(invoice);
-             await _context.SaveChangesAsync();
-             return true;
+             if (invoice != null)
+             {
+                 _context.Invoices.Remove(invoice);
+                 await _context.SaveChangesAsync();
+             }
+        }
+
+        public async Task<InvoiceDto> UpdateInvoiceAsync(Guid id, UpdateInvoiceDto dto)
+        {
+            var invoice = await _context.Invoices.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == id);
+            if (invoice == null) throw new Exception("Facture introuvable");
+
+            invoice.Message = dto.Message;
+            invoice.PaymentTerms = dto.PaymentTerms;
+            invoice.FooterNote = dto.FooterNote;
+            invoice.DateCreated = dto.DateCreated;
+            invoice.DueDate = dto.DueDate;
+            invoice.DiscountValue = dto.DiscountValue;
+            invoice.DiscountType = dto.DiscountType;
+            invoice.DiscountBase = dto.DiscountBase;
+            invoice.DiscountScope = dto.DiscountScope;
+
+            // Update Lines
+            invoice.Lines.Clear();
+            if(dto.Lines != null)
+            {
+                foreach(var lineDto in dto.Lines)
+                {
+                    invoice.Lines.Add(new InvoiceLine
+                    {
+                        Description = lineDto.Description,
+                        Quantity = lineDto.Quantity,
+                        UnitPrice = lineDto.UnitPrice,
+                        VATRate = lineDto.VATRate,
+                        Unit = lineDto.Unit,
+                        TotalHT = lineDto.Quantity * lineDto.UnitPrice,
+                        Type = lineDto.Type,
+                        Position = lineDto.Position,
+                        ProductId = lineDto.ProductId
+                    });
+                }
+            }
+            // Recalculate Totals
+            invoice.TotalHT = invoice.Lines.Sum(l => l.TotalHT);
+             // Apply Discount
+            decimal totalDiscount = 0;
+             if (invoice.DiscountScope == DiscountScope.Total)
+            {
+                 if (invoice.DiscountType == DiscountType.Percent)
+                     totalDiscount = invoice.TotalHT * (invoice.DiscountValue / 100);
+                 else
+                     totalDiscount = invoice.DiscountValue;
+            }
+             // For now simplified totals logic
+            invoice.TotalTVA = invoice.Lines.Sum(l => l.TotalHT * (l.VATRate / 100)); // Simple VAT
+            invoice.TotalTTC = invoice.TotalHT + invoice.TotalTVA - totalDiscount;
+
+            await _context.SaveChangesAsync();
+            return MapInvoiceToDto(invoice);
         }
 
         public async Task<InvoiceDto> ConvertQuoteToInvoiceAsync(Guid quoteId)
@@ -1002,77 +1061,57 @@ namespace TransitManager.Infrastructure.Services
             return MapInvoiceToDto(invoice);
         }
 
-        public async Task SendInvoiceByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null)
+
+        public async Task SendInvoiceByEmailAsync(Guid id, string? subject = null, string? body = null, List<string>? ccEmails = null)
         {
-            var invoice = await _context.Invoices.Include(i => i.Client).FirstOrDefaultAsync(i => i.Id == id);
-            if (invoice == null) throw new Exception("Facture introuvable");
-            
-            // Logic similar to SendQuote (Load settings, Generate PDF, Send)
-             // Load Settings
-            var company = await _settingsService.GetSettingAsync<TransitManager.Core.DTOs.Settings.CompanyProfileDto>("CompanyProfile", new());
-            
-            // Generate PDF (Placeholder)
-            var pdfBytes = await GenerateInvoicePdfAsync(MapInvoiceToDto(invoice));
-            var pdfName = $"Facture_{invoice.Reference}.pdf";
+             var invoice = await _context.Invoices.Include(i => i.Client).FirstOrDefaultAsync(i => i.Id == id);
+             if (invoice == null || invoice.Client == null) throw new Exception("Facture ou client introuvable");
 
-            var attachments = new List<(string Name, byte[] Content)>();
-            attachments.Add((pdfName, pdfBytes));
+             // Generate PDF
+             var pdfBytes = await _exportService.GenerateInvoicePdfAsync(MapInvoiceToDto(invoice));
+             
+             // Create Attachment
+             var attachments = new List<(string Name, byte[] Content)>
+             {
+                 ($"Facture_{invoice.Reference}.pdf", pdfBytes)
+             };
 
-             if (attachmentIds != null && attachmentIds.Any())
-            {
-                foreach (var attId in attachmentIds)
-                {
-                    try 
-                    {
-                        var tempFile = await _documentService.GetTempDocumentAsync(attId);
-                        if (tempFile != null)
-                        {
-                            using var ms = new MemoryStream();
-                            await tempFile.Value.FileStream.CopyToAsync(ms);
-                            attachments.Add((tempFile.Value.FileName, ms.ToArray()));
-                        }
-                    } catch {}
-                }
-            }
+             // Build Rich HTML Body (Zervant Style or similar to Quote)
+             var publicLink = $"{_config["AppUrl"]?.TrimEnd('/')}/portal/invoice/{invoice.PublicToken}";
+             var company = await _settingsService.GetSettingAsync<Core.DTOs.Settings.CompanyProfileDto>("CompanyProfile", new());
 
-            if (string.IsNullOrWhiteSpace(subject)) subject = $"Facture {invoice.Reference} - {company.CompanyName}";
-            if (string.IsNullOrWhiteSpace(body)) body = "Veuillez trouver ci-joint votre facture.";
-
-            var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";
-            
-            // Rich Email Body
-            var htmlBody = $@"
-                <div style='font-family: Arial, sans-serif; color: #333;'>
-                    <h2 style='color: #2c3e50;'>Facture #{invoice.Reference}</h2>
+             var htmlBody = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;'>
+                    <h2 style='color: #2c3e50;'>{company.CompanyName}</h2>
                     <p>Bonjour,</p>
-                    <p>{body}</p>
-                    <div style='background-color: #f8f9fa; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;'>
-                        <p><strong>Date:</strong> {invoice.DateCreated:dd/MM/yyyy}<br/>
-                        <strong>Total:</strong> {invoice.TotalTTC:C}<br/>
-                        <strong>Echéance:</strong> {invoice.DueDate:dd/MM/yyyy}</p>
+                    <div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 20px 0;'>
+                        <p style='margin: 0;'><strong>Vous avez reçu une nouvelle facture.</strong></p>
+                        <p style='margin: 10px 0 0 0;'>
+                            Numéro: <strong>{invoice.Reference}</strong><br/>
+                            Date: {invoice.DateCreated:dd/MM/yyyy}<br/>
+                            Montant: <strong>{invoice.TotalTTC:C}</strong><br/>
+                            Echéance: <span style='color: #dc3545;'>{invoice.DueDate:dd/MM/yyyy}</span>
+                        </p>
                     </div>
-                    <p>Vous pouvez consulter et régler votre facture en ligne en cliquant sur le bouton ci-dessous :</p>
+                    <p>{body.Replace("\n", "<br/>")}</p>
                     <div style='text-align: center; margin: 30px 0;'>
-                        <a href='{publicLink}' style='background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Consulter la facture</a>
+                        <a href='{publicLink}' style='background-color: #28a745; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Voir la facture en ligne</a>
                     </div>
-                    <p style='font-size: 12px; color: #666;'>Si le bouton ne fonctionne pas, copiez ce lien : {publicLink}</p>
+                    <p style='font-size: 12px; color: #666;'>Si le bouton ne fonctionne pas, copiez ce lien : <br/>{publicLink}</p>
                     <hr style='border: 0; border-top: 1px solid #eee; margin: 30px 0;'/>
-                    <p style='font-size: 11px; color: #999;'>{company.CompanyName}</p>
+                    <p style='font-size: 12px; color: #999;'>Cordialement,<br/>{company.CompanyName}</p>
                 </div>";
 
-            await _emailService.SendEmailAsync(invoice.Client.Email, subject, htmlBody, attachments);
+             await _emailService.SendEmailAsync(invoice.Client.Email, subject, htmlBody, attachments, ccEmails);
 
-            if (invoice.Status == InvoiceStatus.Draft)
-            {
-                invoice.Status = InvoiceStatus.Sent;
-                invoice.DateSent = DateTime.UtcNow;
-            }
-
-            _context.InvoiceHistories.Add(new InvoiceHistory { InvoiceId = id, Action = "Email envoyé", Details = $"Envoyé à {invoice.Client.Email}" });
-            await _context.SaveChangesAsync();
+             invoice.DateSent = DateTime.UtcNow;
+             if(invoice.Status == InvoiceStatus.Draft) invoice.Status = InvoiceStatus.Sent;
+             
+             _context.InvoiceHistories.Add(new InvoiceHistory { InvoiceId = id, Action = "Envoyée", Details = $"Envoyée par email à {invoice.Client.Email}" });
+             await _context.SaveChangesAsync();
         }
 
-        public async Task SendPaymentReminderAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null)
+        public async Task SendPaymentReminderAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null, List<string> ccEmails = null)
         {
              var invoice = await _context.Invoices.Include(i => i.Client).FirstOrDefaultAsync(i => i.Id == id);
             if (invoice == null) throw new Exception("Facture introuvable");
@@ -1082,12 +1121,15 @@ namespace TransitManager.Infrastructure.Services
              
              // Maybe attach invoice again? Yes usually.
              var pdfBytes = await GenerateInvoicePdfAsync(MapInvoiceToDto(invoice));
-             var attachments = new List<(string Name, byte[] Content)> { ($"Facture_{invoice.Reference}.pdf", pdfBytes) };
+             var attachments = new List<(string Name, byte[] Content)> 
+             {
+                 ($"Facture_{invoice.Reference}.pdf", pdfBytes)
+             };
 
              if (string.IsNullOrWhiteSpace(subject)) subject = $"Rappel de paiement - Facture {invoice.Reference}";
              if (string.IsNullOrWhiteSpace(body)) body = "Ceci est un rappel de paiement.";
 
-              var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";
+              var publicLink = $"{_config["AppUrl"]?.TrimEnd('/')}/portal/invoice/{invoice.PublicToken}";
               
              // Rich Reminder Body
             var htmlBody = $@"
@@ -1109,7 +1151,7 @@ namespace TransitManager.Infrastructure.Services
                     <p style='font-size: 11px; color: #999;'>{company.CompanyName}</p>
                 </div>";
 
-             await _emailService.SendEmailAsync(invoice.Client.Email, subject, htmlBody, attachments);
+             await _emailService.SendEmailAsync(invoice.Client.Email, subject, htmlBody, attachments, ccEmails);
 
              invoice.ReminderCount++;
              invoice.LastReminderSent = DateTime.UtcNow;
@@ -1195,5 +1237,54 @@ namespace TransitManager.Infrastructure.Services
             }
             return $"{prefix}{next.ToString("D3")}";
         }
+        public async Task<InvoiceDto> DuplicateInvoiceAsync(Guid id)
+        {
+            var original = await _context.Invoices
+                .Include(i => i.Lines)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.Id == id);
+
+            if (original == null) throw new Exception("Facture introuvable");
+
+            var reference = await GenerateInvoiceReferenceAsync();
+            
+            var newInvoice = new Invoice
+            {
+                Reference = reference,
+                ClientId = original.ClientId,
+                DateCreated = DateTime.UtcNow,
+                DueDate = DateTime.UtcNow.AddDays(30), // Or keep original term logic? defaulting to 30 or settings is safer.
+                Status = InvoiceStatus.Draft,
+                Message = original.Message,
+                PaymentTerms = original.PaymentTerms,
+                FooterNote = original.FooterNote,
+                DiscountValue = original.DiscountValue,
+                DiscountType = original.DiscountType,
+                DiscountBase = original.DiscountBase,
+                DiscountScope = original.DiscountScope,
+                PublicToken = Guid.NewGuid(),
+                TotalHT = original.TotalHT,
+                TotalTVA = original.TotalTVA,
+                TotalTTC = original.TotalTTC,
+                Lines = original.Lines.Select(l => new InvoiceLine
+                {
+                    ProductId = l.ProductId,
+                    Description = l.Description,
+                    Date = null, // Reset date? Or keep? usually reset line date if service date. Let's keep null or today.
+                    Quantity = l.Quantity,
+                    Unit = l.Unit,
+                    UnitPrice = l.UnitPrice,
+                    VATRate = l.VATRate,
+                    TotalHT = l.TotalHT,
+                    Type = l.Type,
+                    Position = l.Position
+                }).ToList()
+            };
+
+            _context.Invoices.Add(newInvoice);
+            await _context.SaveChangesAsync();
+            return MapInvoiceToDto(newInvoice);
+        }
+
     }
 }

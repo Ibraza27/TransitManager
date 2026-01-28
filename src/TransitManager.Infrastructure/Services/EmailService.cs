@@ -15,7 +15,7 @@ namespace TransitManager.Infrastructure.Services
             _configuration = configuration;
         }
 
-        public async Task SendEmailAsync(string to, string subject, string htmlMessage, List<(string Name, byte[] Content)>? attachments = null)
+        public async Task SendEmailAsync(string to, string subject, string htmlMessage, List<(string Name, byte[] Content)>? attachments = null, List<string>? ccEmails = null)
         {
             try
             {
@@ -24,6 +24,13 @@ namespace TransitManager.Infrastructure.Services
                 var email = new MimeMessage();
                 email.From.Add(new MailboxAddress(_configuration["EmailSettings:FromName"], _configuration["EmailSettings:FromEmail"]));
                 email.To.Add(new MailboxAddress("", to));
+                if (ccEmails != null)
+                {
+                    foreach(var cc in ccEmails)
+                    {
+                         if(!string.IsNullOrWhiteSpace(cc)) email.Cc.Add(new MailboxAddress("", cc));
+                    }
+                }
                 email.Subject = subject;
                 var bodyBuilder = new BodyBuilder
                 {

@@ -98,10 +98,15 @@
         }
     }
 
-    public void Open(string subject, string body, string email)
+    public async Task Open(string subject, string body, string email)
     {
-        Subject = subject;
-        Body = body;
+        // Load template first
+        await LoadTemplate();
+        
+        // Use template values if available, otherwise use passed values
+        if (string.IsNullOrEmpty(Subject)) Subject = subject;
+        if (string.IsNullOrEmpty(Body)) Body = body;
+        
         RecipientEmail = email;
         Recipients = email; // Init
         IsVisible = true;

@@ -1091,31 +1091,78 @@ namespace TransitManager.Infrastructure.Services
                  ($"Facture_{invoice.Reference}.pdf", pdfBytes)
              };
 
-             // Build Rich HTML Body (Zervant Style or similar to Quote)
-             var publicLink = $"{_config["AppUrl"]?.TrimEnd('/')}/portal/invoice/{invoice.PublicToken}";
+             // Build Rich HTML Body (Match Quote Email Style)
+             var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";
              var company = await _settingsService.GetSettingAsync<Core.DTOs.Settings.CompanyProfileDto>("CompanyProfile", new());
 
+             // Determine User Message (Custom or Default)
+             string userMessagePart;
+             if (!string.IsNullOrWhiteSpace(body))
+             {
+                 // Preserve newlines if plain text
+                 userMessagePart = body.Contains("<") && body.Contains(">") ? body : body.Replace("\n", "<br/>");
+             }
+             else
+             {
+                 userMessagePart = $@"
+                     <p>Bonjour,</p>
+                     <p>Vous trouverez ci-joint votre facture <strong>{invoice.Reference}</strong>.</p>
+                     <p>Nous vous remercions d'avoir choisi notre solution !</p>";
+             }
+
+             // Wrap in Standard Template (Same as Quote Email)
              var htmlBody = $@"
-                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;'>
-                    <h2 style='color: #2c3e50;'>{company.CompanyName}</h2>
-                    <p>Bonjour,</p>
-                    <div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 20px 0;'>
-                        <p style='margin: 0;'><strong>Vous avez reçu une nouvelle facture.</strong></p>
-                        <p style='margin: 10px 0 0 0;'>
-                            Numéro: <strong>{invoice.Reference}</strong><br/>
-                            Date: {invoice.DateCreated:dd/MM/yyyy}<br/>
-                            Montant: <strong>{invoice.TotalTTC:C}</strong><br/>
-                            Echéance: <span style='color: #dc3545;'>{invoice.DueDate:dd/MM/yyyy}</span>
-                        </p>
-                    </div>
-                    <p>{body.Replace("\n", "<br/>")}</p>
-                    <div style='text-align: center; margin: 30px 0;'>
-                        <a href='{publicLink}' style='background-color: #28a745; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Voir la facture en ligne</a>
-                    </div>
-                    <p style='font-size: 12px; color: #666;'>Si le bouton ne fonctionne pas, copiez ce lien : <br/>{publicLink}</p>
-                    <hr style='border: 0; border-top: 1px solid #eee; margin: 30px 0;'/>
-                    <p style='font-size: 12px; color: #999;'>Cordialement,<br/>{company.CompanyName}</p>
-                </div>";
+<div style='font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;'>
+    <div style='text-align: center; margin-bottom: 20px;'>
+       <h2 style='color: #2c3e50;'>{company.CompanyName}</h2>
+    </div>
+    
+    <div style='margin-bottom: 30px;'>
+        {userMessagePart}
+    </div>
+    
+    <div style='background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #e9ecef;'>
+        <h3 style='margin-top: 0;'>Détails de la facture</h3>
+        <table style='width: 100%; border-collapse: collapse;'>
+            <tr>
+                <td style='padding: 5px 0; color: #6c757d;'>Référence :</td>
+                <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{invoice.Reference}</td>
+            </tr>
+            <tr>
+                <td style='padding: 5px 0; color: #6c757d;'>Date d'émission :</td>
+                <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{invoice.DateCreated:dd.MM.yyyy}</td>
+            </tr>
+            <tr>
+                <td style='padding: 5px 0; color: #6c757d;'>Date d'échéance :</td>
+                <td style='padding: 5px 0; font-weight: bold; text-align: right; color: #dc3545;'>{invoice.DueDate:dd.MM.yyyy}</td>
+            </tr>
+             <tr>
+                <td style='padding: 5px 0; color: #6c757d;'>Destinataire :</td>
+                <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{invoice.Client.Nom} {invoice.Client.Prenom}</td>
+            </tr>
+            <tr style='border-top: 1px solid #dee2e6;'>
+                <td style='padding: 15px 0 5px 0; font-size: 1.1em;'>Total TTC :</td>
+                <td style='padding: 15px 0 5px 0; font-weight: bold; font-size: 1.2em; color: #0d6efd; text-align: right;'>{invoice.TotalTTC:N2} €</td>
+            </tr>
+        </table>
+        
+        <div style='text-align: center; margin-top: 25px;'>
+            <a href='{publicLink}' style='display: inline-block; background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;'>Voir la facture</a>
+        </div>
+        <p style='text-align: center; margin-top: 10px; font-size: 12px; color: #6c757d;'>
+            Cliquez sur le bouton ci-dessus pour visualiser ou télécharger la facture.
+        </p>
+    </div>
+
+    <p>Cordialement,</p>
+    
+    <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #555;'>
+        <strong>{company.CompanyName} - {company.LegalStatus}</strong><br/>
+        {company.Address}<br/>
+        {company.ZipCode} {company.City}<br/>
+        Tél: {company.Phone}<br/>
+    </div>
+</div>";
 
              // Send to joined recipients (comma sep if SendEmailAsync supports it? No, usually it takes one or we loop. 
              // Core IEmailService usually takes string `to`. If it supports comma, good.
@@ -1164,30 +1211,71 @@ namespace TransitManager.Infrastructure.Services
                  ($"Facture_{invoice.Reference}.pdf", pdfBytes)
              };
 
-             if (string.IsNullOrWhiteSpace(subject)) subject = $"Rappel de paiement - Facture {invoice.Reference}";
-             if (string.IsNullOrWhiteSpace(body)) body = "Ceci est un rappel de paiement.";
+             if (string.IsNullOrWhiteSpace(subject)) subject = $"Rappel de paiement - Facture {invoice.Reference} - {invoice.TotalTTC:N2} €";
 
-              var publicLink = $"{_config["AppUrl"]?.TrimEnd('/')}/portal/invoice/{invoice.PublicToken}";
+              var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";
               
-             // Rich Reminder Body
-            var htmlBody = $@"
-                <div style='font-family: Arial, sans-serif; color: #333;'>
-                    <h2 style='color: #dc3545;'>Rappel de Paiement - {invoice.Reference}</h2>
-                    <p>Bonjour,</p>
-                    <p>{body}</p>
-                    <div style='background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;'>
-                        <p><strong>Facture:</strong> {invoice.Reference}<br/>
-                        <strong>Montant dû:</strong> {invoice.TotalTTC:C}<br/>
-                        <strong>Date d'échéance:</strong> {invoice.DueDate:dd/MM/yyyy}</p>
-                    </div>
-                    <p>Nous vous remercions de procéder au règlement dès que possible.</p>
-                    <div style='text-align: center; margin: 30px 0;'>
-                        <a href='{publicLink}' style='background-color: #dc3545; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Régler la facture</a>
-                    </div>
-                    <p style='font-size: 12px; color: #666;'>Si le bouton ne fonctionne pas, copiez ce lien : {publicLink}</p>
-                    <hr style='border: 0; border-top: 1px solid #eee; margin: 30px 0;'/>
-                    <p style='font-size: 11px; color: #999;'>{company.CompanyName}</p>
-                </div>";
+             // Determine User Message (Custom or Default)
+             string userMessagePart;
+             if (!string.IsNullOrWhiteSpace(body))
+             {
+                 userMessagePart = body.Contains("<") && body.Contains(">") ? body : body.Replace("\n", "<br/>");
+             }
+             else
+             {
+                 userMessagePart = @"
+                     <p>Nous nous permettons de vous rappeler que votre facture reste impayée à ce jour.</p>
+                     <p>Merci de bien vouloir procéder au règlement dans les meilleurs délais.</p>";
+             }
+
+             // Rich Reminder Body (Improved Layout)
+             var htmlBody = $@"
+<div style='font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;'>
+    <div style='text-align: center; margin-bottom: 20px;'>
+       <h2 style='color: #dc3545;'>Rappel de Paiement</h2>
+    </div>
+    
+    <p>Bonjour,</p>
+    
+    <div style='margin-bottom: 30px;'>
+        {userMessagePart}
+    </div>
+    
+    <div style='background: #fff3cd; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #ffc107;'>
+        <h3 style='margin-top: 0; color: #856404;'>Détails de la facture</h3>
+        <table style='width: 100%; border-collapse: collapse;'>
+            <tr>
+                <td style='padding: 5px 0; color: #856404;'>Référence :</td>
+                <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{invoice.Reference}</td>
+            </tr>
+            <tr>
+                <td style='padding: 5px 0; color: #856404;'>Date d'échéance :</td>
+                <td style='padding: 5px 0; font-weight: bold; text-align: right; color: #dc3545;'>{invoice.DueDate:dd.MM.yyyy}</td>
+            </tr>
+            <tr style='border-top: 1px solid #c9a927;'>
+                <td style='padding: 15px 0 5px 0; font-size: 1.1em;'>Montant dû :</td>
+                <td style='padding: 15px 0 5px 0; font-weight: bold; font-size: 1.2em; color: #dc3545; text-align: right;'>{invoice.TotalTTC:N2} €</td>
+            </tr>
+        </table>
+        
+        <div style='text-align: center; margin-top: 25px;'>
+            <a href='{publicLink}' style='display: inline-block; background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;'>Régler la facture</a>
+        </div>
+        <p style='text-align: center; margin-top: 10px; font-size: 12px; color: #856404;'>
+            Cliquez sur le bouton ci-dessus pour effectuer le règlement en ligne.
+        </p>
+    </div>
+
+    <p>Nous vous remercions de votre compréhension.</p>
+    <p>Cordialement,</p>
+    
+    <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #555;'>
+        <strong>{company.CompanyName} - {company.LegalStatus}</strong><br/>
+        {company.Address}<br/>
+        {company.ZipCode} {company.City}<br/>
+        Tél: {company.Phone}<br/>
+    </div>
+</div>";
 
              var toAddress = string.Join(",", toEmails);
 

@@ -10,11 +10,15 @@ window.downloadFileFromStream = async (fileName, contentStreamReference) => {
     URL.revokeObjectURL(url);
 }
 
-window.openPdfInNewTab = async (contentStreamReference) => {
-    const arrayBuffer = await contentStreamReference.arrayBuffer();
-    const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+window.openPdfInNewTab = async (contentOrUrl) => {
+    if (typeof contentOrUrl === 'string') {
+        window.open(contentOrUrl, '_blank');
+    } else {
+        const arrayBuffer = await contentOrUrl.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+    }
 }
 
 window.createBlobUrl = async (contentStreamReference, contentType) => {

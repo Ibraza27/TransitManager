@@ -275,7 +275,8 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<byte[]> GenerateInvoicePdfAsync(Client client, IEnumerable<Colis> colis, decimal montant)
         {
-            return await Task.Run(() =>
+            // KEEPING EXISTING IMPLEMENTATION FOR BACKWARD COMPATIBILITY IF NEEDED (OR OVERLOAD)
+             return await Task.Run(() =>
             {
                 var document = PdfDocument.Create(container =>
                 {
@@ -300,7 +301,7 @@ namespace TransitManager.Infrastructure.Services
                                 row.RelativeItem().Column(column =>
                                 {
                                     column.Item().Text("FACTURE").FontSize(24).SemiBold().FontColor(Colors.Blue.Darken2);
-                                    column.Item().Text($"NÂ° {DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}").FontSize(12);
+                                    column.Item().Text($"N° {DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}").FontSize(12);
                                     column.Item().Text($"Date: {DateTime.Now:dd/MM/yyyy}").FontSize(10);
                                 });
                                 row.ConstantItem(180).Text("HIPPOCAMPE IMPORT-EXPORT\n7 Rue Pascal\n33370 Tresses\nTél: 06 99 56 93 58\ncontact@hippocampeimportexport.com")
@@ -352,7 +353,7 @@ namespace TransitManager.Infrastructure.Services
                                         table.Cell().Text(item.Designation);
                                         // table.Cell().Text($"{item.Poids:N2} kg"); // SUPPRIMER CETTE LIGNE
                                         table.Cell().Text(""); // On laisse une cellule vide pour le poids
-                                        table.Cell().Text($"{item.Volume:N2} mÂ³");
+                                        table.Cell().Text($"{item.Volume:N2} m³");
                                         table.Cell().AlignRight().Text($"{tarif:C}");
                                     }
                                 });
@@ -374,6 +375,242 @@ namespace TransitManager.Infrastructure.Services
                                         row.ConstantItem(100).Text("Total TTC:").SemiBold();
                                         row.ConstantItem(100).AlignRight().Text($"{montant * 1.2m:C}").SemiBold();
                                     });
+                                });
+                            });
+                        }
+                    });
+                });
+                return document.GeneratePdf();
+            });
+        }
+
+        public async Task<byte[]> GenerateInvoicePdfAsync(InvoiceDto invoice)
+        {
+             var company = await GetCompanyProfileAsync();
+             var banks = await GetBankDetailsAsync();
+             var defaultBank = banks.FirstOrDefault(b => b.IsDefault) ?? banks.FirstOrDefault();
+             
+             // Reuse Logo Logic (duplicated from Quote - should be refactored to helper but time is short)
+             string logoPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", company.LogoUrl.TrimStart('/'));
+             if (!File.Exists(logoPath))
+             {
+                 var tryPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", company.LogoUrl.TrimStart('/'));
+                 if(File.Exists(tryPath)) logoPath = tryPath;
+                 else
+                 {
+                      var devPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../TransitManager.Web/wwwroot/", company.LogoUrl.TrimStart('/')));
+                      if (File.Exists(devPath)) logoPath = devPath;
+                 }
+             }
+
+            const string EUR = " \u20AC"; 
+
+            return await Task.Run(() =>
+            {
+                var document = PdfDocument.Create(container =>
+                {
+                    container.Page(page =>
+                    {
+                        page.Size(PageSizes.A4);
+                        page.Margin(1.5f, Unit.Centimetre);
+                        page.MarginLeft(2f, Unit.Centimetre);
+                        page.MarginRight(2f, Unit.Centimetre);
+                        page.PageColor(Colors.White);
+                        page.DefaultTextStyle(x => x.FontSize(10));
+                        
+                        page.Header().Element(ComposeHeader);
+                        page.Content().Element(ComposeContent);
+                        page.Footer().Element(ComposeFooter);
+
+                        void ComposeHeader(IContainer container)
+                        {
+                            container.PaddingBottom(20).Row(row =>
+                            {
+                                // Logo and Company Info Left
+                                row.RelativeItem().Column(column =>
+                                {
+                                    if (File.Exists(logoPath))
+                                        column.Item().Height(65).Image(logoPath).FitArea();
+                                    else
+                                        column.Item().Text(company.CompanyName.ToUpper()).FontSize(20).Bold().FontColor(Colors.Blue.Darken2);
+                                    
+                                    column.Item().PaddingTop(8).Text(company.CompanyName).FontSize(9).Bold();
+                                    column.Item().Text($"{company.Address}, {company.ZipCode} {company.City}").FontSize(9);
+                                    column.Item().Text($"Pays: {company.Country}").FontSize(9);
+                                    if(!string.IsNullOrEmpty(company.Phone)) column.Item().Text($"Tél: {company.Phone}").FontSize(9);
+                                    column.Item().Text($"Email: {company.Email}").FontSize(9);
+                                });
+
+                                // Invoice Info Right
+                                row.ConstantItem(180).AlignRight().Column(column =>
+                                {
+                                    column.Item().AlignRight().Text("FACTURE").FontSize(28).SemiBold().FontColor(Colors.Grey.Darken3);
+                                    column.Item().AlignRight().PaddingTop(4).Text($"{invoice.Reference}").FontSize(13).Bold();
+                                    column.Item().AlignRight().PaddingTop(12).Text($"Date: {invoice.DateCreated:dd/MM/yyyy}").FontSize(10);
+                                    column.Item().AlignRight().Text($"Echéance: {invoice.DueDate:dd/MM/yyyy}").FontSize(10).FontColor(Colors.Red.Medium);
+                                });
+                            });
+                        }
+
+                        void ComposeContent(IContainer container)
+                        {
+                            container.PaddingVertical(15).Column(column =>
+                            {
+                                column.Spacing(25);
+
+                                // Client Section
+                                column.Item().Row(r => 
+                                {
+                                    r.RelativeItem(); // Spacer
+                                    r.ConstantItem(260).Border(1).BorderColor(Colors.Grey.Lighten2).Background("#F8FAFC").Padding(15).Column(c =>
+                                    {
+                                        c.Item().Text("Destinataire").FontSize(9).SemiBold().FontColor(Colors.Grey.Darken1);
+                                        c.Item().PaddingTop(6).Text($"{invoice.ClientName} {invoice.ClientFirstname}").FontSize(11).Bold();
+                                        if(!string.IsNullOrEmpty(invoice.ClientAddress)) 
+                                            c.Item().PaddingTop(4).Text(invoice.ClientAddress).FontSize(10);
+                                        if(!string.IsNullOrEmpty(invoice.ClientPhone)) 
+                                            c.Item().PaddingTop(2).Text(invoice.ClientPhone).FontSize(10);
+                                        if(!string.IsNullOrEmpty(invoice.ClientEmail)) 
+                                            c.Item().PaddingTop(2).Text(invoice.ClientEmail).FontSize(10);
+                                    });
+                                });
+
+                                // Message
+                                if(!string.IsNullOrEmpty(invoice.Message))
+                                {
+                                    column.Item().PaddingBottom(10).Column(c => {
+                                        c.Item().Text(invoice.Message).FontSize(10);
+                                    });
+                                }
+
+                                // Payment Terms
+                                if(!string.IsNullOrEmpty(invoice.PaymentTerms))
+                                {
+                                    column.Item().PaddingBottom(5).Column(c => {
+                                        c.Item().Text("Modalités de paiement:").SemiBold().FontSize(10);
+                                        c.Item().Text(invoice.PaymentTerms).FontSize(10);
+                                    });
+                                }
+
+                                // Lines Table
+                                column.Item().Table(table =>
+                                {
+                                    table.ColumnsDefinition(columns =>
+                                    {
+                                        columns.RelativeColumn(10f);
+                                        columns.ConstantColumn(62);
+                                        columns.ConstantColumn(32);
+                                        columns.ConstantColumn(30);
+                                        columns.ConstantColumn(55);
+                                        columns.ConstantColumn(42);
+                                        columns.ConstantColumn(58);
+                                    });
+
+                                    table.Header(header =>
+                                    {
+                                        header.Cell().Element(HeaderStyle).Text("Description");
+                                        header.Cell().Element(HeaderStyle).AlignCenter().Text("Date");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Qté"); 
+                                        header.Cell().Element(HeaderStyle).AlignCenter().Text("Unité");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Prix unit."); 
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("TVA");
+                                        header.Cell().Element(HeaderStyle).AlignRight().Text("Montant");
+                                        
+                                        static IContainer HeaderStyle(IContainer container) => 
+                                            container.DefaultTextStyle(x => x.SemiBold().FontSize(8).FontColor(Colors.White))
+                                                     .Background("#2C3E50").PaddingVertical(6).PaddingHorizontal(4);
+                                    });
+
+                                    foreach (var line in invoice.Lines.OrderBy(l => l.Position))
+                                    {
+                                        if (line.Type == QuoteLineType.Title)
+                                        {
+                                            table.Cell().ColumnSpan(7).PaddingTop(12).PaddingBottom(4)
+                                                .Element(c => c.Text(line.Description.ToUpper()).FontSize(9).Bold().FontColor("#1E293B"));
+                                        }
+                                        else if (line.Type == QuoteLineType.Text)
+                                        {
+                                            table.Cell().ColumnSpan(7).PaddingLeft(4).PaddingBottom(6)
+                                                .Element(c => c.Text(line.Description).FontSize(8).FontColor("#64748B"));
+                                        }
+                                        else if (line.Type == QuoteLineType.Subtotal)
+                                        {
+                                            IContainer SubtotalStyle(IContainer container) => container.BorderTop(1).BorderColor("#CBD5E1").PaddingVertical(6);
+                                            table.Cell().Element(SubtotalStyle).Text(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description).Bold().FontSize(8);
+                                            table.Cell().Element(SubtotalStyle); table.Cell().Element(SubtotalStyle); table.Cell().Element(SubtotalStyle); table.Cell().Element(SubtotalStyle); table.Cell().Element(SubtotalStyle); 
+                                            table.Cell().Element(SubtotalStyle).AlignRight().Text($"{line.TotalHT:N2}{EUR}").Bold().FontSize(8);
+                                        }
+                                        else 
+                                        {
+                                            table.Cell().Element(CellStyle).Text(line.Description).FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignCenter().Text(line.Date?.ToString("dd.MM.yyyy") ?? "").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.Quantity:0.00}").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignCenter().Text(line.Unit ?? "pce").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.UnitPrice:N2}{EUR}").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.VATRate:0.00} %").FontSize(8);
+                                            table.Cell().Element(CellStyle).AlignRight().Text($"{line.TotalHT:N2}{EUR}").FontSize(8);
+                                        }
+
+                                        static IContainer CellStyle(IContainer container) => container.BorderBottom(1).BorderColor("#E2E8F0").PaddingVertical(5).PaddingHorizontal(4);
+                                    }
+                                });
+
+                                // Totals
+                                column.Item().AlignRight().Width(280).PaddingTop(10).Column(col =>
+                                {
+                                    col.Item().Row(row => { row.RelativeItem().Text("Total HT").FontSize(10); row.ConstantItem(100).AlignRight().Text($"{invoice.TotalHT:N2}{EUR}").FontSize(10); });
+                                    col.Item().PaddingTop(4).BorderBottom(1).BorderColor("#CBD5E1").PaddingBottom(8).Row(row => { row.RelativeItem().Text("TVA").FontSize(10); row.ConstantItem(100).AlignRight().Text($"{invoice.TotalTVA:N2}{EUR}").FontSize(10); });
+                                    col.Item().PaddingTop(12).Row(row => { row.RelativeItem().Text("Total TTC").SemiBold().FontSize(13); row.ConstantItem(120).AlignRight().Text($"{invoice.TotalTTC:N2}{EUR}").SemiBold().FontSize(13); });
+                                });
+                                
+                                // Footer Notes
+                                if(!string.IsNullOrEmpty(invoice.FooterNote))
+                                {
+                                    column.Item().PaddingTop(20).LineHorizontal(1).LineColor("#E2E8F0");
+                                    column.Item().PaddingTop(8).Text(t => { t.Span(invoice.FooterNote).FontSize(9).FontColor("#64748B"); t.AlignCenter(); });
+                                }
+
+                                // Bank Details
+                                if(defaultBank != null)
+                                {
+                                    column.Item().PaddingTop(30).Element(container => 
+                                    {
+                                        container.Background("#F0F9FF").Border(2).BorderColor("#0369A1").Padding(15).Column(c => {
+                                             c.Item().Text("COORDONNÉES BANCAIRES").Bold().FontSize(12).FontColor("#0369A1");
+                                             c.Item().PaddingTop(10).Row(r => {
+                                                 r.RelativeItem().Column(sub => {
+                                                     sub.Item().Text("Banque").FontSize(8).FontColor("#64748B");
+                                                     sub.Item().Text(defaultBank.BankName).FontSize(10).Bold();
+                                                     sub.Item().PaddingTop(8).Text("Titulaire du compte").FontSize(8).FontColor("#64748B");
+                                                     sub.Item().Text(defaultBank.AccountHolder).FontSize(10).Bold();
+                                                 });
+                                                 r.ConstantItem(20);
+                                                 r.RelativeItem().Column(sub => {
+                                                     sub.Item().Text("IBAN").FontSize(8).FontColor("#64748B");
+                                                     sub.Item().Text(defaultBank.Iban).FontSize(11).Bold().FontFamily(Fonts.CourierNew);
+                                                     sub.Item().PaddingTop(8).Text("BIC / SWIFT").FontSize(8).FontColor("#64748B");
+                                                     sub.Item().Text(defaultBank.Bic).FontSize(10).Bold().FontFamily(Fonts.CourierNew);
+                                                 });
+                                             });
+                                        });
+                                    });
+                                }
+                            });
+                        }
+
+                        void ComposeFooter(IContainer container)
+                        {
+                            container.PaddingTop(15).AlignCenter().Column(c =>
+                            {
+                                c.Item().AlignCenter().Text($"{company.CompanyName} - {company.LegalStatus}").FontSize(10).Black().Bold(); 
+                                c.Item().AlignCenter().Text($"{company.Address} {company.ZipCode} {company.City}").FontSize(8).FontColor("#64748B");
+                                c.Item().AlignCenter().Text($"SIRET: {company.Siret} - TVA: {company.TvaNumber} - RCS: {company.Rcs}").FontSize(8).FontColor("#64748B");
+                                 c.Item().AlignCenter().PaddingTop(6).Text(x =>
+                                {
+                                    x.Span("Page ").FontSize(9);
+                                    x.CurrentPageNumber().FontSize(9);
+                                    x.Span(" / ").FontSize(9);
+                                    x.TotalPages().FontSize(9);
                                 });
                             });
                         }

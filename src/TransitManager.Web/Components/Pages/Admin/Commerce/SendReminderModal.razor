@@ -43,6 +43,9 @@
                         <label class="col-sm-3 col-form-label">Message</label>
                         <div class="col-sm-9">
                             <textarea class="form-control" rows="6" @bind="Body"></textarea>
+                            <div class="mt-2 text-end">
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="SaveAsTemplate"><i class="bi bi-save me-1"></i>Enregistrer comme modèle</button>
+                            </div>
                         </div>
                     </div>
 
@@ -81,6 +84,12 @@
     private string Subject = "";
     private string Body = "";
     private bool CopyToSender = false;
+
+    private async Task SaveAsTemplate()
+    {
+        // Placeholder Logic
+         await JS.InvokeVoidAsync("alert", "Fonctionnalité 'Enregistrer comme modèle' sera disponible dans une prochaine mise à jour.");
+    }
 
     public void Open(string subject, string body, string email)
     {

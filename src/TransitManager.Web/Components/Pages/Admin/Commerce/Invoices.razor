@@ -29,7 +29,7 @@
                 <option value="">Tous statuts</option>
                 @foreach(var status in Enum.GetValues<InvoiceStatus>())
                 {
-                    <option value="@status">@status</option>
+                    <option value="@status">@GetStatusName(status)</option>
                 }
             </select>
         </div>
@@ -249,6 +249,7 @@
                             <li><button class="dropdown-item" @onclick="() => DuplicateInvoice(invoice)"><i class="bi bi-files me-2"></i>Dupliquer</button></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><button class="dropdown-item" @onclick="() => OpenSendModal(invoice)"><i class="bi bi-envelope me-2"></i>Envoyer par e-mail</button></li>
+                            <li><button class="dropdown-item" @onclick="() => PreviewPdf(invoice)"><i class="bi bi-eye me-2"></i>Aperçu PDF</button></li>
                             <li><button class="dropdown-item" @onclick="() => DownloadPdf(invoice)"><i class="bi bi-file-pdf me-2"></i>Télécharger PDF</button></li>
                             <li><button class="dropdown-item" @onclick="() => SendReminder(invoice)"><i class="bi bi-bell-fill me-2"></i>Envoyer Rappel</button></li>
                             <li><hr class="dropdown-divider"></li>
@@ -403,6 +404,21 @@
         } catch(Exception ex) {
              Console.WriteLine(ex);
              await JS.InvokeVoidAsync("alert", "Erreur téléchargement.");
+        }
+        IsLoadingPdf = false;
+    }
+
+    private async Task PreviewPdf(InvoiceDto invoice)
+    {
+        IsLoadingPdf = true;
+        try {
+            var pdfBytes = await ApiService.GetInvoicePdfAsync(invoice.Id);
+            using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
+            var url = await JS.InvokeAsync<string>("createBlobUrl", streamRef, "application/pdf");
+            await JS.InvokeVoidAsync("openPdfInNewTab", url);
+        } catch(Exception ex) {
+             Console.WriteLine(ex);
+             await JS.InvokeVoidAsync("alert", "Erreur lors de l'aperçu.");
         }
         IsLoadingPdf = false;
     }

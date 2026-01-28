@@ -16,9 +16,10 @@
                     <div class="mb-3 row">
                         <label class="col-sm-3 col-form-label">Destinataire(s)</label>
                         <div class="col-sm-9">
-                            <div class="input-group">
+                            <div class="input-group mb-2">
                                 <span class="form-control bg-light">@RecipientEmail <i class="bi bi-x ms-2 cursor-pointer"></i></span>
                             </div>
+                            <input type="text" class="form-control" placeholder="Ajouter autre destinataire (CC)..." @bind="CCEmail" />
                         </div>
                     </div>
                      <div class="mb-3 row">
@@ -43,6 +44,9 @@
                         <label class="col-sm-3 col-form-label">Message</label>
                         <div class="col-sm-9">
                             <textarea class="form-control" rows="6" @bind="Body"></textarea>
+                            <div class="mt-2 text-end">
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="SaveAsTemplate"><i class="bi bi-save me-1"></i>Enregistrer comme modèle</button>
+                            </div>
                         </div>
                     </div>
 
@@ -95,8 +99,16 @@
     private string Subject = "";
     private string Body = "";
     private bool CopyToSender = false;
+    private string CCEmail = ""; // New CC Property
     
     private List<(Guid Id, string Name)> Attachments = new();
+
+    private async Task SaveAsTemplate()
+    {
+        // Placeholder for saving template logic - needs backend support or local storage
+        // For now, just show a success message or non-op
+        await JS.InvokeVoidAsync("alert", "Fonctionnalité 'Enregistrer comme modèle' sera disponible dans une prochaine mise à jour.");
+    }
 
     public void Open(string subject, string body, string email)
     {

@@ -1039,9 +1039,28 @@ namespace TransitManager.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(body)) body = "Veuillez trouver ci-joint votre facture.";
 
             var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";
-            var fullBody = $"{body}<br/><br/>Vous pouvez consulter et régler votre facture en ligne ici : <a href='{publicLink}'>{publicLink}</a>";
+            
+            // Rich Email Body
+            var htmlBody = $@"
+                <div style='font-family: Arial, sans-serif; color: #333;'>
+                    <h2 style='color: #2c3e50;'>Facture #{invoice.Reference}</h2>
+                    <p>Bonjour,</p>
+                    <p>{body}</p>
+                    <div style='background-color: #f8f9fa; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;'>
+                        <p><strong>Date:</strong> {invoice.DateCreated:dd/MM/yyyy}<br/>
+                        <strong>Total:</strong> {invoice.TotalTTC:C}<br/>
+                        <strong>Echéance:</strong> {invoice.DueDate:dd/MM/yyyy}</p>
+                    </div>
+                    <p>Vous pouvez consulter et régler votre facture en ligne en cliquant sur le bouton ci-dessous :</p>
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='{publicLink}' style='background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Consulter la facture</a>
+                    </div>
+                    <p style='font-size: 12px; color: #666;'>Si le bouton ne fonctionne pas, copiez ce lien : {publicLink}</p>
+                    <hr style='border: 0; border-top: 1px solid #eee; margin: 30px 0;'/>
+                    <p style='font-size: 11px; color: #999;'>{company.CompanyName}</p>
+                </div>";
 
-            await _emailService.SendEmailAsync(invoice.Client.Email, subject, fullBody, attachments);
+            await _emailService.SendEmailAsync(invoice.Client.Email, subject, htmlBody, attachments);
 
             if (invoice.Status == InvoiceStatus.Draft)
             {
@@ -1068,10 +1087,29 @@ namespace TransitManager.Infrastructure.Services
              if (string.IsNullOrWhiteSpace(subject)) subject = $"Rappel de paiement - Facture {invoice.Reference}";
              if (string.IsNullOrWhiteSpace(body)) body = "Ceci est un rappel de paiement.";
 
-             var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";
-             var fullBody = $"{body}<br/><br/>Vous pouvez consulter votre facture en ligne ici : <a href='{publicLink}'>{publicLink}</a>";
+              var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";
+              
+             // Rich Reminder Body
+            var htmlBody = $@"
+                <div style='font-family: Arial, sans-serif; color: #333;'>
+                    <h2 style='color: #dc3545;'>Rappel de Paiement - {invoice.Reference}</h2>
+                    <p>Bonjour,</p>
+                    <p>{body}</p>
+                    <div style='background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;'>
+                        <p><strong>Facture:</strong> {invoice.Reference}<br/>
+                        <strong>Montant dû:</strong> {invoice.TotalTTC:C}<br/>
+                        <strong>Date d'échéance:</strong> {invoice.DueDate:dd/MM/yyyy}</p>
+                    </div>
+                    <p>Nous vous remercions de procéder au règlement dès que possible.</p>
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='{publicLink}' style='background-color: #dc3545; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Régler la facture</a>
+                    </div>
+                    <p style='font-size: 12px; color: #666;'>Si le bouton ne fonctionne pas, copiez ce lien : {publicLink}</p>
+                    <hr style='border: 0; border-top: 1px solid #eee; margin: 30px 0;'/>
+                    <p style='font-size: 11px; color: #999;'>{company.CompanyName}</p>
+                </div>";
 
-             await _emailService.SendEmailAsync(invoice.Client.Email, subject, fullBody, attachments);
+             await _emailService.SendEmailAsync(invoice.Client.Email, subject, htmlBody, attachments);
 
              invoice.ReminderCount++;
              invoice.LastReminderSent = DateTime.UtcNow;
@@ -1087,7 +1125,7 @@ namespace TransitManager.Infrastructure.Services
             // User didn't explicitly ask for PDF layout changes, but Invoice needs to say "Facture".
             // We'll likely need to update ExportService later. For now, let's pretend ExportService has it or use a placeholder logic.
             // Actually, I should check ExportService. Creating a placeholder call for now.
-             return await _exportService.GenerateQuotePdfAsync(new QuoteDto { Reference = invoice.Reference }); // HACK: Temporary until ExportService updated
+             return await _exportService.GenerateInvoicePdfAsync(invoice);
         }
         
         // Helpers

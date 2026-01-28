@@ -13,6 +13,7 @@ namespace TransitManager.Core.Interfaces
         Task<byte[]> ExportColisToExcelAsync(IEnumerable<Colis> colis);
         Task<byte[]> ExportConteneurManifestAsync(Conteneur conteneur);
         Task<byte[]> GenerateInvoicePdfAsync(Client client, IEnumerable<Colis> colis, decimal montant);
+        Task<byte[]> GenerateInvoicePdfAsync(InvoiceDto invoice);
         Task<byte[]> GenerateReceiptPdfAsync(Paiement paiement);
         Task<byte[]> GenerateDashboardReportAsync(DashboardData data);
         Task<byte[]> ExportFinancialReportAsync(DateTime startDate, DateTime endDate, IEnumerable<Paiement> paiements);

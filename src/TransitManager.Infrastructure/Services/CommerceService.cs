@@ -799,7 +799,7 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<InvoiceDto> CreateInvoiceAsync(CreateInvoiceDto dto)
         {
-            var settings = await _settingsService.GetSettingAsync<InvoiceSettingsDto>("InvoiceSettings", new());
+            var settings = await _settingsService.GetSettingAsync<BillingSettingsDto>("BillingSettings", new());
 
             // Apply defaults if not provided in DTO
             if (string.IsNullOrWhiteSpace(dto.PaymentTerms)) dto.PaymentTerms = settings.DefaultPaymentTerms;
@@ -998,7 +998,7 @@ namespace TransitManager.Infrastructure.Services
             var quote = await _context.Quotes.Include(q => q.Lines).FirstOrDefaultAsync(q => q.Id == quoteId);
             if (quote == null) throw new Exception("Devis introuvable");
 
-            var settings = await _settingsService.GetSettingAsync<InvoiceSettingsDto>("InvoiceSettings", new());
+            var settings = await _settingsService.GetSettingAsync<BillingSettingsDto>("BillingSettings", new());
 
             var invoice = new Invoice
             {
@@ -1009,8 +1009,8 @@ namespace TransitManager.Infrastructure.Services
                 DueDate = DateTime.UtcNow.AddDays(30), // Default 30 days
                 Status = InvoiceStatus.Draft,
                 Message = quote.Message,
-                PaymentTerms = string.IsNullOrWhiteSpace(quote.PaymentTerms) ? settings.DefaultPaymentTerms : quote.PaymentTerms,
-                FooterNote = string.IsNullOrWhiteSpace(quote.FooterNote) ? settings.DefaultFooterNote : quote.FooterNote,
+                PaymentTerms = settings.DefaultPaymentTerms, // ALWAYS apply default settings for fresh Invoice as requested
+                FooterNote = settings.DefaultFooterNote, // ALWAYS apply default settings for fresh Invoice
                 DiscountValue = quote.DiscountValue,
                 DiscountType = quote.DiscountType,
                 DiscountBase = quote.DiscountBase,
@@ -1062,10 +1062,25 @@ namespace TransitManager.Infrastructure.Services
         }
 
 
-        public async Task SendInvoiceByEmailAsync(Guid id, string? subject = null, string? body = null, List<string>? ccEmails = null)
+        public async Task SendInvoiceByEmailAsync(Guid id, string? subject = null, string? body = null, List<string>? ccEmails = null, List<string>? recipients = null)
         {
-             var invoice = await _context.Invoices.Include(i => i.Client).FirstOrDefaultAsync(i => i.Id == id);
+             var invoice = await _context.Invoices
+                 .Include(i => i.Client)
+                 .Include(i => i.Lines)
+                 .FirstOrDefaultAsync(i => i.Id == id);
              if (invoice == null || invoice.Client == null) throw new Exception("Facture ou client introuvable");
+
+             // Determine Recipients
+             var toEmails = new List<string>();
+             if (recipients != null && recipients.Any())
+             {
+                 toEmails.AddRange(recipients);
+             }
+             else
+             {
+                 toEmails.Add(invoice.Client.Email);
+             }
+             if (!toEmails.Any()) throw new Exception("Aucun destinataire défini.");
 
              // Generate PDF
              var pdfBytes = await _exportService.GenerateInvoicePdfAsync(MapInvoiceToDto(invoice));
@@ -1102,19 +1117,42 @@ namespace TransitManager.Infrastructure.Services
                     <p style='font-size: 12px; color: #999;'>Cordialement,<br/>{company.CompanyName}</p>
                 </div>";
 
-             await _emailService.SendEmailAsync(invoice.Client.Email, subject, htmlBody, attachments, ccEmails);
+             // Send to joined recipients (comma sep if SendEmailAsync supports it? No, usually it takes one or we loop. 
+             // Core IEmailService usually takes string `to`. If it supports comma, good.
+             // If not, we might need a loop or change IEmailService. 
+             // Assuming IEmailService.SendEmailAsync takes comma separated string or list?
+             // Checking line 1105 usage: `invoice.Client.Email`.
+             // I'll join them by comma, assuming standard SMTP/Service handling.
+             var toAddress = string.Join(",", toEmails);
+
+             await _emailService.SendEmailAsync(toAddress, subject, htmlBody, attachments, ccEmails);
 
              invoice.DateSent = DateTime.UtcNow;
              if(invoice.Status == InvoiceStatus.Draft) invoice.Status = InvoiceStatus.Sent;
              
-             _context.InvoiceHistories.Add(new InvoiceHistory { InvoiceId = id, Action = "Envoyée", Details = $"Envoyée par email à {invoice.Client.Email}" });
+             _context.InvoiceHistories.Add(new InvoiceHistory { InvoiceId = id, Action = "Envoyée", Details = $"Envoyée par email à {toAddress}" });
              await _context.SaveChangesAsync();
         }
 
-        public async Task SendPaymentReminderAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null, List<string> ccEmails = null)
+        public async Task SendPaymentReminderAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null, List<string>? ccEmails = null, List<string>? recipients = null)
         {
-             var invoice = await _context.Invoices.Include(i => i.Client).FirstOrDefaultAsync(i => i.Id == id);
+             var invoice = await _context.Invoices
+                 .Include(i => i.Client)
+                 .Include(i => i.Lines)
+                 .FirstOrDefaultAsync(i => i.Id == id);
             if (invoice == null) throw new Exception("Facture introuvable");
+
+             // Determine Recipients
+             var toEmails = new List<string>();
+             if (recipients != null && recipients.Any())
+             {
+                 toEmails.AddRange(recipients);
+             }
+             else
+             {
+                 toEmails.Add(invoice.Client.Email);
+             }
+             if (!toEmails.Any()) throw new Exception("Aucun destinataire défini.");
 
             // Similar sending logic
              var company = await _settingsService.GetSettingAsync<TransitManager.Core.DTOs.Settings.CompanyProfileDto>("CompanyProfile", new());
@@ -1151,12 +1189,14 @@ namespace TransitManager.Infrastructure.Services
                     <p style='font-size: 11px; color: #999;'>{company.CompanyName}</p>
                 </div>";
 
-             await _emailService.SendEmailAsync(invoice.Client.Email, subject, htmlBody, attachments, ccEmails);
+             var toAddress = string.Join(",", toEmails);
+
+             await _emailService.SendEmailAsync(toAddress, subject, htmlBody, attachments, ccEmails);
 
              invoice.ReminderCount++;
              invoice.LastReminderSent = DateTime.UtcNow;
              
-             _context.InvoiceHistories.Add(new InvoiceHistory { InvoiceId = id, Action = "Rappel envoyé", Details = $"Rappel #{invoice.ReminderCount} envoyé" });
+             _context.InvoiceHistories.Add(new InvoiceHistory { InvoiceId = id, Action = "Rappel envoyé", Details = $"Rappel #{invoice.ReminderCount} envoyé à {toAddress}" });
              await _context.SaveChangesAsync();
         }
 

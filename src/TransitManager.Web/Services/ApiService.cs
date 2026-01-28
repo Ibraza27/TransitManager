@@ -1761,7 +1761,7 @@ namespace TransitManager.Web.Services
 
 
 
-        public async Task<bool> SendInvoiceByEmailAsync(Guid id, string? subject, string? body, bool copyToSender, List<Guid>? attachments, List<string>? cc = null)
+        public async Task<bool> SendInvoiceByEmailAsync(Guid id, string? subject, string? body, bool copyToSender, List<Guid>? attachments, List<string>? cc = null, List<string>? recipients = null)
         {
             try
             {
@@ -1771,7 +1771,8 @@ namespace TransitManager.Web.Services
                     Body = body, 
                     CopyToSender = copyToSender, 
                     TempAttachmentIds = attachments,
-                    Cc = cc != null && cc.Any() ? string.Join(",", cc) : null
+                    Cc = cc != null && cc.Any() ? string.Join(",", cc) : null,
+                    Recipients = recipients != null && recipients.Any() ? string.Join(",", recipients) : null
                 };
                 var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/email", request, _jsonOptions);
                 return response.IsSuccessStatusCode;
@@ -1779,7 +1780,7 @@ namespace TransitManager.Web.Services
             catch { return false; }
         }
 
-        public async Task<bool> SendPaymentReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments)
+        public async Task<bool> SendPaymentReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments, List<string>? cc = null, List<string>? recipients = null)
         {
             try
             {
@@ -1788,7 +1789,9 @@ namespace TransitManager.Web.Services
                     Subject = subject, 
                     Body = body, 
                     CopyToSender = true, // Default true for reminders?
-                    TempAttachmentIds = attachments 
+                    TempAttachmentIds = attachments,
+                     Cc = cc != null && cc.Any() ? string.Join(",", cc) : null,
+                     Recipients = recipients != null && recipients.Any() ? string.Join(",", recipients) : null
                 };
                 var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/reminder", request, _jsonOptions);
                 return response.IsSuccessStatusCode;

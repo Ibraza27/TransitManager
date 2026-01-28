@@ -16,10 +16,8 @@
                     <div class="mb-3 row">
                         <label class="col-sm-3 col-form-label">Destinataire(s)</label>
                         <div class="col-sm-9">
-                            <div class="input-group mb-2">
-                                <span class="form-control bg-light">@RecipientEmail <i class="bi bi-x ms-2 cursor-pointer"></i></span>
-                            </div>
-                            <input type="text" class="form-control" placeholder="Ajouter autre destinataire (CC)..." @bind="CCEmail" />
+                            <input type="text" class="form-control mb-2" @bind="Recipients" placeholder="Séparez les emails par des virgules" />
+                            <input type="text" class="form-control" placeholder="Ajouter copie (CC)..." @bind="CCEmail" />
                         </div>
                     </div>
                      <div class="mb-3 row">
@@ -82,6 +80,8 @@
     private bool IsVisible = false;
     private bool IsSending = false;
     
+    private string Recipients = ""; // Editable
+
     private string Subject = "";
     private string Body = "";
     private bool CopyToSender = false;
@@ -103,6 +103,7 @@
         Subject = subject;
         Body = body;
         RecipientEmail = email;
+        Recipients = email; // Init
         IsVisible = true;
         StateHasChanged();
     }
@@ -123,6 +124,7 @@
                  Subject = Subject, 
                  Body = Body, 
                  CopyToSender = CopyToSender,
+                 Recipients = Recipients, // Map
                  Cc = CCEmail,
                  TempAttachmentIds = new List<Guid>() // Typically no extra attachments for reminders, just the PDF
              };

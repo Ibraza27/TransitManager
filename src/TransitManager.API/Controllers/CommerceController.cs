@@ -290,8 +290,16 @@ namespace TransitManager.API.Controllers
                                    .Select(e => e.Trim())
                                    .ToList();
             }
+            
+            List<string>? recipientsList = null;
+            if(!string.IsNullOrWhiteSpace(request.Recipients))
+            {
+                recipientsList = request.Recipients.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(e => e.Trim())
+                                   .ToList();
+            }
 
-            await _commerceService.SendInvoiceByEmailAsync(id, request.Subject, request.Body, ccList);
+            await _commerceService.SendInvoiceByEmailAsync(id, request.Subject, request.Body, ccList, recipientsList);
             return Ok();
         }
 
@@ -306,7 +314,16 @@ namespace TransitManager.API.Controllers
                                    .Select(e => e.Trim())
                                    .ToList();
             }
-            await _commerceService.SendPaymentReminderAsync(id, request.Subject, request.Body, request.TempAttachmentIds, ccList);
+            
+            List<string>? recipientsList = null;
+            if(!string.IsNullOrWhiteSpace(request.Recipients))
+            {
+                recipientsList = request.Recipients.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(e => e.Trim())
+                                   .ToList();
+            }
+            
+            await _commerceService.SendPaymentReminderAsync(id, request.Subject, request.Body, request.TempAttachmentIds, ccList, recipientsList);
             return Ok();
         }
 

@@ -70,19 +70,9 @@
                  </div>
              </div>
 
-             <!-- PDF Viewer (Iframe) -->
-             <div class="bg-white shadow-sm mx-auto flex-grow-1 border w-100" style="max-width: 900px; height: 800px;">
-                 @if(string.IsNullOrEmpty(PdfBlobUrl))
-                 {
-                     <div class="d-flex justify-content-center align-items-center h-100">
-                         <div class="spinner-border text-secondary"></div>
-                         <span class="ms-2">Chargement de l'aperçu...</span>
-                     </div>
-                 }
-                 else
-                 {
-                     <iframe src="@PdfBlobUrl" class="w-100 h-100 border-0"></iframe>
-                 }
+             <!-- PDF Viewer (HTML Preview) -->
+             <div class="bg-white shadow-sm mx-auto flex-grow-1 border w-100 overflow-auto" style="max-width: 900px;">
+                 @RenderAdminPreview(Model)
              </div>
          </div>
     }
@@ -202,7 +192,12 @@
                 </div>
                  
                  <div class="mx-2 mb-5">
-                      <label class="form-label fw-bold small">Notes</label>
+                      <label class="form-label fw-bold small d-flex justify-content-between">
+                          Notes
+                          <button class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size: 0.8rem;" @onclick="SaveNotesAsTemplate" title="Définir comme modèle par défaut">
+                              <i class="bi bi-bookmark-plus me-1"></i>Définir comme modèle
+                          </button>
+                      </label>
                       <textarea class="form-control" rows="3" @bind="Model.FooterNote"></textarea>
                  </div>
              </div>
@@ -388,30 +383,9 @@
     private SendReminderModal _sendReminderModal;
     private string PdfBlobUrl = "";
 
-    private async Task TogglePreview() 
+    private void TogglePreview() 
     { 
         IsPreviewMode = !IsPreviewMode;
-        if(IsPreviewMode) await LoadPdfPreview();
-    }
-    
-    private async Task LoadPdfPreview()
-    {
-        // Switch to HTML Preview using Public Link
-        PdfBlobUrl = ""; 
-        StateHasChanged();
-        
-        if(!Id.HasValue) return;
-        
-        // Use Public Link
-        if(Model.PublicToken != Guid.Empty)
-        {
-             // Use absolute or relative path? Relative is safer for iframe in same domain.
-             PdfBlobUrl = $"/portal/invoice/{Model.PublicToken}";
-        }
-        else
-        {
-             await JS.InvokeVoidAsync("alert", "Token public manquant. Impossible d'afficher l'aperçu.");
-        }
     }
 
     private void OpenSendModal()
@@ -471,6 +445,20 @@
          {
               await JS.InvokeVoidAsync("alert", "Erreur lors de l'envoi du rappel.");
          }
+    }
+    
+    private async Task SaveTermsAsTemplate()
+    {
+        _billingSettings.DefaultPaymentTerms = Model.PaymentTerms;
+        await SettingsService.SaveSettingAsync("BillingSettings", _billingSettings);
+        await JS.InvokeVoidAsync("alert", "Modalités de paiement définies comme modèle par défaut !");
+    }
+
+    private async Task SaveNotesAsTemplate()
+    {
+        _billingSettings.DefaultFooterNote = Model.FooterNote;
+        await SettingsService.SaveSettingAsync("BillingSettings", _billingSettings);
+        await JS.InvokeVoidAsync("alert", "Notes définies comme modèle par défaut !");
     }
 
     private async Task DownloadPdf()
@@ -598,6 +586,161 @@
         public DateTime? Date { get; set; }
         public decimal TotalHT { get; set; } // For display
     }
+    
+    // --- Admin Preview Logic ---
+    private RenderFragment RenderAdminPreview(InvoiceViewModel invoice) => __builder =>
+    {
+        <div class="p-4 bg-white" style="min-height: 800px; font-size: 0.85rem;">
+            <!-- Header with Company Info & Logo -->
+            <div class="row mb-5 border-bottom pb-4">
+                <div class="col-12 col-md-7 mb-3 mb-md-0">
+                    <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
+                    
+                    <div class="small text-muted">
+                        <strong>@_companyProfile.CompanyName</strong><br/>
+                        @_companyProfile.Address<br/>
+                        @_companyProfile.City<br/>
+                        @_companyProfile.Country<br/>
+                        <br/>
+                        Tél: @_companyProfile.Phone<br/>
+                        Email: @_companyProfile.Email
+                    </div>
+                </div>
+                <div class="col-12 col-md-5 text-md-end">
+                    <h2 class="fw-bold text-uppercase text-secondary mb-3">Facture</h2>
+                    <h4 class="fw-bold fs-3">@(string.IsNullOrEmpty(ExistingRef) ? "BROUILLON" : ExistingRef)</h4>
+                    <div class="text-muted mt-2">Date: @invoice.DateCreated.ToString("dd/MM/yyyy")</div>
+                    <div class="text-danger fw-bold">Échéance: @invoice.DueDate.ToString("dd/MM/yyyy")</div>
+                </div>
+            </div>
+
+            <!-- Client Info Box -->
+            <div class="row mb-5 justify-content-end">
+                <div class="col-md-6">
+                    <div class="p-4 bg-light rounded-3 border">
+                        <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
+                        @if(SelectedClient != null)
+                        {
+                            <div class="fs-5 fw-bold text-dark">@SelectedClient.Nom @SelectedClient.Prenom</div>
+                            <div class="text-muted">@SelectedClient.AdressePrincipale</div>
+                            <div class="text-muted">@SelectedClient.TelephonePrincipal</div>
+                            <div class="text-muted"><a href="mailto:@SelectedClient.Email">@SelectedClient.Email</a></div>
+                        }
+                        else
+                        {
+                            <div class="text-muted fst-italic">Client non sélectionné</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message -->
+            @if (!string.IsNullOrEmpty(invoice.Message))
+            {
+                <div class="mb-4">
+                    <h6 class="fw-bold text-secondary text-uppercase small mb-2">Message</h6>
+                    <p class="text-pre-wrap small text-muted">@invoice.Message</p>
+                </div>
+            }
+
+            <!-- Payment Terms -->
+            @if (!string.IsNullOrEmpty(invoice.PaymentTerms))
+            {
+                    <div class="mb-4">
+                    <h6 class="fw-bold text-secondary text-uppercase small mb-2">Modalités de Paiement</h6>
+                    <p class="small text-muted">@invoice.PaymentTerms</p>
+                </div>
+            }
+
+            <!-- Line Items -->
+            <div class="table-responsive mb-5">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="py-3 ps-4">Description</th>
+                            <th class="py-3 ps-4">Date</th>
+                            <th class="text-end py-3">Quantité</th>
+                            <th class="text-end py-3">Prix Unit.</th>
+                            <th class="text-end py-3">TVA</th>
+                            <th class="text-end py-3 pe-4">Total HT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in invoice.Lines)
+                        {
+                            @if(line.Type == QuoteLineType.Title)
+                            {
+                                <tr class="table-secondary title-row">
+                                    <td colspan="6" class="fw-bold text-uppercase py-2 ps-4 text-dark">@line.Description</td>
+                                </tr>
+                            }
+                            else if(line.Type == QuoteLineType.Text)
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-muted py-2 ps-4">@line.Description</td>
+                                </tr>
+                            }
+                            else if (line.Type == QuoteLineType.Subtotal)
+                            {
+                                <tr class="fw-bold border-top">
+                                    <td class="ps-4 py-3" colspan="2">@(string.IsNullOrWhiteSpace(line.Description) ? "Sous-total" : line.Description)</td>
+                                    <td colspan="3"></td>
+                                    <td class="text-end py-3 pe-4 fw-bold">@line.TotalHT.ToString("N2") €</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td class="ps-4 py-3 fw-medium">@line.Description</td>
+                                    <td class="ps-4 py-3">@(line.Date.HasValue ? line.Date.Value.ToString("dd/MM/yyyy") : "-")</td>
+                                    <td class="text-end py-3 text-nowrap">@line.Quantity @line.Unit</td>
+                                    <td class="text-end py-3 text-nowrap">@line.UnitPrice.ToString("N2") €</td>
+                                    <td class="text-end py-3 text-nowrap">@line.VATRate %</td>
+                                    <td class="text-end py-3 pe-4 text-nowrap">@((line.Quantity * line.UnitPrice).ToString("N2")) €</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footers & Totals -->
+            <div class="row">
+                <div class="col-md-7">
+                </div>
+                <div class="col-md-5">
+                        <table class="table table-sm table-borderless">
+                        <tr>
+                            <td class="text-end text-muted">Total HT</td>
+                            <td class="text-end fw-bold">@RawTotalHT.ToString("N2") €</td>
+                        </tr>
+                        <tr>
+                            <td class="text-end text-muted">TVA</td>
+                            <td class="text-end fw-bold">@TotalTVA.ToString("N2") €</td>
+                        </tr>
+                        <tr class="border-top border-dark">
+                            <td class="text-end fs-4 fw-bold pt-3">Total TTC</td>
+                            <td class="text-end fs-4 fw-bold pt-3 text-primary">@TotalTTC.ToString("C2")</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(invoice.FooterNote))
+            {
+                <div class="mt-4 text-center border-top pt-3">
+                        <h6 class="fw-bold text-secondary text-uppercase small mb-2">Note de bas de page</h6>
+                        <p class="small text-muted mb-0">@invoice.FooterNote</p>
+                </div>
+            }
+
+            <!-- Legal Footer -->
+            <div class="mt-5 text-center text-muted small pt-5 border-top">
+                    @_companyProfile.CompanyName - @_companyProfile.Address @_companyProfile.City<br/>
+                    Numéro de SIRET: @_companyProfile.Siret - Numéro de TVA: @_companyProfile.TvaNumber
+            </div>
+        </div>
+    };
     
     // Stub implementations for Unsaved Modal
      private void ConfirmSaveAndExit() { Save(true); _showUnsavedModal = false; }

@@ -998,7 +998,7 @@ namespace TransitManager.Infrastructure.Services
             var quote = await _context.Quotes.Include(q => q.Lines).FirstOrDefaultAsync(q => q.Id == quoteId);
             if (quote == null) throw new Exception("Devis introuvable");
 
-            var settings = await _settingsService.GetSettingAsync<BillingSettingsDto>("BillingSettings", new());
+            var settings = await _settingsService.GetSettingAsync<InvoiceSettingsDto>("InvoiceSettings", new());
 
             var invoice = new Invoice
             {

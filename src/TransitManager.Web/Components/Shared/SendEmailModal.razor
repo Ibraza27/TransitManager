@@ -34,11 +34,15 @@
                                     <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6em;" @onclick="() => RemoveRecipient(email)"></button>
                                 </span>
                             }
-                            <input type="email" class="border-0 flex-grow-1" style="outline: none; min-width: 200px;" 
+                            <input type="email" class="border-0 flex-grow-1" style="outline: none; min-width: 150px;" 
                                    placeholder="Ajouter un email..." 
                                    @bind="_newRecipientInput" 
                                    @bind:event="oninput"
-                                   @onkeydown="HandleRecipientKeyDown" />
+                                   @onkeyup="HandleRecipientKeyUp" 
+                                   @onblur="TryAddRecipient" />
+                            <button type="button" class="btn btn-sm btn-outline-primary ms-1" @onclick="TryAddRecipient" title="Ajouter">
+                                <i class="bi bi-plus"></i>
+                            </button>
                         </div>
                         <div class="mt-1">
                             <a href="javascript:void(0)" class="small text-decoration-none" @onclick="ToggleCc">Cc</a>
@@ -207,17 +211,31 @@ Hippocampe Import-Export.";
     private void ToggleCc() => _showCc = !_showCc;
     private void ToggleBcc() => _showBcc = !_showBcc;
 
-    private void HandleRecipientKeyDown(KeyboardEventArgs e)
+    private void HandleRecipientKeyUp(KeyboardEventArgs e)
     {
-        if ((e.Key == "Enter" || e.Key == "Tab" || e.Key == ",") && !string.IsNullOrWhiteSpace(_newRecipientInput))
+        // Check for Enter key or comma in the input
+        if (e.Key == "Enter" || _newRecipientInput.Contains(","))
         {
-            var email = _newRecipientInput.Trim().TrimEnd(',');
+            TryAddRecipient();
+        }
+    }
+
+    private void TryAddRecipient()
+    {
+        if (string.IsNullOrWhiteSpace(_newRecipientInput)) return;
+        
+        // Handle multiple emails separated by comma
+        var emails = _newRecipientInput.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var emailPart in emails)
+        {
+            var email = emailPart.Trim();
             if (!string.IsNullOrWhiteSpace(email) && email.Contains("@") && !_recipients.Contains(email))
             {
                 _recipients.Add(email);
             }
-            _newRecipientInput = "";
         }
+        _newRecipientInput = "";
+        StateHasChanged();
     }
 
     private void RemoveRecipient(string email) => _recipients.Remove(email);

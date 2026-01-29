@@ -258,7 +258,7 @@
     private string OriginalModelJson = ""; 
     
     private CompanyProfileDto _companyProfile = new();
-    private BillingSettingsDto _billingSettings = new();
+    private InvoiceSettingsDto _invoiceSettings = new();
     private ProductDialog _productDialog;
     private QuoteLineDto _activeLineForCreation; // Reusing QuoteLineDto for UI simplicity or InvoiceLineDto mapping?
     // Actually we should use InvoiceLineDto or a shared LineVM. 
@@ -293,7 +293,7 @@
     {
         IsLoading = true;
          _companyProfile = await SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
-         _billingSettings = await SettingsService.GetSettingAsync<BillingSettingsDto>("BillingSettings", new());
+         _invoiceSettings = await SettingsService.GetSettingAsync<InvoiceSettingsDto>("InvoiceSettings", new());
          
          if (Id.HasValue)
          {
@@ -343,8 +343,8 @@
              {
                  DateCreated = DateTime.Today,
                  DueDate = DateTime.Today.AddDays(30),
-                 PaymentTerms = _billingSettings.DefaultPaymentTerms,
-                 FooterNote = _billingSettings.DefaultFooterNote
+                 PaymentTerms = _invoiceSettings.DefaultPaymentTerms,
+                 FooterNote = _invoiceSettings.DefaultFooterNote
              };
              AddLine();
          }
@@ -449,15 +449,15 @@
     
     private async Task SaveTermsAsTemplate()
     {
-        _billingSettings.DefaultPaymentTerms = Model.PaymentTerms;
-        await SettingsService.SaveSettingAsync("BillingSettings", _billingSettings);
+        _invoiceSettings.DefaultPaymentTerms = Model.PaymentTerms;
+        await SettingsService.SaveSettingAsync("InvoiceSettings", _invoiceSettings);
         await JS.InvokeVoidAsync("alert", "Modalités de paiement définies comme modèle par défaut !");
     }
 
     private async Task SaveNotesAsTemplate()
     {
-        _billingSettings.DefaultFooterNote = Model.FooterNote;
-        await SettingsService.SaveSettingAsync("BillingSettings", _billingSettings);
+        _invoiceSettings.DefaultFooterNote = Model.FooterNote;
+        await SettingsService.SaveSettingAsync("InvoiceSettings", _invoiceSettings);
         await JS.InvokeVoidAsync("alert", "Notes définies comme modèle par défaut !");
     }
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
 using TransitManager.Core.Interfaces;
 using System;
+using System.Linq;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -23,7 +24,21 @@ namespace TransitManager.Infrastructure.Services
 
                 var email = new MimeMessage();
                 email.From.Add(new MailboxAddress(_configuration["EmailSettings:FromName"], _configuration["EmailSettings:FromEmail"]));
-                email.To.Add(new MailboxAddress("", to));
+                
+                // Parse multiple recipients (comma or semicolon separated)
+                var recipientList = to.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(e => e.Trim())
+                    .Where(e => !string.IsNullOrWhiteSpace(e) && e.Contains("@"));
+                
+                foreach (var recipient in recipientList)
+                {
+                    email.To.Add(new MailboxAddress("", recipient));
+                }
+                
+                if (!email.To.Any())
+                {
+                    throw new ArgumentException("Aucun destinataire valide trouvé.");
+                }
                 if (ccEmails != null)
                 {
                     foreach(var cc in ccEmails)

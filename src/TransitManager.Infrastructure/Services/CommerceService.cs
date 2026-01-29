@@ -1062,7 +1062,7 @@ namespace TransitManager.Infrastructure.Services
         }
 
 
-        public async Task SendInvoiceByEmailAsync(Guid id, string? subject = null, string? body = null, List<string>? ccEmails = null, List<string>? recipients = null)
+        public async Task SendInvoiceByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null, List<string>? ccEmails = null, List<string>? recipients = null)
         {
              var invoice = await _context.Invoices
                  .Include(i => i.Client)
@@ -1085,11 +1085,27 @@ namespace TransitManager.Infrastructure.Services
              // Generate PDF
              var pdfBytes = await _exportService.GenerateInvoicePdfAsync(MapInvoiceToDto(invoice));
              
-             // Create Attachment
+             // Create Attachment list with PDF
              var attachments = new List<(string Name, byte[] Content)>
              {
                  ($"Facture_{invoice.Reference}.pdf", pdfBytes)
              };
+             
+             // Load additional attachments from temp uploads
+             if (attachmentIds != null && attachmentIds.Any())
+             {
+                 foreach (var tempId in attachmentIds)
+                 {
+                     var tempFile = await _documentService.GetTempDocumentAsync(tempId);
+                     if (tempFile.HasValue)
+                     {
+                         using var ms = new MemoryStream();
+                         await tempFile.Value.FileStream.CopyToAsync(ms);
+                         attachments.Add((tempFile.Value.FileName, ms.ToArray()));
+                         await tempFile.Value.FileStream.DisposeAsync();
+                     }
+                 }
+             }
 
              // Build Rich HTML Body (Match Quote Email Style)
              var publicLink = $"https://hippocampetransitmanager.com/portal/invoice/{invoice.PublicToken}";

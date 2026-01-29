@@ -886,22 +886,7 @@ namespace TransitManager.Web.Services
             catch { return false; }
         }
 
-        public async Task<bool> SendPaymentReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments, List<string>? cc = null)
-        {
-            try
-            {
-                 var dto = new SendQuoteEmailDto 
-                { 
-                    Subject = subject, 
-                    Body = body, 
-                    TempAttachmentIds = attachments,
-                    Cc = cc != null && cc.Any() ? string.Join(",", cc) : null
-                };
-                var response = await _httpClient.PostAsJsonAsync($"api/commerce/invoices/{id}/reminder", dto, _jsonOptions);
-                return response.IsSuccessStatusCode;
-            }
-            catch { return false; }
-        }
+        // SendPaymentReminderAsync moved to end of class with full recipients support
 		    public async Task<byte[]> ExportConteneurPdfAsync(Guid id, bool includeFinancials)
 		{
 			var url = $"api/conteneurs/{id}/export/pdf?includeFinancials={includeFinancials}";

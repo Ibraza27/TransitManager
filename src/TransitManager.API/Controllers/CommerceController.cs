@@ -299,7 +299,7 @@ namespace TransitManager.API.Controllers
                                    .ToList();
             }
 
-            await _commerceService.SendInvoiceByEmailAsync(id, request.Subject, request.Body, ccList, recipientsList);
+            await _commerceService.SendInvoiceByEmailAsync(id, request.Subject, request.Body, request.TempAttachmentIds, ccList, recipientsList);
             return Ok();
         }
 

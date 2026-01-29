@@ -400,12 +400,23 @@
         if(!Id.HasValue) return;
         try 
         {
-             await ApiService.SendInvoiceByEmailAsync(Id.Value, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds);
+             // Parse recipients from comma-separated string
+             var recipients = string.IsNullOrWhiteSpace(dto.Recipients) 
+                 ? null 
+                 : dto.Recipients.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                     .Select(e => e.Trim()).ToList();
+             
+             // Parse CC emails
+             var cc = string.IsNullOrWhiteSpace(dto.Cc) 
+                 ? null 
+                 : dto.Cc.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                     .Select(e => e.Trim()).ToList();
+             
+             await ApiService.SendInvoiceByEmailAsync(Id.Value, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds, cc, recipients);
              await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
              if(CurrentStatus == InvoiceStatus.Draft) 
              {
                  CurrentStatus = InvoiceStatus.Sent; 
-                 // Update status silently?
                  await ApiService.UpdateInvoiceStatusAsync(Id.Value, InvoiceStatus.Sent);
              }
         }
@@ -426,24 +437,39 @@
     private async Task SendReminderCallback(SendQuoteEmailDto dto)
     {
          if(!Id.HasValue) return;
-         if(await ApiService.SendPaymentReminderAsync(Id.Value, dto.Subject, dto.Body, dto.TempAttachmentIds))
+         
+         try
          {
-             await JS.InvokeVoidAsync("alert", "Rappel envoyé !");
-             if(CurrentStatus == InvoiceStatus.Sent) 
+             // Parse recipients from comma-separated string
+             var recipients = string.IsNullOrWhiteSpace(dto.Recipients) 
+                 ? null 
+                 : dto.Recipients.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                     .Select(e => e.Trim()).ToList();
+             
+             // Parse CC emails
+             var cc = string.IsNullOrWhiteSpace(dto.Cc) 
+                 ? null 
+                 : dto.Cc.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                     .Select(e => e.Trim()).ToList();
+         
+             if(await ApiService.SendPaymentReminderAsync(Id.Value, dto.Subject, dto.Body, dto.TempAttachmentIds, cc, recipients))
              {
-                 CurrentStatus = InvoiceStatus.Overdue;
-                 // Ideally update status in DB too if API didn't do it automatically (it does update history/reminders)
-                 // ApiService.UpdateInvoiceStatusAsync... is NOT called in SendPaymentReminderAsync?
-                 // Wait, CommerceService.SendPaymentReminderAsync doesn't look like it updates STATUS to Overdue.
-                 // It just increments reminder count.
-                 // The user asked "qui change aussi automatiquement le statut de la facture en rappel".
-                 // I should explicitly update status to Overdue (or "Rappel" if that status existed, but enum has Overdue/En Retard).
-                 await ApiService.UpdateInvoiceStatusAsync(Id.Value, InvoiceStatus.Overdue);
+                 await JS.InvokeVoidAsync("alert", "Rappel envoyé !");
+                 if(CurrentStatus == InvoiceStatus.Sent) 
+                 {
+                     CurrentStatus = InvoiceStatus.Overdue;
+                     await ApiService.UpdateInvoiceStatusAsync(Id.Value, InvoiceStatus.Overdue);
+                 }
+             }
+             else
+             {
+                  await JS.InvokeVoidAsync("alert", "Erreur lors de l'envoi du rappel.");
              }
          }
-         else
+         catch(Exception ex)
          {
-              await JS.InvokeVoidAsync("alert", "Erreur lors de l'envoi du rappel.");
+             Console.WriteLine(ex);
+             await JS.InvokeVoidAsync("alert", "Erreur lors de l'envoi du rappel.");
          }
     }
     

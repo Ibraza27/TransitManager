@@ -688,7 +688,19 @@
         StateHasChanged();
         try
         {
-            await ApiService.SendQuoteByEmailAsync(_emailTargetQuote.Id, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds);
+            // Parse recipients from comma-separated string
+            var recipients = string.IsNullOrWhiteSpace(dto.Recipients) 
+                ? null 
+                : dto.Recipients.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(e => e.Trim()).ToList();
+            
+            // Parse CC emails
+            var cc = string.IsNullOrWhiteSpace(dto.Cc) 
+                ? null 
+                : dto.Cc.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(e => e.Trim()).ToList();
+            
+            await ApiService.SendQuoteByEmailAsync(_emailTargetQuote.Id, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds, cc, recipients);
             await ApiService.UpdateQuoteStatusAsync(_emailTargetQuote.Id, QuoteStatus.Sent);
             
             _emailTargetQuote.Status = QuoteStatus.Sent;

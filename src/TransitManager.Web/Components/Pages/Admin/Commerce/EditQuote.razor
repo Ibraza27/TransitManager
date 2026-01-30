@@ -1166,7 +1166,19 @@
         
         try
         {
-            await ApiService.SendQuoteByEmailAsync(Id.Value, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds);
+            // Parse recipients from comma-separated string
+            var recipients = string.IsNullOrWhiteSpace(dto.Recipients) 
+                ? null 
+                : dto.Recipients.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(e => e.Trim()).ToList();
+            
+            // Parse CC emails
+            var cc = string.IsNullOrWhiteSpace(dto.Cc) 
+                ? null 
+                : dto.Cc.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(e => e.Trim()).ToList();
+            
+            await ApiService.SendQuoteByEmailAsync(Id.Value, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds, cc, recipients);
             
             await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
             

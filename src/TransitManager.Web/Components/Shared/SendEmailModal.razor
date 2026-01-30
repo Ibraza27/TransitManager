@@ -178,7 +178,7 @@ Cordialement,
 
 Hippocampe Import-Export.";
 
-    public void Open(string defaultSubject, string defaultBody, string? recipientOverride = null)
+    public async Task Open(string defaultSubject, string defaultBody, string? recipientOverride = null)
     {
         _recipients = new List<string>();
         if (!string.IsNullOrWhiteSpace(recipientOverride))
@@ -186,10 +186,23 @@ Hippocampe Import-Export.";
         else if (!string.IsNullOrWhiteSpace(RecipientEmail))
             _recipients.Add(RecipientEmail);
         
+        // Try to load saved template from localStorage
+        string? savedTemplate = null;
+        try 
+        {
+            savedTemplate = await JS.InvokeAsync<string?>("localStorage.getItem", "quoteEmailTemplate");
+        }
+        catch { /* Ignore JS errors during prerender */ }
+        
+        // Use saved template if available and no custom body provided
+        string bodyToUse = string.IsNullOrWhiteSpace(defaultBody) 
+            ? (savedTemplate ?? DefaultBody) 
+            : defaultBody;
+        
         _emailDto = new SendQuoteEmailDto 
         { 
             Subject = defaultSubject, 
-            Body = string.IsNullOrWhiteSpace(defaultBody) ? DefaultBody : defaultBody,
+            Body = bodyToUse,
             CopyToSender = false // Unchecked by default
         };
         
@@ -323,6 +336,12 @@ Hippocampe Import-Export.";
         try 
         {
             await OnSend.InvokeAsync(_emailDto);
+            
+            // Save as template if checkbox is checked
+            if (_saveAsTemplate && !string.IsNullOrWhiteSpace(_emailDto.Body))
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "quoteEmailTemplate", _emailDto.Body);
+            }
             
             // Auto close modal on success
             await JS.InvokeVoidAsync("hideModal", "sendEmailModal");

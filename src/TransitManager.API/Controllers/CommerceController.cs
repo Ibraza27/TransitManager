@@ -83,7 +83,23 @@ namespace TransitManager.API.Controllers
         [Authorize(Roles = "Administrateur")]
         public async Task<IActionResult> SendQuoteEmail(Guid id, [FromBody] SendQuoteEmailDto request)
         {
-            await _commerceService.SendQuoteByEmailAsync(id, request.Subject, request.Body, request.TempAttachmentIds);
+            List<string>? ccList = null;
+            if(!string.IsNullOrWhiteSpace(request.Cc))
+            {
+                ccList = request.Cc.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(e => e.Trim())
+                                   .ToList();
+            }
+            
+            List<string>? recipientsList = null;
+            if(!string.IsNullOrWhiteSpace(request.Recipients))
+            {
+                recipientsList = request.Recipients.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(e => e.Trim())
+                                   .ToList();
+            }
+            
+            await _commerceService.SendQuoteByEmailAsync(id, request.Subject, request.Body, request.TempAttachmentIds, ccList, recipientsList);
             return Ok();
         }
 

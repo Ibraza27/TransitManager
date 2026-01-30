@@ -1658,9 +1658,17 @@ namespace TransitManager.Web.Services
              await _httpClient.DeleteAsync($"api/commerce/quotes/{id}");
         }
 
-        public async Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, bool copyToSender = false, List<Guid>? attachmentIds = null)
+        public async Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, bool copyToSender = false, List<Guid>? attachmentIds = null, List<string>? cc = null, List<string>? recipients = null)
         {
-            var request = new SendQuoteEmailDto { Subject = subject, Body = body, CopyToSender = copyToSender, TempAttachmentIds = attachmentIds };
+            var request = new SendQuoteEmailDto 
+            { 
+                Subject = subject, 
+                Body = body, 
+                CopyToSender = copyToSender, 
+                TempAttachmentIds = attachmentIds,
+                Cc = cc != null && cc.Any() ? string.Join(",", cc) : null,
+                Recipients = recipients != null && recipients.Any() ? string.Join(",", recipients) : null
+            };
             var response = await _httpClient.PostAsJsonAsync($"api/commerce/quotes/{id}/email", request);
             if (!response.IsSuccessStatusCode)
             {

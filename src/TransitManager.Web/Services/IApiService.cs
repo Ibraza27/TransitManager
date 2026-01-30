@@ -164,7 +164,7 @@ namespace TransitManager.Web.Services
         Task<QuoteDto> CreateOrUpdateQuoteAsync(UpsertQuoteDto dto);
         Task UpdateQuoteStatusAsync(Guid id, QuoteStatus status, string? reason = null);
         Task DeleteQuoteAsync(Guid id);
-        Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, bool copyToSender = false, List<Guid>? attachmentIds = null);
+        Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, bool copyToSender = false, List<Guid>? attachmentIds = null, List<string>? cc = null, List<string>? recipients = null);
         
         // Public Token Access
         Task<QuoteDto> GetPublicQuoteAsync(Guid token);

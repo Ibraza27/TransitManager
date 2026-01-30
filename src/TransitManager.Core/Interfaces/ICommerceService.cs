@@ -21,7 +21,7 @@ namespace TransitManager.Core.Interfaces
         Task<QuoteDto> CreateOrUpdateQuoteAsync(UpsertQuoteDto dto);
         Task<bool> UpdateQuoteStatusAsync(Guid id, QuoteStatus status, string? rejectionReason = null);
         Task<bool> DeleteQuoteAsync(Guid id);
-        Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null);
+        Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null, List<string>? ccEmails = null, List<string>? recipients = null);
         Task<byte[]> GenerateQuotePdfAsync(QuoteDto quote);
 
         // Invoices

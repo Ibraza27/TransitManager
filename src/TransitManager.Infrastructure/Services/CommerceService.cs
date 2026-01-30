@@ -490,7 +490,7 @@ namespace TransitManager.Infrastructure.Services
             return await _exportService.GenerateQuotePdfAsync(quote);
         }
 
-        public async Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null)
+        public async Task SendQuoteByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null, List<string>? ccEmails = null, List<string>? recipients = null)
         {
             var quote = await _context.Quotes.Include(q => q.Client).Include(q => q.Lines).FirstOrDefaultAsync(q => q.Id == id);
             if (quote == null) throw new Exception("Devis introuvable");
@@ -606,7 +606,14 @@ namespace TransitManager.Infrastructure.Services
 
             try
             {
-                await _emailService.SendEmailAsync(quote.Client.Email, subject, finalHtml, attachments);
+                // Determine To addresses: use recipients if provided, otherwise default to client email
+                string toEmails = quote.Client.Email;
+                if (recipients != null && recipients.Any())
+                {
+                    toEmails = string.Join(",", recipients);
+                }
+                
+                await _emailService.SendEmailAsync(toEmails, subject, finalHtml, attachments, ccEmails);
                 
                 // Update status if Draft -> Sent
                 if (quote.Status == QuoteStatus.Draft)
@@ -619,7 +626,7 @@ namespace TransitManager.Infrastructure.Services
                         QuoteId = id, 
                         Date = DateTime.UtcNow, 
                         Action = "Email envoyé", 
-                        Details = $"Devis envoyé par email à {quote.Client.Email} avec succès" 
+                        Details = $"Devis envoyé par email à {toEmails} avec succès" 
                     });
 
                     await _context.SaveChangesAsync();

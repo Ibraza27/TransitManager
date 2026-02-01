@@ -8,6 +8,9 @@ namespace TransitManager.Core.DTOs.Commerce
     public class CreateInvoiceDto
     {
         public Guid? ClientId { get; set; }
+        public string? GuestName { get; set; }
+        public string? GuestEmail { get; set; }
+        public string? GuestPhone { get; set; }
         public DateTime DateCreated { get; set; } = DateTime.UtcNow;
         public DateTime DueDate { get; set; } = DateTime.UtcNow.AddDays(30);
         public string? Message { get; set; }
@@ -20,6 +23,9 @@ namespace TransitManager.Core.DTOs.Commerce
     {
         public Guid Id { get; set; }
         public Guid? ClientId { get; set; }
+        public string? GuestName { get; set; }
+        public string? GuestEmail { get; set; }
+        public string? GuestPhone { get; set; }
         public DateTime DateCreated { get; set; }
         public DateTime DueDate { get; set; }
         

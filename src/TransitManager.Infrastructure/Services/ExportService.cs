@@ -465,13 +465,13 @@ namespace TransitManager.Infrastructure.Services
                                     r.ConstantItem(260).Border(1).BorderColor(Colors.Grey.Lighten2).Background("#F8FAFC").Padding(15).Column(c =>
                                     {
                                         c.Item().Text("Destinataire").FontSize(9).SemiBold().FontColor(Colors.Grey.Darken1);
-                                        c.Item().PaddingTop(6).Text($"{invoice.ClientName} {invoice.ClientFirstname}").FontSize(11).Bold();
+                                        c.Item().PaddingTop(6).Text(invoice.DisplayName).FontSize(11).Bold();
                                         if(!string.IsNullOrEmpty(invoice.ClientAddress)) 
                                             c.Item().PaddingTop(4).Text(invoice.ClientAddress).FontSize(10);
-                                        if(!string.IsNullOrEmpty(invoice.ClientPhone)) 
-                                            c.Item().PaddingTop(2).Text(invoice.ClientPhone).FontSize(10);
-                                        if(!string.IsNullOrEmpty(invoice.ClientEmail)) 
-                                            c.Item().PaddingTop(2).Text(invoice.ClientEmail).FontSize(10);
+                                        if(!string.IsNullOrEmpty(invoice.DisplayPhone)) 
+                                            c.Item().PaddingTop(2).Text(invoice.DisplayPhone).FontSize(10);
+                                        if(!string.IsNullOrEmpty(invoice.DisplayEmail)) 
+                                            c.Item().PaddingTop(2).Text(invoice.DisplayEmail).FontSize(10);
                                     });
                                 });
 
@@ -709,13 +709,13 @@ namespace TransitManager.Infrastructure.Services
                                     r.ConstantItem(260).Border(1).BorderColor(Colors.Grey.Lighten2).Background("#F8FAFC").Padding(15).Column(c =>
                                     {
                                         c.Item().Text("Destinataire").FontSize(9).SemiBold().FontColor(Colors.Grey.Darken1);
-                                        c.Item().PaddingTop(6).Text($"{quote.ClientName} {quote.ClientFirstname}").FontSize(11).Bold();
+                                        c.Item().PaddingTop(6).Text(quote.DisplayName).FontSize(11).Bold();
                                         if(!string.IsNullOrEmpty(quote.ClientAddress)) 
                                             c.Item().PaddingTop(4).Text(quote.ClientAddress).FontSize(10);
-                                        if(!string.IsNullOrEmpty(quote.ClientPhone)) 
-                                            c.Item().PaddingTop(2).Text(quote.ClientPhone).FontSize(10);
-                                        if(!string.IsNullOrEmpty(quote.ClientEmail)) 
-                                            c.Item().PaddingTop(2).Text(quote.ClientEmail).FontSize(10);
+                                        if(!string.IsNullOrEmpty(quote.DisplayPhone)) 
+                                            c.Item().PaddingTop(2).Text(quote.DisplayPhone).FontSize(10);
+                                        if(!string.IsNullOrEmpty(quote.DisplayEmail)) 
+                                            c.Item().PaddingTop(2).Text(quote.DisplayEmail).FontSize(10);
                                     });
                                 });
 

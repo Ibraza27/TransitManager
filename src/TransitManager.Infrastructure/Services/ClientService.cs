@@ -79,6 +79,20 @@ namespace TransitManager.Infrastructure.Services
             await uow.Clients.AddAsync(client);
             await uow.CommitAsync();
 
+            // Auto-create user account with confirmed email if email is provided
+            if (!string.IsNullOrWhiteSpace(client.Email))
+            {
+                try
+                {
+                    var result = await _authService.CreateOrResetPortalAccessAsync(client.Id);
+                    // Note: result.TemporaryPassword could be used to send welcome email
+                }
+                catch (Exception)
+                {
+                    // User creation failed - client is still created, log if needed
+                }
+            }
+
             await _notificationHubService.NotifyClientUpdated(client.Id);
             await _notificationService.NotifyAsync(
                 "Nouveau client",

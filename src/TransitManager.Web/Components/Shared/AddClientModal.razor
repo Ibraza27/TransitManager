@@ -1,0 +1,157 @@
+@using TransitManager.Core.Entities
+@using TransitManager.Web.Services
+@inject IJSRuntime JS
+@inject IApiService ApiService
+
+<!-- Modal for adding a new permanent client inline -->
+<div class="modal fade" id="addClientModal" tabindex="-1" aria-labelledby="addClientLabel" aria-hidden="true" data-bs-backdrop="static" style="z-index: 2050;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+                <h5 class="modal-title fw-bold" id="addClientLabel"><i class="bi bi-person-plus me-2"></i>NOUVEAU CLIENT</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                @if(_isLoading)
+                {
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-3 text-muted">Création du client...</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        <!-- Nom * -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control @(string.IsNullOrWhiteSpace(_client.Nom) && _showValidation ? "is-invalid" : "")" 
+                                   @bind="_client.Nom" placeholder="Dupont" />
+                            @if(string.IsNullOrWhiteSpace(_client.Nom) && _showValidation)
+                            {
+                                <div class="invalid-feedback">Le nom est requis.</div>
+                            }
+                        </div>
+
+                        <!-- Prénom * -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Prénom <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control @(string.IsNullOrWhiteSpace(_client.Prenom) && _showValidation ? "is-invalid" : "")" 
+                                   @bind="_client.Prenom" placeholder="Jean" />
+                            @if(string.IsNullOrWhiteSpace(_client.Prenom) && _showValidation)
+                            {
+                                <div class="invalid-feedback">Le prénom est requis.</div>
+                            }
+                        </div>
+
+                        <!-- Téléphone * -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Téléphone <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control @(string.IsNullOrWhiteSpace(_client.TelephonePrincipal) && _showValidation ? "is-invalid" : "")" 
+                                   @bind="_client.TelephonePrincipal" placeholder="+33 6 12 34 56 78" />
+                            @if(string.IsNullOrWhiteSpace(_client.TelephonePrincipal) && _showValidation)
+                            {
+                                <div class="invalid-feedback">Le téléphone est requis.</div>
+                            }
+                        </div>
+
+                        <!-- Email (optionnel) -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" class="form-control" @bind="_client.Email" placeholder="jean.dupont@email.com" />
+                        </div>
+
+                        <!-- Adresse (optionnel) -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Adresse</label>
+                            <textarea class="form-control" rows="2" @bind="_client.AdressePrincipale" placeholder="123 Rue Example, 75001 Paris"></textarea>
+                        </div>
+                    </div>
+
+                    @if(!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">
+                            <i class="bi bi-exclamation-triangle me-2"></i>@_errorMessage
+                        </div>
+                    }
+                }
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" @onclick="Close" disabled="@_isLoading">Annuler</button>
+                <button type="button" class="btn btn-primary px-4" @onclick="CreateClient" disabled="@_isLoading">
+                    <i class="bi bi-check-lg me-1"></i>Créer le client
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<Client> OnClientCreated { get; set; }
+
+    private Client _client = new Client();
+    private bool _isLoading = false;
+    private bool _showValidation = false;
+    private string? _errorMessage;
+
+    public void Open()
+    {
+        _client = new Client { Actif = true };
+        _isLoading = false;
+        _showValidation = false;
+        _errorMessage = null;
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        _client = new Client();
+        _showValidation = false;
+        _errorMessage = null;
+    }
+
+    private async Task CreateClient()
+    {
+        _showValidation = true;
+        _errorMessage = null;
+
+        // Validate required fields
+        if (string.IsNullOrWhiteSpace(_client.Nom) || 
+            string.IsNullOrWhiteSpace(_client.Prenom) || 
+            string.IsNullOrWhiteSpace(_client.TelephonePrincipal))
+        {
+            return;
+        }
+
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Set client as active
+            _client.Actif = true;
+            
+            // Create client via API (this also creates user account if email provided)
+            var createdClient = await ApiService.CreateClientAsync(_client);
+            
+            if (createdClient != null)
+            {
+                await JS.InvokeVoidAsync("hideModal", "addClientModal");
+                await OnClientCreated.InvokeAsync(createdClient);
+            }
+            else
+            {
+                _errorMessage = "Erreur lors de la création du client.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

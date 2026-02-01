@@ -15,6 +15,21 @@ namespace TransitManager.Core.DTOs.Commerce
         public string ClientPhone { get; set; }
         public string ClientAddress { get; set; }
         public string ClientFirstname { get; set; }
+        
+        // Guest Client fields
+        public string? GuestName { get; set; }
+        public string? GuestEmail { get; set; }
+        public string? GuestPhone { get; set; }
+        
+        // Computed display name: prioritize Client, then GuestName, then GuestEmail
+        public string DisplayName => !string.IsNullOrWhiteSpace(ClientName) 
+            ? $"{ClientName} {ClientFirstname}".Trim() 
+            : !string.IsNullOrWhiteSpace(GuestName) 
+                ? GuestName 
+                : GuestEmail ?? "Client inconnu";
+        
+        public string DisplayEmail => !string.IsNullOrWhiteSpace(ClientEmail) ? ClientEmail : (GuestEmail ?? "");
+        public string DisplayPhone => !string.IsNullOrWhiteSpace(ClientPhone) ? ClientPhone : (GuestPhone ?? "");
 
         public DateTime DateCreated { get; set; }
         public DateTime DueDate { get; set; } 

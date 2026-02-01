@@ -206,7 +206,8 @@ namespace TransitManager.Infrastructure.Services
                     MotDePasseHash = passwordHash,
                     Role = RoleUtilisateur.Client,
                     ClientId = client.Id,
-                    Actif = true
+                    Actif = true,
+                    EmailConfirme = true // Auto-confirm email for inline client creation
                 };
                 context.Utilisateurs.Add(user);
                 Console.WriteLine($"🔑 [AuthService] ✅ Nouvel utilisateur créé. Nom d'utilisateur: {username}");

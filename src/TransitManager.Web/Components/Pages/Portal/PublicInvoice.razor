@@ -71,10 +71,10 @@
                         <div class="col-md-6">
                             <div class="p-4 bg-light rounded-3 border">
                                 <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
-                                <div class="fs-5 fw-bold text-dark">@Invoice.ClientName @Invoice.ClientFirstname</div>
+                                <div class="fs-5 fw-bold text-dark">@Invoice.DisplayName</div>
                                 <div class="text-muted">@Invoice.ClientAddress</div>
-                                <div class="text-muted">@Invoice.ClientPhone</div>
-                                <div class="text-muted"><a href="mailto:@Invoice.ClientEmail">@Invoice.ClientEmail</a></div>
+                                <div class="text-muted">@Invoice.DisplayPhone</div>
+                                <div class="text-muted"><a href="mailto:@Invoice.DisplayEmail">@Invoice.DisplayEmail</a></div>
                             </div>
                         </div>
                     </div>

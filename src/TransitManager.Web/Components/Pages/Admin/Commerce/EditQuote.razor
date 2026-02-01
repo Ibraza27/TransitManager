@@ -111,6 +111,18 @@
                                     <div class="text-muted">@SelectedClient.AdressePrincipale @SelectedClient.CodePostal @SelectedClient.Ville</div>
                                     <div class="text-muted">@SelectedClient.Email</div>
                                 }
+                                else if (!string.IsNullOrWhiteSpace(Model.GuestEmail))
+                                {
+                                    @if(!string.IsNullOrWhiteSpace(Model.GuestName))
+                                    {
+                                        <div class="fs-5 fw-bold text-dark">@Model.GuestName</div>
+                                    }
+                                    <div class="text-muted">@Model.GuestEmail</div>
+                                    @if(!string.IsNullOrWhiteSpace(Model.GuestPhone))
+                                    {
+                                        <div class="text-muted">@Model.GuestPhone</div>
+                                    }
+                                }
                                 else
                                 {
                                     <div class="text-muted fst-italic">Aucun client sélectionné</div>
@@ -245,9 +257,45 @@
                  <div class="row g-2 mx-2 my-2 p-2 bg-white border-bottom">
                      <div class="col-md-5">
                          <label class="form-label small fw-bold mb-1">Client</label>
-                         <ClientAutocomplete 
-                             SelectedClient="@SelectedClient" 
-                             OnClientSelected="HandleClientSelected" />
+                         <!-- Toggle: Client permanent / Client de passage -->
+                         <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                             <input type="radio" class="btn-check" name="clientType" id="clientPermanent" checked="@(!_isGuestClient)" @onchange="() => SetGuestClient(false)">
+                             <label class="btn btn-outline-primary" for="clientPermanent"><i class="bi bi-person me-1"></i>Client</label>
+                             <input type="radio" class="btn-check" name="clientType" id="clientPassage" checked="@_isGuestClient" @onchange="() => SetGuestClient(true)">
+                             <label class="btn btn-outline-secondary" for="clientPassage"><i class="bi bi-person-dash me-1"></i>Passage</label>
+                         </div>
+                         
+                         @if(!_isGuestClient)
+                         {
+                             <div class="d-flex gap-2">
+                                 <div class="flex-grow-1">
+                                     <ClientAutocomplete 
+                                         SelectedClient="@SelectedClient" 
+                                         OnClientSelected="HandleClientSelected" />
+                                 </div>
+                                 <button type="button" class="btn btn-outline-success btn-sm px-2" title="Nouveau client" @onclick="OpenAddClientModal">
+                                     <i class="bi bi-plus-lg"></i>
+                                 </button>
+                             </div>
+                         }
+                         else
+                         {
+                             <!-- Guest Client Fields -->
+                             <div class="row g-1">
+                                 <div class="col-12">
+                                     <input type="email" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model.GuestEmail) ? "is-invalid" : "")" 
+                                            placeholder="Email *" @bind="Model.GuestEmail" />
+                                 </div>
+                                 <div class="col-12">
+                                     <input type="text" class="form-control form-control-sm" 
+                                            placeholder="Nom (optionnel)" @bind="Model.GuestName" />
+                                 </div>
+                                 <div class="col-12">
+                                     <input type="tel" class="form-control form-control-sm" 
+                                            placeholder="Téléphone (optionnel)" @bind="Model.GuestPhone" />
+                                 </div>
+                             </div>
+                         }
                      </div>
                      <div class="col-md-3">
                            <label class="form-label small fw-bold mb-1">Validité</label>
@@ -633,8 +681,12 @@
     private string OriginalModelJson = ""; // Snapshot for Revert
 
     private SendEmailModal _emailModal;
+    private AddClientModal _addClientModal;
     private CompanyProfileDto _companyProfile = new();
     private BillingSettingsDto _billingSettings = new();
+    
+    // Guest client toggle
+    private bool _isGuestClient = false;
 
     // --- Computed Properties for UI ---
     
@@ -700,11 +752,22 @@
                         DiscountType = quote.DiscountType,
                         DiscountBase = quote.DiscountBase,
                         DiscountScope = quote.DiscountScope,
-                        Lines = quote.Lines.OrderBy(l => l.Position).ToList()
+                        Lines = quote.Lines.OrderBy(l => l.Position).ToList(),
+                        // Map Guest Fields
+                        GuestName = quote.GuestName,
+                        GuestEmail = quote.GuestEmail,
+                        GuestPhone = quote.GuestPhone
                     };
                     
                     if (quote.ClientId.HasValue && quote.ClientId != Guid.Empty)
+                    {
                         SelectedClient = await ApiService.GetClientByIdAsync(quote.ClientId.Value);
+                        _isGuestClient = false;
+                    }
+                    else if (!string.IsNullOrEmpty(quote.GuestEmail))
+                    {
+                        _isGuestClient = true;
+                    }
                     
                     CurrentStatus = quote.Status;
 
@@ -855,9 +918,9 @@
 
     private async Task TogglePreview()
     {
-        if (Model.ClientId == Guid.Empty)
+        if ((!_isGuestClient && Model.ClientId == null) || (_isGuestClient && string.IsNullOrEmpty(Model.GuestEmail)))
         {
-             await JS.InvokeVoidAsync("alert", "Veuillez d'abord sélectionner un client.");
+             await JS.InvokeVoidAsync("alert", "Veuillez d'abord sélectionner un client ou saisir un email invité.");
              return;
         }
 
@@ -974,7 +1037,8 @@
     private async Task Finalize(QuoteStatus status)
     {
         // Enforce Client for Finalization
-        if (Model.ClientId == null || Model.ClientId == Guid.Empty)
+        // Enforce Client for Finalization (unless Guest)
+        if (!_isGuestClient && (Model.ClientId == null || Model.ClientId == Guid.Empty))
         {
              await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un client pour finaliser.");
              return;
@@ -1009,6 +1073,22 @@
         {
             // Ensure positions are consistent 0,1,2...
             RenumberLines();
+
+            // CRITICAL FIX: If Guest Client, clear ClientId to ensure backend uses Guest fields
+            if (_isGuestClient)
+            {
+                Model.ClientId = null;
+                 // ClientName removal - invalid property on UpsertQuoteDto
+            }
+            else
+            {
+                // If Permanent Client, clear Guest fields to avoid confusion
+                Model.GuestName = null;
+                Model.GuestEmail = null;
+                Model.GuestPhone = null;
+            }
+            
+            Console.WriteLine($"[EditQuote] Saving: GuestMode={_isGuestClient}, ClientId={Model.ClientId}, GuestEmail={Model.GuestEmail}");
             
             var result = await ApiService.CreateOrUpdateQuoteAsync(Model);
             Model.Id = result.Id;
@@ -1036,7 +1116,8 @@
     {
          if (Model.Id == null) return;
          
-         if (SelectedClient == null || string.IsNullOrEmpty(SelectedClient.Email))
+         if ((!_isGuestClient && (SelectedClient == null || string.IsNullOrEmpty(SelectedClient.Email))) ||
+             (_isGuestClient && string.IsNullOrEmpty(Model.GuestEmail)))
          {
              await JS.InvokeVoidAsync("alert", "Le client n'a pas d'adresse email définie.");
              return;
@@ -1144,16 +1225,21 @@
     {
          if (Model.Id == null) return;
          
-         if (SelectedClient == null || string.IsNullOrEmpty(SelectedClient.Email))
+         if (!_isGuestClient && (SelectedClient == null || string.IsNullOrEmpty(SelectedClient.Email)))
          {
              await JS.InvokeVoidAsync("alert", "Le client n'a pas d'adresse email définie.");
+             return;
+         }
+         else if (_isGuestClient && string.IsNullOrEmpty(Model.GuestEmail))
+         {
+             await JS.InvokeVoidAsync("alert", "L'email invité est requis.");
              return;
          }
 
          var subject = $"Devis {Model.Reference} - {_companyProfile.CompanyName}";
          var body = "Bonjour,\n\nVeuillez trouver ci-joint votre devis.\n\nCordialement,";
          
-         _emailModal.Open(subject, "", SelectedClient.Email); 
+         _emailModal.Open(subject, "", _isGuestClient ? Model.GuestEmail : (SelectedClient?.Email ?? "")); 
          await JS.InvokeVoidAsync("showModal", "sendEmailModal");
     }
 
@@ -1193,8 +1279,42 @@
             await JS.InvokeVoidAsync("alert", "Erreur lors de l'envoi de l'email : " + ex.Message);
         }
     }
+    
+    // Guest Client Methods
+    private void SetGuestClient(bool isGuest)
+    {
+        _isGuestClient = isGuest;
+        if (isGuest)
+        {
+            // Clear permanent client selection when switching to guest
+            SelectedClient = null;
+            Model.ClientId = null;
+        }
+        else
+        {
+            // Clear guest fields when switching to permanent
+            Model.GuestName = null;
+            Model.GuestEmail = null;
+            Model.GuestPhone = null;
+        }
+        StateHasChanged();
+    }
+    
+    private async Task OpenAddClientModal()
+    {
+        _addClientModal?.Open();
+        await JS.InvokeVoidAsync("showModal", "addClientModal");
+    }
+    
+    private async Task HandleNewClientCreated(Client client)
+    {
+        SelectedClient = client;
+        Model.ClientId = client.Id;
+        StateHasChanged();
+    }
 }
-<SendEmailModal @ref="_emailModal" RecipientEmail="@(SelectedClient?.Email ?? "")" QuoteReference="@(Model.Reference ?? "")" OnSend="SendQuoteEmailConfirmed" />
+<SendEmailModal @ref="_emailModal" RecipientEmail="@(SelectedClient?.Email ?? Model.GuestEmail ?? "")" QuoteReference="@(Model.Reference ?? "")" OnSend="SendQuoteEmailConfirmed" />
+<AddClientModal @ref="_addClientModal" OnClientCreated="HandleNewClientCreated" />
 
 <style>
     /* Responsive Sidebar Width */

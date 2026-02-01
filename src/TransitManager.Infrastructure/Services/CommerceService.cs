@@ -146,6 +146,16 @@ namespace TransitManager.Infrastructure.Services
                 .Include(q => q.Lines)
                 .Include(q => q.History)
                 .FirstOrDefaultAsync(q => q.Id == id);
+
+            // DEBUG LOG READ
+            if (quote != null)
+            {
+                try {
+                     var logMsg = $"[{DateTime.Now}] GetQuoteByIdAsync | ID={quote.Id} | ClientId={quote.ClientId} | GuestName='{quote.GuestName}' | GuestEmail='{quote.GuestEmail}'\n";
+                     System.IO.File.AppendAllText("commerce_service_debug.txt", logMsg);
+                } catch {}
+            }
+
             return quote == null ? null : MapToDto(quote);
         }
 
@@ -182,8 +192,8 @@ namespace TransitManager.Infrastructure.Services
             try 
             {
                 var debugLines = dto.Lines.Select((l, i) => new { Index=i, Pos=l.Position, Type=l.Type, Desc=l.Description, Qty=l.Quantity, Price=l.UnitPrice }).ToList();
-                var logMsg = $"[{DateTime.Now}] QuoteID={dto.Id} \nLines: {System.Text.Json.JsonSerializer.Serialize(debugLines)}\n";
-                System.IO.File.AppendAllText("commerce_debug_deep.txt", logMsg);
+                var logMsg = $"[{DateTime.Now}] CreateOrUpdateQuoteAsync | ID={dto.Id} | ClientId={dto.ClientId} | GuestName='{dto.GuestName}' | GuestEmail='{dto.GuestEmail}' | GuestPhone='{dto.GuestPhone}'\n";
+                System.IO.File.AppendAllText("commerce_service_debug.txt", logMsg);
             } catch {}
 
             Quote quote;
@@ -194,6 +204,11 @@ namespace TransitManager.Infrastructure.Services
                 
                 // Update basic fields
                 quote.ClientId = dto.ClientId;
+                // Guest client fields
+                quote.GuestName = dto.GuestName;
+                quote.GuestEmail = dto.GuestEmail;
+                quote.GuestPhone = dto.GuestPhone;
+                
                 quote.DateValidity = dto.DateValidity;
                 quote.Message = dto.Message;
                 quote.PaymentTerms = dto.PaymentTerms;
@@ -212,6 +227,11 @@ namespace TransitManager.Infrastructure.Services
                 {
                     Reference = await GenerateQuoteReferenceAsync(),
                     ClientId = dto.ClientId,
+                    // Guest client fields
+                    GuestName = dto.GuestName,
+                    GuestEmail = dto.GuestEmail,
+                    GuestPhone = dto.GuestPhone,
+                    
                     DateCreated = DateTime.UtcNow,
                     DateValidity = dto.DateValidity,
                     Message = dto.Message,
@@ -347,6 +367,11 @@ namespace TransitManager.Infrastructure.Services
                     // 1. Recover Header Fields (Client, Totals, Strings) if missing or default
                     // We assume 'quote' has the correct intent. We force update the saved instance.
                     savedQuote.ClientId = quote.ClientId;
+                    // FIX: Recover Guest Fields
+                    savedQuote.GuestName = quote.GuestName;
+                    savedQuote.GuestEmail = quote.GuestEmail;
+                    savedQuote.GuestPhone = quote.GuestPhone;
+
                     savedQuote.DateValidity = quote.DateValidity;
                     savedQuote.Message = quote.Message;
                     savedQuote.PaymentTerms = quote.PaymentTerms;
@@ -494,7 +519,14 @@ namespace TransitManager.Infrastructure.Services
         {
             var quote = await _context.Quotes.Include(q => q.Client).Include(q => q.Lines).FirstOrDefaultAsync(q => q.Id == id);
             if (quote == null) throw new Exception("Devis introuvable");
-            if (quote.Client == null || string.IsNullOrEmpty(quote.Client.Email)) throw new Exception("Le client n'a pas d'adresse email valide");
+            
+            string recipientEmail = quote.Client?.Email ?? quote.GuestEmail;
+            // Display: Use GuestName if present, else GuestEmail. Remove generic "Client" fallback if empty.
+            string recipientName = quote.Client != null 
+                ? $"{quote.Client.Nom} {quote.Client.Prenom}" 
+                : (!string.IsNullOrWhiteSpace(quote.GuestName) ? quote.GuestName : quote.GuestEmail);
+            
+            if (string.IsNullOrEmpty(recipientEmail)) throw new Exception("Aucune adresse email valide (ni client, ni invité)");
 
             // Load Settings
             var company = await _settingsService.GetSettingAsync<TransitManager.Core.DTOs.Settings.CompanyProfileDto>("CompanyProfile", new());
@@ -571,9 +603,9 @@ namespace TransitManager.Infrastructure.Services
                 <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{quote.DateValidity:dd.MM.yyyy}</td>
             </tr>
              <tr>
-                <td style='padding: 5px 0; color: #6c757d;'>Destinataire :</td>
-                <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{quote.Client.Nom} {quote.Client.Prenom}</td>
-            </tr>
+                 <td style='padding: 5px 0; color: #6c757d;'>Destinataire :</td>
+                 <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{recipientName}</td>
+             </tr>
             <tr style='border-top: 1px solid #dee2e6;'>
                 <td style='padding: 15px 0 5px 0; font-size: 1.1em;'>Total TTC :</td>
                 <td style='padding: 15px 0 5px 0; font-weight: bold; font-size: 1.2em; color: #0d6efd; text-align: right;'>{quote.TotalTTC:N2} €</td>
@@ -606,8 +638,8 @@ namespace TransitManager.Infrastructure.Services
 
             try
             {
-                // Determine To addresses: use recipients if provided, otherwise default to client email
-                string toEmails = quote.Client.Email;
+                // Determine To addresses: use recipients if provided, otherwise default to client/guest email
+                string toEmails = recipientEmail;
                 if (recipients != null && recipients.Any())
                 {
                     toEmails = string.Join(",", recipients);
@@ -655,11 +687,15 @@ namespace TransitManager.Infrastructure.Services
                 Id = q.Id,
                 Reference = q.Reference,
                 ClientId = q.ClientId,
-                ClientName = q.Client?.Nom ?? "Inconnu",
+                ClientName = q.Client?.Nom,
                 ClientFirstname = q.Client?.Prenom ?? "",
                 ClientPhone = q.Client?.TelephonePrincipal ?? "",
-                ClientAddress = $"{q.Client?.AdressePrincipale} {q.Client?.CodePostal} {q.Client?.Ville}",
+                ClientAddress = q.Client != null ? $"{q.Client.AdressePrincipale} {q.Client.CodePostal} {q.Client.Ville}" : "",
                 ClientEmail = q.Client?.Email ?? "",
+                // Guest client fields
+                GuestName = q.GuestName,
+                GuestEmail = q.GuestEmail,
+                GuestPhone = q.GuestPhone,
                 DateCreated = q.DateCreated,
                 DateValidity = q.DateValidity,
                 Status = q.Status,
@@ -816,6 +852,9 @@ namespace TransitManager.Infrastructure.Services
             {
                 Reference = await GenerateInvoiceReferenceAsync(),
                 ClientId = dto.ClientId,
+                GuestName = dto.GuestName,
+                GuestEmail = dto.GuestEmail,
+                GuestPhone = dto.GuestPhone,
                 DateCreated = dto.DateCreated,
                 DueDate = dto.DueDate,
                 Message = dto.Message,
@@ -844,6 +883,9 @@ namespace TransitManager.Infrastructure.Services
             if (invoice == null) throw new Exception("Facture introuvable");
 
             invoice.ClientId = dto.ClientId;
+            invoice.GuestName = dto.GuestName;
+            invoice.GuestEmail = dto.GuestEmail;
+            invoice.GuestPhone = dto.GuestPhone;
             invoice.DateCreated = dto.DateCreated;
             invoice.DueDate = dto.DueDate;
             invoice.Message = dto.Message;
@@ -1025,7 +1067,11 @@ namespace TransitManager.Infrastructure.Services
                 TotalHT = quote.TotalHT,
                 TotalTVA = quote.TotalTVA,
                 TotalTTC = quote.TotalTTC,
-                PublicToken = Guid.NewGuid()
+                PublicToken = Guid.NewGuid(),
+                // FIX: Copy Guest Data
+                GuestName = quote.GuestName,
+                GuestEmail = quote.GuestEmail,
+                GuestPhone = quote.GuestPhone
             };
 
             // Copy Lines
@@ -1075,7 +1121,14 @@ namespace TransitManager.Infrastructure.Services
                  .Include(i => i.Client)
                  .Include(i => i.Lines)
                  .FirstOrDefaultAsync(i => i.Id == id);
-             if (invoice == null || invoice.Client == null) throw new Exception("Facture ou client introuvable");
+             if (invoice == null) throw new Exception("Facture introuvable");
+
+             string recipientEmail = invoice.Client?.Email ?? invoice.GuestEmail;
+             string recipientName = invoice.Client != null 
+                ? $"{invoice.Client.Nom} {invoice.Client.Prenom}" 
+                : (!string.IsNullOrWhiteSpace(invoice.GuestName) ? invoice.GuestName : invoice.GuestEmail);
+
+             if (string.IsNullOrEmpty(recipientEmail)) throw new Exception("Aucune adresse email valide (ni client, ni invité)");
 
              // Determine Recipients
              var toEmails = new List<string>();
@@ -1085,7 +1138,7 @@ namespace TransitManager.Infrastructure.Services
              }
              else
              {
-                 toEmails.Add(invoice.Client.Email);
+                 toEmails.Add(recipientEmail);
              }
              if (!toEmails.Any()) throw new Exception("Aucun destinataire défini.");
 
@@ -1160,9 +1213,9 @@ namespace TransitManager.Infrastructure.Services
                 <td style='padding: 5px 0; font-weight: bold; text-align: right; color: #dc3545;'>{invoice.DueDate:dd.MM.yyyy}</td>
             </tr>
              <tr>
-                <td style='padding: 5px 0; color: #6c757d;'>Destinataire :</td>
-                <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{invoice.Client.Nom} {invoice.Client.Prenom}</td>
-            </tr>
+                 <td style='padding: 5px 0; color: #6c757d;'>Destinataire :</td>
+                 <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{recipientName}</td>
+             </tr>
             <tr style='border-top: 1px solid #dee2e6;'>
                 <td style='padding: 15px 0 5px 0; font-size: 1.1em;'>Total TTC :</td>
                 <td style='padding: 15px 0 5px 0; font-weight: bold; font-size: 1.2em; color: #0d6efd; text-align: right;'>{invoice.TotalTTC:N2} €</td>
@@ -1334,11 +1387,15 @@ namespace TransitManager.Infrastructure.Services
                 Id = i.Id,
                 Reference = i.Reference,
                 ClientId = i.ClientId,
-                ClientName = i.Client?.Nom ?? "Inconnu",
+                ClientName = i.Client?.Nom,
                 ClientFirstname = i.Client?.Prenom ?? "",
                 ClientEmail = i.Client?.Email ?? "",
                 ClientAddress = i.Client?.AdressePrincipale ?? "",
                 ClientPhone = i.Client?.TelephonePrincipal ?? "",
+                // Guest client fields
+                GuestName = i.GuestName,
+                GuestEmail = i.GuestEmail,
+                GuestPhone = i.GuestPhone,
                 DateCreated = i.DateCreated,
                 DueDate = i.DueDate,
                 DatePaid = i.DatePaid,

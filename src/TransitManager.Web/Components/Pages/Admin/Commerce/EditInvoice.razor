@@ -5,6 +5,8 @@
 @using TransitManager.Core.DTOs.Settings
 @using TransitManager.Core.Enums
 @using TransitManager.Web.Services
+@using TransitManager.Core.Entities
+@using TransitManager.Web.Components.Shared
 @using System.Text.Json
 @inject IApiService ApiService
 @inject NavigationManager NavManager
@@ -87,7 +89,43 @@
                  <div class="row g-2 mx-2 my-2 p-2 bg-white border-bottom">
                      <div class="col-md-5">
                          <label class="form-label small fw-bold mb-1">Client</label>
-                         <ClientAutocomplete SelectedClient="@SelectedClient" OnClientSelected="HandleClientSelected" />
+                         <!-- Toggle: Client permanent / Client de passage -->
+                         <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                             <input type="radio" class="btn-check" name="invoiceClientType" id="invoiceClientPermanent" checked="@(!_isGuestClient)" @onchange="() => SetGuestClient(false)">
+                             <label class="btn btn-outline-primary" for="invoiceClientPermanent"><i class="bi bi-person me-1"></i>Client</label>
+                             <input type="radio" class="btn-check" name="invoiceClientType" id="invoiceClientPassage" checked="@_isGuestClient" @onchange="() => SetGuestClient(true)">
+                             <label class="btn btn-outline-secondary" for="invoiceClientPassage"><i class="bi bi-person-dash me-1"></i>Passage</label>
+                         </div>
+                         
+                         @if(!_isGuestClient)
+                         {
+                             <div class="d-flex gap-2">
+                                 <div class="flex-grow-1">
+                                     <ClientAutocomplete SelectedClient="@SelectedClient" OnClientSelected="HandleClientSelected" />
+                                 </div>
+                                 <button type="button" class="btn btn-outline-success btn-sm px-2" title="Nouveau client" @onclick="OpenAddClientModal">
+                                     <i class="bi bi-plus-lg"></i>
+                                 </button>
+                             </div>
+                         }
+                         else
+                         {
+                             <!-- Guest Client Fields -->
+                             <div class="row g-1">
+                                 <div class="col-12">
+                                     <input type="email" class="form-control form-control-sm @(string.IsNullOrWhiteSpace(Model.GuestEmail) ? "is-invalid" : "")" 
+                                            placeholder="Email *" @bind="Model.GuestEmail" />
+                                 </div>
+                                 <div class="col-12">
+                                     <input type="text" class="form-control form-control-sm" 
+                                            placeholder="Nom (optionnel)" @bind="Model.GuestName" />
+                                 </div>
+                                 <div class="col-12">
+                                     <input type="tel" class="form-control form-control-sm" 
+                                            placeholder="Téléphone (optionnel)" @bind="Model.GuestPhone" />
+                                 </div>
+                             </div>
+                         }
                      </div>
                      <div class="col-md-3">
                            <label class="form-label small fw-bold mb-1">Échéance</label>
@@ -240,8 +278,9 @@
 
 <ProductDialog @ref="_productDialog" OnProductCreated="HandleNewProductCreated" />
 <ConfirmationModal IsVisible="@_showUnsavedModal" Title="Quitter ?" Message="Sauvegarder les modifications ?" OnConfirm="ConfirmSaveAndExit" OnCancel="ConfirmExitWithoutSave" OnClose="@(() => _showUnsavedModal = false)" />
-<SendInvoiceModal @ref="_sendModal" OnSend="SendInvoiceEmail" RecipientEmail="@(SelectedClient?.Email ?? "")" InvoiceReference="@(ExistingRef)" />
-<SendReminderModal @ref="_sendReminderModal" OnSend="SendReminderCallback" RecipientEmail="@(SelectedClient?.Email ?? "")" InvoiceReference="@(ExistingRef)" />
+<SendInvoiceModal @ref="_sendModal" OnSend="SendInvoiceEmail" InvoiceReference="@ExistingRef" RecipientEmail="@(SelectedClient?.Email ?? Model.GuestEmail ?? "")" />
+<SendReminderModal @ref="_sendReminderModal" OnSend="SendReminderCallback" InvoiceReference="@ExistingRef" RecipientEmail="@(SelectedClient?.Email ?? Model.GuestEmail ?? "")" />
+<AddClientModal @ref="_addClientModal" OnClientCreated="HandleNewClientCreated" />
 
 @code {
     [Parameter] public Guid? Id { get; set; }
@@ -266,6 +305,7 @@
     // Let's use a nested VM class that has necessary props.
     
     private bool _showUnsavedModal = false;
+    private AddClientModal _addClientModal; // Added for AddClientModal
 
     // ... Computed Properties (RawTotalHT, DiscountAmount, etc) same as Quote ...
     private decimal RawTotalHT => Model.Lines.Sum(l => l.Quantity * l.UnitPrice);
@@ -311,6 +351,10 @@
                      Message = invoice.Message,
                      PaymentTerms = invoice.PaymentTerms,
                      FooterNote = invoice.FooterNote,
+                     // Map Guest Fields
+                     GuestName = invoice.GuestName,
+                     GuestEmail = invoice.GuestEmail,
+                     GuestPhone = invoice.GuestPhone,
                      DiscountValue = 0, // DTO doesn't have it yet? InvoiceDto DOESN'T have discount fields in my implementation!
                      // WAIT! I forgot to add Discount fields to InvoiceDto and Invoice Entity?
                      // Verify: CommerceService.cs lines 797+ (Create) and 888 (Update).
@@ -333,7 +377,11 @@
                      }).ToList(),
                      PublicToken = invoice.PublicToken
                  };
-                  if(invoice.ClientId.HasValue) SelectedClient = await ApiService.GetClientByIdAsync(invoice.ClientId.Value);
+                  
+                  // Initialize Guest State
+                  _isGuestClient = !invoice.ClientId.HasValue && !string.IsNullOrWhiteSpace(invoice.GuestEmail);
+                  
+                   if(invoice.ClientId.HasValue) SelectedClient = await ApiService.GetClientByIdAsync(invoice.ClientId.Value);
              }
          }
          else
@@ -390,9 +438,16 @@
 
     private void OpenSendModal()
     {
+         if ((!_isGuestClient && (SelectedClient == null || string.IsNullOrEmpty(SelectedClient.Email))) ||
+             (_isGuestClient && string.IsNullOrEmpty(Model.GuestEmail)))
+         {
+              JS.InvokeVoidAsync("alert", "L'email le destinataire est manquant ou invalide.");
+              return;
+         }
+
          var subject = $"Facture {ExistingRef} - {_companyProfile.CompanyName} - {TotalTTC:C2}";
          var body = "Bonjour,\n\nVous trouverez ci-joint votre facture. Nous vous remercions d'avoir choisi notre solution !\n\nCordialement,";
-         _sendModal.Open(subject, body, SelectedClient?.Email ?? "");
+         _sendModal.Open(subject, body, _isGuestClient ? Model.GuestEmail : (SelectedClient?.Email ?? ""));
     }
     
     private async Task SendInvoiceEmail(SendQuoteEmailDto dto)
@@ -429,9 +484,16 @@
 
     private void OpenSendReminderModal()
     {
+         if ((!_isGuestClient && (SelectedClient == null || string.IsNullOrEmpty(SelectedClient.Email))) ||
+             (_isGuestClient && string.IsNullOrEmpty(Model.GuestEmail)))
+         {
+              JS.InvokeVoidAsync("alert", "L'email le destinataire est manquant ou invalide.");
+              return;
+         }
+
          var subject = $"Rappel de paiement - Facture {ExistingRef} - {TotalTTC:C2}";
          var body = "Bonjour,\n\nCeci est un rappel concernant votre facture non réglée. Merci par avance pour votre virement.\n\nRestant à votre disposition,\n\nBien cordialement.";
-         _sendReminderModal.Open(subject, body, SelectedClient?.Email ?? "");
+         _sendReminderModal.Open(subject, body, _isGuestClient ? Model.GuestEmail : (SelectedClient?.Email ?? ""));
     }
 
     private async Task SendReminderCallback(SendQuoteEmailDto dto)
@@ -507,7 +569,11 @@
     {
         IsSaving = true;
         // Map VM to DTO
-        if(Model.ClientId == Guid.Empty) { await JS.InvokeVoidAsync("alert", "Client requis"); IsSaving=false; return; }
+        if(!_isGuestClient && Model.ClientId == Guid.Empty) { await JS.InvokeVoidAsync("alert", "Client requis"); IsSaving=false; return; }
+        if(_isGuestClient && string.IsNullOrEmpty(Model.GuestEmail)) { await JS.InvokeVoidAsync("alert", "Email invité requis"); IsSaving=false; return; }
+
+        // FIX: Clear ClientId if Guest Mode to prevent conflict
+        if (_isGuestClient) Model.ClientId = Guid.Empty;
 
         InvoiceDto? result = null;
         if (Id.HasValue)
@@ -515,7 +581,10 @@
             var updateDto = new UpdateInvoiceDto
             {
                 Id = Id.Value,
-                ClientId = Model.ClientId,
+                ClientId = Model.ClientId == Guid.Empty ? null : Model.ClientId,
+                GuestName = Model.GuestName,
+                GuestEmail = Model.GuestEmail,
+                GuestPhone = Model.GuestPhone,
                 DateCreated = Model.DateCreated,
                 DueDate = Model.DueDate,
                 Message = Model.Message,
@@ -531,9 +600,12 @@
         }
         else
         {
-             var createDto = new CreateInvoiceDto
+            var createDto = new CreateInvoiceDto
             {
-                ClientId = Model.ClientId,
+                ClientId = Model.ClientId == Guid.Empty ? null : Model.ClientId,
+                GuestName = Model.GuestName,
+                GuestEmail = Model.GuestEmail,
+                GuestPhone = Model.GuestPhone,
                 DateCreated = Model.DateCreated, 
                 DueDate = Model.DueDate,
                 Message = Model.Message,
@@ -558,6 +630,39 @@
         else { await JS.InvokeVoidAsync("alert", "Erreur lors de l'enregistrement"); }
     }
     
+    private bool _isGuestClient = false;
+
+    // Helper methods for Guest Client
+    private void SetGuestClient(bool isGuest)
+    {
+        _isGuestClient = isGuest;
+        if (isGuest)
+        {
+            SelectedClient = null;
+            Model.ClientId = Guid.Empty; // Or null if nullable
+        }
+        else
+        {
+            Model.GuestName = null;
+            Model.GuestEmail = null;
+            Model.GuestPhone = null;
+        }
+        StateHasChanged();
+    }
+    
+    private async Task OpenAddClientModal()
+    {
+        _addClientModal?.Open();
+        await JS.InvokeVoidAsync("showModal", "addClientModal");
+    }
+    
+    private async Task HandleNewClientCreated(Client client)
+    {
+        SelectedClient = client;
+        Model.ClientId = client.Id;
+        StateHasChanged();
+    }
+
     private async Task FinalizeInvoice()
     {
         await Save(false);
@@ -597,6 +702,11 @@
         public DiscountScope DiscountScope { get; set; }
         public Guid PublicToken { get; set; }
         public List<InvoiceLineVM> Lines { get; set; } = new();
+        
+        // Guest Client Fields
+        public string? GuestName { get; set; }
+        public string? GuestEmail { get; set; }
+        public string? GuestPhone { get; set; }
     }
 
     public class InvoiceLineVM 
@@ -651,6 +761,18 @@
                             <div class="text-muted">@SelectedClient.AdressePrincipale</div>
                             <div class="text-muted">@SelectedClient.TelephonePrincipal</div>
                             <div class="text-muted"><a href="mailto:@SelectedClient.Email">@SelectedClient.Email</a></div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(Model.GuestEmail))
+                        {
+                            @if(!string.IsNullOrWhiteSpace(Model.GuestName))
+                            {
+                                <div class="fs-5 fw-bold text-dark">@Model.GuestName</div>
+                            }
+                            <div class="text-muted">@Model.GuestEmail</div>
+                            @if(!string.IsNullOrWhiteSpace(Model.GuestPhone))
+                            {
+                                <div class="text-muted">@Model.GuestPhone</div>
+                            }
                         }
                         else
                         {

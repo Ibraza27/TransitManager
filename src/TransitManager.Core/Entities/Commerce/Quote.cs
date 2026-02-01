@@ -20,6 +20,16 @@ namespace TransitManager.Core.Entities.Commerce
         [ForeignKey("ClientId")]
         public Client? Client { get; set; }
 
+        // Guest Client (not stored in Client table)
+        [MaxLength(200)]
+        public string? GuestName { get; set; }      // Optional name
+        
+        [MaxLength(200)]
+        public string? GuestEmail { get; set; }     // Required if no ClientId
+        
+        [MaxLength(50)]
+        public string? GuestPhone { get; set; }     // Optional
+
         public DateTime DateCreated { get; set; } = DateTime.UtcNow;
         public DateTime DateValidity { get; set; } = DateTime.UtcNow.AddDays(30);
 

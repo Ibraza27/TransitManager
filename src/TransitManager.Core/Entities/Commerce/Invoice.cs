@@ -19,6 +19,16 @@ namespace TransitManager.Core.Entities.Commerce
         [ForeignKey("ClientId")]
         public Client? Client { get; set; }
         
+        // Guest Client (not stored in Client table)
+        [MaxLength(200)]
+        public string? GuestName { get; set; }      // Optional name
+        
+        [MaxLength(200)]
+        public string? GuestEmail { get; set; }     // Required if no ClientId
+        
+        [MaxLength(50)]
+        public string? GuestPhone { get; set; }     // Optional
+        
         // Link to original Quote if converted
         public Guid? QuoteId { get; set; }
         // We generally don't enforce FK here to avoid cascade issues, or make it optional.

@@ -14,6 +14,22 @@ namespace TransitManager.Core.DTOs.Commerce
         public string? ClientPhone { get; set; }
         public string? ClientAddress { get; set; }
         public string? ClientEmail { get; set; }
+        
+        // Guest Client fields
+        public string? GuestName { get; set; }
+        public string? GuestEmail { get; set; }
+        public string? GuestPhone { get; set; }
+        
+        // Computed display name: prioritize Client, then GuestName, then GuestEmail
+        public string DisplayName => !string.IsNullOrWhiteSpace(ClientName) 
+            ? $"{ClientName} {ClientFirstname}".Trim() 
+            : !string.IsNullOrWhiteSpace(GuestName) 
+                ? GuestName 
+                : GuestEmail ?? "Client inconnu";
+        
+        public string DisplayEmail => !string.IsNullOrWhiteSpace(ClientEmail) ? ClientEmail : (GuestEmail ?? "");
+        public string DisplayPhone => !string.IsNullOrWhiteSpace(ClientPhone) ? ClientPhone : (GuestPhone ?? "");
+        
         public DateTime DateCreated { get; set; }
         public DateTime DateValidity { get; set; }
         public QuoteStatus Status { get; set; }
@@ -68,6 +84,12 @@ namespace TransitManager.Core.DTOs.Commerce
         public Guid? Id { get; set; }
         public string? Reference { get; set; } // For UI Preview only
         public Guid? ClientId { get; set; }
+        
+        // Guest Client fields (used when ClientId is null)
+        public string? GuestName { get; set; }
+        public string? GuestEmail { get; set; }
+        public string? GuestPhone { get; set; }
+        
         public DateTime? DateCreated { get; set; } // For UI Preview only
         public DateTime DateValidity { get; set; }
         public string? Message { get; set; }
@@ -87,8 +109,8 @@ namespace TransitManager.Core.DTOs.Commerce
     public class QuoteHistoryDto
     {
         public DateTime Date { get; set; }
-        public string Action { get; set; }
-        public string Details { get; set; }
-        public string User { get; set; }
+        public string? Action { get; set; }
+        public string? Details { get; set; }
+        public string? User { get; set; }
     }
 }

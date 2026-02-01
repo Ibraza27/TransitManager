@@ -77,9 +77,9 @@
                                 </div>
                             </div>
                             <div class="small text-muted mb-2">
-                                <div class="fw-bold text-dark">@invoice.ClientName @invoice.ClientFirstname</div>
-                                <div class="text-truncate">@invoice.ClientEmail</div>
-                                @if(!string.IsNullOrEmpty(invoice.ClientPhone)) { <div class="small text-muted"><i class="bi bi-telephone me-1"></i>@invoice.ClientPhone</div> }
+                                <div class="fw-bold text-dark">@invoice.DisplayName</div>
+                                <div class="text-truncate">@invoice.DisplayEmail</div>
+                                @if(!string.IsNullOrEmpty(invoice.DisplayPhone)) { <div class="small text-muted"><i class="bi bi-telephone me-1"></i>@invoice.DisplayPhone</div> }
                                 @if(!string.IsNullOrEmpty(invoice.ClientAddress)) { <div class="small text-muted text-truncate"><i class="bi bi-geo-alt me-1"></i>@invoice.ClientAddress</div> }
                             </div>
                             <div class="d-flex w-100 justify-content-between align-items-center mt-2 border-top pt-2">
@@ -168,8 +168,8 @@
         </div>
     </div>
 }
-<SendInvoiceModal @ref="_sendInvoiceModal" OnSend="SendInvoiceCallback" InvoiceReference="@SelectedInvoice?.Reference" RecipientEmail="@SelectedInvoice?.ClientEmail" />
-<SendReminderModal @ref="_sendReminderModal" OnSend="SendReminderCallback" InvoiceReference="@SelectedInvoice?.Reference" RecipientEmail="@SelectedInvoice?.ClientEmail" />
+<SendInvoiceModal @ref="_sendInvoiceModal" OnSend="SendInvoiceCallback" InvoiceReference="@SelectedInvoice?.Reference" RecipientEmail="@SelectedInvoice?.DisplayEmail" />
+<SendReminderModal @ref="_sendReminderModal" OnSend="SendReminderCallback" InvoiceReference="@SelectedInvoice?.Reference" RecipientEmail="@SelectedInvoice?.DisplayEmail" />
 
 <style>
     .active-invoice {
@@ -295,8 +295,8 @@
                 <div class="card mb-4 border-0 bg-light">
                     <div class="card-body">
                         <h6 class="card-subtitle mb-2 text-muted text-uppercase small fw-bold">Client</h6>
-                        <div class="fs-5 fw-bold">@invoice.ClientName @invoice.ClientFirstname</div>
-                         <div class="text-secondary"><i class="bi bi-envelope me-2"></i>@invoice.ClientEmail</div>
+                        <div class="fs-5 fw-bold">@invoice.DisplayName</div>
+                         <div class="text-secondary"><i class="bi bi-envelope me-2"></i>@invoice.DisplayEmail</div>
                          @if(!string.IsNullOrEmpty(invoice.ClientPhone)) { <div class="text-secondary"><i class="bi bi-telephone me-2"></i>@invoice.ClientPhone</div> }
                          @if(!string.IsNullOrEmpty(invoice.ClientAddress)) { <div class="text-secondary"><i class="bi bi-geo-alt me-2"></i>@invoice.ClientAddress</div> }
                     </div>
@@ -389,7 +389,7 @@
     {
          var subject = $"Facture {invoice.Reference} - HIPPOCAMPE IMPORT EXPORT - {invoice.TotalTTC:C2}";
          var body = "Bonjour,\n\nVous trouverez ci-joint votre facture.\nNous vous remercions d'avoir choisi notre solution !\n\nCordialement,";
-         _sendInvoiceModal.Open(subject, body, invoice.ClientEmail);
+         _sendInvoiceModal.Open(subject, body, invoice.DisplayEmail);
     }
 
     private async Task SendInvoiceCallback(SendQuoteEmailDto dto)
@@ -431,7 +431,7 @@
     {
          var subject = $"Rappel de paiement - Facture {invoice.Reference} - {invoice.TotalTTC:C2}";
          var body = "Bonjour,\n\nCeci est un rappel concernant votre facture non réglée. Merci par avance pour votre virement.\n\nRestant à votre disposition,\n\nBien cordialement.";
-         _sendReminderModal?.Open(subject, body, invoice.ClientEmail);
+         _sendReminderModal?.Open(subject, body, invoice.DisplayEmail);
     }
 
     private async Task SendReminderCallback(SendQuoteEmailDto dto)
@@ -560,10 +560,10 @@
                 <div class="col-md-6">
                     <div class="p-4 bg-light rounded-3 border">
                         <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
-                        <div class="fs-5 fw-bold text-dark">@invoice.ClientName @invoice.ClientFirstname</div>
+                        <div class="fs-5 fw-bold text-dark">@invoice.DisplayName</div>
                         <div class="text-muted">@invoice.ClientAddress</div>
                         <div class="text-muted">@invoice.ClientPhone</div>
-                        <div class="text-muted"><a href="mailto:@invoice.ClientEmail">@invoice.ClientEmail</a></div>
+                        <div class="text-muted"><a href="mailto:@invoice.DisplayEmail">@invoice.DisplayEmail</a></div>
                     </div>
                 </div>
             </div>

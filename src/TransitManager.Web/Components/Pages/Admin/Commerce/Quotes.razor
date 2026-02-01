@@ -80,9 +80,9 @@
                                 </div>
                             </div>
                             <div class="small text-muted mb-2">
-                                <div class="fw-bold text-dark">@quote.ClientName @quote.ClientFirstname</div>
-                                @if(!string.IsNullOrEmpty(quote.ClientPhone)) { <div><i class="bi bi-telephone me-1"></i> @quote.ClientPhone</div> }
-                                @if(!string.IsNullOrEmpty(quote.ClientEmail)) { <div class="text-truncate"><i class="bi bi-envelope me-1"></i> @quote.ClientEmail</div> }
+                                <div class="fw-bold text-dark">@quote.DisplayName</div>
+                                @if(!string.IsNullOrEmpty(quote.DisplayPhone)) { <div><i class="bi bi-telephone me-1"></i> @quote.DisplayPhone</div> }
+                                @if(!string.IsNullOrEmpty(quote.DisplayEmail)) { <div class="text-truncate"><i class="bi bi-envelope me-1"></i> @quote.DisplayEmail</div> }
                                 @if(!string.IsNullOrEmpty(quote.ClientAddress)) { <div class="text-truncate"><i class="bi bi-geo-alt me-1"></i> @quote.ClientAddress</div> }
                             </div>
                             <div class="d-flex w-100 justify-content-between align-items-center mt-2 border-top pt-2">
@@ -284,9 +284,9 @@
                 <div class="card mb-4 border-0 bg-light">
                     <div class="card-body">
                         <h6 class="card-subtitle mb-2 text-muted text-uppercase small fw-bold">Client</h6>
-                        <div class="fs-5 fw-bold">@quote.ClientName @quote.ClientFirstname</div>
-                         <div class="text-secondary"><i class="bi bi-envelope me-2"></i>@quote.ClientEmail</div>
-                         <div class="text-secondary"><i class="bi bi-telephone me-2"></i>@quote.ClientPhone</div>
+                        <div class="fs-5 fw-bold">@quote.DisplayName</div>
+                         <div class="text-secondary"><i class="bi bi-envelope me-2"></i>@quote.DisplayEmail</div>
+                         <div class="text-secondary"><i class="bi bi-telephone me-2"></i>@quote.DisplayPhone</div>
                     </div>
                 </div>
 
@@ -448,10 +448,10 @@
                 <div class="col-md-6">
                     <div class="p-4 bg-light rounded-3 border">
                         <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
-                        <div class="fs-5 fw-bold text-dark">@quote.ClientName @quote.ClientFirstname</div>
+                        <div class="fs-5 fw-bold text-dark">@quote.DisplayName</div>
                         <div class="text-muted">@quote.ClientAddress</div>
                         <div class="text-muted">@quote.ClientPhone</div>
-                        <div class="text-muted"><a href="mailto:@quote.ClientEmail">@quote.ClientEmail</a></div>
+                        <div class="text-muted"><a href="mailto:@quote.DisplayEmail">@quote.DisplayEmail</a></div>
                     </div>
                 </div>
             </div>
@@ -669,7 +669,7 @@
 
     private async Task OpenEmailModal(QuoteDto quote)
     {
-        if (string.IsNullOrEmpty(quote.ClientEmail))
+        if (string.IsNullOrEmpty(quote.DisplayEmail))
         {
             await JS.InvokeVoidAsync("alert", "Le client n'a pas d'adresse email définie.");
             return;
@@ -677,7 +677,7 @@
         
         _emailTargetQuote = quote;
         var subject = $"Devis {quote.Reference} - {_companyProfile.CompanyName} - {quote.TotalTTC:N2} EUR";
-        _emailModal.Open(subject, "", quote.ClientEmail);
+        _emailModal.Open(subject, "", quote.DisplayEmail);
         await JS.InvokeVoidAsync("showModal", "sendEmailModal");
     }
 
@@ -907,6 +907,6 @@
 }
 
 <TransitManager.Web.Components.Shared.SendEmailModal @ref="_emailModal" 
-    RecipientEmail="@(_emailTargetQuote?.ClientEmail ?? "")" 
+    RecipientEmail="@(_emailTargetQuote?.DisplayEmail ?? "")" 
     QuoteReference="@(_emailTargetQuote?.Reference ?? "")" 
     OnSend="SendQuoteEmailConfirmed" />

@@ -79,10 +79,10 @@
                         <div class="col-md-6">
                             <div class="p-4 bg-light rounded-3 border">
                                 <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
-                                <div class="fs-5 fw-bold text-dark">@Quote.ClientName @Quote.ClientFirstname</div>
+                                <div class="fs-5 fw-bold text-dark">@Quote.DisplayName</div>
                                 <div class="text-muted">@Quote.ClientAddress</div>
-                                <div class="text-muted">@Quote.ClientPhone</div>
-                                <div class="text-muted"><a href="mailto:@Quote.ClientEmail">@Quote.ClientEmail</a></div>
+                                <div class="text-muted">@Quote.DisplayPhone</div>
+                                <div class="text-muted"><a href="mailto:@Quote.DisplayEmail">@Quote.DisplayEmail</a></div>
                             </div>
                         </div>
                     </div>

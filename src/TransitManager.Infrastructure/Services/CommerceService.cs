@@ -141,6 +141,26 @@ namespace TransitManager.Infrastructure.Services
                 .ToListAsync();
 
             var items = entities.Select(q => MapToDto(q)).ToList();
+            
+            // Populate Linked Invoices
+            var quoteIds = items.Select(q => q.Id).ToList();
+            if (quoteIds.Any())
+            {
+                var linkedInvoices = await _context.Invoices
+                    .Where(i => i.QuoteId.HasValue && quoteIds.Contains(i.QuoteId.Value))
+                    .Select(i => new { i.QuoteId, i.Id, i.Reference })
+                    .ToListAsync();
+                    
+                foreach(var item in items)
+                {
+                    var link = linkedInvoices.FirstOrDefault(l => l.QuoteId == item.Id);
+                    if (link != null)
+                    {
+                        item.InvoiceId = link.Id;
+                        item.InvoiceReference = link.Reference;
+                    }
+                }
+            }
 
             return new PagedResult<QuoteDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
         }
@@ -151,8 +171,27 @@ namespace TransitManager.Infrastructure.Services
                 .Include(q => q.Client)
                 .Include(q => q.Lines)
                 .Include(q => q.History)
+                .Include(q => q.Client)
+                .Include(q => q.Lines)
+                .Include(q => q.History)
                 .FirstOrDefaultAsync(q => q.Id == id);
-
+            
+            // Populate Linked Invoice
+            QuoteDto? dto = quote == null ? null : MapToDto(quote);
+            if (dto != null)
+            {
+                var linkedInvoice = await _context.Invoices
+                    .Where(i => i.QuoteId == quote.Id)
+                    .Select(i => new { i.Id, i.Reference })
+                    .FirstOrDefaultAsync();
+                    
+                if (linkedInvoice != null)
+                {
+                    dto.InvoiceId = linkedInvoice.Id;
+                    dto.InvoiceReference = linkedInvoice.Reference;
+                }
+            }
+            
             // DEBUG LOG READ
             if (quote != null)
             {
@@ -162,7 +201,7 @@ namespace TransitManager.Infrastructure.Services
                 } catch {}
             }
 
-            return quote == null ? null : MapToDto(quote);
+            return dto;
         }
 
         public async Task<QuoteDto?> GetQuoteByTokenAsync(Guid token)
@@ -782,8 +821,10 @@ namespace TransitManager.Infrastructure.Services
         {
             var query = _context.Invoices
                 .Include(i => i.Client)
+                .Include(i => i.Client)
                 .Include(i => i.Lines)
                 .Include(i => i.History)
+                .Include(i => i.Quote) // Include Quote for Reference
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
@@ -806,7 +847,7 @@ namespace TransitManager.Infrastructure.Services
             }
 
             var total = await query.CountAsync();
-            var entities = await query.OrderByDescending(q => q.DateCreated)
+            var entities = await query.OrderByDescending(q => q.DateCreated).ThenByDescending(q => q.Reference)
                 .Skip((page - 1) * pageSize).Take(pageSize)
                 .ToListAsync();
 
@@ -819,8 +860,10 @@ namespace TransitManager.Infrastructure.Services
         {
             var invoice = await _context.Invoices
                 .Include(i => i.Client)
+                .Include(i => i.Client)
                 .Include(i => i.Lines)
                 .Include(i => i.History)
+                .Include(i => i.Quote)
                 .FirstOrDefaultAsync(i => i.Id == id);
             return invoice == null ? null : MapInvoiceToDto(invoice);
         }
@@ -889,84 +932,7 @@ namespace TransitManager.Infrastructure.Services
             return MapInvoiceToDto(invoice);
         }
 
-        public async Task<InvoiceDto> UpdateInvoiceAsync(UpdateInvoiceDto dto)
-        {
-            var invoice = await _context.Invoices.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == dto.Id);
-            if (invoice == null) throw new Exception("Facture introuvable");
-
-            invoice.ClientId = dto.ClientId;
-            invoice.GuestName = dto.GuestName;
-            invoice.GuestEmail = dto.GuestEmail;
-            invoice.GuestPhone = dto.GuestPhone;
-            invoice.DateCreated = dto.DateCreated;
-            invoice.DueDate = dto.DueDate;
-            invoice.Message = dto.Message;
-            invoice.PaymentTerms = dto.PaymentTerms;
-            invoice.FooterNote = dto.FooterNote;
-            // Status is typically managed via specific actions, but we allow update here if draft
-            if (invoice.Status == InvoiceStatus.Draft) invoice.Status = dto.Status;
-
-            _context.InvoiceLines.RemoveRange(invoice.Lines);
-            
-            var newLines = new List<InvoiceLine>();
-            decimal runningSubtotal = 0;
-            int pos = 0;
-            decimal grossHT = 0;
-            decimal grossTVA = 0;
-
-            foreach (var lineDto in dto.Lines)
-            {
-                decimal lineTotalHT = 0;
-                
-                 if (lineDto.Type == QuoteLineType.Subtotal)
-                {
-                    lineTotalHT = runningSubtotal;
-                    runningSubtotal = 0;
-                }
-                else if (lineDto.Type == QuoteLineType.Product)
-                {
-                     lineTotalHT = lineDto.Quantity * lineDto.UnitPrice;
-                     var lineTVA = lineTotalHT * (lineDto.VATRate / 100m);
-                     grossHT += lineTotalHT;
-                     grossTVA += lineTVA;
-                     runningSubtotal += lineTotalHT;
-                }
-
-                // Subtotal fix
-                decimal finalPrice = lineDto.UnitPrice;
-                decimal finalQty = lineDto.Quantity;
-                if(lineDto.Type == QuoteLineType.Subtotal) { finalPrice = lineTotalHT; finalQty = 1; }
-
-                newLines.Add(new InvoiceLine
-                {
-                     InvoiceId = invoice.Id,
-                     ProductId = lineDto.ProductId,
-                     Description = lineDto.Description,
-                     Date = lineDto.Date,
-                     Quantity = finalQty,
-                     Unit = lineDto.Unit,
-                     UnitPrice = finalPrice,
-                     VATRate = lineDto.VATRate,
-                     TotalHT = lineTotalHT,
-                     Type = lineDto.Type,
-                     Position = pos++
-                });
-            }
-
-            invoice.Lines = newLines;
-            
-            // Recalc Totals (We assume simplistic calc for now, copying Quote logic minus discounts if not passed in DTO yet)
-            // Note: UpdateInvoiceDto didn't include discount fields in my hasty definition earlier. 
-            // Standard calc:
-            invoice.TotalHT = grossHT - invoice.DiscountValue; // Assuming discount stored on entity persists
-            // Simple: Just use gross for now as we didn't add discount controls to invoice UI yet
-            invoice.TotalHT = grossHT; 
-            invoice.TotalTVA = grossTVA;
-            invoice.TotalTTC = invoice.TotalHT + invoice.TotalTVA;
-
-            await _context.SaveChangesAsync();
-            return MapInvoiceToDto(invoice);
-        }
+        // UpdateInvoiceAsync method moved below DeleteInvoiceAsync with complete try-catch
 
         public async Task<bool> UpdateInvoiceStatusAsync(Guid id, InvoiceStatus status)
         {
@@ -1002,62 +968,70 @@ namespace TransitManager.Infrastructure.Services
 
         public async Task<InvoiceDto> UpdateInvoiceAsync(Guid id, UpdateInvoiceDto dto)
         {
-            var invoice = await _context.Invoices.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == id);
-            if (invoice == null) throw new Exception("Facture introuvable");
-
-            invoice.Message = dto.Message;
-            invoice.PaymentTerms = dto.PaymentTerms;
-            invoice.FooterNote = dto.FooterNote;
-            invoice.DateCreated = dto.DateCreated;
-            invoice.DueDate = dto.DueDate;
-            invoice.DiscountValue = dto.DiscountValue;
-            invoice.DiscountType = dto.DiscountType;
-            invoice.DiscountBase = dto.DiscountBase;
-            invoice.DiscountScope = dto.DiscountScope;
-            
-            // Fix: Update Client/Guest fields
-            invoice.ClientId = dto.ClientId;
-            invoice.GuestName = dto.GuestName;
-            invoice.GuestEmail = dto.GuestEmail;
-            invoice.GuestPhone = dto.GuestPhone;
-
-            // Update Lines
-            invoice.Lines.Clear();
-            if(dto.Lines != null)
+            try
             {
-                foreach(var lineDto in dto.Lines)
+                var invoice = await _context.Invoices.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == id);
+                if (invoice == null) throw new Exception("Facture introuvable");
+
+                invoice.Message = dto.Message;
+                invoice.PaymentTerms = dto.PaymentTerms;
+                invoice.FooterNote = dto.FooterNote;
+                invoice.DateCreated = dto.DateCreated;
+                invoice.DueDate = dto.DueDate;
+                invoice.DiscountValue = dto.DiscountValue;
+                invoice.DiscountType = dto.DiscountType;
+                invoice.DiscountBase = dto.DiscountBase;
+                invoice.DiscountScope = dto.DiscountScope;
+                
+                // Fix: Update Client/Guest fields
+                invoice.ClientId = dto.ClientId;
+                invoice.GuestName = dto.GuestName;
+                invoice.GuestEmail = dto.GuestEmail;
+                invoice.GuestPhone = dto.GuestPhone;
+
+                // Update Lines
+                invoice.Lines.Clear();
+                if(dto.Lines != null)
                 {
-                    invoice.Lines.Add(new InvoiceLine
+                    foreach(var lineDto in dto.Lines)
                     {
-                        Description = lineDto.Description,
-                        Quantity = lineDto.Quantity,
-                        UnitPrice = lineDto.UnitPrice,
-                        VATRate = lineDto.VATRate,
-                        Unit = lineDto.Unit,
-                        TotalHT = lineDto.Quantity * lineDto.UnitPrice,
-                        Type = lineDto.Type,
-                        Position = lineDto.Position,
-                        ProductId = lineDto.ProductId
-                    });
+                        invoice.Lines.Add(new InvoiceLine
+                        {
+                            Description = lineDto.Description,
+                            Quantity = lineDto.Quantity,
+                            UnitPrice = lineDto.UnitPrice,
+                            VATRate = lineDto.VATRate,
+                            Unit = lineDto.Unit,
+                            TotalHT = lineDto.Quantity * lineDto.UnitPrice,
+                            Type = lineDto.Type,
+                            Position = lineDto.Position,
+                            ProductId = lineDto.ProductId
+                        });
+                    }
                 }
-            }
-            // Recalculate Totals
-            invoice.TotalHT = invoice.Lines.Sum(l => l.TotalHT);
-             // Apply Discount
-            decimal totalDiscount = 0;
-             if (invoice.DiscountScope == DiscountScope.Total)
-            {
-                 if (invoice.DiscountType == DiscountType.Percent)
-                     totalDiscount = invoice.TotalHT * (invoice.DiscountValue / 100);
-                 else
-                     totalDiscount = invoice.DiscountValue;
-            }
-             // For now simplified totals logic
-            invoice.TotalTVA = invoice.Lines.Sum(l => l.TotalHT * (l.VATRate / 100)); // Simple VAT
-            invoice.TotalTTC = invoice.TotalHT + invoice.TotalTVA - totalDiscount;
+                // Recalculate Totals
+                invoice.TotalHT = invoice.Lines.Sum(l => l.TotalHT);
+                 // Apply Discount
+                decimal totalDiscount = 0;
+                 if (invoice.DiscountScope == DiscountScope.Total)
+                {
+                     if (invoice.DiscountType == DiscountType.Percent)
+                         totalDiscount = invoice.TotalHT * (invoice.DiscountValue / 100);
+                     else
+                         totalDiscount = invoice.DiscountValue;
+                }
+                 // For now simplified totals logic
+                invoice.TotalTVA = invoice.Lines.Sum(l => l.TotalHT * (l.VATRate / 100)); // Simple VAT
+                invoice.TotalTTC = invoice.TotalHT + invoice.TotalTVA - totalDiscount;
 
-            await _context.SaveChangesAsync();
-            return MapInvoiceToDto(invoice);
+                await _context.SaveChangesAsync();
+                return MapInvoiceToDto(invoice);
+            }
+            catch (Exception ex)
+            {
+                try { System.IO.File.AppendAllText("commerce_invoice_error.txt", $"[{DateTime.Now}] UpdateInvoiceAsync ERROR: {ex}\n"); } catch {}
+                throw;
+            }
         }
 
         public async Task<InvoiceDto> ConvertQuoteToInvoiceAsync(Guid quoteId)
@@ -1446,7 +1420,11 @@ namespace TransitManager.Infrastructure.Services
                     Action = h.Action,
                     Details = h.Details,
                     UserName = h.UserName ?? "Système"
-                }).ToList()
+                }).ToList(),
+                
+                // Links
+                QuoteId = i.QuoteId,
+                QuoteReference = i.Quote?.Reference
             };
         }
 

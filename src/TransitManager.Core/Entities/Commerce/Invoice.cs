@@ -31,7 +31,8 @@ namespace TransitManager.Core.Entities.Commerce
         
         // Link to original Quote if converted
         public Guid? QuoteId { get; set; }
-        // We generally don't enforce FK here to avoid cascade issues, or make it optional.
+        [ForeignKey("QuoteId")]
+        public Quote? Quote { get; set; }
         
         public DateTime DateCreated { get; set; } = DateTime.UtcNow;
         public DateTime DueDate { get; set; } = DateTime.UtcNow.AddDays(30); // Échéance

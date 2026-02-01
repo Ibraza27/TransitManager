@@ -27,6 +27,12 @@
                 <i class="bi bi-x-lg"></i>
             </button>
             <h4 class="mb-0 fw-bold text-truncate" style="max-width: 200px;">@(Id == null ? "Nouveau" : $"{ExistingRef}")</h4>
+             @if(LinkedInvoiceId.HasValue)
+             {
+                <div class="small text-muted ms-3 border-start ps-3">
+                    <i class="bi bi-link-45deg"></i> Facture: <a href="/admin/commerce/invoices/edit/@LinkedInvoiceId" class="text-decoration-none fw-bold">@LinkedInvoiceRef</a>
+                </div>
+             }
         </div>
         <div class="d-flex gap-2 flex-wrap">
             @if (IsPreviewMode)
@@ -588,7 +594,11 @@
                       }
                       else if(CurrentStatus == QuoteStatus.Accepted)
                       {
-                          <button class="btn btn-warning" @onclick="ConvertToInvoice">Convertir en Facture</button>
+                           <button class="btn btn-warning" @onclick="ConvertToInvoice">Convertir en Facture</button>
+                      }
+                      else if(CurrentStatus == QuoteStatus.Converted || LinkedInvoiceId.HasValue)
+                      {
+                           <a href="/admin/commerce/invoices/edit/@LinkedInvoiceId" class="btn btn-primary"><i class="bi bi-arrow-right-circle me-2"></i>Voir la Facture</a>
                       }
                   </div>
              </div>
@@ -687,8 +697,12 @@
     
     // Guest client toggle
     private bool _isGuestClient = false;
+    
+    // Linked Invoice
+    private Guid? LinkedInvoiceId;
+    private string? LinkedInvoiceRef;
 
-    // --- Computed Properties for UI ---
+    // --- Computed Properties for UIs ---
     
     private decimal RawTotalHT => Model.Lines.Sum(l => l.Quantity * l.UnitPrice);
     
@@ -758,6 +772,10 @@
                         GuestEmail = quote.GuestEmail,
                         GuestPhone = quote.GuestPhone
                     };
+                    
+                    // Linked Invoice
+                    LinkedInvoiceId = quote.InvoiceId;
+                    LinkedInvoiceRef = quote.InvoiceReference;
                     
                     if (quote.ClientId.HasValue && quote.ClientId != Guid.Empty)
                     {
@@ -1214,7 +1232,7 @@
         QuoteStatus.Viewed => "Vu",
         QuoteStatus.Accepted => "Accepté",
         QuoteStatus.Rejected => "Refusé",
-        QuoteStatus.Converted => "Converti",
+        QuoteStatus.Converted => "Facturé",
         QuoteStatus.Deleted => "Supprimé",
         _ => status.ToString()
     };

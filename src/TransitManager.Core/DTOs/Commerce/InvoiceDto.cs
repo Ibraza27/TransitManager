@@ -45,6 +45,10 @@ namespace TransitManager.Core.DTOs.Commerce
         public decimal TotalTTC { get; set; }
         public decimal AmountPaid { get; set; }
 
+        // Links
+        public Guid? QuoteId { get; set; }
+        public string? QuoteReference { get; set; }
+
         public Guid PublicToken { get; set; }
 
         public List<InvoiceLineDto> Lines { get; set; } = new();

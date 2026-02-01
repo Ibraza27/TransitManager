@@ -235,7 +235,14 @@
                             <li><a class="dropdown-item" href="/admin/commerce/quotes/edit/@quote.Id"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
                             <li><button class="dropdown-item" @onclick="() => DuplicateQuote(quote)"><i class="bi bi-files me-2"></i>Dupliquer</button></li>
                             
-                            <li><button class="dropdown-item text-warning" @onclick="() => ConvertToInvoice(quote)"><i class="bi bi-arrow-repeat me-2"></i>Convertir en Facture</button></li>
+                             @if(quote.InvoiceId.HasValue)
+                             {
+                                <li><a class="dropdown-item text-primary" href="/admin/commerce/invoices/edit/@quote.InvoiceId"><i class="bi bi-eye me-2"></i>Voir Facture</a></li>
+                             }
+                             else
+                             {
+                                <li><button class="dropdown-item text-warning" @onclick="() => ConvertToInvoice(quote)"><i class="bi bi-arrow-repeat me-2"></i>Convertir en Facture</button></li>
+                             }
 
                             <li>
                                 <button class="dropdown-item" @onclick="() => DownloadPdf(quote)" disabled="@IsLoadingPdf">
@@ -869,7 +876,7 @@
         QuoteStatus.Accepted => "Accepté",
         QuoteStatus.Rejected => "Refusé",
         QuoteStatus.ChangeRequested => "Modification demandée",
-        QuoteStatus.Converted => "Converti",
+        QuoteStatus.Converted => "Facturé",
         QuoteStatus.Deleted => "Supprimé",
         _ => status.ToString()
     };

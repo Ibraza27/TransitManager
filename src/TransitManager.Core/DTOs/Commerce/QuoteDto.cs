@@ -53,7 +53,11 @@ namespace TransitManager.Core.DTOs.Commerce
         public Guid PublicToken { get; set; }
         public string PublicUrl { get; set; } // Computed URL
 
-        public string? RejectionReason { get; set; } // NEW
+        public string? RejectionReason { get; set; }
+
+        // Links
+        public Guid? InvoiceId { get; set; }
+        public string? InvoiceReference { get; set; }
 
         public List<QuoteHistoryDto> History { get; set; } = new();
         public List<QuoteLineDto> Lines { get; set; } = new();

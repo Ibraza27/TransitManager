@@ -100,7 +100,7 @@
                          </div>
                         <div class="col-12 col-md-5 text-md-end">
                             <h2 class="fw-bold text-uppercase text-secondary mb-3">Devis</h2>
-                            <h4 class="fw-bold fs-3">@(Model.Reference ?? "BROUILLON")</h4>
+                            <h4 class="fw-bold fs-3">@(ExistingRef ?? Model.Reference ?? "BROUILLON")</h4>
                             <div class="text-muted mt-2">Date : @(Model.DateCreated?.ToString("dd/MM/yyyy") ?? DateTime.Now.ToString("dd/MM/yyyy"))</div>
                              <div class="text-danger fw-bold">Valide jusqu'au : @Model.DateValidity.ToString("dd/MM/yyyy")</div>
                         </div>

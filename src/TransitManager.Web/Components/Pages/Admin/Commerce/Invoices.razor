@@ -277,6 +277,10 @@
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li><a class="dropdown-item" href="/admin/commerce/invoices/edit/@invoice.Id"><i class="bi bi-pencil me-2"></i>Modifier</a></li>
                             <li><button class="dropdown-item" @onclick="() => DuplicateInvoice(invoice)"><i class="bi bi-files me-2"></i>Dupliquer</button></li>
+                            @if(invoice.QuoteId.HasValue)
+                            {
+                                <li><a class="dropdown-item text-info" href="/admin/commerce/quotes/edit/@invoice.QuoteId"><i class="bi bi-file-text me-2"></i>Voir Devis</a></li>
+                            }
                             <li><hr class="dropdown-divider"></li>
                             <li><button class="dropdown-item" @onclick="() => OpenSendModal(invoice)"><i class="bi bi-envelope me-2"></i>Envoyer par e-mail</button></li>
                             <li><button class="dropdown-item" @onclick="() => OpenAdminPreview(invoice)"><i class="bi bi-eye me-2"></i>Aperçu</button></li>

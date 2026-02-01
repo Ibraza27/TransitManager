@@ -45,3 +45,23 @@ window.hideModal = (modalId) => {
         }
     }
 }
+
+window.printPdfFromBase64 = (base64) => {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    
+    // Open in new window and print
+    const printWindow = window.open(url, '_blank');
+    if (printWindow) {
+        printWindow.addEventListener('load', () => {
+            printWindow.focus();
+            printWindow.print();
+        });
+    }
+}

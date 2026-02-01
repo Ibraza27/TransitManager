@@ -233,7 +233,15 @@
     private async Task Print()
     {
         if (Invoice == null) return;
-        // Simple print using browser for now or stream logic
-        await JS.InvokeVoidAsync("print"); 
+        IsLoadingPdf = true;
+        try {
+            var bytes = await ApiService.GetInvoicePdfAsync(Invoice.Id);
+            // Open PDF in new window and trigger print
+            var base64 = Convert.ToBase64String(bytes);
+            await JS.InvokeVoidAsync("printPdfFromBase64", base64);
+        } catch(Exception ex) { 
+            await JS.InvokeVoidAsync("alert", "Erreur: " + ex.Message); 
+        }
+        finally { IsLoadingPdf = false; }
     }
 }

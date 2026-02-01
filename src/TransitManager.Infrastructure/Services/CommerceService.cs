@@ -117,7 +117,13 @@ namespace TransitManager.Infrastructure.Services
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(q => q.Reference.Contains(search) || q.Client.Nom.Contains(search));
+                var s = search.ToLower();
+                query = query.Where(q => q.Reference.ToLower().Contains(s) 
+                                      || (q.Client != null && (q.Client.Nom.ToLower().Contains(s) || q.Client.Prenom.ToLower().Contains(s)))
+                                      || (q.GuestName != null && q.GuestName.ToLower().Contains(s))
+                                      || (q.GuestEmail != null && q.GuestEmail.ToLower().Contains(s))
+                                      || (q.GuestPhone != null && q.GuestPhone.Contains(s))
+                                      );
             }
             if (clientId.HasValue)
             {
@@ -782,7 +788,13 @@ namespace TransitManager.Infrastructure.Services
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(q => q.Reference.Contains(search) || q.Client.Nom.Contains(search));
+                var s = search.ToLower();
+                query = query.Where(q => q.Reference.ToLower().Contains(s) 
+                                      || (q.Client != null && (q.Client.Nom.ToLower().Contains(s) || q.Client.Prenom.ToLower().Contains(s)))
+                                      || (q.GuestName != null && q.GuestName.ToLower().Contains(s))
+                                      || (q.GuestEmail != null && q.GuestEmail.ToLower().Contains(s))
+                                      || (q.GuestPhone != null && q.GuestPhone.Contains(s))
+                                      );
             }
             if (clientId.HasValue)
             {
@@ -1002,6 +1014,12 @@ namespace TransitManager.Infrastructure.Services
             invoice.DiscountType = dto.DiscountType;
             invoice.DiscountBase = dto.DiscountBase;
             invoice.DiscountScope = dto.DiscountScope;
+            
+            // Fix: Update Client/Guest fields
+            invoice.ClientId = dto.ClientId;
+            invoice.GuestName = dto.GuestName;
+            invoice.GuestEmail = dto.GuestEmail;
+            invoice.GuestPhone = dto.GuestPhone;
 
             // Update Lines
             invoice.Lines.Clear();

@@ -215,12 +215,14 @@
                       <!-- Mobile Card View omitted for brevity - same as EditQuote -->
                       
                       <!-- Add Buttons -->
-                      <div class="p-2 dropdown">
-                             <button class="btn btn-dark btn-sm dropdown-toggle rounded-pill px-3" data-bs-toggle="dropdown">
-                                 <i class="bi bi-plus-lg me-1"></i> Ajouter
+                      <div class="p-2 btn-group">
+                             <button class="btn btn-dark btn-sm rounded-start-pill px-3" @onclick="() => AddLine(QuoteLineType.Product)">
+                                 <i class="bi bi-plus-lg me-1"></i> Ajouter Ligne
+                             </button>
+                             <button type="button" class="btn btn-dark btn-sm dropdown-toggle dropdown-toggle-split rounded-end-pill" data-bs-toggle="dropdown" aria-expanded="false">
+                                 <span class="visually-hidden">Toggle Dropdown</span>
                              </button>
                              <ul class="dropdown-menu shadow">
-                                 <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Product)">Produit</button></li>
                                  <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Title)">Titre</button></li>
                                  <li><button class="dropdown-item" @onclick="() => AddLine(QuoteLineType.Text)">Texte</button></li>
                                  <li><hr class="dropdown-divider"></li>
@@ -474,6 +476,7 @@
                  CurrentStatus = InvoiceStatus.Sent; 
                  await ApiService.UpdateInvoiceStatusAsync(Id.Value, InvoiceStatus.Sent);
              }
+             NavManager.NavigateTo("/admin/commerce/invoices");
         }
          catch(Exception ex)
         {
@@ -522,6 +525,7 @@
                      CurrentStatus = InvoiceStatus.Overdue;
                      await ApiService.UpdateInvoiceStatusAsync(Id.Value, InvoiceStatus.Overdue);
                  }
+                 NavManager.NavigateTo("/admin/commerce/invoices");
              }
              else
              {

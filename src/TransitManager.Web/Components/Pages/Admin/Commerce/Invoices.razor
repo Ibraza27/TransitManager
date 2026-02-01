@@ -301,6 +301,16 @@
                          @if(!string.IsNullOrEmpty(invoice.ClientAddress)) { <div class="text-secondary"><i class="bi bi-geo-alt me-2"></i>@invoice.ClientAddress</div> }
                     </div>
                 </div>
+                
+                @if(!string.IsNullOrEmpty(invoice.Message))
+                {
+                    <div class="card mb-4 border-0 bg-white">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted text-uppercase small fw-bold">Message</h6>
+                            <div class="text-secondary text-pre-wrap">@invoice.Message</div>
+                        </div>
+                    </div>
+                }
 
                 <!-- Lines -->
                 <h6 class="text-uppercase small fw-bold text-muted mb-3">Détails</h6>

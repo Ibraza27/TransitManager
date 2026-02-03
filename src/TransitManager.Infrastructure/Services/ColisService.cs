@@ -11,6 +11,7 @@ using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
 using TransitManager.Infrastructure.Data.Uow;
 using TransitManager.Infrastructure.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -24,6 +25,7 @@ namespace TransitManager.Infrastructure.Services
         private readonly IClientService _clientService;
         private readonly ITimelineService _timelineService;
         private readonly IAuthenticationService _authService;
+        private readonly Microsoft.Extensions.Logging.ILogger<ColisService> _logger;
 
         // Définition centralisée des statuts qui ne doivent PAS être écrasés par le conteneur
         private readonly StatutColis[] _statutsCritiques = new[]
@@ -40,7 +42,8 @@ namespace TransitManager.Infrastructure.Services
             IConteneurService conteneurService,
             IClientService clientService,
             ITimelineService timelineService,
-            IAuthenticationService authService)
+            IAuthenticationService authService,
+            Microsoft.Extensions.Logging.ILogger<ColisService> logger)
         {
             _uowFactory = uowFactory; // <-- MODIFIÉ
             _notificationService = notificationService;
@@ -48,6 +51,7 @@ namespace TransitManager.Infrastructure.Services
             _clientService = clientService;
             _timelineService = timelineService;
             _authService = authService;
+            _logger = logger;
         }
 
         public async Task RecalculateAndUpdateColisStatisticsAsync(Guid colisId)
@@ -124,37 +128,46 @@ namespace TransitManager.Infrastructure.Services
 
             await uow.Colis.AddAsync(newColis);
             await uow.CommitAsync();
-            await _timelineService.AddEventAsync("Colis créé et enregistré", colisId: newColis.Id, statut: newColis.Statut.ToString());
 
-            var client = await uow.Clients.GetByIdAsync(newColis.ClientId);
-            
-            // NOTIFICATION ADMIN
-            await _notificationService.CreateAndSendAsync(
-                title: "📦 Nouveau Colis",
-                message: $"Nouveau colis {newColis.NumeroReference} ajouté pour {client?.NomComplet ?? "Client inconnu"}",
-                userId: null, // Broadcast Admin
-                categorie: CategorieNotification.StatutColis,
-                actionUrl: $"/colis/edit/{newColis.Id}", // URL Admin
-                relatedEntityId: newColis.Id,
-                relatedEntityType: "Colis"
-            );
-
-            var clientUser = await uow.Utilisateurs.GetByClientIdAsync(newColis.ClientId);
-            if (clientUser != null)
+            try
             {
+                await _timelineService.AddEventAsync("Colis créé et enregistré", colisId: newColis.Id, statut: newColis.Statut.ToString());
+
+                var client = await uow.Clients.GetByIdAsync(newColis.ClientId);
+                
+                // NOTIFICATION ADMIN
                 await _notificationService.CreateAndSendAsync(
                     title: "📦 Nouveau Colis",
-                    message: $"Un nouveau colis ({newColis.Designation}) a été créé pour vous.",
-                    userId: newColis.ClientId,
+                    message: $"Nouveau colis {newColis.NumeroReference} ajouté pour {client?.NomComplet ?? "Client inconnu"}",
+                    userId: null, // Broadcast Admin
                     categorie: CategorieNotification.StatutColis,
-                    actionUrl: $"/colis/detail/{newColis.Id}",
+                    actionUrl: $"/colis/edit/{newColis.Id}", // URL Admin
                     relatedEntityId: newColis.Id,
                     relatedEntityType: "Colis"
                 );
+
+                var clientUser = await uow.Utilisateurs.GetByClientIdAsync(newColis.ClientId);
+                if (clientUser != null)
+                {
+                    await _notificationService.CreateAndSendAsync(
+                        title: "📦 Nouveau Colis",
+                        message: $"Un nouveau colis ({newColis.Designation}) a été créé pour vous.",
+                        userId: newColis.ClientId,
+                        categorie: CategorieNotification.StatutColis,
+                        actionUrl: $"/colis/detail/{newColis.Id}",
+                        relatedEntityId: newColis.Id,
+                        relatedEntityType: "Colis"
+                    );
+                }
+
+                await _clientService.RecalculateAndUpdateClientStatisticsAsync(newColis.ClientId);
+                if (newColis.ConteneurId.HasValue) await _conteneurService.RecalculateStatusAsync(newColis.ConteneurId.Value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Erreur lors des opérations post-création du colis {ColisId}. Le colis a été créé avec succès.", newColis.Id);
             }
 
-            await _clientService.RecalculateAndUpdateClientStatisticsAsync(newColis.ClientId);
-            if (newColis.ConteneurId.HasValue) await _conteneurService.RecalculateStatusAsync(newColis.ConteneurId.Value);
             return newColis;
         }
 

@@ -14,52 +14,54 @@
 
 <div class="container-fluid mt-4 mb-5">
     
-    <!-- EN-TÊTE -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
-        <div>
-            <h2 class="fw-bold text-primary">
-                <i class="bi bi-box-fill me-2"></i>
-                @(IsNew ? "Nouveau Dossier" : $"Dossier {_dto.NumeroDossier}")
-            </h2>
-        </div>
-        <div class="d-flex flex-wrap gap-2 position-relative w-100 w-md-auto">
-            <!-- MENU D'EXPORTATION -->
-            <div class="dropdown">
-                <button class="btn btn-outline-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
-                    <i class="bi bi-file-earmark-pdf me-2"></i>Exporter PDF
-                </button>
-
-                <ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" 
-                    style="right: auto; left: 0; margin-top: 5px;">
-                    <li>
-                        <button class="dropdown-item" @onclick="() => ExportPdf(false)">
-                            📄 Manifeste Simple (Sans prix)
-                        </button>
-                    </li>
-                    <li>
-                        <button class="dropdown-item" @onclick="() => ExportPdf(true)">
-                            💰 Rapport Complet (Avec prix)
-                        </button>
-                    </li>
-                </ul>
-                
-                @if (_isExportMenuOpen)
-                {
-                    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" 
-                         @onclick="ToggleExportMenu"></div>
-                }
+    <!-- EN-TÊTE STICKY -->
+    <div class="sticky-top bg-white z-3 shadow-sm py-3 px-3 mx-n3 mb-4 border-bottom">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div>
+                <h2 class="fw-bold text-primary mb-1">
+                    <i class="bi bi-box-fill me-2"></i>
+                    @(IsNew ? "Nouveau Dossier" : $"Dossier {_dto.NumeroDossier}")
+                </h2>
             </div>
-
-            <button class="btn btn-outline-primary" @onclick="LoadData">
-                <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
-            </button>
-            
-            <button class="btn btn-primary" @onclick="SaveContainer">
-                <i class="bi bi-save me-2"></i> Enregistrer
-            </button>
-            <a href="/my-containers" class="btn btn-outline-secondary">
-                Retour
-            </a>
+            <div class="d-flex flex-wrap gap-2 position-relative w-100 w-md-auto">
+                <!-- MENU D'EXPORTATION -->
+                <div class="dropdown">
+                    <button class="btn btn-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>Exporter PDF
+                    </button>
+    
+                    <ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" 
+                        style="right: auto; left: 0; margin-top: 5px;">
+                        <li>
+                            <button class="dropdown-item" @onclick="() => ExportPdf(false)">
+                                📄 Manifeste Simple (Sans prix)
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" @onclick="() => ExportPdf(true)">
+                                💰 Rapport Complet (Avec prix)
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    @if (_isExportMenuOpen)
+                    {
+                        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" 
+                             @onclick="ToggleExportMenu"></div>
+                    }
+                </div>
+    
+                <button class="btn btn-primary" @onclick="LoadData">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+                </button>
+                
+                <button class="btn btn-primary shadow-sm" @onclick="SaveContainer">
+                    <i class="bi bi-save me-2"></i> Enregistrer
+                </button>
+                <a href="/my-containers" class="btn btn-dark">
+                    Retour
+                </a>
+            </div>
         </div>
     </div>
 
@@ -72,21 +74,18 @@
     }
     else
     {
-        <!-- NAVIGATION ONGLETS -->
-        <ul class="nav nav-tabs mb-4">
-            <li class="nav-item">
-                <button class="nav-link @(_activeTab == "infos" ? "active fw-bold" : "")" @onclick='() => _activeTab = "infos"'>
-                    <i class="bi bi-info-circle me-2"></i>Informations Générales
+        <!-- NAVIGATION ONGLETS (Floating Pills - 3 par ligne) -->
+        <ul class="nav nav-pills mb-4 bg-light p-2 rounded shadow-sm row g-2">
+            <li class="nav-item col-4 col-md-4">
+                <button class="nav-link w-100 text-truncate @(_activeTab == "infos" ? "active shadow fw-bold" : "")" @onclick='() => _activeTab = "infos"'>
+                    <i class="bi bi-info-circle me-2"></i>Infos
                 </button>
             </li>
-            
-            <!-- ONGLET DISCUSSION (NOUVEAU) -->
-            @if (!IsNew)
+             @if (!IsNew)
             {
-                <li class="nav-item">
-                    <button class="nav-link @(_activeTab == "discussion" ? "active fw-bold" : "")" @onclick='() => _activeTab = "discussion"'>
-                        <i class="bi bi-chat-dots me-2"></i>
-                        Discussion
+                <li class="nav-item col-4 col-md-4">
+                    <button class="nav-link w-100 text-truncate @(_activeTab == "discussion" ? "active shadow fw-bold" : "")" @onclick='() => _activeTab = "discussion"'>
+                        <i class="bi bi-chat-dots me-2"></i> Chat
                         @if(_unreadMessagesCount > 0 && _activeTab != "discussion")
                         {
                             <span class="badge bg-danger rounded-pill ms-2">@_unreadMessagesCount</span>
@@ -97,9 +96,9 @@
 
             @if (!IsNew)
             {
-                <li class="nav-item">
-                    <button class="nav-link @(_activeTab == "documents" ? "active fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
-                        <i class="bi bi-folder2-open me-2"></i>Documents
+                <li class="nav-item col-4 col-md-4">
+                    <button class="nav-link w-100 text-truncate @(_activeTab == "documents" ? "active shadow fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
+                        <i class="bi bi-folder2-open me-2"></i>Docs
                          @if (_dto.MissingDocumentsCount > 0)
                         {
                             <span class="badge bg-danger rounded-pill ms-2">@_dto.MissingDocumentsCount</span>
@@ -287,7 +286,8 @@
                                     <table class="table table-hover align-middle mb-0">
                                         <thead class="table-light">
                                             <tr>
-                                                <th>Réf</th>
+                                                <th class="text-end pe-3" style="width: 100px;">Actions</th>
+                                                <th class="text-center" title="Cocher pour exclure de l'export PDF">Exclure</th>
                                                 <th>Client</th>
                                                 <th>Désignation</th>
                                                 <th>Destination</th>
@@ -295,15 +295,27 @@
                                                 <th class="text-end">Payé</th>
                                                 <th class="text-end">Restant</th>
                                                 <th class="text-center">Statut</th>
-                                                <th class="text-center" title="Cocher pour exclure de l'export PDF">Exclure</th>
-                                                <th class="text-end pe-3">Actions</th>
+                                                <th>Réf</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach (var c in _dto.Colis)
                                             {
                                                 <tr>
-                                                    <td class="font-monospace text-primary">@c.NumeroReference</td>
+                                                    <td class="text-end pe-3">
+                                                        <div class="d-flex justify-content-end gap-2">
+                                                            <a href="colis/edit/@c.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
+                                                                ✏️
+                                                            </a>
+                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignColis(c)" title="Retirer">
+                                                                ❌
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center">
+                                                         <input type="checkbox" class="form-check-input" checked="@c.IsExcludedFromExport" 
+                                                                @onchange="@(async (args) => await ToggleExportExclusion(c, args.Value))" />
+                                                    </td>
                                                     <td>
                                                         <div class="fw-bold">@c.ClientNomComplet</div>
                                                     </td>
@@ -322,20 +334,7 @@
                                                          }
                                                     </td>
                                                     <td class="text-center"><span class="badge bg-secondary">@c.Statut</span></td>
-                                                    <td class="text-center">
-                                                         <input type="checkbox" class="form-check-input" checked="@c.IsExcludedFromExport" 
-                                                                @onchange="@(async (args) => await ToggleExportExclusion(c, args.Value))" />
-                                                    </td>
-                                                    <td class="text-end pe-3">
-                                                        <div class="d-flex justify-content-end gap-2">
-                                                            <a href="colis/edit/@c.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
-                                                                ✏️
-                                                            </a>
-                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignColis(c)" title="Retirer">
-                                                                ❌
-                                                            </button>
-                                                        </div>
-                                                    </td>
+                                                    <td class="font-monospace text-primary">@c.NumeroReference</td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -357,27 +356,37 @@
                                     <table class="table table-hover align-middle mb-0">
                                         <thead class="table-light">
                                             <tr>
-                                                <th>Immatriculation</th>
+                                                <th class="text-end pe-3" style="width: 100px;">Actions</th>
                                                 <th>Client</th>
                                                 <th>Modèle</th>
                                                 <th>Destination</th>
+                                                <th>Immatriculation</th>
                                                 <th class="text-end">Prix</th>
                                                 <th class="text-end">Payé</th>
                                                 <th class="text-end">Restant</th>
                                                 <th class="text-center">Statut</th>
-                                                <th class="text-end pe-3">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach (var v in _dto.Vehicules)
                                             {
                                                 <tr>
-                                                    <td class="font-monospace text-success fw-bold">@v.Immatriculation</td>
+                                                    <td class="text-end pe-3">
+                                                        <div class="d-flex justify-content-end gap-2">
+                                                            <a href="vehicule/edit/@v.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
+                                                                ✏️
+                                                            </a>
+                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignVehicle(v)" title="Retirer">
+                                                                ❌
+                                                            </button>
+                                                        </div>
+                                                    </td>
                                                     <td>
                                                         <div class="fw-bold">@v.ClientNomComplet</div>
                                                     </td>
                                                     <td>@v.Marque @v.Modele</td>
                                                     <td>@v.DestinationFinale</td>
+                                                    <td class="font-monospace text-success fw-bold">@v.Immatriculation</td>
                                                     <td class="text-end fw-bold">@v.PrixTotal.ToString("C0")</td>
                                                     <td class="text-end text-success">@v.SommePayee.ToString("C0")</td>
                                                     <td class="text-end">
@@ -391,16 +400,6 @@
                                                          }
                                                     </td>                                            
                                                     <td class="text-center"><span class="badge bg-secondary">@v.Statut</span></td>
-                                                    <td class="text-end pe-3">
-                                                        <div class="d-flex justify-content-end gap-2">
-                                                            <a href="vehicule/edit/@v.Id" target="_blank" class="btn btn-outline-primary btn-sm" title="Voir/Modifier">
-                                                                ✏️
-                                                            </a>
-                                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => UnassignVehicle(v)" title="Retirer">
-                                                                ❌
-                                                            </button>
-                                                        </div>
-                                                    </td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -509,17 +508,38 @@
 
     private async Task SaveContainer()
     {
-        if (string.IsNullOrWhiteSpace(_conteneur.NumeroDossier)) return;
+        // VALIDATION
+        var missingFields = new List<string>();
+        if (string.IsNullOrWhiteSpace(_conteneur.NumeroDossier)) missingFields.Add("Numéro Dossier");
+        if (string.IsNullOrWhiteSpace(_conteneur.NomCompagnie)) missingFields.Add("Compagnie");
+        if (string.IsNullOrWhiteSpace(_conteneur.Destination)) missingFields.Add("Destination");
+        // "Payer" = PaysDestination
+        if (string.IsNullOrWhiteSpace(_conteneur.PaysDestination)) missingFields.Add("Pays"); 
+
+        if (missingFields.Any())
+        {
+            var msg = "Veuillez renseigner les champs suivants : " + string.Join(", ", missingFields);
+            await JSRuntime.InvokeVoidAsync("alert", msg);
+            return;
+        }
 
         if (IsNew)
         {
             var created = await ApiService.CreateConteneurAsync(_conteneur);
-            if (created != null) Navigation.NavigateTo($"/conteneur/detail/{created.Id}");
+            if (created != null)
+            {
+                 Navigation.NavigateTo($"/conteneur/detail/{created.Id}");
+            }
+            else
+            {
+                 await JSRuntime.InvokeVoidAsync("alert", "Erreur lors de la création.");
+            }
         }
         else
         {
             await ApiService.UpdateConteneurAsync(_conteneur.Id, _conteneur);
             await LoadData();
+            await JSRuntime.InvokeVoidAsync("alert", "Dossier sauvegardé.");
         }
     }
 

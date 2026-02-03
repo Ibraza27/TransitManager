@@ -80,23 +80,18 @@
                                 <table class="table table-sm table-hover table-bordered mb-0 align-middle">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Date</th>
+                                            @if (!IsReadOnly) { <th style="width: 80px;" class="text-center">Actions</th> }
                                             <th>Désignation</th>
                                             <th class="text-center">Qté</th>
                                             <th class="text-end">Total</th>
                                             <th class="text-end text-muted">P.U.</th>
-                                            @if (!IsReadOnly) { <th style="width: 80px;" class="text-center">Actions</th> }
+                                            <th>Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach (var item in _items.OrderByDescending(i => i.Date))
                                         {
                                             <tr>
-                                                <td>@item.Date.ToString("dd/MM/yy")</td>
-                                                <td>@item.Designation</td>
-                                                <td class="text-center fw-bold">@item.Quantite</td>
-                                                <td class="text-end fw-bold text-primary">@item.Valeur.ToString("C2")</td>
-                                                <td class="text-end text-muted small">@(item.Quantite > 0 ? (item.Valeur / item.Quantite).ToString("C2") : "-")</td>
                                                 @if (!IsReadOnly)
                                                 {
                                                     <td class="text-center">
@@ -106,6 +101,11 @@
                                                         </div>
                                                     </td>
                                                 }
+                                                <td>@item.Designation</td>
+                                                <td class="text-center fw-bold">@item.Quantite</td>
+                                                <td class="text-end fw-bold text-primary">@item.Valeur.ToString("C2")</td>
+                                                <td class="text-end text-muted small">@(item.Quantite > 0 ? (item.Valeur / item.Quantite).ToString("C2") : "-")</td>
+                                                <td>@item.Date.ToString("dd/MM/yy")</td>
                                             </tr>
                                         }
                                         @if (!_items.Any()) { <tr><td colspan="6" class="text-center text-muted fst-italic py-3">Aucun article</td></tr> }

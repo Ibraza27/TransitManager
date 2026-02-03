@@ -178,14 +178,26 @@ namespace TransitManager.Web.Services
             catch { return null; }
         }
 
-        public async Task<bool> CreateColisAsync(CreateColisDto dto)
+        public async Task<Colis?> CreateColisAsync(CreateColisDto dto)
         {
             try
             {
                 var response = await _httpClient.PostAsJsonAsync("api/colis", dto);
-                return response.IsSuccessStatusCode;
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    if (string.IsNullOrWhiteSpace(content)) return null;
+                    return JsonSerializer.Deserialize<Colis>(content, _jsonOptions);
+                }
+                
+                // Log non-success status code if needed
+                return null;
             }
-            catch { return false; }
+            catch (Exception ex)
+            {
+                // In a real app we'd log this locally
+                return null;
+            }
         }
 
         public async Task<bool> UpdateColisAsync(Guid id, UpdateColisDto dto)
@@ -309,14 +321,18 @@ namespace TransitManager.Web.Services
             return await _httpClient.GetFromJsonAsync<Client>($"api/clients/{id}", _jsonOptions);
         }
 
-        public async Task<bool> CreateVehiculeAsync(Vehicule vehicule)
+        public async Task<Vehicule?> CreateVehiculeAsync(Vehicule vehicule)
         {
             try
             {
                 var response = await _httpClient.PostAsJsonAsync("api/vehicules", vehicule, _jsonOptions);
-                return response.IsSuccessStatusCode;
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<Vehicule>(_jsonOptions);
+                }
+                return null;
             }
-            catch { return false; }
+            catch { return null; }
         }
 
         public async Task<bool> UpdateVehiculeAsync(Guid id, Vehicule vehicule)

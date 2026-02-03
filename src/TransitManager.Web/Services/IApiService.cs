@@ -22,7 +22,7 @@ namespace TransitManager.Web.Services
         // --- Gestion des Colis ---
         Task<IEnumerable<ColisListItemDto>?> GetMyColisAsync();
         Task<Colis?> GetColisByIdAsync(Guid id);
-        Task<bool> CreateColisAsync(CreateColisDto dto);
+        Task<Colis?> CreateColisAsync(CreateColisDto dto); // Changed from bool
         Task<bool> UpdateColisAsync(Guid id, UpdateColisDto dto);
         Task<string?> GenerateBarcodeAsync();
         Task<bool> ToggleColisExportExclusionAsync(Guid id, bool isExcluded);
@@ -41,7 +41,8 @@ namespace TransitManager.Web.Services
 		
 		Task<Client> GetClientByIdAsync(Guid id);
 		Task<Vehicule> GetVehiculeByIdAsync(Guid id);
-		Task<bool> CreateVehiculeAsync(Vehicule vehicule);
+		Task<Vehicule?> CreateVehiculeAsync(Vehicule vehicule); // Changed from bool
+
 		Task<bool> UpdateVehiculeAsync(Guid id, Vehicule vehicule);
 		Task<IEnumerable<Paiement>?> GetPaiementsForVehiculeAsync(Guid vehiculeId);
 		Task<bool> DeleteVehiculeAsync(Guid id);

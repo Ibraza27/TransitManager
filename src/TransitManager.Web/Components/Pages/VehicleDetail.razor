@@ -15,56 +15,61 @@
 
 <div class="container mt-4 mb-5">
     <!-- En-tête -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
-        <div>
-            <h2 class="fw-bold text-primary">
-                <i class="bi bi-car-front-fill me-2"></i>
-                @(IsNew ? "Nouveau Véhicule" : "Détail du Véhicule")
-            </h2>
-            @if (!IsNew)
-            {
-                <span class="badge @GetStatusBadgeClass(_vehicule.Statut)">@_vehicule.Statut</span>
-                <span class="text-muted ms-2 small">Immat: @_vehicule.Immatriculation</span>
-            }
-        </div>
-        <div class="d-flex flex-wrap gap-2 position-relative w-100 w-md-auto">
-            <!-- MENU EXPORT -->
-            <div class="dropdown">
-                <button class="btn btn-outline-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
-                    <i class="bi bi-file-earmark-pdf me-2"></i>PDF
-                </button>
-                <ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" style="right: auto; left: 0; margin-top: 5px;">
-                    <li>
-                        <button class="dropdown-item" @onclick="() => ExportPdf(false, false)">
-                            📄 État des lieux Simple
-                        </button>
-                    </li>
-                    <li>
-                        <button class="dropdown-item" @onclick="() => ExportPdf(true, false)">
-                            💰 État des lieux + Prix
-                        </button>
-                    </li>
-                    <li>
-                        <button class="dropdown-item" @onclick="() => ExportPdf(true, true)">
-                            📸 Dossier Complet (+ Photos)
-                        </button>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <button class="dropdown-item" @onclick="ExportAttestation">
-                            ⚖️ Attestation de Valeur
-                        </button>
-                    </li>
-                </ul>
-                @if (_isExportMenuOpen)
+    <!-- En-tête Sticky -->
+    <div class="sticky-top bg-white z-3 shadow-sm py-3 px-3 mx-n3 mb-4 border-bottom">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div>
+                <h2 class="fw-bold text-primary mb-1">
+                    <i class="bi bi-car-front-fill me-2"></i>
+                    @(IsNew ? "Nouveau Véhicule" : "Détail du Véhicule")
+                </h2>
+                @if (!IsNew)
                 {
-                    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" @onclick="ToggleExportMenu"></div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge @GetStatusBadgeClass(_vehicule.Statut)">@_vehicule.Statut</span>
+                        <span class="text-muted small">Immat: <span class="font-monospace text-dark fw-bold">@_vehicule.Immatriculation</span></span>
+                    </div>
                 }
             </div>
-            <button class="btn btn-primary" @onclick="() => SaveVehicle()" disabled="@(!CanEditGlobal)">
-                <i class="bi bi-save me-2"></i> Enregistrer
-            </button>
-            <a href="/my-vehicles" class="btn btn-outline-dark">Retour</a>
+            <div class="d-flex flex-wrap gap-2 position-relative w-100 w-md-auto">
+                <!-- MENU EXPORT -->
+                <div class="dropdown">
+                    <button class="btn btn-danger dropdown-toggle" type="button" @onclick="ToggleExportMenu">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>PDF
+                    </button>
+                    <ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" style="right: auto; left: 0; margin-top: 5px;">
+                        <li>
+                            <button class="dropdown-item" @onclick="() => ExportPdf(false, false)">
+                                📄 État des lieux Simple
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" @onclick="() => ExportPdf(true, false)">
+                                💰 État des lieux + Prix
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" @onclick="() => ExportPdf(true, true)">
+                                📸 Dossier Complet (+ Photos)
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button class="dropdown-item" @onclick="ExportAttestation">
+                                ⚖️ Attestation de Valeur
+                            </button>
+                        </li>
+                    </ul>
+                    @if (_isExportMenuOpen)
+                    {
+                        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" @onclick="ToggleExportMenu"></div>
+                    }
+                </div>
+                <button class="btn btn-primary shadow-sm" @onclick="() => SaveVehicle()" disabled="@(!CanEditGlobal)">
+                    <i class="bi bi-save me-2"></i> Enregistrer
+                </button>
+                <a href="/my-vehicles" class="btn btn-dark">Retour</a>
+            </div>
         </div>
     </div>
 
@@ -74,26 +79,25 @@
     }
     else
     {
-        <!-- TABS NAVIGATION -->
-        <ul class="nav nav-tabs mb-4">
-            <li class="nav-item">
-                <button class="nav-link @(_activeTab == "infos" ? "active fw-bold" : "")" @onclick='() => _activeTab = "infos"'>
-                    <i class="bi bi-info-circle me-2"></i>Informations & Finances
+        <!-- TABS NAVIGATION (Floating Pills - 3 par ligne) -->
+        <ul class="nav nav-pills mb-4 bg-light p-2 rounded shadow-sm row g-2">
+            <li class="nav-item col-4 col-md-4">
+                <button class="nav-link w-100 text-truncate @(_activeTab == "infos" ? "active shadow fw-bold" : "")" @onclick='() => _activeTab = "infos"'>
+                    <i class="bi bi-info-circle me-2"></i>Infos
                 </button>
             </li>
             
             <!-- ONGLET SUIVI (NOUVEAU) -->
             @if (!IsNew)
             {
-                <li class="nav-item">
-                    <button class="nav-link @(_activeTab == "suivi" ? "active fw-bold" : "")" @onclick='() => _activeTab = "suivi"'>
+                <li class="nav-item col-4 col-md-4">
+                    <button class="nav-link w-100 text-truncate @(_activeTab == "suivi" ? "active shadow fw-bold" : "")" @onclick='() => _activeTab = "suivi"'>
                         <i class="bi bi-clock-history me-2"></i>Suivi
                     </button>
                 </li>
-                 <li class="nav-item">
-                    <button class="nav-link @(_activeTab == "discussion" ? "active fw-bold" : "")" @onclick='() => _activeTab = "discussion"'>
-                        <i class="bi bi-chat-left-text me-2"></i>
-                        Discussion
+                 <li class="nav-item col-4 col-md-4">
+                    <button class="nav-link w-100 text-truncate @(_activeTab == "discussion" ? "active shadow fw-bold" : "")" @onclick='() => _activeTab = "discussion"'>
+                        <i class="bi bi-chat-left-text me-2"></i> Chat
                         @if(_unreadMessagesCount > 0 && _activeTab != "discussion")
                         {
                             <span class="badge bg-danger rounded-pill ms-2">@_unreadMessagesCount</span>
@@ -104,9 +108,9 @@
 
              @if (!IsNew)
              {
-                <li class="nav-item">
-                    <button class="nav-link @(_activeTab == "documents" ? "active fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
-                        <i class="bi bi-folder2-open me-2"></i>Documents & Photos
+                <li class="nav-item col-4 col-md-4">
+                    <button class="nav-link w-100 text-truncate @(_activeTab == "documents" ? "active shadow fw-bold" : "")" @onclick='() => _activeTab = "documents"'>
+                        <i class="bi bi-folder2-open me-2"></i>Docs
                          @if (GetMissingDocumentsCount() > 0)
                         {
                             <span class="badge bg-danger rounded-pill ms-2">@GetMissingDocumentsCount()</span>
@@ -116,9 +120,9 @@
              }
             @if(!IsNew)
             {
-                 <li class="nav-item">
-                    <button class="nav-link @(_activeTab == "sav" ? "active fw-bold" : "")" @onclick='() => _activeTab = "sav"'>
-                        <i class="bi bi-shield-check me-2"></i>SAV / Signalement
+                 <li class="nav-item col-4 col-md-4">
+                    <button class="nav-link w-100 text-truncate @(_activeTab == "sav" ? "active shadow fw-bold" : "")" @onclick='() => _activeTab = "sav"'>
+                        <i class="bi bi-shield-check me-2"></i>SAV
                          @if (_receptionControl != null)
                         {
                             <span class="badge rounded-pill ms-2 @(_receptionControl.Status == ReceptionStatus.ReceivedFull ? "bg-success" : "bg-danger")">
@@ -888,15 +892,28 @@
             RowVersion = _vehicule.RowVersion
         };
 
-        bool success;
+        bool success = false;
         if (IsNew)
         {
             toSend.Id = Guid.Empty;
-            success = await ApiService.CreateVehiculeAsync(toSend);
+            var createdVehicle = await ApiService.CreateVehiculeAsync(toSend);
+            if (createdVehicle != null)
+            {
+                Navigation.NavigateTo($"/vehicule/detail/{createdVehicle.Id}");
+                return;
+            }
         }
         else
         {
             success = await ApiService.UpdateVehiculeAsync(toSend.Id, toSend);
+             if (success)
+            {
+                 // Stay on page (Edit Mode)
+                 await OnInitializedAsync(); // Refresh data
+                 StateHasChanged();
+                 await JSRuntime.InvokeVoidAsync("alert", "Modifications enregistrées.");
+                 return;
+            }
         }
         
         if (success)

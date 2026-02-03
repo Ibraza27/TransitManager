@@ -76,34 +76,35 @@
                         <table class="table table-hover align-middle table-sm">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Date</th>
+
+                                    @if(IsAdmin) { <th class="text-center" style="width:100px">Actions</th> }
                                     <th>Mode</th>
                                     <th>Réf.</th>
                                     <th class="text-end">Montant</th>
-                                    @if(IsAdmin) { <th class="text-center" style="width:100px">Actions</th> }
+                                    <th>Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var p in _payments.OrderByDescending(x => x.DatePaiement))
                                 {
                                     <tr class="@(p.Id == _currentPayment.Id ? "table-active" : "")">
-                                        <td>@p.DatePaiement.ToString("dd/MM/yyyy")</td>
+                                        @if (IsAdmin)
+                                        {
+                                            <td class="text-center">
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => EditPayment(p)" title="Modifier">
+                                                        ✏️
+                                                    </button>
+                                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => DeletePayment(p)" title="Supprimer">
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        }
                                         <td><span class="badge bg-secondary">@p.ModePaiement</span></td>
                                         <td><small class="text-muted">@p.Commentaires</small></td>
                                         <td class="text-end fw-bold text-success">@p.Montant.ToString("C2")</td>
-										@if (IsAdmin)
-										{
-											<td class="text-center">
-												<div class="d-flex justify-content-center gap-2">
-													<button class="btn btn-outline-primary btn-sm" @onclick="() => EditPayment(p)" title="Modifier">
-														✏️
-													</button>
-													<button class="btn btn-outline-danger btn-sm" @onclick="() => DeletePayment(p)" title="Supprimer">
-														🗑️
-													</button>
-												</div>
-											</td>
-										}
+                                        <td>@p.DatePaiement.ToString("dd/MM/yyyy")</td>
                                     </tr>
                                 }
                                 @if(!_payments.Any())

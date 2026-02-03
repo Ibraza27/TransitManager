@@ -1,0 +1,35 @@
+@page "/logged-out"
+@layout TransitManager.Web.Components.Layout.EmptyLayout
+@inject NavigationManager Navigation
+
+<PageTitle>Déconnexion - Hippocampe</PageTitle>
+
+<div class="d-flex align-items-center justify-content-center min-vh-100 bg-dark" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+    <div class="card shadow-lg p-4 text-center border-0" style="max-width: 400px; width: 90%; background-color: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px);">
+        <div class="card-body">
+            <!-- Logo -->
+            <div class="mb-4">
+                <img src="images/logo.jpg" alt="Logo Hippocampe" class="img-fluid rounded-circle shadow-sm" style="width: 100px; height: 100px; object-fit: cover; border: 3px solid #3b82f6;">
+            </div>
+            
+            <h3 class="fw-bold text-white mb-2">À Bientôt !</h3>
+            <p class="text-white-50 mb-4 small">Vous avez été déconnecté en toute sécurité.</p>
+            
+            <div class="d-grid gap-3">
+                <!-- Bouton Reconnexion -->
+                <a href="/Account/Login" class="btn btn-primary btn-lg shadow-sm fw-bold">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Se reconnecter
+                </a>
+                
+                <!-- Bouton Accueil -->
+                <a href="/" class="btn btn-outline-light btn-sm opacity-75">
+                    <i class="bi bi-house me-2"></i>Aller à l'accueil
+                </a>
+            </div>
+            
+            <div class="mt-4 pt-3 border-top border-secondary border-opacity-25">
+                <small class="text-muted" style="font-size: 0.75rem;">&copy; @DateTime.Now.Year Hippocampe Transit</small>
+            </div>
+        </div>
+    </div>
+</div>

@@ -493,6 +493,14 @@ namespace TransitManager.Infrastructure.Services
                 }
             }
             
+            // Synchronize with linked Invoice
+            // FIX: Reload with AsNoTracking to ensure Sync uses fresh DB data (avoids "Save Twice" bug)
+            var finalQuote = await _context.Quotes.AsNoTracking().Include(q => q.Lines).FirstOrDefaultAsync(q => q.Id == quote.Id);
+            if (finalQuote != null)
+            {
+                await SyncQuoteToInvoiceAsync(finalQuote);
+            }
+
             // Reload to get Client info
             var reloaded = await GetQuoteByIdAsync(quote.Id);
             try { System.IO.File.AppendAllText("commerce_debug.txt", $"[{DateTime.Now}] RELOADED LineCount={reloaded?.Lines?.Count}\n"); } catch {}
@@ -915,10 +923,60 @@ namespace TransitManager.Infrastructure.Services
                 Message = dto.Message,
                 PaymentTerms = dto.PaymentTerms,
                 FooterNote = dto.FooterNote,
+                DiscountValue = dto.DiscountValue,
+                DiscountType = dto.DiscountType,
+                DiscountBase = dto.DiscountBase,
+                DiscountScope = dto.DiscountScope,
                 Status = InvoiceStatus.Draft,
                 PublicToken = Guid.NewGuid()
             };
+
+            // Add Lines
+            decimal grossHT = 0;
+            decimal grossTVA = 0;
+            if (dto.Lines != null)
+            {
+                int loopPos = 0;
+                foreach (var lineDto in dto.Lines)
+                {
+                    decimal lineHT = lineDto.Quantity * lineDto.UnitPrice;
+                    
+                    if (lineDto.Type == QuoteLineType.Product)
+                    {
+                        grossHT += lineHT;
+                        grossTVA += lineHT * (lineDto.VATRate / 100m);
+                    }
+
+                    invoice.Lines.Add(new InvoiceLine
+                    {
+                        ProductId = lineDto.ProductId,
+                        Description = lineDto.Description,
+                        Date = lineDto.Date,
+                        Quantity = lineDto.Quantity,
+                        Unit = lineDto.Unit,
+                        UnitPrice = lineDto.UnitPrice,
+                        VATRate = lineDto.VATRate,
+                        TotalHT = lineHT,
+                        Type = lineDto.Type,
+                        Position = lineDto.Position != 0 ? lineDto.Position : loopPos++
+                    });
+                }
+            }
+
+            // Calculations
+            decimal discountAmount = 0;
+            if (invoice.DiscountType == DiscountType.Percent)
+                discountAmount = grossHT * (invoice.DiscountValue / 100m);
+            else
+                discountAmount = invoice.DiscountValue;
+
+            if (discountAmount > grossHT) discountAmount = grossHT;
             
+            invoice.TotalHT = grossHT - discountAmount;
+            decimal discountRatio = grossHT == 0 ? 0 : (discountAmount / grossHT);
+            invoice.TotalTVA = grossTVA * (1 - discountRatio);
+            invoice.TotalTTC = invoice.TotalHT + invoice.TotalTVA;
+
             _context.Invoices.Add(invoice);
             
             _context.InvoiceHistories.Add(new InvoiceHistory 
@@ -991,10 +1049,20 @@ namespace TransitManager.Infrastructure.Services
 
                 // Update Lines
                 invoice.Lines.Clear();
+                decimal grossHT = 0;
+                decimal grossTVA = 0;
                 if(dto.Lines != null)
                 {
                     foreach(var lineDto in dto.Lines)
                     {
+                        decimal lineHT = lineDto.Quantity * lineDto.UnitPrice;
+                        
+                        if (lineDto.Type == QuoteLineType.Product)
+                        {
+                            grossHT += lineHT;
+                            grossTVA += lineHT * (lineDto.VATRate / 100m);
+                        }
+
                         invoice.Lines.Add(new InvoiceLine
                         {
                             Description = lineDto.Description,
@@ -1002,29 +1070,38 @@ namespace TransitManager.Infrastructure.Services
                             UnitPrice = lineDto.UnitPrice,
                             VATRate = lineDto.VATRate,
                             Unit = lineDto.Unit,
-                            TotalHT = lineDto.Quantity * lineDto.UnitPrice,
+                            TotalHT = lineHT,
                             Type = lineDto.Type,
                             Position = lineDto.Position,
                             ProductId = lineDto.ProductId
                         });
                     }
                 }
+
                 // Recalculate Totals
-                invoice.TotalHT = invoice.Lines.Sum(l => l.TotalHT);
-                 // Apply Discount
-                decimal totalDiscount = 0;
-                 if (invoice.DiscountScope == DiscountScope.Total)
-                {
-                     if (invoice.DiscountType == DiscountType.Percent)
-                         totalDiscount = invoice.TotalHT * (invoice.DiscountValue / 100);
-                     else
-                         totalDiscount = invoice.DiscountValue;
-                }
-                 // For now simplified totals logic
-                invoice.TotalTVA = invoice.Lines.Sum(l => l.TotalHT * (l.VATRate / 100)); // Simple VAT
-                invoice.TotalTTC = invoice.TotalHT + invoice.TotalTVA - totalDiscount;
+                decimal discountAmount = 0;
+                if (invoice.DiscountType == DiscountType.Percent)
+                    discountAmount = grossHT * (invoice.DiscountValue / 100m);
+                else
+                    discountAmount = invoice.DiscountValue;
+
+                if (discountAmount > grossHT) discountAmount = grossHT;
+
+                invoice.TotalHT = grossHT - discountAmount;
+                decimal discountRatio = grossHT == 0 ? 0 : (discountAmount / grossHT);
+                invoice.TotalTVA = grossTVA * (1 - discountRatio);
+                invoice.TotalTTC = invoice.TotalHT + invoice.TotalTVA;
 
                 await _context.SaveChangesAsync();
+                
+                // Synchronize with linked Quote
+                // FIX: Reload with AsNoTracking to ensure Sync uses fresh DB data (avoids "Save Twice" bug)
+                var finalInvoice = await _context.Invoices.AsNoTracking().Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == invoice.Id);
+                if (finalInvoice != null)
+                {
+                    await SyncInvoiceToQuoteAsync(finalInvoice);
+                }
+
                 return MapInvoiceToDto(invoice);
             }
             catch (Exception ex)
@@ -1395,6 +1472,10 @@ namespace TransitManager.Infrastructure.Services
                 Message = i.Message,
                 PaymentTerms = i.PaymentTerms,
                 FooterNote = i.FooterNote,
+                DiscountValue = i.DiscountValue,
+                DiscountType = i.DiscountType,
+                DiscountBase = i.DiscountBase,
+                DiscountScope = i.DiscountScope,
                 TotalHT = i.TotalHT,
                 TotalTVA = i.TotalTVA,
                 TotalTTC = i.TotalTTC,
@@ -1495,5 +1576,151 @@ namespace TransitManager.Infrastructure.Services
             return MapInvoiceToDto(newInvoice);
         }
 
+        private async Task SyncQuoteToInvoiceAsync(Quote quote)
+        {
+            try
+            {
+                // 1. Find the target Invoice (NoTracking)
+                var invoiceId = await _context.Invoices
+                    .Where(i => i.QuoteId == quote.Id)
+                    .Select(i => i.Id)
+                    .FirstOrDefaultAsync();
+
+                if (invoiceId == Guid.Empty) return;
+
+                // Log source state
+                try { System.IO.File.AppendAllText("sync_debug.txt", $"[{DateTime.Now}] START DirectSyncQuoteToInvoice: {quote.Reference} -> ID {invoiceId} (Lines: {quote.Lines.Count})\n"); } catch {}
+
+                // 2. Clear tracker for this Invoice to prevent conflicts if it's already tracked
+                var trackedInvoice = _context.Invoices.Local.FirstOrDefault(i => i.Id == invoiceId);
+                if (trackedInvoice != null) _context.Entry(trackedInvoice).State = EntityState.Detached;
+
+                // 3. Update Header directly in DB using ExecuteUpdate (bypasses tracker staleness)
+                await _context.Invoices
+                    .Where(i => i.Id == invoiceId)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(i => i.ClientId, quote.ClientId)
+                        .SetProperty(i => i.GuestName, quote.GuestName)
+                        .SetProperty(i => i.GuestEmail, quote.GuestEmail)
+                        .SetProperty(i => i.GuestPhone, quote.GuestPhone)
+                        .SetProperty(i => i.Message, quote.Message)
+                        .SetProperty(i => i.PaymentTerms, quote.PaymentTerms)
+                        // .SetProperty(i => i.FooterNote, quote.FooterNote) // Dissociated as requested
+                        .SetProperty(i => i.DiscountValue, quote.DiscountValue)
+                        .SetProperty(i => i.DiscountType, quote.DiscountType)
+                        .SetProperty(i => i.DiscountBase, quote.DiscountBase)
+                        .SetProperty(i => i.DiscountScope, quote.DiscountScope)
+                        .SetProperty(i => i.TotalHT, quote.TotalHT)
+                        .SetProperty(i => i.TotalTVA, quote.TotalTVA)
+                        .SetProperty(i => i.TotalTTC, quote.TotalTTC)
+                    );
+
+                // 4. Atomic Delete existing lines in DB
+                await _context.InvoiceLines
+                    .Where(l => l.InvoiceId == invoiceId)
+                    .ExecuteDeleteAsync();
+
+                // 5. Insert new lines
+                foreach (var ql in quote.Lines)
+                {
+                    var newLine = new InvoiceLine
+                    {
+                        InvoiceId = invoiceId,
+                        ProductId = ql.ProductId,
+                        Description = ql.Description,
+                        Date = ql.Date,
+                        Quantity = ql.Quantity,
+                        Unit = ql.Unit,
+                        UnitPrice = ql.UnitPrice,
+                        VATRate = ql.VATRate,
+                        TotalHT = ql.TotalHT,
+                        Type = ql.Type,
+                        Position = ql.Position
+                    };
+                    _context.InvoiceLines.Add(newLine);
+                }
+                
+                await _context.SaveChangesAsync();
+                try { System.IO.File.AppendAllText("sync_debug.txt", $"[{DateTime.Now}] END DirectSyncQuoteToInvoice SUCCESS\n"); } catch {}
+            }
+            catch (Exception ex)
+            {
+                // Safety: Log but don't crash the main operation
+                try { System.IO.File.AppendAllText("sync_error.txt", $"[{DateTime.Now}] SyncQuoteToInvoice FAILED: {ex}\n"); } catch {}
+            }
+        }
+
+        private async Task SyncInvoiceToQuoteAsync(Invoice invoice)
+        {
+            if (!invoice.QuoteId.HasValue) return;
+            var quoteId = invoice.QuoteId.Value;
+
+            try
+            {
+                // 1. Find the target Quote (Check existence)
+                var quoteExists = await _context.Quotes.AnyAsync(q => q.Id == quoteId);
+                if (!quoteExists) return;
+
+                // Log source state
+                try { System.IO.File.AppendAllText("sync_debug.txt", $"[{DateTime.Now}] START DirectSyncInvoiceToQuote: {invoice.Reference} -> QuoteId {quoteId} (Lines: {invoice.Lines.Count})\n"); } catch {}
+
+                // 2. Clear tracker for this Quote
+                var trackedQuote = _context.Quotes.Local.FirstOrDefault(q => q.Id == quoteId);
+                if (trackedQuote != null) _context.Entry(trackedQuote).State = EntityState.Detached;
+
+                // 3. Update Header directly in DB using ExecuteUpdate
+                await _context.Quotes
+                    .Where(q => q.Id == quoteId)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(q => q.ClientId, invoice.ClientId)
+                        .SetProperty(q => q.GuestName, invoice.GuestName)
+                        .SetProperty(q => q.GuestEmail, invoice.GuestEmail)
+                        .SetProperty(q => q.GuestPhone, invoice.GuestPhone)
+                        .SetProperty(q => q.Message, invoice.Message)
+                        .SetProperty(q => q.PaymentTerms, invoice.PaymentTerms)
+                        // .SetProperty(q => q.FooterNote, invoice.FooterNote) // Dissociated as requested
+                        .SetProperty(q => q.DiscountValue, invoice.DiscountValue)
+                        .SetProperty(q => q.DiscountType, invoice.DiscountType)
+                        .SetProperty(q => q.DiscountBase, invoice.DiscountBase)
+                        .SetProperty(q => q.DiscountScope, invoice.DiscountScope)
+                        .SetProperty(q => q.TotalHT, invoice.TotalHT)
+                        .SetProperty(q => q.TotalTVA, invoice.TotalTVA)
+                        .SetProperty(q => q.TotalTTC, invoice.TotalTTC)
+                    );
+
+                // 4. Atomic Delete existing lines in DB
+                await _context.QuoteLines
+                    .Where(l => l.QuoteId == quoteId)
+                    .ExecuteDeleteAsync();
+
+                // 5. Insert new lines
+                foreach (var il in invoice.Lines)
+                {
+                    var newLine = new QuoteLine
+                    {
+                        QuoteId = quoteId,
+                        ProductId = il.ProductId,
+                        Description = il.Description,
+                        Date = il.Date,
+                        Quantity = il.Quantity,
+                        Unit = il.Unit,
+                        UnitPrice = il.UnitPrice,
+                        VATRate = il.VATRate,
+                        TotalHT = il.TotalHT,
+                        Type = il.Type,
+                        Position = il.Position
+                    };
+                    _context.QuoteLines.Add(newLine);
+                }
+                
+                await _context.SaveChangesAsync();
+                try { System.IO.File.AppendAllText("sync_debug.txt", $"[{DateTime.Now}] END DirectSyncInvoiceToQuote SUCCESS\n"); } catch {}
+            }
+            catch (Exception ex)
+            {
+                // Safety: Log but don't crash the main operation
+                try { System.IO.File.AppendAllText("sync_error.txt", $"[{DateTime.Now}] SyncInvoiceToQuote FAILED: {ex}\n"); } catch {}
+            }
+        }
     }
 }

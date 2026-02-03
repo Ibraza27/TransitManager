@@ -704,7 +704,7 @@
 
     // --- Computed Properties for UIs ---
     
-    private decimal RawTotalHT => Model.Lines.Sum(l => l.Quantity * l.UnitPrice);
+    private decimal RawTotalHT => Model.Lines.Where(l => l.Type == QuoteLineType.Product).Sum(l => l.Quantity * l.UnitPrice);
     
     private decimal DiscountAmount 
     {
@@ -728,7 +728,7 @@
     {
         get 
         {
-            var rawTva = Model.Lines.Sum(l => (l.Quantity * l.UnitPrice) * (l.VATRate / 100m));
+            var rawTva = Model.Lines.Where(l => l.Type == QuoteLineType.Product).Sum(l => (l.Quantity * l.UnitPrice) * (l.VATRate / 100m));
             if (RawTotalHT == 0) return 0;
             var ratio = (Model.DiscountBase == DiscountBase.BaseHT) ? (DiscountAmount / RawTotalHT) : 0; 
             return rawTva * (1 - ratio);
@@ -1110,8 +1110,20 @@
             
             var result = await ApiService.CreateOrUpdateQuoteAsync(Model);
             Model.Id = result.Id;
-            if(!Id.HasValue) { Id = result.Id; } // Update local ID binding
+            if(!Id.HasValue) { Id = result.Id; } 
             CurrentStatus = result.Status;
+            
+            // Refresh Model from result to ensure totals/lines match server
+            // We map QuoteDto back to UpsertQuoteDto
+            Model.Reference = result.Reference;
+            Model.Lines = result.Lines; // QuoteLineDto matches exactly
+            Model.DiscountValue = result.DiscountValue;
+            Model.DiscountType = result.DiscountType;
+            Model.DiscountBase = result.DiscountBase;
+            Model.DiscountScope = result.DiscountScope;
+            Model.TotalHT = result.TotalHT;
+            Model.TotalTVA = result.TotalTVA;
+            Model.TotalTTC = result.TotalTTC;
             
             // Update Snapshot
             OriginalModelJson = JsonSerializer.Serialize(Model);

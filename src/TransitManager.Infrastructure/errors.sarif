@@ -1,0 +1,4306 @@
+{
+  "$schema": "http://json.schemastore.org/sarif-1.0.0",
+  "version": "1.0.0",
+  "runs": [
+    {
+      "tool": {
+        "name": "Compilateur Microsoft (R) Visual C#",
+        "version": "4.11.0.0",
+        "fileVersion": "4.11.0-3.24554.2 (bc1c3011)",
+        "semanticVersion": "4.11.0",
+        "language": "fr-FR"
+      },
+      "results": [
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 49,
+                  "startColumn": 69,
+                  "endLine": 49,
+                  "endColumn": 82
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS4014",
+          "level": "warning",
+          "message": "Dans la mesure où cet appel n'est pas attendu, l'exécution de la méthode actuelle continue avant la fin de l'appel. Envisagez d'appliquer l'opérateur 'await' au résultat de l'appel.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ColisService.cs",
+                "region": {
+                  "startLine": 250,
+                  "startColumn": 64,
+                  "endLine": 250,
+                  "endColumn": 145
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 184,
+                  "startColumn": 46,
+                  "endLine": 184,
+                  "endColumn": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS0168",
+          "level": "warning",
+          "message": "La variable 'ex' est déclarée, mais jamais utilisée",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 155,
+                  "startColumn": 49,
+                  "endLine": 155,
+                  "endColumn": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 3
+          }
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 109,
+                  "startColumn": 17,
+                  "endLine": 109,
+                  "endColumn": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8600",
+          "level": "warning",
+          "message": "Conversion de littéral ayant une valeur null ou d'une éventuelle valeur null en type non-nullable.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 247,
+                  "startColumn": 25,
+                  "endLine": 247,
+                  "endColumn": 109
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8600",
+          "level": "warning",
+          "message": "Conversion de littéral ayant une valeur null ou d'une éventuelle valeur null en type non-nullable.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/MessageService.cs",
+                "region": {
+                  "startLine": 77,
+                  "startColumn": 23,
+                  "endLine": 79,
+                  "endColumn": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 179,
+                  "startColumn": 17,
+                  "endLine": 179,
+                  "endColumn": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 199,
+                  "startColumn": 59,
+                  "endLine": 199,
+                  "endColumn": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 205,
+                  "startColumn": 59,
+                  "endLine": 205,
+                  "endColumn": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8600",
+          "level": "warning",
+          "message": "Conversion de littéral ayant une valeur null ou d'une éventuelle valeur null en type non-nullable.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 575,
+                  "startColumn": 37,
+                  "endLine": 575,
+                  "endColumn": 76
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8600",
+          "level": "warning",
+          "message": "Conversion de littéral ayant une valeur null ou d'une éventuelle valeur null en type non-nullable.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 577,
+                  "startColumn": 36,
+                  "endLine": 579,
+                  "endColumn": 101
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8604",
+          "level": "warning",
+          "message": "Existence possible d'un argument de référence null pour le paramètre 'groupName' dans 'IClientProxy IHubClients<IClientProxy>.Group(string groupName)'.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/TimelineService.cs",
+                "region": {
+                  "startLine": 57,
+                  "startColumn": 37,
+                  "endLine": 57,
+                  "endColumn": 55
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8604",
+          "level": "warning",
+          "message": "Existence possible d'un argument de référence null pour le paramètre 'groupName' dans 'IClientProxy IHubClients<IClientProxy>.Group(string groupName)'.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/TimelineService.cs",
+                "region": {
+                  "startLine": 60,
+                  "startColumn": 37,
+                  "endLine": 60,
+                  "endColumn": 58
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8604",
+          "level": "warning",
+          "message": "Existence possible d'un argument de référence null pour le paramètre 'first' dans 'bool Enumerable.SequenceEqual<byte>(IEnumerable<byte> first, IEnumerable<byte> second)'.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/UserService.cs",
+                "region": {
+                  "startLine": 101,
+                  "startColumn": 42,
+                  "endLine": 101,
+                  "endColumn": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8600",
+          "level": "warning",
+          "message": "Conversion de littéral ayant une valeur null ou d'une éventuelle valeur null en type non-nullable.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/MessageService.cs",
+                "region": {
+                  "startLine": 247,
+                  "startColumn": 36,
+                  "endLine": 249,
+                  "endColumn": 79
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS0618",
+          "level": "warning",
+          "message": "'TextExtensions.Text(IContainer, object?)' est obsolète : 'This method has been deprecated since version 2022.12. Please use an overload where the text parameter is passed explicitly as a string.'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 248,
+                  "startColumn": 41,
+                  "endLine": 248,
+                  "endColumn": 86
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 2
+          }
+        },
+        {
+          "ruleId": "CS1998",
+          "level": "warning",
+          "message": "Cette méthode async n'a pas d'opérateur 'await' et elle s'exécutera de façon synchrone. Utilisez l'opérateur 'await' pour attendre les appels d'API non bloquants ou 'await Task.Run(…)' pour effectuer un travail utilisant le processeur sur un thread d'arrière-plan.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/DocumentService.cs",
+                "region": {
+                  "startLine": 604,
+                  "startColumn": 66,
+                  "endLine": 604,
+                  "endColumn": 86
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ClientRepository.cs",
+                "region": {
+                  "startLine": 182,
+                  "startColumn": 21,
+                  "endLine": 182,
+                  "endColumn": 28
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/FinanceService.cs",
+                "region": {
+                  "startLine": 239,
+                  "startColumn": 118,
+                  "endLine": 239,
+                  "endColumn": 138
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/FinanceService.cs",
+                "region": {
+                  "startLine": 240,
+                  "startColumn": 128,
+                  "endLine": 240,
+                  "endColumn": 151
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8600",
+          "level": "warning",
+          "message": "Conversion de littéral ayant une valeur null ou d'une éventuelle valeur null en type non-nullable.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1129,
+                  "startColumn": 38,
+                  "endLine": 1129,
+                  "endColumn": 81
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8600",
+          "level": "warning",
+          "message": "Conversion de littéral ayant une valeur null ou d'une éventuelle valeur null en type non-nullable.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1130,
+                  "startColumn": 37,
+                  "endLine": 1132,
+                  "endColumn": 107
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8604",
+          "level": "warning",
+          "message": "Existence possible d'un argument de référence null pour le paramètre 'subject' dans 'Task IEmailService.SendEmailAsync(string to, string subject, string htmlMessage, List<(string Name, byte[] Content)>? attachments = null, List<string>? ccEmails = null)'.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1254,
+                  "startColumn": 60,
+                  "endLine": 1254,
+                  "endColumn": 67
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1279,
+                  "startColumn": 31,
+                  "endLine": 1279,
+                  "endColumn": 45
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8604",
+          "level": "warning",
+          "message": "Existence possible d'un argument de référence null pour le paramètre 'item' dans 'void List<string>.Add(string item)'.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1279,
+                  "startColumn": 31,
+                  "endLine": 1279,
+                  "endColumn": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8601",
+          "level": "warning",
+          "message": "Existence possible d'une assignation de référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1393,
+                  "startColumn": 30,
+                  "endLine": 1393,
+                  "endColumn": 43
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8601",
+          "level": "warning",
+          "message": "Existence possible d'une assignation de référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1432,
+                  "startColumn": 31,
+                  "endLine": 1432,
+                  "endColumn": 40
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS1061",
+          "level": "error",
+          "message": "'IEnumerable<InvoiceLine>' ne contient pas de définition pour 'Clear' et aucune méthode d'extension accessible 'Clear' acceptant un premier argument de type 'IEnumerable<InvoiceLine>' n'a été trouvée (une directive using ou une référence d'assembly est-elle manquante ?)",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1540,
+                  "startColumn": 83,
+                  "endLine": 1540,
+                  "endColumn": 88
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1540,
+                  "startColumn": 21,
+                  "endLine": 1540,
+                  "endColumn": 82
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS1061",
+          "level": "error",
+          "message": "'IEnumerable<QuoteLine>' ne contient pas de définition pour 'Clear' et aucune méthode d'extension accessible 'Clear' acceptant un premier argument de type 'IEnumerable<QuoteLine>' n'a été trouvée (une directive using ou une référence d'assembly est-elle manquante ?)",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1606,
+                  "startColumn": 81,
+                  "endLine": 1606,
+                  "endColumn": 86
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CS8602",
+          "level": "warning",
+          "message": "Déréférencement d'une éventuelle référence null.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1606,
+                  "startColumn": 21,
+                  "endLine": 1606,
+                  "endColumn": 80
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS8600",
+          "level": "warning",
+          "message": "Conversion de littéral ayant une valeur null ou d'une éventuelle valeur null en type non-nullable.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1076,
+                  "startColumn": 37,
+                  "endLine": 1076,
+                  "endColumn": 109
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CS0618",
+          "level": "warning",
+          "message": "'GridExtensions.Grid(IContainer, Action<GridDescriptor>)' est obsolète : 'This element has been deprecated since version 2022.11. Please use the Table element, or the combination of the Row and Column elements.'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1259,
+                  "startColumn": 17,
+                  "endLine": 1266,
+                  "endColumn": 19
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 2
+          }
+        },
+        {
+          "ruleId": "CS0618",
+          "level": "warning",
+          "message": "'GridExtensions.Grid(IContainer, Action<GridDescriptor>)' est obsolète : 'This element has been deprecated since version 2022.11. Please use the Table element, or the combination of the Row and Column elements.'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1272,
+                  "startColumn": 17,
+                  "endLine": 1281,
+                  "endColumn": 19
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 2
+          }
+        },
+        {
+          "ruleId": "CS8321",
+          "level": "warning",
+          "message": "La fonction locale 'ComposeTableInventaire' est déclarée, mais jamais utilisée",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1323,
+                  "startColumn": 18,
+                  "endLine": 1323,
+                  "endColumn": 40
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 3
+          }
+        },
+        {
+          "ruleId": "CS0618",
+          "level": "warning",
+          "message": "'GridExtensions.Grid(IContainer, Action<GridDescriptor>)' est obsolète : 'This element has been deprecated since version 2022.11. Please use the Table element, or the combination of the Row and Column elements.'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 2111,
+                  "startColumn": 10,
+                  "endLine": 2128,
+                  "endColumn": 12
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 2
+          }
+        },
+        {
+          "ruleId": "CS0618",
+          "level": "warning",
+          "message": "'ImageExtensions.Image(IContainer, byte[], ImageScaling)' est obsolète : 'This element has been changed since version 2023.5. Please use the Image method overload that returns the ImageDescriptor object.'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 2297,
+                  "startColumn": 33,
+                  "endLine": 2297,
+                  "endColumn": 128
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 2
+          }
+        },
+        {
+          "ruleId": "CS0618",
+          "level": "warning",
+          "message": "'GridExtensions.Grid(IContainer, Action<GridDescriptor>)' est obsolète : 'This element has been deprecated since version 2022.11. Please use the Table element, or the combination of the Row and Column elements.'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 2430,
+                  "startColumn": 34,
+                  "endLine": 2448,
+                  "endColumn": 36
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 2
+          }
+        },
+        {
+          "ruleId": "CS0067",
+          "level": "warning",
+          "message": "L'événement 'NotificationService.NotificationReceived' n'est jamais utilisé",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/NotificationService.cs",
+                "region": {
+                  "startLine": 305,
+                  "startColumn": 59,
+                  "endLine": 305,
+                  "endColumn": 79
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 3
+          }
+        },
+        {
+          "ruleId": "CS0414",
+          "level": "warning",
+          "message": "Le champ 'TransitContext._currentUser' est assigné, mais sa valeur n'est jamais utilisée",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Data/TransitContext.cs",
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 34,
+                  "endLine": 15,
+                  "endColumn": 46
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 3
+          }
+        },
+        {
+          "ruleId": "CA1816",
+          "level": "note",
+          "message": "Changez UnitOfWork.Dispose() pour appeler GC.SuppressFinalize(object). Cette opération empêche les types dérivés qui introduisent un finaliseur d'avoir à réimplémenter 'IDisposable' pour l'appeler.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Data/Uow/UnitOfWork.cs",
+                "region": {
+                  "startLine": 36,
+                  "startColumn": 17,
+                  "endLine": 36,
+                  "endColumn": 24
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1861",
+          "level": "note",
+          "message": "Préférer les champs 'static readonly' aux arguments de tableau de constantes si la méthode appelée est appelée à plusieurs reprises et ne mute pas le tableau passé",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Migrations/20251113194025_AddUserClientLink.cs",
+                "region": {
+                  "startLine": 24,
+                  "startColumn": 26,
+                  "endLine": 24,
+                  "endColumn": 62
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "paramName": "columns"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1861",
+          "level": "note",
+          "message": "Préférer les champs 'static readonly' aux arguments de tableau de constantes si la méthode appelée est appelée à plusieurs reprises et ne mute pas le tableau passé",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Migrations/20251207153900_AddEmailVerificationFields.cs",
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 26,
+                  "endLine": 37,
+                  "endColumn": 121
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "paramName": "columns"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1861",
+          "level": "note",
+          "message": "Préférer les champs 'static readonly' aux arguments de tableau de constantes si la méthode appelée est appelée à plusieurs reprises et ne mute pas le tableau passé",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Migrations/20251213112208_AddNotificationSystem.cs",
+                "region": {
+                  "startLine": 113,
+                  "startColumn": 26,
+                  "endLine": 113,
+                  "endColumn": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "paramName": "columns"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GenerateUniqueCodeAsync' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ClientService.cs",
+                "region": {
+                  "startLine": 195,
+                  "startColumn": 36,
+                  "endLine": 195,
+                  "endColumn": 59
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'UpdateClientStatisticsAsync' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ClientService.cs",
+                "region": {
+                  "startLine": 210,
+                  "startColumn": 22,
+                  "endLine": 210,
+                  "endColumn": 49
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1869",
+          "level": "note",
+          "message": "Évitez de créer une instance « JsonSerializerOptions » pour chaque opération de sérialisation. Mettez en cache et réutilisez les instances à la place.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/BackupService.cs",
+                "region": {
+                  "startLine": 202,
+                  "startColumn": 76,
+                  "endLine": 202,
+                  "endColumn": 143
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "level": "note",
+          "message": "Utilisez de préférence « string.Equals(string, StringComparison) » pour effectuer une comparaison sans respect de la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/AuthenticationService.cs",
+                "region": {
+                  "startLine": 46,
+                  "startColumn": 47,
+                  "endLine": 46,
+                  "endColumn": 83
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "level": "note",
+          "message": "Utilisez de préférence « string.Equals(string, StringComparison) » pour effectuer une comparaison sans respect de la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/AuthenticationService.cs",
+                "region": {
+                  "startLine": 51,
+                  "startColumn": 51,
+                  "endLine": 51,
+                  "endColumn": 96
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/EmailService.cs",
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 22,
+                  "endLine": 38,
+                  "endColumn": 36
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ColisService.cs",
+                "region": {
+                  "startLine": 247,
+                  "startColumn": 21,
+                  "endLine": 247,
+                  "endColumn": 43
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ConteneurRepository.cs",
+                "region": {
+                  "startLine": 67,
+                  "startColumn": 21,
+                  "endLine": 67,
+                  "endColumn": 76
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": "ToLower"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ConteneurRepository.cs",
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 21,
+                  "endLine": 68,
+                  "endColumn": 80
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": "ToLower"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/EmailService.cs",
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 77,
+                  "endLine": 31,
+                  "endColumn": 80
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1861",
+          "level": "note",
+          "message": "Préférer les champs 'static readonly' aux arguments de tableau de constantes si la méthode appelée est appelée à plusieurs reprises et ne mute pas le tableau passé",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/EmailService.cs",
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 46,
+                  "endLine": 29,
+                  "endColumn": 64
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "paramName": "separator"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 147,
+                  "startColumn": 17,
+                  "endLine": 147,
+                  "endColumn": 31
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 121,
+                  "startColumn": 42,
+                  "endLine": 121,
+                  "endColumn": 75
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 122,
+                  "startColumn": 64,
+                  "endLine": 122,
+                  "endColumn": 98
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 122,
+                  "startColumn": 102,
+                  "endLine": 122,
+                  "endColumn": 139
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 123,
+                  "startColumn": 66,
+                  "endLine": 123,
+                  "endColumn": 99
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 124,
+                  "startColumn": 67,
+                  "endLine": 124,
+                  "endColumn": 101
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 133,
+                  "startColumn": 23,
+                  "endLine": 133,
+                  "endColumn": 44
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 133,
+                  "startColumn": 48,
+                  "endLine": 133,
+                  "endColumn": 73
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ConteneurRepository.cs",
+                "region": {
+                  "startLine": 105,
+                  "startColumn": 21,
+                  "endLine": 105,
+                  "endColumn": 67
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ConteneurRepository.cs",
+                "region": {
+                  "startLine": 106,
+                  "startColumn": 21,
+                  "endLine": 106,
+                  "endColumn": 65
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ConteneurRepository.cs",
+                "region": {
+                  "startLine": 107,
+                  "startColumn": 21,
+                  "endLine": 107,
+                  "endColumn": 69
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ConteneurRepository.cs",
+                "region": {
+                  "startLine": 108,
+                  "startColumn": 48,
+                  "endLine": 108,
+                  "endColumn": 93
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ConteneurRepository.cs",
+                "region": {
+                  "startLine": 109,
+                  "startColumn": 47,
+                  "endLine": 109,
+                  "endColumn": 91
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ConteneurRepository.cs",
+                "region": {
+                  "startLine": 110,
+                  "startColumn": 50,
+                  "endLine": 110,
+                  "endColumn": 97
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA2254",
+          "level": "note",
+          "message": "Le modèle de message de journalisation ne doit pas varier entre les appels à 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/MaintenanceService.cs",
+                "region": {
+                  "startLine": 58,
+                  "startColumn": 56,
+                  "endLine": 58,
+                  "endColumn": 87
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA2254",
+          "level": "note",
+          "message": "Le modèle de message de journalisation ne doit pas varier entre les appels à 'LoggerExtensions.LogWarning(ILogger, string?, params object?[])'.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/MaintenanceService.cs",
+                "region": {
+                  "startLine": 62,
+                  "startColumn": 52,
+                  "endLine": 62,
+                  "endColumn": 103
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1816",
+          "level": "note",
+          "message": "Changez NotificationHubService.DisposeAsync() pour appeler GC.SuppressFinalize(object). Cette opération empêche les types dérivés qui introduisent un finaliseur d'avoir à réimplémenter 'IDisposable' pour l'appeler.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/NotificationHubService.cs",
+                "region": {
+                  "startLine": 59,
+                  "startColumn": 32,
+                  "endLine": 59,
+                  "endColumn": 44
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "level": "note",
+          "message": "Utilisez de préférence « string.Equals(string, StringComparison) » pour effectuer une comparaison sans respect de la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/AuthenticationService.cs",
+                "region": {
+                  "startLine": 285,
+                  "startColumn": 72,
+                  "endLine": 285,
+                  "endColumn": 116
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": "ToLower"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/NotificationService.cs",
+                "region": {
+                  "startLine": 75,
+                  "startColumn": 9,
+                  "endLine": 75,
+                  "endColumn": 25
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1854",
+          "level": "note",
+          "message": "Préférer un appel 'TryGetValue' à un accès à l’indexeur dictionary protégé par une vérification 'ContainsKey' pour éviter la double recherche.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/DocumentService.cs",
+                "region": {
+                  "startLine": 89,
+                  "startColumn": 18,
+                  "endLine": 89,
+                  "endColumn": 52
+                }
+              }
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/DocumentService.cs",
+                "region": {
+                  "startLine": 122,
+                  "startColumn": 38,
+                  "endLine": 122,
+                  "endColumn": 60
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1854",
+          "level": "note",
+          "message": "Préférer un appel 'TryGetValue' à un accès à l’indexeur dictionary protégé par une vérification 'ContainsKey' pour éviter la double recherche.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/DocumentService.cs",
+                "region": {
+                  "startLine": 120,
+                  "startColumn": 33,
+                  "endLine": 120,
+                  "endColumn": 67
+                }
+              }
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/DocumentService.cs",
+                "region": {
+                  "startLine": 122,
+                  "startColumn": 38,
+                  "endLine": 122,
+                  "endColumn": 60
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ProductService.cs",
+                "region": {
+                  "startLine": 61,
+                  "startColumn": 17,
+                  "endLine": 61,
+                  "endColumn": 31
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ProductService.cs",
+                "region": {
+                  "startLine": 73,
+                  "startColumn": 29,
+                  "endLine": 73,
+                  "endColumn": 70
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": "ToLower"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 185,
+                  "startColumn": 21,
+                  "endLine": 185,
+                  "endColumn": 69
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 186,
+                  "startColumn": 21,
+                  "endLine": 186,
+                  "endColumn": 65
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 187,
+                  "startColumn": 43,
+                  "endLine": 187,
+                  "endColumn": 86
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 187,
+                  "startColumn": 90,
+                  "endLine": 187,
+                  "endColumn": 136
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 188,
+                  "startColumn": 45,
+                  "endLine": 188,
+                  "endColumn": 101
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 189,
+                  "startColumn": 41,
+                  "endLine": 189,
+                  "endColumn": 79
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1835",
+          "level": "note",
+          "message": "Changer l'appel de méthode 'ReadAsync' pour utiliser la surcharge 'Stream.ReadAsync(Memory<byte>, CancellationToken)'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/DocumentService.cs",
+                "region": {
+                  "startLine": 100,
+                  "startColumn": 23,
+                  "endLine": 100,
+                  "endColumn": 58
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1845",
+          "level": "note",
+          "message": "Utilisez une chaîne de type span. Concat’ et ’AsSpan’ à la place de ’Substring'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/MessageService.cs",
+                "region": {
+                  "startLine": 160,
+                  "startColumn": 47,
+                  "endLine": 160,
+                  "endColumn": 84
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GetStatutFromConteneur' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ColisService.cs",
+                "region": {
+                  "startLine": 367,
+                  "startColumn": 29,
+                  "endLine": 367,
+                  "endColumn": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA2254",
+          "level": "note",
+          "message": "Le modèle de message de journalisation ne doit pas varier entre les appels à 'LoggerExtensions.LogInformation(ILogger, string?, params object?[])'.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/FinanceService.cs",
+                "region": {
+                  "startLine": 39,
+                  "startColumn": 40,
+                  "endLine": 39,
+                  "endColumn": 82
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/NotificationService.cs",
+                "region": {
+                  "startLine": 199,
+                  "startColumn": 18,
+                  "endLine": 199,
+                  "endColumn": 36
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 271,
+                  "startColumn": 17,
+                  "endLine": 271,
+                  "endColumn": 43
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ReceptionService.cs",
+                "region": {
+                  "startLine": 89,
+                  "startColumn": 18,
+                  "endLine": 89,
+                  "endColumn": 27
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ReceptionService.cs",
+                "region": {
+                  "startLine": 136,
+                  "startColumn": 17,
+                  "endLine": 136,
+                  "endColumn": 37
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1861",
+          "level": "note",
+          "message": "Préférer les champs 'static readonly' aux arguments de tableau de constantes si la méthode appelée est appelée à plusieurs reprises et ne mute pas le tableau passé",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ProductService.cs",
+                "region": {
+                  "startLine": 85,
+                  "startColumn": 42,
+                  "endLine": 85,
+                  "endColumn": 62
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "paramName": "separator"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'IsPasswordValid' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/AuthenticationService.cs",
+                "region": {
+                  "startLine": 170,
+                  "startColumn": 22,
+                  "endLine": 170,
+                  "endColumn": 37
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GenerateUniqueUsernameAsync' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/AuthenticationService.cs",
+                "region": {
+                  "startLine": 254,
+                  "startColumn": 36,
+                  "endLine": 254,
+                  "endColumn": 63
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GenerateTemporaryPassword' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/AuthenticationService.cs",
+                "region": {
+                  "startLine": 268,
+                  "startColumn": 24,
+                  "endLine": 268,
+                  "endColumn": 49
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 214,
+                  "startColumn": 21,
+                  "endLine": 214,
+                  "endColumn": 65
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 215,
+                  "startColumn": 21,
+                  "endLine": 215,
+                  "endColumn": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 216,
+                  "startColumn": 43,
+                  "endLine": 216,
+                  "endColumn": 82
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 216,
+                  "startColumn": 86,
+                  "endLine": 216,
+                  "endColumn": 128
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ColisRepository.cs",
+                "region": {
+                  "startLine": 217,
+                  "startColumn": 45,
+                  "endLine": 217,
+                  "endColumn": 97
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ProductService.cs",
+                "region": {
+                  "startLine": 226,
+                  "startColumn": 32,
+                  "endLine": 226,
+                  "endColumn": 35
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ProductService.cs",
+                "region": {
+                  "startLine": 226,
+                  "startColumn": 55,
+                  "endLine": 226,
+                  "endColumn": 59
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ProductService.cs",
+                "region": {
+                  "startLine": 226,
+                  "startColumn": 79,
+                  "endLine": 226,
+                  "endColumn": 83
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 595,
+                  "startColumn": 42,
+                  "endLine": 595,
+                  "endColumn": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 695,
+                  "startColumn": 43,
+                  "endLine": 695,
+                  "endColumn": 59
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 625,
+                  "startColumn": 49,
+                  "endLine": 625,
+                  "endColumn": 52
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 625,
+                  "startColumn": 71,
+                  "endLine": 625,
+                  "endColumn": 74
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/MessageService.cs",
+                "region": {
+                  "startLine": 228,
+                  "startColumn": 17,
+                  "endLine": 228,
+                  "endColumn": 37
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 293,
+                  "startColumn": 17,
+                  "endLine": 293,
+                  "endColumn": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 293,
+                  "startColumn": 42,
+                  "endLine": 293,
+                  "endColumn": 67
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'DetermineColor' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/TimelineService.cs",
+                "region": {
+                  "startLine": 100,
+                  "startColumn": 24,
+                  "endLine": 100,
+                  "endColumn": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'DetermineIcon' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/TimelineService.cs",
+                "region": {
+                  "startLine": 91,
+                  "startColumn": 24,
+                  "endLine": 91,
+                  "endColumn": 37
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/NotificationService.cs",
+                "region": {
+                  "startLine": 348,
+                  "startColumn": 17,
+                  "endLine": 348,
+                  "endColumn": 44
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'Truncate' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/MessageService.cs",
+                "region": {
+                  "startLine": 157,
+                  "startColumn": 18,
+                  "endLine": 157,
+                  "endColumn": 26
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GetMessageUrl' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/MessageService.cs",
+                "region": {
+                  "startLine": 163,
+                  "startColumn": 18,
+                  "endLine": 163,
+                  "endColumn": 31
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GetIconForCategory' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/NotificationService.cs",
+                "region": {
+                  "startLine": 280,
+                  "startColumn": 24,
+                  "endLine": 280,
+                  "endColumn": 42
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GetColorForCategory' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/NotificationService.cs",
+                "region": {
+                  "startLine": 294,
+                  "startColumn": 24,
+                  "endLine": 294,
+                  "endColumn": 43
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1861",
+          "level": "note",
+          "message": "Préférer les champs 'static readonly' aux arguments de tableau de constantes si la méthode appelée est appelée à plusieurs reprises et ne mute pas le tableau passé",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Migrations/20251106203803_InitialCreate.cs",
+                "region": {
+                  "startLine": 447,
+                  "startColumn": 26,
+                  "endLine": 447,
+                  "endColumn": 523
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "paramName": "columns"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1861",
+          "level": "note",
+          "message": "Préférer les champs 'static readonly' aux arguments de tableau de constantes si la méthode appelée est appelée à plusieurs reprises et ne mute pas le tableau passé",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Migrations/20251106203803_InitialCreate.cs",
+                "region": {
+                  "startLine": 481,
+                  "startColumn": 26,
+                  "endLine": 481,
+                  "endColumn": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "paramName": "columns"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1861",
+          "level": "note",
+          "message": "Préférer les champs 'static readonly' aux arguments de tableau de constantes si la méthode appelée est appelée à plusieurs reprises et ne mute pas le tableau passé",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Migrations/20251106203803_InitialCreate.cs",
+                "region": {
+                  "startLine": 588,
+                  "startColumn": 26,
+                  "endLine": 588,
+                  "endColumn": 61
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "paramName": "columns"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 840,
+                  "startColumn": 42,
+                  "endLine": 840,
+                  "endColumn": 75
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 841,
+                  "startColumn": 64,
+                  "endLine": 841,
+                  "endColumn": 98
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 841,
+                  "startColumn": 102,
+                  "endLine": 841,
+                  "endColumn": 139
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 842,
+                  "startColumn": 66,
+                  "endLine": 842,
+                  "endColumn": 99
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 843,
+                  "startColumn": 67,
+                  "endLine": 843,
+                  "endColumn": 101
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/UserService.cs",
+                "region": {
+                  "startLine": 221,
+                  "startColumn": 18,
+                  "endLine": 221,
+                  "endColumn": 37
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GetStatutFromConteneur' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/VehiculeService.cs",
+                "region": {
+                  "startLine": 322,
+                  "startColumn": 32,
+                  "endLine": 322,
+                  "endColumn": 54
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GenerateTemporaryPassword' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/UserService.cs",
+                "region": {
+                  "startLine": 176,
+                  "startColumn": 24,
+                  "endLine": 176,
+                  "endColumn": 49
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ClientRepository.cs",
+                "region": {
+                  "startLine": 179,
+                  "startColumn": 21,
+                  "endLine": 179,
+                  "endColumn": 53
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ClientRepository.cs",
+                "region": {
+                  "startLine": 180,
+                  "startColumn": 21,
+                  "endLine": 180,
+                  "endColumn": 56
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ClientRepository.cs",
+                "region": {
+                  "startLine": 181,
+                  "startColumn": 21,
+                  "endLine": 181,
+                  "endColumn": 72
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ClientRepository.cs",
+                "region": {
+                  "startLine": 182,
+                  "startColumn": 21,
+                  "endLine": 182,
+                  "endColumn": 55
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Repositories/ClientRepository.cs",
+                "region": {
+                  "startLine": 184,
+                  "startColumn": 21,
+                  "endLine": 184,
+                  "endColumn": 60
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'CalculateStatusFromDates' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 162,
+                  "startColumn": 33,
+                  "endLine": 162,
+                  "endColumn": 57
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'UpdatePlombOnChildren' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ConteneurService.cs",
+                "region": {
+                  "startLine": 279,
+                  "startColumn": 28,
+                  "endLine": 279,
+                  "endColumn": 49
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA2254",
+          "level": "note",
+          "message": "Le modèle de message de journalisation ne doit pas varier entre les appels à 'LoggerExtensions.LogError(ILogger, Exception?, string?, params object?[])'.",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/FinanceService.cs",
+                "region": {
+                  "startLine": 260,
+                  "startColumn": 38,
+                  "endLine": 260,
+                  "endColumn": 93
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1138,
+                  "startColumn": 40,
+                  "endLine": 1138,
+                  "endColumn": 56
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1146,
+                  "startColumn": 19,
+                  "endLine": 1146,
+                  "endColumn": 33
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1158,
+                  "startColumn": 43,
+                  "endLine": 1158,
+                  "endColumn": 62
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1182,
+                  "startColumn": 50,
+                  "endLine": 1182,
+                  "endColumn": 53
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1182,
+                  "startColumn": 72,
+                  "endLine": 1182,
+                  "endColumn": 75
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1273,
+                  "startColumn": 40,
+                  "endLine": 1273,
+                  "endColumn": 56
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1281,
+                  "startColumn": 19,
+                  "endLine": 1281,
+                  "endColumn": 33
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1313,
+                  "startColumn": 19,
+                  "endLine": 1313,
+                  "endColumn": 53
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1313,
+                  "startColumn": 57,
+                  "endLine": 1313,
+                  "endColumn": 90
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1862",
+          "ruleKey": "CA1862-001",
+          "level": "note",
+          "message": "Préférez la surcharge de méthode de comparaison de chaînes de « string.Contains(string) » qui accepte une valeur enum « StringComparison » pour effectuer une comparaison qui ne respecte pas la casse, mais gardez à l’esprit que cela peut entraîner des modifications subtiles du comportement. Veillez donc à effectuer des tests approfondis après l’application de la suggestion ou, si la comparaison sensible à la culture n’est pas nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase »",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1313,
+                  "startColumn": 94,
+                  "endLine": 1313,
+                  "endColumn": 129
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "LeftOffendingMethod": "ToLower",
+              "RightOffendingMethod": null
+            }
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1301,
+                  "startColumn": 50,
+                  "endLine": 1301,
+                  "endColumn": 53
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1847",
+          "level": "note",
+          "message": "Utilisez ’String. Contient (Char)' à la place de ’String. Contains (String)' lors de la recherche d’un caractère unique",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1301,
+                  "startColumn": 72,
+                  "endLine": 1301,
+                  "endColumn": 75
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1845",
+          "level": "note",
+          "message": "Utilisez une chaîne de type span. Concat’ et ’AsSpan’ à la place de ’Substring'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/FinanceService.cs",
+                "region": {
+                  "startLine": 239,
+                  "startColumn": 108,
+                  "endLine": 239,
+                  "endColumn": 153
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1845",
+          "level": "note",
+          "message": "Utilisez une chaîne de type span. Concat’ et ’AsSpan’ à la place de ’Substring'",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/FinanceService.cs",
+                "region": {
+                  "startLine": 240,
+                  "startColumn": 118,
+                  "endLine": 240,
+                  "endColumn": 166
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GenerateUniqueReceiptNumberAsync' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/PaiementService.cs",
+                "region": {
+                  "startLine": 453,
+                  "startColumn": 36,
+                  "endLine": 453,
+                  "endColumn": 68
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GetPaiementActionUrl' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/PaiementService.cs",
+                "region": {
+                  "startLine": 465,
+                  "startColumn": 18,
+                  "endLine": 465,
+                  "endColumn": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'CalculateClientBalanceAsync' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/PaiementService.cs",
+                "region": {
+                  "startLine": 418,
+                  "startColumn": 37,
+                  "endLine": 418,
+                  "endColumn": 64
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'ParseDecimal' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ProductService.cs",
+                "region": {
+                  "startLine": 155,
+                  "startColumn": 25,
+                  "endLine": 155,
+                  "endColumn": 37
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'EscapeCsv' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ProductService.cs",
+                "region": {
+                  "startLine": 224,
+                  "startColumn": 24,
+                  "endLine": 224,
+                  "endColumn": 33
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'ParseCsvLine' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ProductService.cs",
+                "region": {
+                  "startLine": 188,
+                  "startColumn": 30,
+                  "endLine": 188,
+                  "endColumn": 42
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'MapInvoiceToDto' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/CommerceService.cs",
+                "region": {
+                  "startLine": 1386,
+                  "startColumn": 28,
+                  "endLine": 1386,
+                  "endColumn": 43
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1243,
+                  "startColumn": 25,
+                  "endLine": 1243,
+                  "endColumn": 41
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1249,
+                  "startColumn": 25,
+                  "endLine": 1249,
+                  "endColumn": 45
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1663,
+                  "startColumn": 29,
+                  "endLine": 1663,
+                  "endColumn": 47
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1735,
+                  "startColumn": 29,
+                  "endLine": 1735,
+                  "endColumn": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1794,
+                  "startColumn": 71,
+                  "endLine": 1794,
+                  "endColumn": 87
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1818,
+                  "startColumn": 29,
+                  "endLine": 1818,
+                  "endColumn": 54
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 2098,
+                  "startColumn": 55,
+                  "endLine": 2098,
+                  "endColumn": 76
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 2106,
+                  "startColumn": 13,
+                  "endLine": 2106,
+                  "endColumn": 25
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 2418,
+                  "startColumn": 76,
+                  "endLine": 2418,
+                  "endColumn": 100
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1860",
+          "level": "note",
+          "message": "Préférez comparer « Count » à 0 au lieu d’utiliser « Any() », à la fois pour plus de clarté et pour des performances",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 2425,
+                  "startColumn": 34,
+                  "endLine": 2425,
+                  "endColumn": 46
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1,
+            "customProperties": {
+              "DiagnosticPropertyKey": "Count"
+            }
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GetPaymentTypeLabel' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 1162,
+                  "startColumn": 24,
+                  "endLine": 1162,
+                  "endColumn": 43
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        },
+        {
+          "ruleId": "CA1822",
+          "level": "note",
+          "message": "Le membre 'GenerateInspectionImage' n'accède pas aux données d'instance et peut être marqué comme étant static",
+          "locations": [
+            {
+              "resultFile": {
+                "uri": "file:///S:/PROGRAMATION/TransitManager/src/TransitManager.Infrastructure/Services/ExportService.cs",
+                "region": {
+                  "startLine": 2488,
+                  "startColumn": 24,
+                  "endLine": 2488,
+                  "endColumn": 47
+                }
+              }
+            }
+          ],
+          "properties": {
+            "warningLevel": 1
+          }
+        }
+      ],
+      "rules": {
+        "CA1816": {
+          "id": "CA1816",
+          "shortDescription": "Les méthodes Dispose doivent appeler SuppressFinalize",
+          "fullDescription": "Une méthode qui est une implémentation de Dispose n'appelle pas GC.SuppressFinalize. Ou bien, une méthode qui n'est pas une implémentation de Dispose appelle GC.SuppressFinalize. Ou encore, une méthode appelle GC.SuppressFinalize et passe autre chose que this (Me en Visual Basic).",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1816",
+          "properties": {
+            "category": "Usage",
+            "isEnabledByDefault": true,
+            "tags": [
+              "PortedFromFxCop",
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1822": {
+          "id": "CA1822",
+          "shortDescription": "Marquer les membres comme étant static",
+          "fullDescription": "Les membres qui n'accèdent pas aux données d'instance ou qui n'appellent pas de méthodes d'instance peuvent être marqués comme étant static. Une fois que vous avez marqué les méthodes comme étant static, le compilateur émet des sites d'appel non virtuels pour ces membres. Cela peut apporter un gain de performances mesurable pour le code qui en dépend.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1822",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "PortedFromFxCop",
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1835": {
+          "id": "CA1835",
+          "shortDescription": "Préférer les surcharges basées sur 'Memory' pour 'ReadAsync' et 'WriteAsync'",
+          "fullDescription": "'Stream’ a une surcharge ’ReadAsync’ qui prend un ’Memory<Byte>' comme premier argument et une surcharge ’WriteAsync’ qui prend un ’ReadOnlyMemory<Byte>' comme premier argument. Préférez l'appel des surcharges basées sur la mémoire, car elles sont plus efficaces.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1835",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1845": {
+          "id": "CA1845",
+          "shortDescription": "Utilisez une chaîne de type span. Concat",
+          "fullDescription": "Il est plus efficace d’utiliser ’AsSpan’ et ’String. Concat', à la place de ’Substring’ et d’un opérateur de concaténation.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1845",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1847": {
+          "id": "CA1847",
+          "shortDescription": "Utiliser le littéral char pour une recherche à caractère unique",
+          "fullDescription": "String. Contains (Char)» est disponible en tant que surcharge d’amélioration pour une recherche de caractère unique.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1847",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1854": {
+          "id": "CA1854",
+          "shortDescription": "Préférer la méthode 'IDictionary.TryGetValue(TKey, out TValue)'",
+          "fullDescription": "Préférez un appel 'TryGetValue' à un accès à l’indexeur dictionary protégé par une vérification 'ContainsKey'. 'ContainsKey' et l’indexeur recherchent tous les deux la clé sous le capot. Par conséquent, l’utilisation de 'TryGetValue' supprime la recherche supplémentaire.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1854",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1860": {
+          "id": "CA1860",
+          "shortDescription": "Éviter d’utiliser la méthode d’extension 'Enumerable.Any()'",
+          "fullDescription": "Préférez utiliser les propriétés 'IsEmpty', 'Count' ou 'Length' selon la disponibilité, plutôt que d’appeler 'Enumerable.Any()'. L’intention est plus claire et plus performante que l’utilisation de la méthode d’extension 'Enumerable.Any()'.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1860",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1861": {
+          "id": "CA1861",
+          "shortDescription": "Éviter les tableaux constants en tant qu’arguments",
+          "fullDescription": "Les tableaux constants passés en argument ne sont pas réutilisés en cas d’appels répétés, ce qui implique la création d’un nouveau tableau à chaque fois. Envisagez de les extraire vers des champs « static readonly » pour améliorer le niveau de performance si le tableau passé n’est pas modifié au sein de la méthode appelée.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1861",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1862": {
+          "id": "CA1862",
+          "shortDescription": "Utiliser les surcharges de méthode « StringComparison » pour effectuer des comparaisons de chaînes sans respect de la casse",
+          "fullDescription": "Évitez d’appeler « ToLower », « ToUpper », « ToLowerInvariant » et « ToUpperInvariant » pour effectuer des comparaisons de chaînes sans respect de la casse, comme dans « string.ToLower() == string.ToLower() », car elles entraînent une allocation. Utilisez plutôt « string.Equals(string, StringComparison) » pour effectuer des comparaisons qui ne respectent pas la casse. Le passage à l’utilisation d’une surcharge qui accepte « StringComparison » peut entraîner des modifications subtiles du comportement. Il est donc important d’effectuer des tests approfondis après l’application de la suggestion. En outre, si aucune comparaison sensible à la culture n’est nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase ».",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1862",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1862-001": {
+          "id": "CA1862",
+          "shortDescription": "Utiliser les surcharges de méthode « StringComparison » pour effectuer des comparaisons de chaînes sans respect de la casse",
+          "fullDescription": "Évitez d’appeler « ToLower », « ToUpper », « ToLowerInvariant » et « ToUpperInvariant » pour effectuer des comparaisons de chaînes sans respect de la casse, car elles entraînent une allocation. Préférez plutôt appeler les surcharges de méthode de « Contains », d’« IndexOf » et de « StartsWith » qui acceptent une valeur enum « StringComparison » pour effectuer des comparaisons qui ne respectent pas la casse. Le passage à l’utilisation d’une surcharge qui accepte « StringComparison » peut entraîner des modifications subtiles du comportement. Il est donc important d’effectuer des tests approfondis après l’application de la suggestion. En outre, si aucune comparaison sensible à la culture n’est nécessaire, envisagez d’utiliser « StringComparison.OrdinalIgnoreCase ».",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1862",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA1869": {
+          "id": "CA1869",
+          "shortDescription": "Mettre en cache et réutiliser les instances « JsonSerializerOptions »",
+          "fullDescription": "Évitez de créer une instance « JsonSerializerOptions » pour chaque opération de sérialisation. Mettez en cache et réutilisez les instances à la place. Les instances « JsonSerializerOptions » à usage unique peuvent considérablement dégrader les performances de votre application.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1869",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CA2254": {
+          "id": "CA2254",
+          "shortDescription": "Le modèle doit être une expression statique.",
+          "fullDescription": "Le modèle de message de journalisation ne doit pas varier entre les appels.",
+          "defaultLevel": "note",
+          "helpUri": "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2254",
+          "properties": {
+            "category": "Usage",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Telemetry",
+              "EnabledRuleInAggressiveMode"
+            ]
+          }
+        },
+        "CS0067": {
+          "id": "CS0067",
+          "shortDescription": "L'événement n'est jamais utilisé",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS0067)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS0168": {
+          "id": "CS0168",
+          "shortDescription": "La variable est déclarée mais jamais utilisée",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS0168)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS0414": {
+          "id": "CS0414",
+          "shortDescription": "Le champ est assigné, mais sa valeur n'est jamais utilisée",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS0414)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS0618": {
+          "id": "CS0618",
+          "shortDescription": "Le type ou le membre est obsolète",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS0618)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS1061": {
+          "id": "CS1061",
+          "defaultLevel": "error",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS1061)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry",
+              "NotConfigurable"
+            ]
+          }
+        },
+        "CS1998": {
+          "id": "CS1998",
+          "shortDescription": "Cette méthode async n'a pas d'opérateur 'await' et elle s'exécutera de façon synchrone",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS1998)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS4014": {
+          "id": "CS4014",
+          "shortDescription": "Dans la mesure où cet appel n'est pas attendu, l'exécution de la méthode actuelle continue avant la fin de l'appel",
+          "fullDescription": "La méthode actuelle appelle une méthode async qui retourne Task ou Task<TResult>. Par ailleurs, elle n'applique pas l'opérateur await au résultat. L'appel de la méthode async démarre une tâche asynchrone. Cependant, comme aucun opérateur await n'est appliqué, le programme continue sans attendre la fin de la tâche. Généralement, ce comportement n'est pas celui que vous attendez. La plupart du temps, les autres aspects de la méthode d'appel dépendent du résultat de l'appel ou, au minimum, la méthode appelée doit s'achever avant le retour de la méthode contenant l'appel.\u000d\u000a\u000d\u000aUn problème de même importance est ce qui arrive aux exceptions levées dans la méthode async appelée. Une exception levée dans une méthode qui retourne Task ou Task<TResult> est stockée dans la tâche retournée. Si vous n'attendez pas la tâche ou la vérification explicite d'exceptions, l'exception est perdue. Si vous attendez la tâche, son exception est à nouveau levée.\u000d\u000a\u000d\u000aNous vous recommandons de toujours attendre l'appel.\u000d\u000a\u000d\u000aSupprimez l'avertissement seulement si vous êtes sûr de ne pas vouloir attendre la fin de l'appel asynchrone, et que la méthode appelée ne lèvera aucune exception. Dans ce cas, vous pouvez supprimer l'avertissement en affectant le résultat de la tâche de l'appel à une variable.",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS4014)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS8321": {
+          "id": "CS8321",
+          "shortDescription": "La fonction locale est déclarée mais jamais utilisée",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS8321)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS8600": {
+          "id": "CS8600",
+          "shortDescription": "Conversion de littéral ayant une valeur null ou d'une éventuelle valeur null en type non-nullable.",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS8600)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS8601": {
+          "id": "CS8601",
+          "shortDescription": "Existence possible d'une assignation de référence null.",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS8601)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS8602": {
+          "id": "CS8602",
+          "shortDescription": "Déréférencement d'une éventuelle référence null.",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS8602)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        },
+        "CS8604": {
+          "id": "CS8604",
+          "shortDescription": "Existence possible d'un argument de référence null.",
+          "defaultLevel": "warning",
+          "helpUri": "https://msdn.microsoft.com/query/roslyn.query?appId=roslyn&k=k(CS8604)",
+          "properties": {
+            "category": "Compiler",
+            "isEnabledByDefault": true,
+            "tags": [
+              "Compiler",
+              "Telemetry"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

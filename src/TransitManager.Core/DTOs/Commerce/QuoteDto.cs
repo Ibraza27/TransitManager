@@ -108,6 +108,10 @@ namespace TransitManager.Core.DTOs.Commerce
         // Removed InternalNotes as it is not in Entity
 
         public List<QuoteLineDto> Lines { get; set; } = new();
+
+        public decimal TotalHT { get; set; }
+        public decimal TotalTVA { get; set; }
+        public decimal TotalTTC { get; set; }
     }
 
     public class QuoteHistoryDto

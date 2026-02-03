@@ -218,7 +218,87 @@
                           </table>
                       </div>
                       
-                      <!-- Mobile Card View omitted for brevity - same as EditQuote -->
+                      <!-- MOBILE CARD VIEW -->
+                      <div class="d-md-none">
+                          @foreach (var (line, index) in Model.Lines.Select((l, i) => (l, i)))
+                          {
+                              <div class="card mb-2 shadow-sm border-0 @(line.Type == QuoteLineType.Subtotal ? "bg-light border-top border-2" : "")">
+                                  <div class="card-body p-2">
+                                      <!-- Header: Delete & Controls -->
+                                      <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-secondary" @onclick="() => MoveLine(line, -1)" disabled="@(index == 0)">
+                                                    <i class="bi bi-arrow-up-short"></i>
+                                                </button>
+                                                <button class="btn btn-outline-secondary" @onclick="() => MoveLine(line, 1)" disabled="@(index == Model.Lines.Count - 1)">
+                                                    <i class="bi bi-arrow-down-short"></i>
+                                                </button>
+                                            </div>
+                                            <button class="btn btn-link text-danger p-0" @onclick="() => RemoveLine(line)">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                      </div>
+
+                                      <!-- Content -->
+                                      @if(line.Type == QuoteLineType.Title)
+                                      {
+                                          <input type="text" class="form-control fw-bold border-0 fs-6 bg-light mb-2" placeholder="TITRE DE SECTION" @bind="line.Description" />
+                                      }
+                                      else if (line.Type == QuoteLineType.Text)
+                                      {
+                                          <textarea class="form-control border-0 bg-light mb-2" rows="2" placeholder="Texte libre..." @bind="line.Description"></textarea>
+                                      }
+                                      else if (line.Type == QuoteLineType.Product)
+                                      {
+                                           <div class="mb-2">
+                                                <label class="small text-muted fw-bold">Description</label>
+                                                <ProductAutocomplete 
+                                                    @bind-Description="line.Description" 
+                                                    OnProductSelected="@((p) => HandleProductSelected(line, p))"
+                                                    OnCreateNew="() => OpenNewProductDialog(line)" />
+                                           </div>
+                                           
+                                           <div class="row g-2 mb-2">
+                                               <div class="col-4">
+                                                   <label class="small text-muted fw-bold">Date</label>
+                                                   <input type="date" class="form-control form-control-sm" @bind="line.Date" />
+                                               </div>
+                                               <div class="col-4">
+                                                   <label class="small text-muted fw-bold">Qté</label>
+                                                   <input type="number" class="form-control form-control-sm" @bind="line.Quantity" @bind:after="UpdateSubtotals" step="0.01" />
+                                               </div>
+                                               <div class="col-4">
+                                                   <label class="small text-muted fw-bold">Unité</label>
+                                                    <input type="text" class="form-control form-control-sm" @bind="line.Unit" />
+                                               </div>
+                                           </div>
+
+                                           <div class="row g-2 align-items-end">
+                                               <div class="col-4">
+                                                   <label class="small text-muted fw-bold">Prix U.</label>
+                                                   <input type="number" class="form-control form-control-sm" @bind="line.UnitPrice" @bind:after="UpdateSubtotals" step="0.01" />
+                                               </div>
+                                               <div class="col-3">
+                                                   <label class="small text-muted fw-bold">TVA %</label>
+                                                    <input type="number" class="form-control form-control-sm" @bind="line.VATRate" step="0.1" />
+                                               </div>
+                                               <div class="col-5 text-end">
+                                                   <label class="small text-muted fw-bold d-block">Total HT</label>
+                                                   <span class="fw-bold text-primary fs-5">@((line.Quantity * line.UnitPrice).ToString("N2")) €</span>
+                                               </div>
+                                           </div>
+                                      }
+                                      else if (line.Type == QuoteLineType.Subtotal)
+                                      {
+                                          <div class="d-flex justify-content-between align-items-center">
+                                              <span class="fw-bold text-uppercase">Sous-total</span>
+                                              <span class="fw-bold fs-5">@line.TotalHT.ToString("N2") €</span>
+                                          </div>
+                                      }
+                                  </div>
+                              </div>
+                          }
+                      </div>
                       
                       <!-- Add Buttons -->
                       <div class="p-2 btn-group">
@@ -316,7 +396,7 @@
     private AddClientModal _addClientModal; // Added for AddClientModal
 
     // ... Computed Properties (RawTotalHT, DiscountAmount, etc) same as Quote ...
-    private decimal RawTotalHT => Model.Lines.Sum(l => l.Quantity * l.UnitPrice);
+    private decimal RawTotalHT => Model.Lines.Where(l => l.Type == QuoteLineType.Product).Sum(l => l.Quantity * l.UnitPrice);
     private decimal DiscountAmount 
     {
         get {
@@ -329,7 +409,7 @@
     private decimal TotalTVA 
     {
         get {
-             var rawTva = Model.Lines.Sum(l => (l.Quantity * l.UnitPrice) * (l.VATRate / 100m));
+             var rawTva = Model.Lines.Where(l => l.Type == QuoteLineType.Product).Sum(l => (l.Quantity * l.UnitPrice) * (l.VATRate / 100m));
              if(RawTotalHT == 0) return 0;
              var ratio = (Model.DiscountBase == DiscountBase.BaseHT) ? (DiscountAmount/RawTotalHT) : 0;
              return rawTva * (1 - ratio);
@@ -428,7 +508,22 @@
              Model.Lines[idx] = other;
         }
     }
-    private void UpdateSubtotals() { /* Same logic */ }
+    private void UpdateSubtotals() 
+    { 
+        decimal runningTotal = 0;
+        foreach(var line in Model.Lines)
+        {
+            if (line.Type == QuoteLineType.Product)
+            {
+                runningTotal += line.Quantity * line.UnitPrice;
+            }
+            else if (line.Type == QuoteLineType.Subtotal)
+            {
+                line.TotalHT = runningTotal;
+                runningTotal = 0; 
+            }
+        }
+    }
     private void HandleProductSelected(InvoiceLineVM line, ProductDto p) {
         line.Description = p.Name; line.UnitPrice = p.UnitPrice; line.Unit = p.Unit; line.VATRate = p.VATRate;
     }
@@ -635,6 +730,21 @@
         {
             Id = result.Id;
             ExistingRef = result.Reference;
+            CurrentStatus = result.Status;
+            
+            // Refresh Model from result
+            Model.Id = result.Id;
+            Model.Lines = result.Lines.Select(l => new InvoiceLineVM {
+                Id = l.Id, Description = l.Description, Quantity = l.Quantity, UnitPoint = l.UnitPrice, 
+                UnitPrice = l.UnitPrice, VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit,
+                TotalHT = l.TotalHT
+            }).ToList();
+            
+            Model.DiscountValue = result.DiscountValue;
+            Model.DiscountType = result.DiscountType;
+            Model.DiscountBase = result.DiscountBase;
+            Model.DiscountScope = result.DiscountScope;
+            
             OriginalModelJson = JsonSerializer.Serialize(Model);
             if (exit) GoBack();
             else if(!Id.HasValue) NavManager.NavigateTo($"/admin/commerce/invoices/edit/{result.Id}"); // Redirect if new

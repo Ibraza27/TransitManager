@@ -44,6 +44,20 @@
         </div>
     </div>
 
+    @* Success Toast Notification *@
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+            <div class="toast show align-items-center text-white bg-success border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-check-circle-fill me-2"></i>@_successMessage
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     @if (IsLoading)
     {
         <div class="d-flex justify-content-center align-items-center flex-grow-1">
@@ -63,8 +77,12 @@
                      <button class="btn btn-light btn-sm" @onclick="OpenSendModal">
                          <i class="bi bi-envelope-fill me-2"></i>Envoyer par e-mail
                      </button>
-                     <button class="btn btn-outline-light btn-sm" @onclick="DownloadPdf">
-                         <i class="bi bi-file-pdf me-2"></i>Télécharger PDF
+                     <button class="btn btn-outline-light btn-sm" @onclick="DownloadPdf" disabled="@IsDownloadingPdf">
+                         @if(IsDownloadingPdf) {
+                             <span class="spinner-border spinner-border-sm me-2"></span><text>Téléchargement...</text>
+                         } else {
+                             <i class="bi bi-file-pdf me-2"></i><text>Télécharger PDF</text>
+                         }
                      </button>
                      <button class="btn btn-warning btn-sm" @onclick="OpenSendReminderModal">
                          <i class="bi bi-bell-fill me-2"></i>Envoyer Rappel
@@ -381,6 +399,8 @@
     private bool IsLoading = true;
     private bool IsSaving = false;
     private bool IsPreviewMode = false;
+    private bool IsDownloadingPdf = false;
+    private string _successMessage = "";
     private InvoiceStatus CurrentStatus = InvoiceStatus.Draft;
     private string OriginalModelJson = ""; 
     
@@ -462,8 +482,9 @@
                      // Saving requires UpdateInvoiceDto.
                      // Let's assume for now 0 discount or standard calc.
                      Lines = invoice.Lines.Select(l => new InvoiceLineVM {
-                         Id = l.Id, Description=l.Description, Quantity=l.Quantity, UnitPoint=l.UnitPrice, 
-                         UnitPrice=l.UnitPrice, VATRate=l.VATRate, Type=l.Type, Date=l.Date, Unit=l.Unit 
+                         Id = l.Id, Description=l.Description, Quantity=l.Quantity, 
+                         UnitPrice=l.UnitPrice, VATRate=l.VATRate, Type=l.Type, Date=l.Date, Unit=l.Unit,
+                         TotalHT = l.TotalHT, Position = l.Position
                      }).ToList(),
                      PublicToken = invoice.PublicToken
                  };
@@ -472,6 +493,9 @@
                   _isGuestClient = !invoice.ClientId.HasValue && !string.IsNullOrWhiteSpace(invoice.GuestEmail);
                   
                    if(invoice.ClientId.HasValue) SelectedClient = await ApiService.GetClientByIdAsync(invoice.ClientId.Value);
+                   
+                   // Recalculate subtotals after loading
+                   UpdateSubtotals();
              }
          }
          else
@@ -510,6 +534,13 @@
     }
     private void UpdateSubtotals() 
     { 
+        // First, sync Position with list order
+        for(int i = 0; i < Model.Lines.Count; i++)
+        {
+            Model.Lines[i].Position = i;
+        }
+        
+        // Then recalculate subtotals
         decimal runningTotal = 0;
         foreach(var line in Model.Lines)
         {
@@ -659,12 +690,17 @@
     private async Task DownloadPdf()
     {
           if(!Id.HasValue) return;
+          IsDownloadingPdf = true;
+          StateHasChanged();
           try {
              var pdfBytes = await ApiService.GetInvoicePdfAsync(Id.Value);
              using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
              await JS.InvokeVoidAsync("downloadFileFromStream", $"Facture_{ExistingRef}.pdf", streamRef);
           } catch(Exception ex) {
               await JS.InvokeVoidAsync("alert", "Erreur téléchargement.");
+          } finally {
+              IsDownloadingPdf = false;
+              StateHasChanged();
           }
     }
 
@@ -683,73 +719,97 @@
         if (_isGuestClient) Model.ClientId = Guid.Empty;
 
         InvoiceDto? result = null;
-        if (Id.HasValue)
+        try
         {
-            var updateDto = new UpdateInvoiceDto
+            if (Id.HasValue)
             {
-                Id = Id.Value,
-                ClientId = Model.ClientId == Guid.Empty ? null : Model.ClientId,
-                GuestName = Model.GuestName,
-                GuestEmail = Model.GuestEmail,
-                GuestPhone = Model.GuestPhone,
-                DateCreated = Model.DateCreated,
-                DueDate = Model.DueDate,
-                Message = Model.Message,
-                PaymentTerms = Model.PaymentTerms,
-                FooterNote = Model.FooterNote,
-                Status = CurrentStatus,
-                Lines = Model.Lines.Select(l => new UpdateInvoiceLineDto { 
-                    Id = l.Id != Guid.Empty ? (Guid?)l.Id : null,
-                    Description = l.Description, Quantity = l.Quantity, UnitPrice = l.UnitPrice, 
-                    VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit }).ToList()
-            };
-            result = await ApiService.UpdateInvoiceAsync(updateDto);
-        }
-        else
-        {
-            var createDto = new CreateInvoiceDto
+                var updateDto = new UpdateInvoiceDto
+                {
+                    Id = Id.Value,
+                    ClientId = Model.ClientId == Guid.Empty ? null : Model.ClientId,
+                    GuestName = Model.GuestName,
+                    GuestEmail = Model.GuestEmail,
+                    GuestPhone = Model.GuestPhone,
+                    DateCreated = Model.DateCreated,
+                    DueDate = Model.DueDate,
+                    Message = Model.Message,
+                    PaymentTerms = Model.PaymentTerms,
+                    FooterNote = Model.FooterNote,
+                    Status = CurrentStatus,
+                    Lines = Model.Lines.Select(l => new UpdateInvoiceLineDto { 
+                        Id = l.Id != Guid.Empty ? (Guid?)l.Id : null,
+                        Description = l.Description, Quantity = l.Quantity, UnitPrice = l.UnitPrice, 
+                        VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit, Position = l.Position }).ToList()
+                };
+                result = await ApiService.UpdateInvoiceAsync(updateDto);
+            }
+            else
             {
-                ClientId = Model.ClientId == Guid.Empty ? null : Model.ClientId,
-                GuestName = Model.GuestName,
-                GuestEmail = Model.GuestEmail,
-                GuestPhone = Model.GuestPhone,
-                DateCreated = Model.DateCreated, 
-                DueDate = Model.DueDate,
-                Message = Model.Message,
-                PaymentTerms = Model.PaymentTerms,
-                FooterNote = Model.FooterNote,
-                Lines = Model.Lines.Select(l => new UpdateInvoiceLineDto { 
-                    Description = l.Description, Quantity = l.Quantity, UnitPrice = l.UnitPrice, 
-                    VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit }).ToList()
-            };
-            result = await ApiService.CreateInvoiceAsync(createDto);
-        }
+                var createDto = new CreateInvoiceDto
+                {
+                    ClientId = Model.ClientId == Guid.Empty ? null : Model.ClientId,
+                    GuestName = Model.GuestName,
+                    GuestEmail = Model.GuestEmail,
+                    GuestPhone = Model.GuestPhone,
+                    DateCreated = Model.DateCreated, 
+                    DueDate = Model.DueDate,
+                    Message = Model.Message,
+                    PaymentTerms = Model.PaymentTerms,
+                    FooterNote = Model.FooterNote,
+                    Lines = Model.Lines.Select(l => new UpdateInvoiceLineDto { 
+                        Description = l.Description, Quantity = l.Quantity, UnitPrice = l.UnitPrice, 
+                        VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit, Position = l.Position }).ToList()
+                };
+                result = await ApiService.CreateInvoiceAsync(createDto);
+            }
 
-        IsSaving = false;
-        if (result != null)
-        {
-            Id = result.Id;
-            ExistingRef = result.Reference;
-            CurrentStatus = result.Status;
-            
-            // Refresh Model from result
-            Model.Id = result.Id;
-            Model.Lines = result.Lines.Select(l => new InvoiceLineVM {
-                Id = l.Id, Description = l.Description, Quantity = l.Quantity, UnitPoint = l.UnitPrice, 
-                UnitPrice = l.UnitPrice, VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit,
-                TotalHT = l.TotalHT
-            }).ToList();
-            
-            Model.DiscountValue = result.DiscountValue;
-            Model.DiscountType = result.DiscountType;
-            Model.DiscountBase = result.DiscountBase;
-            Model.DiscountScope = result.DiscountScope;
-            
-            OriginalModelJson = JsonSerializer.Serialize(Model);
-            if (exit) GoBack();
-            else if(!Id.HasValue) NavManager.NavigateTo($"/admin/commerce/invoices/edit/{result.Id}"); // Redirect if new
+            if (result != null)
+            {
+                Id = result.Id;
+                ExistingRef = result.Reference;
+                CurrentStatus = result.Status;
+                
+                // Refresh Model from result
+                Model.Id = result.Id;
+                Model.Lines = result.Lines.Select(l => new InvoiceLineVM {
+                    Id = l.Id, Description = l.Description, Quantity = l.Quantity, 
+                    UnitPrice = l.UnitPrice, VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit,
+                    TotalHT = l.TotalHT, Position = l.Position
+                }).ToList();
+                
+                Model.DiscountValue = result.DiscountValue;
+                Model.DiscountType = result.DiscountType;
+                Model.DiscountBase = result.DiscountBase;
+                Model.DiscountScope = result.DiscountScope;
+                
+                // Recalculate subtotals after reloading lines
+                UpdateSubtotals();
+                
+                OriginalModelJson = JsonSerializer.Serialize(Model);
+                
+                // Show success notification
+                _successMessage = "Facture enregistrée avec succès !";
+                StateHasChanged();
+                await Task.Delay(3000);
+                _successMessage = "";
+                StateHasChanged();
+                
+                if (exit) GoBack();
+                else if(!Id.HasValue) NavManager.NavigateTo($"/admin/commerce/invoices/edit/{result.Id}"); 
+            }
+            else
+            {
+                throw new Exception("L'API n'a retourné aucun résultat (null).");
+            }
         }
-        else { await JS.InvokeVoidAsync("alert", "Erreur lors de l'enregistrement"); }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Erreur lors de l'enregistrement: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
     }
     
     private bool _isGuestClient = false;
@@ -842,11 +902,11 @@
         public string Description { get; set; } = "";
         public decimal Quantity { get; set; }
         public string Unit { get; set; } = "";
-        public decimal UnitPrice { get; set; } // Renamed from UnitPoint to match DTO logic
-        public decimal UnitPoint { get; set; } // Duplicate?
+        public decimal UnitPrice { get; set; }
         public decimal VATRate { get; set; }
         public DateTime? Date { get; set; }
         public decimal TotalHT { get; set; } // For display
+        public int Position { get; set; } // For ordering
     }
     
     // --- Admin Preview Logic ---

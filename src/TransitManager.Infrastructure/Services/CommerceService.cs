@@ -12,6 +12,8 @@ using TransitManager.Infrastructure.Data;
 using TransitManager.Core.DTOs.Settings;
 using Microsoft.Extensions.Configuration;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace TransitManager.Infrastructure.Services
 {
     public class CommerceService : ICommerceService
@@ -22,6 +24,7 @@ namespace TransitManager.Infrastructure.Services
         private readonly ISettingsService _settingsService;
         private readonly IDocumentService _documentService;
         private readonly IConfiguration _config;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         public CommerceService(
             TransitContext context,
@@ -29,7 +32,8 @@ namespace TransitManager.Infrastructure.Services
             IExportService exportService,
             ISettingsService settingsService,
             IDocumentService documentService,
-            IConfiguration config)
+            IConfiguration config,
+            IServiceScopeFactory scopeFactory)
         {
             _context = context;
             _emailService = emailService;
@@ -37,6 +41,7 @@ namespace TransitManager.Infrastructure.Services
             _settingsService = settingsService;
             _documentService = documentService;
             _config = config;
+            _scopeFactory = scopeFactory;
         }
 
         // --- Products ---
@@ -855,7 +860,7 @@ namespace TransitManager.Infrastructure.Services
             }
 
             var total = await query.CountAsync();
-            var entities = await query.OrderByDescending(q => q.DateCreated).ThenByDescending(q => q.Reference)
+            var entities = await query.OrderByDescending(q => q.Reference)
                 .Skip((page - 1) * pageSize).Take(pageSize)
                 .ToListAsync();
 
@@ -986,7 +991,23 @@ namespace TransitManager.Infrastructure.Services
                 Details = "Facture créée manuellement" 
             });
 
-            await _context.SaveChangesAsync();
+            try 
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // DETECT PHANTOM INSERT (SQLite/EF Core issue)
+                var exists = await _context.Invoices.AnyAsync(i => i.Id == invoice.Id);
+                if (!exists) throw; 
+
+                // If it exists, it was likely inserted successfully despite the exception
+                _context.Entry(invoice).State = EntityState.Detached;
+                var saved = await _context.Invoices.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == invoice.Id);
+                if (saved != null) return MapInvoiceToDto(saved);
+                throw;
+            }
+
             return MapInvoiceToDto(invoice);
         }
 
@@ -1028,29 +1049,29 @@ namespace TransitManager.Infrastructure.Services
         {
             try
             {
-                var invoice = await _context.Invoices.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == id);
-                if (invoice == null) throw new Exception("Facture introuvable");
+                // DEBUG LOG
+                try {
+                     var lineCount = dto.Lines?.Count ?? 0;
+                     System.IO.File.AppendAllText("commerce_debug_update.txt", $"[{DateTime.Now}] UpdateInvoiceAsync ID={id}: Received {lineCount} lines.\n");
+                } catch {}
 
-                invoice.Message = dto.Message;
-                invoice.PaymentTerms = dto.PaymentTerms;
-                invoice.FooterNote = dto.FooterNote;
-                invoice.DateCreated = dto.DateCreated;
-                invoice.DueDate = dto.DueDate;
-                invoice.DiscountValue = dto.DiscountValue;
-                invoice.DiscountType = dto.DiscountType;
-                invoice.DiscountBase = dto.DiscountBase;
-                invoice.DiscountScope = dto.DiscountScope;
+                // STEP 1: Load invoice WITHOUT tracking to avoid ChangeTracker pollution
+                var existingInvoice = await _context.Invoices
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(i => i.Id == id);
+                    
+                if (existingInvoice == null) throw new Exception("Facture introuvable");
+
+                // STEP 2: Delete existing lines DIRECTLY in DB (bypass tracking)
+                await _context.InvoiceLines.Where(l => l.InvoiceId == id).ExecuteDeleteAsync();
                 
-                // Fix: Update Client/Guest fields
-                invoice.ClientId = dto.ClientId;
-                invoice.GuestName = dto.GuestName;
-                invoice.GuestEmail = dto.GuestEmail;
-                invoice.GuestPhone = dto.GuestPhone;
+                try { System.IO.File.AppendAllText("commerce_debug_update.txt", $"[{DateTime.Now}] Lines deleted via ExecuteDeleteAsync.\n"); } catch {}
 
-                // Update Lines
-                invoice.Lines.Clear();
+                // STEP 3: Calculate new totals
                 decimal grossHT = 0;
                 decimal grossTVA = 0;
+                var newLines = new List<InvoiceLine>();
+                
                 if(dto.Lines != null)
                 {
                     foreach(var lineDto in dto.Lines)
@@ -1063,9 +1084,12 @@ namespace TransitManager.Infrastructure.Services
                             grossTVA += lineHT * (lineDto.VATRate / 100m);
                         }
 
-                        invoice.Lines.Add(new InvoiceLine
+                        newLines.Add(new InvoiceLine
                         {
+                            Id = Guid.NewGuid(), // Force new ID
+                            InvoiceId = id,
                             Description = lineDto.Description,
+                            Date = lineDto.Date, // FIX: Include Date field
                             Quantity = lineDto.Quantity,
                             UnitPrice = lineDto.UnitPrice,
                             VATRate = lineDto.VATRate,
@@ -1078,31 +1102,86 @@ namespace TransitManager.Infrastructure.Services
                     }
                 }
 
-                // Recalculate Totals
+                // Calculate discount
                 decimal discountAmount = 0;
-                if (invoice.DiscountType == DiscountType.Percent)
-                    discountAmount = grossHT * (invoice.DiscountValue / 100m);
+                if (dto.DiscountType == DiscountType.Percent)
+                    discountAmount = grossHT * (dto.DiscountValue / 100m);
                 else
-                    discountAmount = invoice.DiscountValue;
+                    discountAmount = dto.DiscountValue;
 
                 if (discountAmount > grossHT) discountAmount = grossHT;
 
-                invoice.TotalHT = grossHT - discountAmount;
+                decimal finalTotalHT = grossHT - discountAmount;
                 decimal discountRatio = grossHT == 0 ? 0 : (discountAmount / grossHT);
-                invoice.TotalTVA = grossTVA * (1 - discountRatio);
-                invoice.TotalTTC = invoice.TotalHT + invoice.TotalTVA;
+                decimal finalTotalTVA = grossTVA * (1 - discountRatio);
+                decimal finalTotalTTC = finalTotalHT + finalTotalTVA;
 
-                await _context.SaveChangesAsync();
-                
-                // Synchronize with linked Quote
-                // FIX: Reload with AsNoTracking to ensure Sync uses fresh DB data (avoids "Save Twice" bug)
-                var finalInvoice = await _context.Invoices.AsNoTracking().Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == invoice.Id);
-                if (finalInvoice != null)
+                // FIX: Convert dates to UTC (ExecuteUpdateAsync bypasses TransitContext.SaveChangesAsync conversion)
+                var dateCreatedUtc = dto.DateCreated.Kind == DateTimeKind.Utc 
+                    ? dto.DateCreated 
+                    : DateTime.SpecifyKind(dto.DateCreated, DateTimeKind.Local).ToUniversalTime();
+                var dueDateUtc = dto.DueDate.Kind == DateTimeKind.Utc 
+                    ? dto.DueDate 
+                    : DateTime.SpecifyKind(dto.DueDate, DateTimeKind.Local).ToUniversalTime();
+
+                // STEP 4: Use ExecuteUpdateAsync for the Invoice header DIRECTLY in DB (bypass tracking completely)
+                await _context.Invoices
+                    .Where(i => i.Id == id)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(i => i.Message, dto.Message)
+                        .SetProperty(i => i.PaymentTerms, dto.PaymentTerms)
+                        .SetProperty(i => i.FooterNote, dto.FooterNote)
+                        .SetProperty(i => i.DateCreated, dateCreatedUtc)
+                        .SetProperty(i => i.DueDate, dueDateUtc)
+                        .SetProperty(i => i.DiscountValue, dto.DiscountValue)
+                        .SetProperty(i => i.DiscountType, dto.DiscountType)
+                        .SetProperty(i => i.DiscountBase, dto.DiscountBase)
+                        .SetProperty(i => i.DiscountScope, dto.DiscountScope)
+                        .SetProperty(i => i.ClientId, dto.ClientId)
+                        .SetProperty(i => i.GuestName, dto.GuestName)
+                        .SetProperty(i => i.GuestEmail, dto.GuestEmail)
+                        .SetProperty(i => i.GuestPhone, dto.GuestPhone)
+                        .SetProperty(i => i.TotalHT, finalTotalHT)
+                        .SetProperty(i => i.TotalTVA, finalTotalTVA)
+                        .SetProperty(i => i.TotalTTC, finalTotalTTC)
+                    );
+
+                try { System.IO.File.AppendAllText("commerce_debug_update.txt", $"[{DateTime.Now}] Invoice header updated via ExecuteUpdateAsync.\n"); } catch {}
+
+                // STEP 5: Insert new lines directly
+                if (newLines.Count > 0)
                 {
-                    await SyncInvoiceToQuoteAsync(finalInvoice);
+                    _context.InvoiceLines.AddRange(newLines);
+                    await _context.SaveChangesAsync();
+                }
+                
+                try { System.IO.File.AppendAllText("commerce_debug_update.txt", $"[{DateTime.Now}] {newLines.Count} lines inserted. SUCCESS!\n"); } catch {}
+
+                // STEP 6: Synchronize with linked Quote if applicable
+                if (existingInvoice.QuoteId.HasValue)
+                {
+                    // Reload fresh data for sync
+                    var freshInvoice = await _context.Invoices
+                        .AsNoTracking()
+                        .Include(i => i.Lines)
+                        .FirstOrDefaultAsync(i => i.Id == id);
+                    if (freshInvoice != null)
+                    {
+                        await SyncInvoiceToQuoteAsync(freshInvoice);
+                    }
                 }
 
-                return MapInvoiceToDto(invoice);
+                // STEP 7: Reload and return the final state
+                var finalInvoice = await _context.Invoices
+                    .AsNoTracking()
+                    .Include(i => i.Lines)
+                    .Include(i => i.Client)
+                    .Include(i => i.History)
+                    .FirstOrDefaultAsync(i => i.Id == id);
+                    
+                if (finalInvoice == null) throw new Exception("Facture introuvable après mise à jour");
+                
+                return MapInvoiceToDto(finalInvoice);
             }
             catch (Exception ex)
             {
@@ -1110,6 +1189,8 @@ namespace TransitManager.Infrastructure.Services
                 throw;
             }
         }
+
+
 
         public async Task<InvoiceDto> ConvertQuoteToInvoiceAsync(Guid quoteId)
         {

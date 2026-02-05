@@ -112,10 +112,15 @@ namespace TransitManager.Infrastructure.Data
                 {
                     if (property.CurrentValue is DateTime dateTimeValue && dateTimeValue.Kind != DateTimeKind.Utc)
                     {
-                        // Logique améliorée et plus robuste :
-                        // 1. Si la date est 'Unspecified' (venant d'un DatePicker), on la traite comme une date locale.
-                        // 2. Ensuite, on la convertit en UTC.
-                        property.CurrentValue = DateTime.SpecifyKind(dateTimeValue, DateTimeKind.Local).ToUniversalTime();
+                        // FIX: Normalize dates to NOON UTC to avoid timezone-related day shifts (j-1 issue)
+                        // This ensures dates remain on the same day regardless of timezone
+                        var localDate = dateTimeValue.Kind == DateTimeKind.Unspecified 
+                            ? DateTime.SpecifyKind(dateTimeValue, DateTimeKind.Local) 
+                            : dateTimeValue;
+                        
+                        // Set to noon on that date in UTC to prevent day rollover
+                        var dateOnlyUtc = new DateTime(localDate.Year, localDate.Month, localDate.Day, 12, 0, 0, DateTimeKind.Utc);
+                        property.CurrentValue = dateOnlyUtc;
                     }
                 }
             }

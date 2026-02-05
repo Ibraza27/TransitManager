@@ -6,6 +6,7 @@ namespace TransitManager.Core.DTOs
     public class VehiculeListItemDto
     {
         public Guid Id { get; set; }
+        public Guid ClientId { get; set; } // AJOUT
         public string Immatriculation { get; set; } = string.Empty;
         public string Marque { get; set; } = string.Empty;
         public string Modele { get; set; } = string.Empty;

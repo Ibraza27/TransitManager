@@ -27,6 +27,7 @@ namespace TransitManager.Core.Enums
         Assurance,
         ControleTechnique,
         PhotoConstatVehicule,
+        PhotoVehicule,
         EtatDesLieuxSigne,
         SAV
     }

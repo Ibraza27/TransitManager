@@ -837,9 +837,15 @@ namespace TransitManager.Web.Services
                 var response = await _httpClient.PostAsJsonAsync("api/commerce/invoices", dto, _jsonOptions);
                 if (response.IsSuccessStatusCode)
                     return await response.Content.ReadFromJsonAsync<InvoiceDto>(_jsonOptions);
-                return null;
+                
+                var error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Erreur API ({response.StatusCode}): {error}");
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Best Effort Log] CreateInvoiceAsync Exception: {ex.Message}");
+                throw; 
+            }
         }
 
         public async Task<InvoiceDto?> UpdateInvoiceAsync(UpdateInvoiceDto dto)
@@ -849,9 +855,15 @@ namespace TransitManager.Web.Services
                 var response = await _httpClient.PutAsJsonAsync($"api/commerce/invoices/{dto.Id}", dto, _jsonOptions);
                 if (response.IsSuccessStatusCode)
                     return await response.Content.ReadFromJsonAsync<InvoiceDto>(_jsonOptions);
-                return null;
+                
+                var error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Erreur API ({response.StatusCode}): {error}");
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Best Effort Log] UpdateInvoiceAsync Exception: {ex.Message}");
+                throw; 
+            }
         }
 
         public async Task<bool> ConvertQuoteToInvoiceAsync(Guid quoteId)

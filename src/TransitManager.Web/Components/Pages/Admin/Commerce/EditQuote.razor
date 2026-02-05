@@ -61,8 +61,22 @@
                     <i class="bi bi-save me-2"></i>@(Id.HasValue && !IsAutoDraft ? "Enregistrer" : "Brouillon")
                 </button>
             }
-        </div>
     </div>
+    </div>
+
+    @* Success Toast Notification *@
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+            <div class="toast show align-items-center text-white bg-success border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-check-circle-fill me-2"></i>@_successMessage
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
     @if (IsLoading)
     {
@@ -687,6 +701,7 @@
     private bool IsSaving = false;
     private bool IsPreviewMode = false;
     private bool IsLoadingPdf = false; 
+    private string _successMessage = "";
     private QuoteStatus CurrentStatus = QuoteStatus.Draft;
     private string OriginalModelJson = ""; // Snapshot for Revert
 
@@ -1125,8 +1140,16 @@
             Model.TotalTVA = result.TotalTVA;
             Model.TotalTTC = result.TotalTTC;
             
+            // Recalculate subtotals after reloading lines
+            UpdateSubtotals();
+            
             // Update Snapshot
             OriginalModelJson = JsonSerializer.Serialize(Model);
+
+            // Show success notification
+            _successMessage = "Devis enregistré avec succès !";
+            StateHasChanged();
+            _ = Task.Delay(3000).ContinueWith(_ => { _successMessage = ""; InvokeAsync(StateHasChanged); });
 
             return true;
         }

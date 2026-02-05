@@ -76,13 +76,19 @@
         </div>
         <!-- Tableau -->
         <div class="card shadow-sm border-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+            <!-- Scrollbar at top using rotation trick -->
+            <!-- Scrollbar at top using rotation trick - Added mb-2 to prevent overlap -->
+            <div class="table-responsive mb-2" style="transform: rotateX(180deg);">
+                <table class="table table-hover align-middle mb-0" style="transform: rotateX(180deg);">
                     <thead class="bg-light text-secondary">
                         <tr>
-                            <th scope="col" class="ps-4">Code-barres</th>
-                            <!-- NOUVELLE COLONNE CLIENT -->
+                            <!-- COLONNE ACTIONS (Déplacée en premier) -->
+                            <th scope="col" class="ps-4" style="min-width: 120px;">Actions</th>
+                            <!-- COLONNE CLIENT (Lien ajouté plus bas) -->
                             <th scope="col">Client</th>
+                            <!-- COLONNE CODE-BARRES (Déplacée ici ou après client ?) User said "interchange". Let's put Barcode where Action was? No, User said: "interchange la colonne code-bare avec la colonne Action" -> Swap them. So Action is 1st, Barcode is last. -->
+                            <!-- But wait, Barcode was 1st, Action was Last. -->
+                            <!-- So Action becomes 1st. Barcode becomes Last. -->
                             <th scope="col">Désignation</th>
                             <th scope="col">Destination</th>
                             <th scope="col">Conteneur</th>
@@ -91,8 +97,7 @@
                             <th scope="col" class="text-end">Payé</th>
                             <th scope="col" class="text-end">Restant</th>
                             <th scope="col" class="text-center">Statut</th>
-                            <!-- COLONNE ACTIONS -->
-                            <th scope="col" class="text-end pe-4" style="min-width: 120px;">Actions</th>
+                            <th scope="col" class="text-end pe-4">Code-barres</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -102,18 +107,35 @@
                             {
                                 <!-- APPLICATION DE LA CLASSE POUR LE RETARD -->
                                 <tr class="@GetRowClass(colis)">
-                                    <td class="ps-4 fw-bold text-primary font-monospace">
-                                        <i class="bi bi-upc-scan me-2 text-muted"></i>
-                                        @(string.IsNullOrEmpty(colis.AllBarcodes) ? "N/A" : colis.AllBarcodes.Split(',').FirstOrDefault())
+                                    <!-- BOUTON ÉDITER (Déplacé en premier) -->
+                                    <td class="ps-4">
+                                        <div class="d-flex justify-content-start gap-2">
+                                            <button class="btn btn-outline-primary btn-sm" @onclick="() => EditParcel(colis.Id)" title="Modifier">
+                                                ✏️
+                                            </button>
+                                            <AuthorizeView Roles="Administrateur">
+                                                <Authorized>
+                                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteParcel(colis)" title="Supprimer">
+                                                        🗑️
+                                                    </button>
+                                                </Authorized>
+                                            </AuthorizeView>
+                                        </div>
                                     </td>
-                                    <!-- DONNÉES CLIENT -->
+                                    
+                                    <!-- DONNÉES CLIENT (Avec Lien) -->
                                     <td>
-                                        <div class="fw-bold text-dark">@colis.ClientNomComplet</div>
+                                        <div class="fw-bold">
+                                            <a href="/colis/detail/@colis.Id" class="text-decoration-none text-dark hover-primary">
+                                                @colis.ClientNomComplet
+                                            </a>
+                                        </div>
                                         @if (!string.IsNullOrEmpty(colis.ClientTelephonePrincipal))
                                         {
                                             <small class="text-muted"><i class="bi bi-telephone-fill me-1" style="font-size: 0.7rem;"></i>@colis.ClientTelephonePrincipal</small>
                                         }
                                     </td>
+                                    
                                     <td>
                                         <div class="fw-medium">@colis.Designation</div>
                                         <small class="text-muted">Ref: @colis.NumeroReference</small>
@@ -133,7 +155,6 @@
                                     </td>
                                     <td class="text-center">@colis.NombrePieces</td>
                                     <td class="text-end fw-bold">
-                                    <td class="text-end fw-bold">
                                         @if(colis.TypeEnvoi == TypeEnvoi.AvecDedouanement)
                                         {
                                             <div>@colis.TotalFinal.ToString("C0", _culture)</div>
@@ -144,7 +165,6 @@
                                             <div>@colis.TotalFinal.ToString("C0", _culture)</div>
                                             <small class="text-muted d-block" style="font-size: 0.7rem;">(Sans Douane)</small>
                                         }
-                                    </td>
                                     </td>
                                     <td class="text-end text-success">@colis.SommePayee.ToString("C0", _culture)</td>
                                     <td class="text-end">
@@ -169,21 +189,12 @@
                                             </div>
                                         }
                                     </td>
-                                    <!-- BOUTON ÉDITER -->
-									<td class="text-end pe-4">
-										<div class="d-flex justify-content-end gap-2">
-											<button class="btn btn-outline-primary btn-sm" @onclick="() => EditParcel(colis.Id)" title="Modifier">
-												✏️
-											</button>
-											<AuthorizeView Roles="Administrateur">
-												<Authorized>
-													<button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteParcel(colis)" title="Supprimer">
-														🗑️
-													</button>
-												</Authorized>
-											</AuthorizeView>
-										</div>
-									</td>
+                                    
+                                    <!-- CODE-BARRES (Déplacé en dernier) -->
+                                    <td class="text-end pe-4 fw-bold text-primary font-monospace">
+                                        <i class="bi bi-upc-scan me-2 text-muted"></i>
+                                        @(string.IsNullOrEmpty(colis.AllBarcodes) ? "N/A" : colis.AllBarcodes.Split(',').FirstOrDefault())
+                                    </td>
                                 </tr>
                             }
                         }

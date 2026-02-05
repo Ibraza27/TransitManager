@@ -85,23 +85,36 @@
     else
     {
     <div class="card shadow-sm border-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+        <!-- Scrollbar at top using rotation trick - Added mb-2 to prevent overlap -->
+        <div class="table-responsive mb-2" style="transform: rotateX(180deg);">
+            <table class="table table-hover align-middle mb-0" style="transform: rotateX(180deg);">
                 <thead class="bg-light text-secondary">
                     <tr>
-                        <th class="ps-4">Immatriculation</th>
+                        <!-- 1. ACTIONS (First) -->
+                        <th class="ps-4" style="min-width: 120px;">Actions</th>
+                        
+                        <!-- 2. CLIENT -->
                         <th>Client</th>
+                        
+                        <!-- 3. VEHICULE -->
                         <th>Véhicule</th>
+                        
+                        <!-- 4. IMMATRICULATION -->
+                        <th>Immatriculation</th>
+                        
+                        <!-- 5. CONTENEUR (Kept as context) -->
                         <th>Conteneur</th>
                         
-                        <!-- NOUVELLE COLONNE -->
+                        <!-- 6. COMMENTAIRE -->
                         <th>Commentaire</th> 
                         
+                        <!-- 7,8,9. TOTAUX -->
                         <th class="text-end">Total</th>
                         <th class="text-end">Payé</th>
                         <th class="text-end">Restant</th>
+                        
+                        <!-- 10. STATUT -->
                         <th class="text-center">Statut</th>
-                        <th class="text-end pe-4" style="min-width: 120px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -110,15 +123,46 @@
                         @foreach (var v in FilteredVehicles)
                         {
                             <tr class="@(v.HasMissingDocuments ? "table-warning" : "")">
-                                <td class="ps-4 fw-bold font-monospace text-primary">@v.Immatriculation</td>
+                                <!-- 1. ACTIONS -->
+                                <td class="ps-4">
+                                    <div class="d-flex justify-content-start gap-2">
+                                        <button class="btn btn-outline-primary btn-sm" 
+                                                @onclick="() => EditVehicle(v.Id)" 
+                                                title="Modifier">
+                                            ✏️
+                                        </button>
+                                        <AuthorizeView Roles="Administrateur">
+                                            <Authorized>
+                                                <button class="btn btn-outline-danger btn-sm" 
+                                                        @onclick="() => DeleteVehicle(v)" 
+                                                        title="Supprimer">
+                                                    🗑️
+                                                </button>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    </div>
+                                </td>
+
+                                <!-- 2. CLIENT (Linked) -->
                                 <td>
-                                    <div class="fw-bold">@v.ClientNomComplet</div>
+                                    <div class="fw-bold">
+                                         <a href="/vehicule/detail/@v.Id" class="text-decoration-none text-dark hover-primary">
+                                            @v.ClientNomComplet
+                                        </a>
+                                    </div>
                                     <small class="text-muted">@v.ClientTelephonePrincipal</small>
                                 </td>
+
+                                <!-- 3. VÉHICULE -->
                                 <td>
                                     <div>@v.Marque @v.Modele</div>
                                     <small class="text-muted">Année @v.Annee</small>
                                 </td>
+                                
+                                <!-- 4. IMMATRICULATION -->
+                                <td class="fw-bold font-monospace text-primary">@v.Immatriculation</td>
+
+                                <!-- 5. CONTENEUR -->
                                 <td>
                                     @if (!string.IsNullOrEmpty(v.ConteneurNumeroDossier))
                                     {
@@ -132,12 +176,12 @@
                                     }
                                 </td>
 
-                                <!-- NOUVELLE COLONNE : Commentaire (tronqué si trop long) -->
+                                <!-- 6. COMMENTAIRE -->
                                 <td style="max-width: 150px;" class="text-truncate text-uppercase text-danger fw-bold" title="@v.Commentaires">
                                     <small>@v.Commentaires</small>
                                 </td>
 
-                                <!-- Finances -->
+                                <!-- 7,8,9. FINANCES -->
                                 <td class="text-end fw-bold">@v.PrixTotal.ToString("C0")</td>
                                 <td class="text-end text-success">@v.SommePayee.ToString("C0")</td>
                                 <td class="text-end">
@@ -151,32 +195,9 @@
                                     }
                                 </td>
                                 
+                                <!-- 10. STATUT -->
                                 <td class="text-center">
                                     <span class="badge rounded-pill @GetStatusBadgeClass(v.Statut)">@v.Statut</span>
-                                </td>
-                                
-                                <!-- ACTIONS AVEC ÉMOJIS -->
-                                <td class="text-end pe-4">
-                                    <!-- Utilisation de d-flex et gap-2 pour l'espacement propre -->
-                                    <div class="d-flex justify-content-end gap-2">
-                                        
-                                        <button class="btn btn-outline-primary btn-sm" 
-                                                @onclick="() => EditVehicle(v.Id)" 
-                                                title="Modifier">
-                                            ✏️ <!-- Émoji Crayon -->
-                                        </button>
-                                        
-                                        <AuthorizeView Roles="Administrateur">
-                                            <Authorized>
-                                                <button class="btn btn-outline-danger btn-sm" 
-                                                        @onclick="() => DeleteVehicle(v)" 
-                                                        title="Supprimer">
-                                                    🗑️ <!-- Émoji Poubelle -->
-                                                </button>
-                                            </Authorized>
-                                        </AuthorizeView>
-
-                                    </div>
                                 </td>
                             </tr>
                         }
@@ -190,16 +211,16 @@
 				{
 					<tfoot class="bg-light fw-bold border-top">
 						<tr>
-							<!-- Fusionne les 5 premières colonnes (Immat, Client, Véhicule, Conteneur, Commentaire) -->
-							<td colspan="5" class="text-end text-secondary text-uppercase pe-3 align-middle">Totaux :</td>
+							<!-- Fusionne les 6 premières colonnes (Action, Client, Véhicule, Immat, Conteneur, Commentaire) -->
+							<td colspan="6" class="text-end text-secondary text-uppercase pe-3 align-middle">Totaux :</td>
 							
 							<!-- Les 3 colonnes financières -->
 							<td class="text-end align-middle">@FilteredVehicles.Sum(v => v.PrixTotal).ToString("C0")</td>
 							<td class="text-end text-success align-middle">@FilteredVehicles.Sum(v => v.SommePayee).ToString("C0")</td>
 							<td class="text-end text-danger align-middle">@FilteredVehicles.Sum(v => v.RestantAPayer).ToString("C0")</td>
 							
-							<!-- Fusionne les 2 dernières colonnes (Statut, Actions) -->
-							<td colspan="2"></td>
+							<!-- Statut (Dernière colonne) -->
+							<td></td>
 						</tr>
 					</tfoot>
 				}								

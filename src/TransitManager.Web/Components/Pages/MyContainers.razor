@@ -74,11 +74,17 @@
     else
     {
     <div class="card shadow-sm border-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="min-width: 1400px;">
+        <!-- Scrollbar at top using rotation trick -->
+        <div class="table-responsive" style="transform: rotateX(180deg);">
+            <table class="table table-hover align-middle mb-0" style="min-width: 1400px; transform: rotateX(180deg);">
                 <thead class="bg-light text-secondary">
                     <tr>
-                        <th class="ps-4">N° Dossier</th>
+                        <!-- 1. ACTIONS (First) -->
+                        <th class="ps-4" style="min-width: 100px;">Actions</th>
+                        
+                        <!-- 2. DOSSIER -->
+                        <th>N° Dossier</th>
+                        
                         <th>Statut</th>
                         <th>Destination</th>
                         <th>Plomb</th>
@@ -90,7 +96,6 @@
                         <th class="text-center">Arrivée</th>
                         <th class="text-center">Clôture</th>
                         <th>Commentaire</th>
-                        <th class="text-end pe-4" style="min-width: 100px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -99,7 +104,52 @@
                         @foreach (var c in FilteredContainers)
                         {
                             <tr class="@(c.Documents.Any(d => d.Statut == StatutDocument.Manquant) ? "table-danger" : "")">
-                                <td class="ps-4 fw-bold text-primary font-monospace">@c.NumeroDossier</td>
+                                <!-- 1. ACTIONS -->
+                                <td class="ps-4">
+                                    <div class="d-flex justify-content-start gap-2">
+                                        
+                                        <!-- Tracking Button (Conditionnel) -->
+                                        @if (!string.IsNullOrEmpty(GetTrackingUrl(c)))
+                                        {
+                                            <a href="@GetTrackingUrl(c)" target="_blank" class="btn btn-outline-info btn-sm" title="Suivre sur le site de la compagnie">
+                                                🚢
+                                            </a>
+                                        }
+
+                                        <!-- AJOUT : Restriction Admin pour le bouton Modifier -->
+                                        <AuthorizeView Roles="Administrateur">
+                                            <Authorized>
+                                                <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewContainer(c.Id)" title="Détails / Modifier">
+                                                    ✏️
+                                                </button>
+                                            </Authorized>
+                                        </AuthorizeView>
+
+                                        <!-- Bouton Supprimer (Admin seulement) -->
+                                        <AuthorizeView Roles="Administrateur">
+                                            <Authorized>
+                                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteContainer(c)" title="Supprimer">
+                                                    🗑️
+                                                </button>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    </div>
+                                </td>
+
+                                <!-- 2. DOSSIER (Linked for Admin) -->
+                                <td class="fw-bold text-primary font-monospace">
+                                    <AuthorizeView Roles="Administrateur">
+                                        <Authorized>
+                                             <a href="/conteneur/detail/@c.Id" class="text-decoration-none text-primary hover-opacity">
+                                                 @c.NumeroDossier
+                                             </a>
+                                        </Authorized>
+                                        <NotAuthorized>
+                                             @c.NumeroDossier
+                                        </NotAuthorized>
+                                    </AuthorizeView>
+                                </td>
+
                                 <td>
                                     <span class="badge rounded-pill @GetStatusBadgeClass(c.Statut)">@c.Statut</span>
                                 </td>
@@ -150,37 +200,6 @@
                                 
                                 <td class="text-truncate" style="max-width: 150px;" title="@c.Commentaires">
                                     <small class="text-muted">@c.Commentaires</small>
-                                </td>
-
-                                <td class="text-end pe-4">
-									<div class="d-flex justify-content-end gap-2">
-										
-										<!-- Tracking Button (Conditionnel) -->
-                                        @if (!string.IsNullOrEmpty(GetTrackingUrl(c)))
-                                        {
-                                            <a href="@GetTrackingUrl(c)" target="_blank" class="btn btn-outline-info btn-sm" title="Suivre sur le site de la compagnie">
-                                                🚢 Suivi
-                                            </a>
-                                        }
-
-										<!-- AJOUT : Restriction Admin pour le bouton Modifier -->
-										<AuthorizeView Roles="Administrateur">
-											<Authorized>
-												<button class="btn btn-outline-primary btn-sm" @onclick="() => ViewContainer(c.Id)" title="Détails / Modifier">
-													✏️
-												</button>
-											</Authorized>
-										</AuthorizeView>
-
-                                        <!-- Bouton Supprimer (Admin seulement) -->
-                                        <AuthorizeView Roles="Administrateur">
-                                            <Authorized>
-                                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteContainer(c)" title="Supprimer">
-                                                    🗑️
-                                                </button>
-                                            </Authorized>
-                                        </AuthorizeView>
-                                    </div>
                                 </td>
                             </tr>
                         }

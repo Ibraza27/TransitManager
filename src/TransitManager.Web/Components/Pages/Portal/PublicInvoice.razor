@@ -63,9 +63,13 @@
                         <div class="col-12 col-md-7 mb-3 mb-md-0">
                                 <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
                             <div class="small text-muted">
-                                <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
-                                7 Rue Pascal, 33370 TRESSES<br/>
-                                Tél: 09 81 72 45 40 - Email: contact@hippocampeimportexport.com
+                                <strong>@_companyProfile.CompanyName - @_companyProfile.LegalStatus</strong><br/>
+                                @_companyProfile.Address, @_companyProfile.ZipCode @_companyProfile.City<br/>
+                                Tél: @_companyProfile.Phone - Email: @_companyProfile.Email <br/>
+                                @if(!string.IsNullOrEmpty(_companyProfile.Website))
+                                {
+                                    <span>Site: <a href="@_companyProfile.Website" target="_blank" class="text-muted">@_companyProfile.Website</a></span>
+                                }
                             </div>
                         </div>
                         <div class="col-12 col-md-5 text-md-end">
@@ -207,8 +211,8 @@
                     }
 
                     <div class="mt-5 text-center text-muted small pt-5 border-top">
-                            HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses<br/>
-                            Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX
+                            @_companyProfile.CompanyName - @_companyProfile.LegalStatus - @_companyProfile.Address @_companyProfile.ZipCode @_companyProfile.City<br/>
+                            Numéro de SIRET: @_companyProfile.Siret - Numéro de TVA: @_companyProfile.TvaNumber - @_companyProfile.Rcs
                     </div> <!-- Fin legal footer -->
                     </div> <!-- Fin page-content -->
                 </div> <!-- Fin a4-paper -->
@@ -271,6 +275,7 @@
     [Parameter] public Guid Token { get; set; }
     private InvoiceDto? Invoice;
     private BankDetailsDto _bankDetails = new();
+    private CompanyProfileDto _companyProfile = new();
     private bool IsLoading = true;
     private bool IsLoadingPdf = false;
 
@@ -281,6 +286,7 @@
         {
             Invoice = await ApiService.GetPublicInvoiceAsync(Token);
             _bankDetails = await SettingsService.GetSettingAsync<BankDetailsDto>("BankDetails", new());
+            _companyProfile = await SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
         }
         catch { Invoice = null; }
         finally { IsLoading = false; }

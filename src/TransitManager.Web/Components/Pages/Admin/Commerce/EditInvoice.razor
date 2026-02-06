@@ -517,7 +517,7 @@
 
     private void AddLine(QuoteLineType type = QuoteLineType.Product)
     {
-        Model.Lines.Add(new InvoiceLineVM { Type = type, Quantity = 1, UnitPrice = 0, VATRate = 20, Date = DateTime.Today });
+        Model.Lines.Add(new InvoiceLineVM { Type = type, Quantity = 1, UnitPrice = 0, VATRate = 0, Date = DateTime.Today });
         UpdateSubtotals();
     }
     
@@ -925,7 +925,11 @@
                         @_companyProfile.Country<br/>
                         <br/>
                         Tél: @_companyProfile.Phone<br/>
-                        Email: @_companyProfile.Email
+                        Email: @_companyProfile.Email <br/>
+                        @if(!string.IsNullOrEmpty(_companyProfile.Website))
+                        {
+                            <span>Site: @_companyProfile.Website</span>
+                        }
                     </div>
                 </div>
                 <div class="col-12 col-md-5 text-md-end">

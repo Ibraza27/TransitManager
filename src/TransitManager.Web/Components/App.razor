@@ -58,6 +58,20 @@
                 localStorage.setItem('sidebarCollapsed', isCollapsed);
             }
         };
+
+        // --- RESIZE LISTENER FOR BLAZOR ---
+        window.resizeListenerRef = null;
+        window.registerResizeListener = (dotnetHelper) => {
+            if (window.resizeListenerRef) return; // Déjà enregistré
+            window.resizeListenerRef = dotnetHelper;
+            window.addEventListener('resize', () => {
+                dotnetHelper.invokeMethodAsync('OnResize', window.innerWidth);
+            });
+        };
+        window.unregisterResizeListener = () => {
+             // Note: RemoveEventListener requires the exact function instance, simplified here as clean up on dispose is partial
+             window.resizeListenerRef = null;
+        };
         
         // Gestion du chargement et de la reconnexion - Définition anticipée
         console.log("🔄 [Script] Démarrage de l'initialisation Blazor...");
@@ -199,6 +213,22 @@
                 // setTimeout(() => { document.body.removeChild(iframe); URL.revokeObjectURL(url); }, 2000);
             };
         }
+
+        window.showModal = (id) => {
+            var el = document.getElementById(id);
+            if(el) {
+                var modal = bootstrap.Modal.getOrCreateInstance(el);
+                modal.show();
+            }
+        };
+
+        window.hideModal = (id) => {
+            var el = document.getElementById(id);
+            if(el) {
+                var modal = bootstrap.Modal.getInstance(el);
+                if(modal) modal.hide();
+            }
+        };
     </script>
     <!-- === FIN AJOUT === -->
 

@@ -685,6 +685,7 @@ namespace TransitManager.Infrastructure.Services
         {company.Address}<br/>
         {company.ZipCode} {company.City}<br/>
         Tél: {company.Phone}<br/>
+        {(!string.IsNullOrEmpty(company.Website) ? $"Site Web: <a href='{company.Website}'>{company.Website}</a><br/>" : "")}
     </div>
 </div>";
 
@@ -1382,11 +1383,11 @@ namespace TransitManager.Infrastructure.Services
 
     <p>Cordialement,</p>
     
-    <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #555;'>
         <strong>{company.CompanyName} - {company.LegalStatus}</strong><br/>
         {company.Address}<br/>
         {company.ZipCode} {company.City}<br/>
         Tél: {company.Phone}<br/>
+        {(!string.IsNullOrEmpty(company.Website) ? $"Site Web: <a href='{company.Website}'>{company.Website}</a><br/>" : "")}
     </div>
 </div>";
 
@@ -1500,11 +1501,11 @@ namespace TransitManager.Infrastructure.Services
     <p>Nous vous remercions de votre compréhension.</p>
     <p>Cordialement,</p>
     
-    <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #555;'>
         <strong>{company.CompanyName} - {company.LegalStatus}</strong><br/>
         {company.Address}<br/>
         {company.ZipCode} {company.City}<br/>
         Tél: {company.Phone}<br/>
+        {(!string.IsNullOrEmpty(company.Website) ? $"Site Web: <a href='{company.Website}'>{company.Website}</a><br/>" : "")}
     </div>
 </div>";
 

@@ -800,27 +800,33 @@ body:has(.sidebar-glass.collapsed) .content-area {
 }
 
 /* Sidebar Internal Items for Collapse */
-.sidebar-glass.collapsed .logo-text span,
-.sidebar-glass.collapsed .nav-link span,
-.sidebar-glass.collapsed .nav-link::after,
-.sidebar-glass.collapsed .sidebar-section-title {
-    display: none !important;
-    opacity: 0;
+/* Sidebar Internal Items for Collapse - DESKTOP ONLY */
+@media (min-width: 769px) {
+
+    .sidebar-glass.collapsed .logo-text span,
+    .sidebar-glass.collapsed .nav-link span,
+    .sidebar-glass.collapsed .nav-link::after,
+    .sidebar-glass.collapsed .sidebar-section-title {
+        display: none !important;
+        opacity: 0;
+    }
 }
 
 /* FULL HIDE on Desktop when collapsed */
-.sidebar-glass.collapsed {
-    width: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-}
+@media (min-width: 769px) {
+    .sidebar-glass.collapsed {
+        width: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
 
-body:has(.sidebar-glass.collapsed) .top-bar-glass {
-    left: 0 !important;
-}
+    body:has(.sidebar-glass.collapsed) .top-bar-glass {
+        left: 0 !important;
+    }
 
-body:has(.sidebar-glass.collapsed) .content-area {
-    margin-left: 0 !important;
+    body:has(.sidebar-glass.collapsed) .content-area {
+        margin-left: 0 !important;
+    }
 }
 
 .logo-text {
@@ -1300,6 +1306,9 @@ html[data-theme="dark"] a:hover {
 
     .sidebar-glass.show {
         display: flex !important;
+        width: 85% !important;
+        /* Force width on mobile even if collapsed */
+        max-width: 320px !important;
     }
 
     /* Mobile Close Button - Always visible */

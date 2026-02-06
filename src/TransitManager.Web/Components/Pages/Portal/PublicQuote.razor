@@ -66,13 +66,17 @@
                                 <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
                             
                             <div class="small text-muted">
-                                <strong>HIPPOCAMPE IMPORT EXPORT - SAS</strong><br/>
-                                7 Rue Pascal<br/>
-                                33370 TRESSES<br/>
-                                France<br/>
+                                <strong>@_companyProfile.CompanyName - @_companyProfile.LegalStatus</strong><br/>
+                                @_companyProfile.Address<br/>
+                                @_companyProfile.ZipCode @_companyProfile.City<br/>
+                                @_companyProfile.Country<br/>
                                 <br/>
-                                Tél: 09 81 72 45 40<br/>
-                                Email: contact@hippocampeimportexport.com
+                                Tél: @_companyProfile.Phone<br/>
+                                Email: @_companyProfile.Email<br/>
+                                @if(!string.IsNullOrEmpty(_companyProfile.Website))
+                                {
+                                    <span>Site: <a href="@_companyProfile.Website" target="_blank" class="text-muted">@_companyProfile.Website</a></span>
+                                }
                             </div>
                         </div>
                         <div class="col-12 col-md-5 text-md-end">
@@ -252,8 +256,8 @@
 
                     <!-- Legal Footer -->
                     <div class="mt-5 text-center text-muted small pt-5 border-top">
-                            HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses<br/>
-                            Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX
+                            @_companyProfile.CompanyName - @_companyProfile.LegalStatus - @_companyProfile.Address @_companyProfile.ZipCode @_companyProfile.City<br/>
+                            Numéro de SIRET: @_companyProfile.Siret - Numéro de TVA: @_companyProfile.TvaNumber - @_companyProfile.Rcs
                     </div> <!-- Fin legal footer -->
                     </div> <!-- Fin page-content -->
                 </div> <!-- Fin a4-paper -->
@@ -361,7 +365,12 @@
     [Parameter] public Guid Token { get; set; }
     private QuoteDto? Quote;
     private BankDetailsDto _bankDetails = new();
+    private CompanyProfileDto _companyProfile = new();
     private bool IsLoading = true;
+    private bool IsLoadingPdf = false;
+    private string CommentModalTitle = "Demande de modification / Commentaire";
+    private string CommentModalMessage = "Veuillez indiquer vos demandes de modification ou commentaires ci-dessous :";
+    private string CommentModalButtonClass = "btn-secondary";
 
     protected override async Task OnInitializedAsync()
     {
@@ -370,15 +379,12 @@
         {
             Quote = await ApiService.GetPublicQuoteAsync(Token);
             _bankDetails = await SettingsService.GetSettingAsync<BankDetailsDto>("BankDetails", new());
+            _companyProfile = await SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
         }
-        finally
-        {
-            IsLoading = false;
-        }
+        catch { Quote = null; }
+        finally { IsLoading = false; }
     }
     
-    private bool IsLoadingPdf = false; // New state
-
     private async Task DownloadPdf()
     {
         if (Quote == null) return;
@@ -461,9 +467,7 @@
 
     // --- Comment Modal Logic ---
     private bool IsCommentModalVisible = false;
-    private string CommentModalTitle = "";
-    private string CommentModalMessage = "";
-    private string CommentModalButtonClass = "btn-primary";
+
     private Func<string, Task>? OnCommentConfirmAction;
 
     private void OpenCommentModal(string title, string message, string btnClass, Func<string, Task> action)

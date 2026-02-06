@@ -10,6 +10,7 @@ namespace TransitManager.Core.DTOs.Settings
         public string City { get; set; } = "TRESSES";
         public string Country { get; set; } = "France";
         public string Email { get; set; } = "contact@hippocampeimportexport.com";
+        public string Website { get; set; } = "";
         public string Phone { get; set; } = "09.81.72.45.40";
         public string Mobile { get; set; } = "06 99 56 93 58";
         public string Siret { get; set; } = "891909772";

@@ -148,28 +148,29 @@
     </div>
 }
 
-<!-- Admin Preview Modal -->
+<!-- Admin Preview Modal (Centered A4 Style) -->
 @if (ShowAdminPreviewModal && PreviewQuote != null)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
-        <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Aperçu du Devis</h5>
+    <div class="modal-backdrop fade show" @onclick="CloseAdminPreview"></div>
+    <div class="modal fade show d-block" tabindex="-1" style="z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 950px;">
+            <div class="modal-content border-0 shadow-lg" @onclick:stopPropagation="true">
+                <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #1e293b, #334155);">
+                    <h5 class="modal-title text-light">Aperçu du Devis</h5>
                     <div class="ms-auto d-flex gap-2">
-                        <a href="/admin/commerce/quotes/edit/@PreviewQuote.Id" class="btn btn-secondary btn-sm" target="_blank">
+                        <a href="/admin/commerce/quotes/edit/@PreviewQuote.Id" class="btn btn-light btn-sm" target="_blank">
                             <i class="bi bi-pencil me-2"></i>Modifier
                         </a>
                          <button class="btn btn-primary btn-sm" @onclick="() => OpenEmailModal(PreviewQuote)">
                             <i class="bi bi-send me-2"></i>Envoyer
                         </button>
-                        <button class="btn btn-outline-dark btn-sm" @onclick="() => DownloadPdf(PreviewQuote)">
+                        <button class="btn btn-outline-light btn-sm" @onclick="() => DownloadPdf(PreviewQuote)">
                             <i class="bi bi-download me-2"></i>PDF
                         </button>
-                        <button type="button" class="btn-close ms-2" @onclick="CloseAdminPreview"></button>
+                        <button type="button" class="btn-close btn-close-white ms-2" @onclick="CloseAdminPreview"></button>
                     </div>
                 </div>
-                <div class="modal-body bg-light">
+                <div class="modal-body bg-light p-4" style="max-height: 80vh;">
                     <!-- Render the Preview Fragment here -->
                     @RenderAdminPreview(PreviewQuote)
                 </div>

@@ -439,6 +439,7 @@ namespace TransitManager.Infrastructure.Services
                                     column.Item().Text($"Pays: {company.Country}").FontSize(9);
                                     if(!string.IsNullOrEmpty(company.Phone)) column.Item().Text($"Tél: {company.Phone}").FontSize(9);
                                     column.Item().Text($"Email: {company.Email}").FontSize(9);
+                                    if(!string.IsNullOrEmpty(company.Website)) column.Item().Text($"Site: {company.Website}").FontSize(9);
                                 });
 
                                 // Invoice Info Right
@@ -683,6 +684,7 @@ namespace TransitManager.Infrastructure.Services
                                     column.Item().Text($"Pays: {company.Country}").FontSize(9);
                                     if(!string.IsNullOrEmpty(company.Phone)) column.Item().Text($"Tél: {company.Phone}").FontSize(9);
                                     column.Item().Text($"Email: {company.Email}").FontSize(9);
+                                    if(!string.IsNullOrEmpty(company.Website)) column.Item().Text($"Site: {company.Website}").FontSize(9);
                                 });
 
                                 // Quote Info Right

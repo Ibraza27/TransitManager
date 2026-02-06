@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@implements IAsyncDisposable
 @inject CustomAuthenticationStateProvider AuthStateProvider
 
 @inject NavigationManager NavigationManager
@@ -102,18 +103,12 @@
     private bool _isMobileMenuOpen = false;
     private bool _initialized = false;
 
-    protected override void OnInitialized()
+    private IJSObjectReference? _jsModule;
+    private DotNetObjectReference<MainLayout>? _objRef;
+
+    protected override async Task OnInitializedAsync()
     {
         NavigationManager.LocationChanged += OnLocationChanged;
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        if (_isMobileMenuOpen)
-        {
-            _isMobileMenuOpen = false;
-            StateHasChanged();
-        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -125,21 +120,42 @@
                 var storedState = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sidebar_collapsed_state");
                 if (!string.IsNullOrEmpty(storedState) && bool.TryParse(storedState, out bool isCollapsed))
                 {
-                    if (_isCollapsed != isCollapsed)
-                    {
-                        _isCollapsed = isCollapsed;
-                        StateHasChanged();
-                    }
+                    _isCollapsed = isCollapsed;
+                    StateHasChanged();
                 }
+
+                // Initialize Resize Listener
+                 _objRef = DotNetObjectReference.Create(this);
+                 await JSRuntime.InvokeVoidAsync("window.registerResizeListener", _objRef);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading sidebar state: {ex.Message}");
+                Console.WriteLine($"Error init main layout: {ex.Message}");
             }
             finally
             {
                 _initialized = true;
             }
+        }
+    }
+
+    [JSInvokable]
+    public void OnResize(int width)
+    {
+        // Si on passe en mobile (< 768px), on désactive le mode collapsed desktop pour éviter les bugs
+        if (width < 768 && _isCollapsed)
+        {
+            _isCollapsed = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (_isMobileMenuOpen)
+        {
+            _isMobileMenuOpen = false;
+            StateHasChanged();
         }
     }
 
@@ -168,8 +184,16 @@
         NavigationManager.NavigateTo("/login", forceLoad: true);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
+        if (_objRef != null)
+        {
+             _objRef.Dispose();
+        }
+         
+        try {
+             await JSRuntime.InvokeVoidAsync("window.unregisterResizeListener");
+        } catch {}
     }
 }

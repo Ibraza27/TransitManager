@@ -4,151 +4,155 @@
 @inject IJSRuntime JS
 @inject IApiService ApiService
 
-<!-- Modal -->
-<div class="modal fade" id="sendEmailModal" tabindex="-1" aria-labelledby="sendEmailLabel" aria-hidden="true" data-bs-backdrop="static" style="z-index: 2000;">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);">
-                <h5 class="modal-title fw-bold" id="sendEmailLabel"><i class="bi bi-envelope-paper me-2"></i>ENVOYER PAR E-MAIL</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" @onclick="CloseModal"></button>
-            </div>
-            <div class="modal-body p-4">
-                
-                @if(_isSending)
-                {
-                    <div class="text-center py-5">
-                         <div class="spinner-border text-primary mb-3" role="status"></div>
-                         <p class="text-muted">Envoi en cours...</p>
-                    </div>
-                }
-                else
-                {
-                    <!-- Destinataire(s) -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Destinataire(s)</label>
-                        <div class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center" style="min-height: 42px;">
-                            @foreach(var email in _recipients)
-                            {
-                                <span class="badge bg-primary d-flex align-items-center gap-1 py-2 px-3">
-                                    @email
-                                    <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6em;" @onclick="() => RemoveRecipient(email)"></button>
-                                </span>
-                            }
-                            <input type="email" class="border-0 flex-grow-1" style="outline: none; min-width: 150px;" 
-                                   placeholder="Ajouter un email..." 
-                                   @bind="_newRecipientInput" 
-                                   @bind:event="oninput"
-                                   @onkeyup="HandleRecipientKeyUp" 
-                                   @onblur="TryAddRecipient" />
-                            <button type="button" class="btn btn-sm btn-outline-primary ms-1" @onclick="TryAddRecipient" title="Ajouter">
-                                <i class="bi bi-plus"></i>
-                            </button>
+<!-- Modal (Blazor-controlled visibility) -->
+@if (_isVisible)
+{
+    <div class="modal-backdrop fade show" @onclick="CloseModal"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="z-index: 1055;">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" @onclick:stopPropagation="true">
+                <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-envelope-paper me-2"></i>ENVOYER PAR E-MAIL</h5>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    
+                    @if(_isSending)
+                    {
+                        <div class="text-center py-5">
+                             <div class="spinner-border text-primary mb-3" role="status"></div>
+                             <p class="text-muted">Envoi en cours...</p>
                         </div>
-                        <div class="mt-1">
-                            <a href="javascript:void(0)" class="small text-decoration-none" @onclick="ToggleCc">Cc</a>
-                            <a href="javascript:void(0)" class="small text-decoration-none ms-2" @onclick="ToggleBcc">Bcc</a>
-                        </div>
-                        @if(_showCc)
-                        {
-                            <div class="mt-2">
-                                <input type="text" class="form-control form-control-sm" placeholder="Cc (séparer par virgule)" @bind="_ccEmails" />
-                            </div>
-                        }
-                        @if(_showBcc)
-                        {
-                            <div class="mt-2">
-                                <input type="text" class="form-control form-control-sm" placeholder="Bcc (séparer par virgule)" @bind="_bccEmails" />
-                            </div>
-                        }
-                    </div>
-
-                    <!-- Copie Contact -->
-                    <div class="form-check mb-3 p-2 border rounded bg-light">
-                        <input class="form-check-input" type="checkbox" id="copyContact" @bind="_emailDto.CopyToSender">
-                        <label class="form-check-label small" for="copyContact">
-                            <i class="bi bi-envelope-plus me-1"></i>Recevoir une copie (contact@hippocampeimportexport.com)
-                        </label>
-                    </div>
-
-                    <!-- Sujet -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Sujet</label>
-                        <input type="text" class="form-control" @bind="_emailDto.Subject" />
-                    </div>
-
-                    <!-- Message -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold d-flex justify-content-between">
-                            <span>Message<span class="text-muted fw-normal ms-1">(@_emailDto.Body?.Length/5000)</span></span>
-                        </label>
-                        <textarea class="form-control" rows="8" @bind="_emailDto.Body" maxlength="5000"></textarea>
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="saveTemplate" @bind="_saveAsTemplate">
-                            <label class="form-check-label small" for="saveTemplate">
-                                Enregistrer comme modèle de message
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Pièces jointes -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Pièces jointes</label>
-                        <div class="border rounded p-3 bg-light">
-                            @foreach(var att in _attachments)
-                            {
-                                <div class="d-flex align-items-center mb-2">
-                                    @if(att.IsUploading)
-                                    {
-                                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                                    }
-                                    else if (att.IsDefault || att.TempId.HasValue)
-                                    {
-                                         <span class="badge bg-success rounded-pill me-2">
-                                            <i class="bi bi-check-circle me-1"></i>
-                                        </span>
-                                    }
-                                    else 
-                                    {
-                                         <span class="badge bg-warning text-dark rounded-pill me-2">
-                                            <i class="bi bi-exclamation-circle me-1"></i>
-                                        </span>
-                                    }
-
-                                    <span class="flex-grow-1 small @(att.IsUploading ? "text-muted fst-italic" : "")">
-                                        @att.FileName
-                                        @if(att.IsUploading) { <span>(Téléchargement...)</span> }
+                    }
+                    else
+                    {
+                        <!-- Destinataire(s) -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Destinataire(s)</label>
+                            <div class="border rounded p-2 d-flex flex-wrap gap-1 align-items-center" style="min-height: 42px;">
+                                @foreach(var email in _recipients)
+                                {
+                                    <span class="badge bg-primary d-flex align-items-center gap-1 py-2 px-3">
+                                        @email
+                                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6em;" @onclick="() => RemoveRecipient(email)"></button>
                                     </span>
-                                    
-                                    @if(!att.IsDefault)
-                                    {
-                                        <button type="button" class="btn btn-sm btn-link text-danger p-0" @onclick="() => RemoveAttachment(att)">
-                                            <i class="bi bi-x-circle"></i>
-                                        </button>
-                                    }
+                                }
+                                <input type="email" class="border-0 flex-grow-1" style="outline: none; min-width: 150px;" 
+                                       placeholder="Ajouter un email..." 
+                                       @bind="_newRecipientInput" 
+                                       @bind:event="oninput"
+                                       @onkeyup="HandleRecipientKeyUp" 
+                                       @onblur="TryAddRecipient" />
+                                <button type="button" class="btn btn-sm btn-outline-primary ms-1" @onclick="TryAddRecipient" title="Ajouter">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                            <div class="mt-1">
+                                <a href="javascript:void(0)" class="small text-decoration-none" @onclick="ToggleCc">Cc</a>
+                                <a href="javascript:void(0)" class="small text-decoration-none ms-2" @onclick="ToggleBcc">Bcc</a>
+                            </div>
+                            @if(_showCc)
+                            {
+                                <div class="mt-2">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Cc (séparer par virgule)" @bind="_ccEmails" />
                                 </div>
                             }
-                            <div class="mt-2">
-                                <InputFile OnChange="OnFileSelected" class="form-control form-control-sm" multiple />
-                                <small class="text-muted">Formats acceptés: PDF, Images, Documents (max 5MB)</small>
+                            @if(_showBcc)
+                            {
+                                <div class="mt-2">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Bcc (séparer par virgule)" @bind="_bccEmails" />
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Copie Contact -->
+                        <div class="form-check mb-3 p-2 border rounded bg-light">
+                            <input class="form-check-input" type="checkbox" id="copyContact" @bind="_emailDto.CopyToSender">
+                            <label class="form-check-label small" for="copyContact">
+                                <i class="bi bi-envelope-plus me-1"></i>Recevoir une copie (contact@hippocampeimportexport.com)
+                            </label>
+                        </div>
+
+                        <!-- Sujet -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Sujet</label>
+                            <input type="text" class="form-control" @bind="_emailDto.Subject" />
+                        </div>
+
+                        <!-- Message -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold d-flex justify-content-between">
+                                <span>Message<span class="text-muted fw-normal ms-1">(@_emailDto.Body?.Length/5000)</span></span>
+                            </label>
+                            <textarea class="form-control" rows="8" @bind="_emailDto.Body" maxlength="5000"></textarea>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="saveTemplate" @bind="_saveAsTemplate">
+                                <label class="form-check-label small" for="saveTemplate">
+                                    Enregistrer comme modèle de message
+                                </label>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="alert alert-info text-dark py-2 small border-0">
-                        <i class="bi bi-info-circle me-2"></i>Le détail du devis sera inclus dans le corps de l'email.
-                    </div>
-                }
-            </div>
-            <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-link text-secondary" data-bs-dismiss="modal" @onclick="CloseModal" disabled="@_isSending">Annuler</button>
-                <button type="button" class="btn btn-primary px-4 rounded-pill" @onclick="SendEmail" disabled="@(_isSending || !_recipients.Any())">
-                    @if (_isSending) { <span class="spinner-border spinner-border-sm me-2"></span> }
-                    <i class="bi bi-send-fill me-2"></i>Envoyer
-                </button>
+                        <!-- Pièces jointes -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Pièces jointes</label>
+                            <div class="border rounded p-3 bg-light">
+                                @foreach(var att in _attachments)
+                                {
+                                    <div class="d-flex align-items-center mb-2">
+                                        @if(att.IsUploading)
+                                        {
+                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                        }
+                                        else if (att.IsDefault || att.TempId.HasValue)
+                                        {
+                                             <span class="badge bg-success rounded-pill me-2">
+                                                <i class="bi bi-check-circle me-1"></i>
+                                            </span>
+                                        }
+                                        else 
+                                        {
+                                             <span class="badge bg-warning text-dark rounded-pill me-2">
+                                                <i class="bi bi-exclamation-circle me-1"></i>
+                                            </span>
+                                        }
+
+                                        <span class="flex-grow-1 small @(att.IsUploading ? "text-muted fst-italic" : "")">
+                                            @att.FileName
+                                            @if(att.IsUploading) { <span>(Téléchargement...)</span> }
+                                        </span>
+                                        
+                                        @if(!att.IsDefault)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-link text-danger p-0" @onclick="() => RemoveAttachment(att)">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                <div class="mt-2">
+                                    <InputFile OnChange="OnFileSelected" class="form-control form-control-sm" multiple />
+                                    <small class="text-muted">Formats acceptés: PDF, Images, Documents (max 5MB)</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info text-dark py-2 small border-0">
+                            <i class="bi bi-info-circle me-2"></i>Le détail du devis sera inclus dans le corps de l'email.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-link text-secondary" @onclick="CloseModal" disabled="@_isSending">Annuler</button>
+                    <button type="button" class="btn btn-primary px-4 rounded-pill" @onclick="SendEmail" disabled="@(_isSending || !_recipients.Any())">
+                        @if (_isSending) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        <i class="bi bi-send-fill me-2"></i>Envoyer
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 @code {
     [Parameter] public string RecipientEmail { get; set; } = "";

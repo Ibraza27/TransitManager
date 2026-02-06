@@ -135,12 +135,12 @@ namespace TransitManager.Infrastructure.Services
                 worksheet.Cell(1, 4).Value = "Conteneur";
                 worksheet.Cell(1, 5).Value = "Désignation";
                 // worksheet.Cell(1, 6).Value = "Poids (kg)"; // SUPPRIMÃ‰
-                worksheet.Cell(1, 6).Value = "Volume (mÂ³)"; // MODIFIÃ‰ (indice 6 au lieu de 7)
-                worksheet.Cell(1, 7).Value = "Statut"; // MODIFIÃ‰ (indice 7 au lieu de 8)
-                worksheet.Cell(1, 8).Value = "Date d'arrivée"; // MODIFIÃ‰ (indice 8 au lieu de 9)
-                worksheet.Cell(1, 9).Value = "Valeur déclarée (â‚¬)"; // MODIFIÃ‰ (indice 9 au lieu de 10)
-                worksheet.Cell(1, 10).Value = "Fragile"; // MODIFIÃ‰ (indice 10 au lieu de 11)
-                worksheet.Cell(1, 11).Value = "Localisation"; // MODIFIÃ‰ (indice 11 au lieu de 12)
+                worksheet.Cell(1, 6).Value = "Volume (m³)"; // MODIFIÉ (indice 6 au lieu de 7)
+                worksheet.Cell(1, 7).Value = "Statut"; // MODIFIÉ (indice 7 au lieu de 8)
+                worksheet.Cell(1, 8).Value = "Date d'arrivée"; // MODIFIÉ (indice 8 au lieu de 9)
+                worksheet.Cell(1, 9).Value = "Valeur déclarée (€)"; // MODIFIÉ (indice 9 au lieu de 10)
+                worksheet.Cell(1, 10).Value = "Fragile"; // MODIFIÉ (indice 10 au lieu de 11)
+                worksheet.Cell(1, 11).Value = "Localisation"; // MODIFIÉ (indice 11 au lieu de 12)
                 // Style des en-têtes
                 var headerRange = worksheet.Range(1, 1, 1, 12);
                 headerRange.Style.Font.Bold = true;
@@ -196,7 +196,7 @@ namespace TransitManager.Infrastructure.Services
                         page.PageColor(Colors.White);
                         page.DefaultTextStyle(x => x.FontSize(11));
                         page.Header()
-                            .Text("MANIFESTE D'EXPÃ‰DITION")
+                            .Text("MANIFESTE D'EXPÉDITION")
                             .SemiBold().FontSize(20).FontColor(Colors.Blue.Darken2);
                         page.Content()
                             .PaddingVertical(1, Unit.Centimetre)
@@ -1933,7 +1933,7 @@ namespace TransitManager.Infrastructure.Services
 						// DROITE : Info Client Propriétaire
                         row.RelativeItem().AlignRight().Column(column =>
                         {
-                            column.Item().AlignRight().Text("PROPRIÃ‰TAIRE").FontSize(8).SemiBold().FontColor(Colors.Grey.Darken2);
+                            column.Item().AlignRight().Text("PROPRIÉTAIRE").FontSize(8).SemiBold().FontColor(Colors.Grey.Darken2);
                             column.Item().AlignRight().Text(colis.Client?.NomComplet ?? "Inconnu").FontSize(12).Bold();
                             column.Item().AlignRight().Text(colis.Client?.TelephonePrincipal ?? "-");
                             
@@ -1997,7 +1997,7 @@ namespace TransitManager.Infrastructure.Services
 							});
 						});
 						
-						// B. INFOS GÃ‰NÃ‰RALES
+						// B. INFOS GÉNÉRALES
 						column.Item().Background(Colors.Grey.Lighten4).Padding(10).Column(c => 
 						{
 							c.Item().Row(r => 
@@ -2011,7 +2011,7 @@ namespace TransitManager.Infrastructure.Services
 						});
 
 						// C. INVENTAIRE (Identique Ã  avant)
-						column.Item().Text("DÃ‰TAIL DE L'INVENTAIRE").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
+						column.Item().Text("DÉTAIL DE L'INVENTAIRE").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
 						// ... (Tableau inventaire inchangé) ...
 						column.Item().Table(table =>
 						{
@@ -2029,7 +2029,7 @@ namespace TransitManager.Infrastructure.Services
 							table.Footer(footer => {
 								footer.Cell().ColumnSpan(2).Element(FooterStyle).AlignRight().Text("TOTAUX :").Bold();
 								footer.Cell().Element(FooterStyle).AlignCenter().Text(inventaire.Sum(i => i.Quantite).ToString()).Bold();
-								footer.Cell().Element(FooterStyle).AlignRight().Text($"{inventaire.Sum(i => i.Valeur):N2} â‚¬").Bold();
+								footer.Cell().Element(FooterStyle).AlignRight().Text($"{inventaire.Sum(i => i.Valeur):N2} €").Bold();
 								footer.Cell().Element(FooterStyle);
 							});
 						});
@@ -2044,7 +2044,7 @@ namespace TransitManager.Infrastructure.Services
 								c.Item().Text("VALIDATION CLIENT").FontSize(10).SemiBold().Underline();
 								
 								if (!string.IsNullOrEmpty(colis.LieuSignatureInventaire))
-									c.Item().Text($"Fait Ã  : {colis.LieuSignatureInventaire}");
+									c.Item().Text($"Fait à : {colis.LieuSignatureInventaire}");
 								
 								if (colis.DateSignatureInventaire.HasValue)
 									c.Item().Text($"Le : {colis.DateSignatureInventaire.Value:dd/MM/yyyy}");
@@ -2083,13 +2083,13 @@ namespace TransitManager.Infrastructure.Services
 						{
 							column.Item().PaddingTop(5).AlignRight().Border(1).BorderColor(Colors.Black).Padding(10).Column(c => 
 							{
-								c.Item().Text("SITUATION FINANCIÃˆRE").FontSize(10).Underline().Bold();
-								c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{colis.PrixTotal:N2} â‚¬").Bold(); });
-								c.Item().Row(r => { r.RelativeItem().Text("DéjÃ  Payé :"); r.RelativeItem().AlignRight().Text($"{colis.SommePayee:N2} â‚¬").FontColor(Colors.Green.Medium); });
+								c.Item().Text("SITUATION FINANCIÈRE").FontSize(10).Underline().Bold();
+								c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{colis.PrixTotal:N2} €").Bold(); });
+								c.Item().Row(r => { r.RelativeItem().Text("Déjà Payé :"); r.RelativeItem().AlignRight().Text($"{colis.SommePayee:N2} €").FontColor(Colors.Green.Medium); });
 								c.Item().PaddingTop(5).BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingTop(5).Row(r => 
 								{
-									r.RelativeItem().Text("RESTE Ã€ PAYER :").Bold();
-									r.RelativeItem().AlignRight().Text($"{colis.RestantAPayer:N2} â‚¬").ExtraBold().FontColor(Colors.Red.Medium);
+									r.RelativeItem().Text("RESTE À PAYER :").Bold();
+									r.RelativeItem().AlignRight().Text($"{colis.RestantAPayer:N2} €").ExtraBold().FontColor(Colors.Red.Medium);
 								});
 							});
 						}
@@ -2225,7 +2225,7 @@ namespace TransitManager.Infrastructure.Services
 						// DROITE : Propriétaire
 						row.RelativeItem().AlignRight().Column(column =>
 						{
-							column.Item().AlignRight().Text("PROPRIÃ‰TAIRE").FontSize(8).SemiBold().FontColor(Colors.Grey.Darken2);
+							column.Item().AlignRight().Text("PROPRIÉTAIRE").FontSize(8).SemiBold().FontColor(Colors.Grey.Darken2);
 							column.Item().AlignRight().Text(vehicule.Client?.NomComplet ?? "Inconnu").FontSize(12).Bold();
 							column.Item().AlignRight().Text(vehicule.Client?.TelephonePrincipal ?? "-");
 							
@@ -2284,7 +2284,7 @@ namespace TransitManager.Infrastructure.Services
                             column.Item().Background(Colors.Grey.Lighten4).Padding(5).Text($"Notes: {vehicule.Commentaires}").Italic();
                         }
                         // B. Ã‰TAT DES LIEUX (SCHÃ‰MA GRAPHIQUE)
-                        column.Item().PaddingTop(10).Text("Ã‰TAT DES LIEUX ET CARROSSERIE").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
+                        column.Item().PaddingTop(10).Text("ÉTAT DES LIEUX ET CARROSSERIE").FontSize(12).Bold().FontColor(Colors.Blue.Darken2);
                         
                         column.Item().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Element(box => 
                         {
@@ -2309,20 +2309,20 @@ namespace TransitManager.Infrastructure.Services
                             // Liste 1
                             row.RelativeItem().Column(c =>
                             {
-                                c.Item().Text("Ã‰QUIPEMENTS PRÃ‰SENTS").FontSize(10).Bold().Underline();
-                                c.Item().Text($"â€¢ Carte Grise : {(accessoires.CarteGrise ? "OUI" : "NON")}");
-                                c.Item().Text($"â€¢ Clés : {accessoires.NombreClefs}");
-                                c.Item().Text($"â€¢ Radio/Façade : {(accessoires.Radio ? "OUI" : "NON")}");
-                                c.Item().Text($"â€¢ Antenne : {(accessoires.Antenne ? "OUI" : "NON")}");
+                                c.Item().Text("ÉQUIPEMENTS PRÉSENTS").FontSize(10).Bold().Underline();
+                                c.Item().Text($"• Carte Grise : {(accessoires.CarteGrise ? "OUI" : "NON")}");
+                                c.Item().Text($"• Clés : {accessoires.NombreClefs}");
+                                c.Item().Text($"• Radio/Façade : {(accessoires.Radio ? "OUI" : "NON")}");
+                                c.Item().Text($"• Antenne : {(accessoires.Antenne ? "OUI" : "NON")}");
                             });
 
                             // Liste 2
                             row.RelativeItem().Column(c =>
                             {
                                 c.Item().Text(""); // Spacer
-                                c.Item().Text($"â€¢ Roue Secours : {(accessoires.RoueSecours ? "OUI" : "NON")}");
-                                c.Item().Text($"â€¢ Cric/Manivelle : {(accessoires.Cric ? "OUI" : "NON")}");
-                                c.Item().Text($"â€¢ Enjoliveurs : {accessoires.NombreEnjoliveurs} / 4");
+                                c.Item().Text($"• Roue Secours : {(accessoires.RoueSecours ? "OUI" : "NON")}");
+                                c.Item().Text($"• Cric/Manivelle : {(accessoires.Cric ? "OUI" : "NON")}");
+                                c.Item().Text($"• Enjoliveurs : {accessoires.NombreEnjoliveurs} / 4");
                             });
                         });
 
@@ -2342,8 +2342,8 @@ namespace TransitManager.Infrastructure.Services
                                 // --- MODIFICATION : Affichage conditionnel ---
                                 if (vehicule.ValeurDeclaree > 0)
                                 {
-                                    // Si une valeur est saisie, on l'affiche avec le sigle â‚¬
-                                    r.RelativeItem().Text($"{vehicule.ValeurDeclaree:N0} â‚¬").AlignRight().FontSize(10).Bold();
+                                    // Si une valeur est saisie, on l'affiche avec le sigle €
+                                    r.RelativeItem().Text($"{vehicule.ValeurDeclaree:N0} €").AlignRight().FontSize(10).Bold();
                                 }
                                 else
                                 {
@@ -2359,7 +2359,7 @@ namespace TransitManager.Infrastructure.Services
                                 text.DefaultTextStyle(x => x.FontSize(8)); // Texte légal un peu plus petit
                                 text.Span("Important : ").Bold();
                                 text.Span("en tant que responsable du chargement de mes effets personnels dans le conteneur et/ou véhicule, je certifie l'exactitude de ma liste et que mes colis ne contiennent aucun produit dangereux au sens du code IMDG qui peut comprendre des produits tels que : ");
-                                text.Span("ARTICLES EXPLOSIFS, GAZ COMPRIMÃ‰, RECHARGE DE GAZ, AÃ‰ROSOLS, PRODUITS CORROSIFS, PRODUITS TOXIQUES OU MATIÃˆRES RADIOACTIVES.").Bold();
+                                text.Span("ARTICLES EXPLOSIFS, GAZ COMPRIMÉ, RECHARGE DE GAZ, AÉROSOLS, PRODUITS CORROSIFS, PRODUITS TOXIQUES OU MATIÈRES RADIOACTIVES.").Bold();
                             });
 
                             c.Item().PaddingTop(2).Text("La non observation de cette règle de sécurité engagera ma responsabilité civile et pénale en cas de litige.").FontSize(8);
@@ -2384,7 +2384,7 @@ namespace TransitManager.Infrastructure.Services
                             });
                             row.RelativeItem().Column(c =>
                             {
-                                c.Item().AlignRight().Text($"Fait Ã  {vehicule.LieuEtatDesLieux}, le {vehicule.DateEtatDesLieux:dd/MM/yyyy}").FontSize(8);
+                                c.Item().AlignRight().Text($"Fait à {vehicule.LieuEtatDesLieux}, le {vehicule.DateEtatDesLieux:dd/MM/yyyy}").FontSize(8);
                                 c.Item().AlignRight().Text("Signature Client").FontSize(8).SemiBold();
                                 if (!string.IsNullOrEmpty(vehicule.SignatureClient))
                                 {
@@ -2402,14 +2402,14 @@ namespace TransitManager.Infrastructure.Services
                         {
                             column.Item().PaddingTop(10).AlignRight().Border(1).BorderColor(Colors.Black).Padding(10).Column(c =>
                             {
-                                c.Item().Text("SITUATION FINANCIÃˆRE").FontSize(10).Underline().Bold();
-                                c.Item().Row(r => { r.RelativeItem().Text("Valeur Déclarée :"); r.RelativeItem().AlignRight().Text($"{vehicule.ValeurDeclaree:N2} â‚¬"); });
-                                c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{vehicule.PrixTotal:N2} â‚¬").Bold(); });
-                                c.Item().Row(r => { r.RelativeItem().Text("DéjÃ  Payé :"); r.RelativeItem().AlignRight().Text($"{vehicule.SommePayee:N2} â‚¬").FontColor(Colors.Green.Medium); });
+                                c.Item().Text("SITUATION FINANCIÈRE").FontSize(10).Underline().Bold();
+                                c.Item().Row(r => { r.RelativeItem().Text("Valeur Déclarée :"); r.RelativeItem().AlignRight().Text($"{vehicule.ValeurDeclaree:N2} €"); });
+                                c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{vehicule.PrixTotal:N2} €").Bold(); });
+                                c.Item().Row(r => { r.RelativeItem().Text("Déjà Payé :"); r.RelativeItem().AlignRight().Text($"{vehicule.SommePayee:N2} €").FontColor(Colors.Green.Medium); });
                                 c.Item().PaddingTop(5).BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingTop(5).Row(r =>
                                 {
-                                    r.RelativeItem().Text("RESTE Ã€ PAYER :").Bold();
-                                    r.RelativeItem().AlignRight().Text($"{vehicule.RestantAPayer:N2} â‚¬").ExtraBold().FontColor(Colors.Red.Medium);
+                                    r.RelativeItem().Text("RESTE À PAYER :").Bold();
+                                    r.RelativeItem().AlignRight().Text($"{vehicule.RestantAPayer:N2} €").ExtraBold().FontColor(Colors.Red.Medium);
                                 });
                             });
                         }
@@ -2609,7 +2609,7 @@ namespace TransitManager.Infrastructure.Services
 						{
 							text.Span("Je soussigné ");
 							text.Span($"{vehicule.Client?.NomComplet}").Bold();
-							text.Span($" déclare vouloir expédier Ã  {vehicule.DestinationFinale} mon véhicule personnel décrit ci-dessous :");
+							text.Span($" déclare vouloir expédier à {vehicule.DestinationFinale} mon véhicule personnel décrit ci-dessous :");
 						});
 
 						column.Item().Height(15);
@@ -2639,7 +2639,7 @@ namespace TransitManager.Infrastructure.Services
 							AddRow("Modèle :", vehicule.Modele);
                             AddRow("Motorisation :", vehicule.Motorisation.ToString());
 							AddRow("Immatriculation :", vehicule.Immatriculation);
-							AddRow("Valeur :", $"{vehicule.ValeurDeclaree:N0} â‚¬");
+							AddRow("Valeur :", $"{vehicule.ValeurDeclaree:N0} €");
 							AddRow("NÂ° de téléphone :", vehicule.Client?.TelephonePrincipal ?? "");
 							AddRow("Adresse mail :", vehicule.Client?.Email ?? "");
 						});
@@ -2673,8 +2673,8 @@ namespace TransitManager.Infrastructure.Services
 
 						column.Item().Height(15);
 
-						// DOCUMENTS Ã€ JOINDRE
-						column.Item().Text("Documents Ã  joindre :").Bold().Underline();
+						// DOCUMENTS À JOINDRE
+						column.Item().Text("Documents à joindre :").Bold().Underline();
 						column.Item().Text("- copie carte grise");
 						column.Item().Text("- copie du certificat de cession (si la carte grise n'est pas au nom de l'acheteur)");
 						column.Item().Text("- certificat de non-gage");
@@ -2693,7 +2693,7 @@ namespace TransitManager.Infrastructure.Services
 						string lieu = !string.IsNullOrEmpty(vehicule.LieuEtatDesLieux) ? vehicule.LieuEtatDesLieux : "Bordeaux";
 						string date = vehicule.DateEtatDesLieux.HasValue ? vehicule.DateEtatDesLieux.Value.ToString("dd/MM/yyyy") : DateTime.Now.ToString("dd/MM/yyyy");
 
-						column.Item().Text($"Fait Ã  {lieu}, le {date}");
+						column.Item().Text($"Fait à {lieu}, le {date}");
 						
 						column.Item().PaddingTop(5).Text("Signature :");
 						

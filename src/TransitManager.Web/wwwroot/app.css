@@ -737,7 +737,7 @@ main {
     left: 0;
     width: var(--sidebar-width);
     height: 100vh;
-    z-index: 1030;
+    z-index: 1040;
     background: var(--glass-bg);
     border-right: 1px solid var(--glass-border);
     border-radius: 0;
@@ -758,7 +758,7 @@ main {
     /* Take remaining space */
     height: 70px;
     /* Fixed height */
-    z-index: 1020;
+    z-index: 1040;
     background: var(--glass-bg);
     border-bottom: 1px solid var(--glass-border);
     backdrop-filter: blur(20px);
@@ -781,6 +781,8 @@ main {
     padding-right: 2rem;
     min-height: 100vh;
     transition: margin-left 0.3s ease;
+    position: relative;
+    z-index: 1;
 }
 
 /* Collapsed State Logic */

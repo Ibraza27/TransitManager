@@ -1,16 +1,19 @@
 @page "/portal/quote/{Token:guid}"
 @layout Layout.EmptyLayout
 @using TransitManager.Core.DTOs.Commerce
+@using TransitManager.Core.DTOs.Settings
 @using TransitManager.Core.Enums
 @using TransitManager.Web.Services
 @using Microsoft.JSInterop
 @inject IApiService ApiService
 @inject IJSRuntime JS
+@inject TransitManager.Core.Interfaces.ISettingsService SettingsService
 @using TransitManager.Web.Components.Shared
 
 <div class="d-flex flex-column min-vh-100" style="background-color: #0a0f1a;">
-    <!-- Navbar simplified for Public View - FULL WIDTH -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm px-2 px-md-4">
+    <!-- Navbar simplified for Public View - FULL WIDTH - STICKY -->
+    <!-- Navbar simplified for Public View - FULL WIDTH - FIXED -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm px-2 px-md-4 fixed-top" style="z-index: 1030;">
         <a class="navbar-brand fw-bold" href="#">HIPPOCAMPE</a>
         <div class="ms-auto d-flex gap-2">
              <a href="/login" class="btn btn-outline-light btn-sm">Se connecter</a>
@@ -18,39 +21,45 @@
         </div>
     </nav>
 
-    <div class="container-fluid px-0 py-0 flex-grow-1">
+    <div class="flex-grow-1" style="background-color: #0a0f1a;">
         @if (IsLoading)
         {
              <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
         }
         else if (Quote == null)
         {
-            <div class="alert alert-danger shadow-sm text-center">
-                <h4>Devis introuvable ou expiré.</h4>
-                <p>Veuillez contacter l'administrateur si vous pensez qu'il s'agit d'une erreur.</p>
+            <div class="d-flex flex-column justify-content-center align-items-center" style="min-height: 100vh; padding-top: 56px;">
+                <div class="alert alert-danger shadow-sm text-center m-4 py-4 px-5 border-0" style="max-width: 600px; background-color: rgba(220, 53, 69, 0.1); color: #ea868f; border: 1px solid #ea868f;">
+                    <i class="bi bi-exclamation-triangle-fill fs-1 mb-3"></i>
+                    <h4 class="fw-bold">Devis introuvable ou expiré</h4>
+                    <p class="mb-0">Veuillez contacter l'administrateur si vous pensez qu'il s'agit d'une erreur.</p>
+                </div>
             </div>
         }
         else
         {
-            <!-- Action Bar (Top) -->
-            <div class="d-flex justify-content-between align-items-center mb-4 d-print-none flex-wrap gap-2">
-                <h4 class="mb-0 text-muted">Aperçu du devis</h4>
+            <!-- Action Bar (Séparée du document A4) - Padding Top ajouté pour compenser fixed-top -->
+            <div class="d-flex justify-content-between align-items-center py-3 px-3 px-md-4 d-print-none" style="background-color: #0a0f1a; margin-top: 56px;">
+                <h5 class="mb-0 text-light">Aperçu du devis</h5>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-dark btn-sm fw-bold border-2" @onclick="Print" disabled="@IsLoadingPdf">
-                         @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>Impression...</span> }
-                         else { <i class="bi bi-printer me-2"></i><span>Imprimer</span> }
+                    <button class="btn btn-outline-light btn-sm" @onclick="Print" disabled="@IsLoadingPdf">
+                         @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                         else { <i class="bi bi-printer me-1"></i> }
+                         <span>Imprimer</span>
                     </button>
-                    <button class="btn btn-outline-dark btn-sm fw-bold border-2" @onclick="DownloadPdf" disabled="@IsLoadingPdf">
-                         @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>PDF...</span> }
-                         else { <i class="bi bi-download me-2"></i><span>PDF</span> }
+                    <button class="btn btn-outline-light btn-sm" @onclick="DownloadPdf" disabled="@IsLoadingPdf">
+                         @if(IsLoadingPdf) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                         else { <i class="bi bi-download me-1"></i> }
+                         <span>PDF</span>
                     </button>
                 </div>
             </div>
 
-            <div class="mb-0 d-flex justify-content-center" style="min-height: 100vh; width: 100vw; margin: 0; padding: 0; background-color: #0a0f1a;" id="printableArea">
-                <!-- Wrapper Logic from Admin Preview -->
-                <div class="p-4 bg-white my-3 my-md-4 mx-3 mx-md-auto shadow-lg rounded-3" style="width: 100%; max-width: 1100px; min-height: 800px; font-size: 0.85rem;">
-                    
+            <!-- Document A4 -->
+            <div class="d-flex justify-content-center px-3 px-md-4 pb-4" id="printableArea">
+                <div class="a4-paper bg-white shadow-lg rounded-3">
+                    <!-- Page Content avec vraies marges -->
+                    <div class="page-content">
                     <!-- Header with Company Info & Logo -->
                     <div class="row mb-5 border-bottom pb-4">
                         <div class="col-12 col-md-7 mb-3 mb-md-0">
@@ -179,6 +188,24 @@
                         </div>
                     </div>
 
+                    <!-- RIB Section -->
+                    <!-- RIB Section - Police augmentée -->
+                    <div class="mt-4 p-3 border rounded bg-light">
+                        <h6 class="fw-bold text-secondary text-uppercase mb-2">
+                            <i class="bi bi-bank me-2"></i>Coordonnées Bancaires
+                        </h6>
+                        <div class="row" style="font-size: 1rem;">
+                            <div class="col-md-6 mb-2 mb-md-0">
+                                <strong>Banque:</strong> @_bankDetails.BankName<br/>
+                                <strong>Titulaire:</strong> @_bankDetails.AccountHolder
+                            </div>
+                            <div class="col-md-6">
+                                <strong>IBAN:</strong> @_bankDetails.Iban<br/>
+                                <strong>BIC:</strong> @_bankDetails.Bic
+                            </div>
+                        </div>
+                    </div>
+
                     @if (!string.IsNullOrEmpty(Quote.FooterNote))
                     {
                         <div class="mt-4 text-center border-top pt-3">
@@ -227,10 +254,10 @@
                     <div class="mt-5 text-center text-muted small pt-5 border-top">
                             HIPPOCAMPE IMPORT EXPORT - SAS - 7 Rue Pascal 33370 Tresses<br/>
                             Numéro de SIRET: 891909772 - Numéro de TVA: FR42891909772 - BORDEAUX
-                    </div>
-                </div>
-            </div>
-            
+                    </div> <!-- Fin legal footer -->
+                    </div> <!-- Fin page-content -->
+                </div> <!-- Fin a4-paper -->
+            </div> <!-- Fin printableArea -->
             <!-- Sticky Bottom Actions -->
             @if (Quote.Status != QuoteStatus.Accepted && Quote.Status != QuoteStatus.Rejected)
             {
@@ -276,6 +303,42 @@
     .animation-slide-up { animation: slideUp 0.5s ease-out; }
     @@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     
+    /* A4 Paper Format */
+    .a4-paper {
+        width: 210mm;
+        min-height: 297mm;
+        font-size: 0.85rem;
+    }
+    
+    /* Page Content avec vraies marges A4 - Réduit de moitié */
+    .page-content {
+        padding: 18px 20px;
+    }
+    
+    @@media (max-width: 768px) {
+        .a4-paper {
+            width: 100%;
+            min-height: auto;
+            border-radius: 0;
+        }
+        .page-content {
+            padding: 15px 18px;
+        }
+    }
+    
+    @@media print {
+        .a4-paper {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0;
+            box-shadow: none;
+            border-radius: 0;
+        }
+        .page-content {
+            padding: 15mm 18mm;
+        }
+    }
+    
     /* FORCE FULLSCREEN RESET */
     body, html {
         margin: 0 !important;
@@ -297,6 +360,7 @@
 @code {
     [Parameter] public Guid Token { get; set; }
     private QuoteDto? Quote;
+    private BankDetailsDto _bankDetails = new();
     private bool IsLoading = true;
 
     protected override async Task OnInitializedAsync()
@@ -305,6 +369,7 @@
         try
         {
             Quote = await ApiService.GetPublicQuoteAsync(Token);
+            _bankDetails = await SettingsService.GetSettingAsync<BankDetailsDto>("BankDetails", new());
         }
         finally
         {

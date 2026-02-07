@@ -441,6 +441,9 @@
     <!-- MODALES -->
     <ParcelSelector IsVisible="_showAddParcel" OnClose="() => _showAddParcel = false" OnSelectionConfirmed="AddParcels" />
     <VehicleSelector IsVisible="_showAddVehicle" OnClose="() => _showAddVehicle = false" OnSelectionConfirmed="AddVehicles" />
+    
+    <!-- Loading Modal pour génération PDF -->
+    <LoadingModal IsVisible="_isLoadingPdf" Title="GÉNÉRATION DU PDF..." Message="Votre document est en cours de préparation. Veuillez patienter quelques instants." />
 
 </div>
 
@@ -466,6 +469,7 @@
     }
     
     private bool _isExportMenuOpen = false;
+    private bool _isLoadingPdf = false;
     private void ToggleExportMenu() => _isExportMenuOpen = !_isExportMenuOpen;
 
     protected override async Task OnInitializedAsync()
@@ -588,7 +592,7 @@
     private async Task ExportPdf(bool includeFinancials)
     {
         _isExportMenuOpen = false;
-        _isLoading = true;
+        _isLoadingPdf = true;
         StateHasChanged();
 
         try
@@ -620,7 +624,7 @@
         }
         finally
         {
-            _isLoading = false;
+            _isLoadingPdf = false;
             StateHasChanged();
         }
     }

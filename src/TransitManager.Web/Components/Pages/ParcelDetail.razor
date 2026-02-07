@@ -640,6 +640,9 @@
             </div>
         </div>
     }
+    
+    <!-- Loading Modal pour génération PDF -->
+    <LoadingModal IsVisible="_isLoadingPdf" Title="GÉNÉRATION DU PDF..." Message="Votre document est en cours de préparation. Veuillez patienter quelques instants." />
 </div>
 
 
@@ -696,6 +699,7 @@
     private decimal _pricePerM3 = 0;
     private decimal _defaultRate = 0; // Stockage du taux par défaut
     private bool _isExportMenuOpen = false;
+    private bool _isLoadingPdf = false;
     
     // UI Warnings
     private bool _showComputedInfo = false;
@@ -1216,12 +1220,24 @@
     {
         if (Id.HasValue)
         {
-            var pdfBytes = await ApiService.ExportColisPdfAsync(Id.Value, includeFinancials, includePhotos);
-            var title = includePhotos ? "dossier_complet" : (includeFinancials ? "recu_financier" : "fiche_colis");
-            var fileName = $"colis_{_colis.NumeroReference}_{title}.pdf";
+            _isLoadingPdf = true;
+            _isExportMenuOpen = false;
+            StateHasChanged();
             
-            using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
-            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            try
+            {
+                var pdfBytes = await ApiService.ExportColisPdfAsync(Id.Value, includeFinancials, includePhotos);
+                var title = includePhotos ? "dossier_complet" : (includeFinancials ? "recu_financier" : "fiche_colis");
+                var fileName = $"colis_{_colis.NumeroReference}_{title}.pdf";
+                
+                using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            }
+            finally
+            {
+                _isLoadingPdf = false;
+                StateHasChanged();
+            }
         }
     }
     
@@ -1229,11 +1245,23 @@
     {
         if (Id.HasValue)
         {
-            var pdfBytes = await ApiService.ExportTicketPdfAsync(Id.Value, format);
-            var fileName = $"ticket_{_colis.NumeroReference}.pdf";
+            _isLoadingPdf = true;
+            _isExportMenuOpen = false;
+            StateHasChanged();
             
-            using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
-            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            try
+            {
+                var pdfBytes = await ApiService.ExportTicketPdfAsync(Id.Value, format);
+                var fileName = $"ticket_{_colis.NumeroReference}.pdf";
+                
+                using var streamRef = new DotNetStreamReference(new MemoryStream(pdfBytes));
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+            }
+            finally
+            {
+                _isLoadingPdf = false;
+                StateHasChanged();
+            }
         }
     }
     

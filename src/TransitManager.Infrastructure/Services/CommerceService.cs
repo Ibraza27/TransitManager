@@ -704,7 +704,7 @@ namespace TransitManager.Infrastructure.Services
                     toEmails = string.Join(",", recipients);
                 }
                 
-                await _emailService.SendEmailAsync(toEmails, subject, finalHtml, attachments, ccEmails);
+                await _emailService.SendEmailAsync(toEmails, subject, finalHtml, attachments, ccEmails, "contact@hippocampeimportexport.com");
                 
                 // Update status if Draft -> Sent
                 if (quote.Status == QuoteStatus.Draft)
@@ -1399,7 +1399,7 @@ namespace TransitManager.Infrastructure.Services
              // I'll join them by comma, assuming standard SMTP/Service handling.
              var toAddress = string.Join(",", toEmails);
 
-             await _emailService.SendEmailAsync(toAddress, subject, htmlBody, attachments, ccEmails);
+             await _emailService.SendEmailAsync(toAddress, subject, htmlBody, attachments, ccEmails, "contact@hippocampeimportexport.com");
 
              invoice.DateSent = DateTime.UtcNow;
              if(invoice.Status == InvoiceStatus.Draft) invoice.Status = InvoiceStatus.Sent;
@@ -1511,7 +1511,7 @@ namespace TransitManager.Infrastructure.Services
 
              var toAddress = string.Join(",", toEmails);
 
-             await _emailService.SendEmailAsync(toAddress, subject, htmlBody, attachments, ccEmails);
+             await _emailService.SendEmailAsync(toAddress, subject, htmlBody, attachments, ccEmails, "contact@hippocampeimportexport.com");
 
              invoice.ReminderCount++;
              invoice.LastReminderSent = DateTime.UtcNow;

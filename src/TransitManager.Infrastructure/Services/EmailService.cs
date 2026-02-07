@@ -16,7 +16,7 @@ namespace TransitManager.Infrastructure.Services
             _configuration = configuration;
         }
 
-        public async Task SendEmailAsync(string to, string subject, string htmlMessage, List<(string Name, byte[] Content)>? attachments = null, List<string>? ccEmails = null)
+        public async Task SendEmailAsync(string to, string subject, string htmlMessage, List<(string Name, byte[] Content)>? attachments = null, List<string>? ccEmails = null, string? replyTo = null)
         {
             try
             {
@@ -46,6 +46,13 @@ namespace TransitManager.Infrastructure.Services
                          if(!string.IsNullOrWhiteSpace(cc)) email.Cc.Add(new MailboxAddress("", cc));
                     }
                 }
+                
+                // Set Reply-To header if provided
+                if (!string.IsNullOrWhiteSpace(replyTo) && replyTo.Contains("@"))
+                {
+                    email.ReplyTo.Add(new MailboxAddress("", replyTo.Trim()));
+                }
+                
                 email.Subject = subject;
                 var bodyBuilder = new BodyBuilder
                 {

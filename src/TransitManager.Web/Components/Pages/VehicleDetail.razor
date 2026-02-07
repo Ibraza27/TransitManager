@@ -561,6 +561,9 @@
                EntityType="Vehicule" EntityId="@_vehicule.Id" ClientId="@_vehicule.ClientId"
                Vehicule="_vehicule" />
     }
+    
+    <!-- Loading Modal pour génération PDF -->
+    <LoadingModal IsVisible="_isLoadingPdf" Title="GÉNÉRATION DU PDF..." Message="Votre document est en cours de préparation. Veuillez patienter quelques instants." />
 </div>
 
 @code {
@@ -600,6 +603,7 @@
     private bool _showPriceProposal = false; 
     private bool _isExportMenuOpen = false;
     private bool _showSavWizard = false;
+    private bool _isLoadingPdf = false;
     private ReceptionControl? _receptionControl;
 
     private int _unreadMessagesCount = 0;
@@ -792,7 +796,7 @@
     private async Task ExportPdf(bool includeFinancials, bool includePhotos)
     {
         _isExportMenuOpen = false;
-        _isLoading = true;
+        _isLoadingPdf = true;
         StateHasChanged();
         try
         {
@@ -816,7 +820,7 @@
         }
         finally
         {
-            _isLoading = false;
+            _isLoadingPdf = false;
             StateHasChanged();
         }
     }
@@ -937,7 +941,7 @@
 	private async Task ExportAttestation()
     {
         _isExportMenuOpen = false;
-        _isLoading = true;
+        _isLoadingPdf = true;
         StateHasChanged();
 
         try
@@ -965,7 +969,7 @@
         }
         finally
         {
-            _isLoading = false;
+            _isLoadingPdf = false;
             StateHasChanged();
         }
     }

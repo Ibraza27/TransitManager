@@ -20,15 +20,18 @@ namespace TransitManager.Infrastructure.Services
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IAuthenticationService _authService;
+        private readonly IWebPushService? _webPushService;
 
         public NotificationService(
             IDbContextFactory<TransitContext> contextFactory,
             IHubContext<NotificationHub> hubContext,
-            IAuthenticationService authService)
+            IAuthenticationService authService,
+            IWebPushService? webPushService = null)
         {
             _contextFactory = contextFactory;
             _hubContext = hubContext;
             _authService = authService;
+            _webPushService = webPushService;
         }
 
 		public async Task CreateAndSendAsync(
@@ -127,14 +130,35 @@ namespace TransitManager.Infrastructure.Services
 						// Envoi ciblé par User ID
 						await _hubContext.Clients.User(notif.UtilisateurId.Value.ToString())
 							.SendAsync("ReceiveNotification", notifDto);
-						
-						// Log pour débogage (à retirer en prod si trop verbeux)
+
 						Console.WriteLine($"[NotificationService] SignalR envoyé à {notif.UtilisateurId}");
 					}
 					catch (Exception ex)
 					{
 						Console.WriteLine($"[NotificationService] Erreur envoi SignalR : {ex.Message}");
 					}
+				}
+			}
+
+			// 5. Envoyer via Web Push (notifications même navigateur fermé)
+			if (_webPushService != null)
+			{
+				try
+				{
+					var recipientIds = notifsToSend
+						.Where(n => n.UtilisateurId.HasValue)
+						.Select(n => n.UtilisateurId!.Value)
+						.Distinct()
+						.ToList();
+
+					if (recipientIds.Any())
+					{
+						await _webPushService.SendToUsersAsync(recipientIds, title, message, actionUrl);
+					}
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"[NotificationService] Erreur envoi Web Push : {ex.Message}");
 				}
 			}
 		}
@@ -233,6 +257,25 @@ namespace TransitManager.Infrastructure.Services
                         await _hubContext.Clients.User(userIdStr).SendAsync("ReceiveNotification", notifDto);
                     }
                     catch { /* Ignore SignalR errors in batch */ }
+                }
+            }
+
+            // Envoi Web Push groupé par utilisateur
+            if (_webPushService != null)
+            {
+                foreach (var group in groupedNotifs)
+                {
+                    if (!group.Key.HasValue) continue;
+                    var firstNotif = group.First();
+                    try
+                    {
+                        await _webPushService.SendToUserAsync(
+                            group.Key.Value,
+                            firstNotif.Title,
+                            group.Count() > 1 ? $"{group.Count()} nouvelles notifications" : firstNotif.Message,
+                            firstNotif.ActionUrl);
+                    }
+                    catch { /* Ignore Web Push errors in batch */ }
                 }
             }
         }

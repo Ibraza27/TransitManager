@@ -112,6 +112,12 @@ namespace TransitManager.Web.Services
 		Task<int> GetUnreadNotificationsCountAsync();
 		Task MarkNotificationAsReadAsync(Guid id);
 		Task MarkAllNotificationsAsReadAsync();
+
+        // --- Push Notifications ---
+        Task<string?> GetVapidPublicKeyAsync();
+        Task<bool> SubscribeToPushAsync(string subscriptionJson);
+        Task<bool> UnsubscribeFromPushAsync(string endpoint);
+
 		Task<bool> CheckEntityExistsAsync(string entityType, Guid id);
 		
 		Task<Document?> RequestDocumentAsync(DocumentRequestDto request);

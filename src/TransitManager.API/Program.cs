@@ -125,6 +125,7 @@ builder.Services.AddScoped<IVehiculeService, VehiculeService>();
 builder.Services.AddScoped<IConteneurService, ConteneurService>();
 builder.Services.AddScoped<IPaiementService, PaiementService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IWebPushService, WebPushService>();
 builder.Services.AddScoped<IFinanceService, FinanceService>();
 builder.Services.AddScoped<IBarcodeService, BarcodeService>();
 builder.Services.AddScoped<IExportService, ExportService>();

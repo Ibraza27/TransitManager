@@ -65,6 +65,12 @@
                         <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 900;" @onclick="ToggleExportMenu"></div>
                     }
                 </div>
+                @if (!IsNew)
+                {
+                    <button class="btn btn-success" @onclick="() => _showPayments = true">
+                        <i class="bi bi-cash-coin me-2"></i>Paiements
+                    </button>
+                }
                 <button class="btn btn-primary shadow-sm" @onclick="() => SaveVehicle()" disabled="@(!CanEditGlobal)">
                     <i class="bi bi-save me-2"></i> Enregistrer
                 </button>
@@ -564,6 +570,16 @@
     
     <!-- Loading Modal pour génération PDF -->
     <LoadingModal IsVisible="_isLoadingPdf" Title="GÉNÉRATION DU PDF..." Message="Votre document est en cours de préparation. Veuillez patienter quelques instants." />
+    
+    <!-- Payment Modal -->
+    <PaymentModal IsVisible="_showPayments" 
+                  IsAdmin="@CanEditGlobal"
+                  ColisId="Guid.Empty"
+                  VehiculeId="@_vehicule.Id"
+                  ClientId="@_vehicule.ClientId"
+                  TotalAmount="@_vehicule.PrixTotal"
+                  OnPaymentsChanged="@((total) => { _vehicule.SommePayee = total; StateHasChanged(); })"
+                  OnClose="@(() => _showPayments = false)" />
 </div>
 
 @code {

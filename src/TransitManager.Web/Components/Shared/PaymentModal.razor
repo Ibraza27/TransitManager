@@ -79,9 +79,9 @@
 
                                     @if(IsAdmin) { <th class="text-center" style="width:100px">Actions</th> }
                                     <th>Mode</th>
-                                    <th>Réf.</th>
                                     <th class="text-end">Montant</th>
                                     <th>Date</th>
+                                    <th>Réf.</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -102,9 +102,9 @@
                                             </td>
                                         }
                                         <td><span class="badge bg-secondary">@p.ModePaiement</span></td>
-                                        <td><small class="text-muted">@p.Commentaires</small></td>
                                         <td class="text-end fw-bold text-success">@p.Montant.ToString("C2")</td>
                                         <td>@p.DatePaiement.ToString("dd/MM/yyyy")</td>
+                                        <td><small class="text-muted">@p.Commentaires</small></td>
                                     </tr>
                                 }
                                 @if(!_payments.Any())

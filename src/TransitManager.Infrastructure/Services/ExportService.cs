@@ -2018,7 +2018,7 @@ namespace TransitManager.Infrastructure.Services
 						column.Item().Table(table =>
 						{
 							table.ColumnsDefinition(columns => { columns.ConstantColumn(80); columns.RelativeColumn(); columns.ConstantColumn(50); columns.ConstantColumn(70); columns.ConstantColumn(70); });
-							table.Header(header => { header.Cell().Element(HeaderStyle).Text("Date"); header.Cell().Element(HeaderStyle).Text("Désignation"); header.Cell().Element(HeaderStyle).AlignCenter().Text("Qté"); header.Cell().Element(HeaderStyle).AlignRight().Text("Total"); header.Cell().Element(HeaderStyle).AlignRight().Text("P.U."); });
+							table.Header(header => { header.Cell().Element(HeaderStyle).Text("Date"); header.Cell().Element(HeaderStyle).Text("Désignation"); header.Cell().Element(HeaderStyle).AlignCenter().Text("Qté"); header.Cell().Element(HeaderStyle).AlignRight().Text("Valeur"); header.Cell().Element(HeaderStyle).AlignRight().Text("P.U."); });
 							foreach (var item in inventaire)
 							{
 								table.Cell().Element(CellStyle).Text(item.Date.ToString("dd/MM/yy"));
@@ -2086,7 +2086,10 @@ namespace TransitManager.Infrastructure.Services
 							column.Item().PaddingTop(5).AlignRight().Border(1).BorderColor(Colors.Black).Padding(10).Column(c => 
 							{
 								c.Item().Text("SITUATION FINANCIÈRE").FontSize(10).Underline().Bold();
-								c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{colis.PrixTotal:N2} €").Bold(); });
+								c.Item().Row(r => { r.RelativeItem().Text("PRIX TOTAL (HORS DOUANE) :"); r.RelativeItem().AlignRight().Text($"{colis.PrixTotal:N2} €").Bold(); });
+								c.Item().Row(r => { r.RelativeItem().Text("Valeur Douane (20%) :"); r.RelativeItem().AlignRight().Text($"{colis.ValeurDouane:N2} €"); });
+								c.Item().Row(r => { r.RelativeItem().Text("TOTAL + DOUANE :"); r.RelativeItem().AlignRight().Text($"{(colis.PrixTotal + colis.ValeurDouane):N2} €").Bold().FontColor(Colors.Blue.Darken2); });
+								c.Item().PaddingTop(5).BorderTop(1).BorderColor(Colors.Grey.Lighten3);
 								c.Item().Row(r => { r.RelativeItem().Text("Déjà Payé :"); r.RelativeItem().AlignRight().Text($"{colis.SommePayee:N2} €").FontColor(Colors.Green.Medium); });
 								c.Item().PaddingTop(5).BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingTop(5).Row(r => 
 								{
@@ -2406,7 +2409,25 @@ namespace TransitManager.Infrastructure.Services
                             {
                                 c.Item().Text("SITUATION FINANCIÈRE").FontSize(10).Underline().Bold();
                                 c.Item().Row(r => { r.RelativeItem().Text("Valeur Déclarée :"); r.RelativeItem().AlignRight().Text($"{vehicule.ValeurDeclaree:N2} €"); });
-                                c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{vehicule.PrixTotal:N2} €").Bold(); });
+                                
+                                // Affichage conditionnel selon la souscription assurance
+                                if (vehicule.HasAssurance)
+                                {
+                                    // Calcul assurance: (ValeurDeclaree + PrixTotal) * 1.2 * 0.7% + 50, min 250€
+                                    var baseAmount = (vehicule.ValeurDeclaree + vehicule.PrixTotal) * 1.2m;
+                                    var assurance = (baseAmount * 0.007m) + 50m;
+                                    if (assurance < 250m) assurance = 250m;
+                                    var totalAvecAssurance = vehicule.PrixTotal + assurance;
+                                    
+                                    c.Item().Row(r => { r.RelativeItem().Text("Prix (Hors Assurance) :"); r.RelativeItem().AlignRight().Text($"{vehicule.PrixTotal:N2} €"); });
+                                    c.Item().Row(r => { r.RelativeItem().Text("Assurance :"); r.RelativeItem().AlignRight().Text($"{assurance:N2} €"); });
+                                    c.Item().Row(r => { r.RelativeItem().Text("TOTAL + ASSURANCE :"); r.RelativeItem().AlignRight().Text($"{totalAvecAssurance:N2} €").Bold().FontColor(Colors.Blue.Darken2); });
+                                }
+                                else
+                                {
+                                    c.Item().Row(r => { r.RelativeItem().Text("Prix Total :"); r.RelativeItem().AlignRight().Text($"{vehicule.PrixTotal:N2} €").Bold(); });
+                                }
+                                
                                 c.Item().Row(r => { r.RelativeItem().Text("Déjà Payé :"); r.RelativeItem().AlignRight().Text($"{vehicule.SommePayee:N2} €").FontColor(Colors.Green.Medium); });
                                 c.Item().PaddingTop(5).BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingTop(5).Row(r =>
                                 {

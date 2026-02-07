@@ -1319,7 +1319,51 @@ namespace TransitManager.Web.Services
             }
             catch { }
         }
-		
+
+        // --- Push Notifications ---
+        public async Task<string?> GetVapidPublicKeyAsync()
+        {
+            try
+            {
+                var result = await _httpClient.GetFromJsonAsync<JsonElement>("api/pushsubscriptions/vapid-public-key");
+                return result.GetProperty("publicKey").GetString();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Erreur GetVapidPublicKey: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<bool> SubscribeToPushAsync(string subscriptionJson)
+        {
+            try
+            {
+                var content = new StringContent(subscriptionJson, System.Text.Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync("api/pushsubscriptions/subscribe", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Erreur SubscribeToPush: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> UnsubscribeFromPushAsync(string endpoint)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/pushsubscriptions/unsubscribe", new { Endpoint = endpoint });
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Erreur UnsubscribeFromPush: {ex.Message}");
+                return false;
+            }
+        }
+
 		public async Task<bool> CheckEntityExistsAsync(string entityType, Guid id)
 		{
 			try

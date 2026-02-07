@@ -1,0 +1,227 @@
+@inject IJSRuntime JSRuntime
+@inject IApiService ApiService
+@inject IConfiguration Configuration
+@implements IAsyncDisposable
+
+@* Bannière discrète proposant d'activer les notifications push *@
+@if (_showPrompt)
+{
+    <div class="push-prompt-banner fade-in-up">
+        <div class="d-flex align-items-center gap-3">
+            <div class="push-prompt-icon">
+                <i class="bi bi-bell-fill"></i>
+            </div>
+            <div class="flex-grow-1">
+                <strong class="small">Notifications push</strong>
+                <p class="mb-0 small text-muted">Recevez les alertes même quand l'app est fermée</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-primary rounded-pill px-3" @onclick="EnablePush" disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    Activer
+                </button>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill" @onclick="DismissPrompt">
+                    Plus tard
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Bouton toggle dans la barre si déjà configuré *@
+@if (_showToggle)
+{
+    <button class="btn btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center @(_isSubscribed ? "btn-primary" : "btn-outline-secondary")"
+            style="width: 32px; height: 32px;"
+            @onclick="TogglePush"
+            title="@(_isSubscribed ? "Notifications push activées" : "Notifications push désactivées")">
+        <i class="bi @(_isSubscribed ? "bi-bell-fill" : "bi-bell-slash")"></i>
+    </button>
+}
+
+<style>
+    .push-prompt-banner {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 12px 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        z-index: 1050;
+        max-width: 500px;
+        width: calc(100% - 40px);
+    }
+    html[data-theme="dark"] .push-prompt-banner {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    .push-prompt-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.1rem;
+    }
+</style>
+
+@code {
+    private bool _showPrompt = false;
+    private bool _showToggle = false;
+    private bool _isSubscribed = false;
+    private bool _isLoading = false;
+    private bool _initialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await InitializePushState();
+        }
+    }
+
+    private async Task InitializePushState()
+    {
+        try
+        {
+            var isSupported = await JSRuntime.InvokeAsync<bool>("pushNotifications.isSupported");
+            if (!isSupported) return;
+
+            // Enregistrer le service worker
+            await JSRuntime.InvokeAsync<bool?>("pushNotifications.registerServiceWorker");
+
+            var permission = await JSRuntime.InvokeAsync<string>("pushNotifications.getPermissionStatus");
+            var isSubscribed = await JSRuntime.InvokeAsync<bool>("pushNotifications.isSubscribed");
+
+            _isSubscribed = isSubscribed;
+
+            if (permission == "granted" && isSubscribed)
+            {
+                // Déjà activé -> afficher le toggle
+                _showToggle = true;
+            }
+            else if (permission == "denied")
+            {
+                // Refusé par le navigateur -> ne rien montrer
+                _showPrompt = false;
+                _showToggle = false;
+            }
+            else if (permission == "default")
+            {
+                // Jamais demandé -> vérifier si on l'a déjà proposé récemment
+                var dismissed = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "push_prompt_dismissed");
+                if (string.IsNullOrEmpty(dismissed))
+                {
+                    _showPrompt = true;
+                }
+                else
+                {
+                    // Proposer à nouveau après 7 jours
+                    if (long.TryParse(dismissed, out var ts))
+                    {
+                        var dismissedDate = DateTimeOffset.FromUnixTimeMilliseconds(ts);
+                        if (DateTimeOffset.UtcNow - dismissedDate > TimeSpan.FromDays(7))
+                        {
+                            _showPrompt = true;
+                        }
+                    }
+                }
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PushPrompt] Erreur init: {ex.Message}");
+        }
+    }
+
+    private async Task EnablePush()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // 1. Récupérer la clé VAPID publique depuis l'API
+            var vapidKey = await ApiService.GetVapidPublicKeyAsync();
+            if (string.IsNullOrEmpty(vapidKey))
+            {
+                Console.WriteLine("[PushPrompt] Clé VAPID non disponible");
+                return;
+            }
+
+            // 2. S'abonner via le navigateur (déclenche la demande de permission)
+            var subscriptionJson = await JSRuntime.InvokeAsync<string?>("pushNotifications.subscribe", vapidKey);
+            if (string.IsNullOrEmpty(subscriptionJson))
+            {
+                Console.WriteLine("[PushPrompt] Abonnement refusé par l'utilisateur");
+                _showPrompt = false;
+                return;
+            }
+
+            // 3. Envoyer l'abonnement au serveur
+            var success = await ApiService.SubscribeToPushAsync(subscriptionJson);
+            if (success)
+            {
+                _isSubscribed = true;
+                _showPrompt = false;
+                _showToggle = true;
+                Console.WriteLine("[PushPrompt] Abonnement push activé avec succès !");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PushPrompt] Erreur activation push: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task TogglePush()
+    {
+        if (_isSubscribed)
+        {
+            // Désabonner
+            try
+            {
+                var endpoint = await JSRuntime.InvokeAsync<string?>("pushNotifications.unsubscribe");
+                if (!string.IsNullOrEmpty(endpoint))
+                {
+                    await ApiService.UnsubscribeFromPushAsync(endpoint);
+                }
+                _isSubscribed = false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PushPrompt] Erreur désabonnement: {ex.Message}");
+            }
+        }
+        else
+        {
+            await EnablePush();
+        }
+    }
+
+    private async Task DismissPrompt()
+    {
+        _showPrompt = false;
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "push_prompt_dismissed", timestamp);
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+}

@@ -32,6 +32,9 @@
     <!-- PDF & Graphique -->
     <PackageReference Include="QuestPDF" />
     <PackageReference Include="SkiaSharp" />
+
+    <!-- Web Push Notifications -->
+    <PackageReference Include="WebPush" Version="1.0.12" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
 	<FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>

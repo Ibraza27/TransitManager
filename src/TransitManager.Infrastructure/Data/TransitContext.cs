@@ -38,6 +38,7 @@ namespace TransitManager.Infrastructure.Data
         public DbSet<Message> Messages { get; set; } = null!;
         public DbSet<TrackingEvent> TrackingEvents { get; set; } = null!;
 		public DbSet<Notification> Notifications { get; set; } = null!; 
+        public DbSet<PushSubscription> PushSubscriptions { get; set; } = null!; 
         public DbSet<AppSetting> AppSettings { get; set; } = null!;
         public DbSet<ReceptionControl> ReceptionControls { get; set; } = null!;
         public DbSet<ReceptionIssue> ReceptionIssues { get; set; } = null!;

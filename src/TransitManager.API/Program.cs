@@ -142,6 +142,7 @@ builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<ITimelineService, TimelineService>();
 builder.Services.AddScoped<IProductService, ProductService>(); // NEW: Product Service
 builder.Services.AddScoped<ISettingsService, SettingsService>(); // NEW: Settings Service
+builder.Services.AddScoped<IWebPushService, WebPushService>();
 // --- SERVICES WEB API ---
 builder.Services.AddScoped<IReceptionService, ReceptionService>(); // Module SAV
 builder.Services.AddScoped<IAuditService, AuditService>(); // Module Audit
@@ -250,9 +251,9 @@ builder.Services.AddAuthorization(options =>
 // Augmenter les limites pour éviter les timeouts en dev et mobile
 var signalRBuilder = builder.Services.AddSignalR(options => {
     options.EnableDetailedErrors = true;
-    // OPTIMISATION MOBILE : Timeouts augmentés
-    options.KeepAliveInterval = TimeSpan.FromSeconds(30); // Heartbeat plus lent (économise batterie/data)
-    options.ClientTimeoutInterval = TimeSpan.FromMinutes(2); // Tolérance de 2 minutes de déconnexion avant de tuer la session serveur
+    // OPTIMISATION MOBILE : Timeouts augmentés pour éviter les déconnexions en veille
+    options.KeepAliveInterval = TimeSpan.FromMinutes(2); // Heartbeat plus lent (économise batterie)
+    options.ClientTimeoutInterval = TimeSpan.FromMinutes(15); // Tolérance de 15 minutes avant déconnexion
 });
 
 if (useRedis && !string.IsNullOrWhiteSpace(redisConnectionString))

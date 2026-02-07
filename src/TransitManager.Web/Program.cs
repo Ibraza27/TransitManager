@@ -39,7 +39,21 @@ builder.Services.AddAntiforgery();
 // === FIN DE LA MODIFICATION ===
 // --- SERVICES ---
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options => 
+    {
+        // Increase circuit retention to 15 mins (default 3 mins) to allow mobile users to return from background
+        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(15);
+    });
+
+// Configure SignalR Hub Options for Blazor Server
+builder.Services.AddServerSideBlazor()
+    .AddHubOptions(options => 
+    {
+        options.ClientTimeoutInterval = TimeSpan.FromMinutes(15);
+        options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+        options.HandshakeTimeout = TimeSpan.FromSeconds(30);
+    });
+
 // === DÉBUT DE LA MODIFICATION ===
 Console.WriteLine("[WEB] Configuration de l'authentification Cookie...");
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

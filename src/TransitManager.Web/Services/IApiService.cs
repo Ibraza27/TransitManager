@@ -187,5 +187,10 @@ namespace TransitManager.Web.Services
         Task<bool> SendPaymentReminderAsync(Guid id, string? subject, string? body, List<Guid>? attachments, List<string>? cc = null, List<string>? recipients = null);
         Task<byte[]> GetInvoicePdfAsync(Guid id);
         Task<InvoiceDto?> GetPublicInvoiceAsync(Guid token);
+        
+        // --- Web Push ---
+        Task<string?> GetVapidPublicKeyAsync();
+        Task SubscribeToPushAsync(string subscriptionJson);
+        Task UnsubscribeFromPushAsync(string endpoint);
     }
 }

@@ -100,6 +100,48 @@ namespace TransitManager.Web.Services
             catch { return null; }
         }
 
+        // --- Web Push ---
+        public async Task<string?> GetVapidPublicKeyAsync()
+        {
+            try
+            {
+                var result = await _httpClient.GetFromJsonAsync<JsonElement>("api/pushsubscriptions/vapid-public-key");
+                if (result.TryGetProperty("publicKey", out var key))
+                {
+                    return key.GetString();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Error getting VAPID key: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task SubscribeToPushAsync(string subscriptionJson)
+        {
+             try
+             {
+                 var content = new StringContent(subscriptionJson, System.Text.Encoding.UTF8, "application/json");
+                 await _httpClient.PostAsync("api/pushsubscriptions/subscribe", content);
+             }
+             catch (Exception ex)
+             {
+                 Console.WriteLine($"[ApiService] Error subscribing push: {ex.Message}");
+             }
+        }
+        
+        public async Task UnsubscribeFromPushAsync(string endpoint)
+        {
+             try
+             {
+                 var payload = new { Endpoint = endpoint };
+                 await _httpClient.PostAsJsonAsync("api/pushsubscriptions/unsubscribe", payload);
+             }
+             catch { }
+        }
+
         public async Task<IEnumerable<SelectionItemDto>> GetAllEntitiesAsync(string type)
         {
             try

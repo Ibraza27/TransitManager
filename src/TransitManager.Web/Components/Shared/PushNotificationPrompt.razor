@@ -1,0 +1,132 @@
+@using TransitManager.Web.Services
+@using Microsoft.JSInterop
+@inject IApiService ApiService
+@inject IJSRuntime JSRuntime
+@inject IConfiguration Configuration
+@using System.Text.Json
+
+@if (ShowPrompt)
+{
+    <!-- Mobile-friendly floating notification prompt -->
+    <div class="position-fixed bottom-0 start-50 translate-middle-x p-3 mb-3 bg-white shadow-lg rounded border border-primary animate__animated animate__fadeInUp" 
+         style="z-index: 2000; width: 90%; max-width: 400px; border-radius: 12px !important;">
+        <div class="d-flex align-items-center mb-3">
+            <div class="bg-primary bg-opacity-10 p-2 rounded-circle me-3">
+                <i class="bi bi-bell-fill text-primary fs-4"></i>
+            </div>
+            <div>
+                <h6 class="mb-0 fw-bold text-dark">Notifications Push 🔔</h6>
+                <small class="text-muted lh-1">
+                    Soyez notifié en temps réel, même l'application fermée !
+                </small>
+            </div>
+            <button type="button" class="btn-close ms-auto align-self-start" aria-label="Close" @onclick="Dismiss"></button>
+        </div>
+        
+        <div class="d-flex gap-2">
+             <button class="btn btn-primary flex-grow-1" @onclick="EnablePush" disabled="@IsSubscribing">
+                 @if (IsSubscribing)
+                 {
+                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                     <span>Processing...</span>
+                 }
+                 else
+                 {
+                     <span>Activer</span>
+                 }
+             </button>
+             <button class="btn btn-outline-secondary flex-grow-1" @onclick="Dismiss">Plus tard</button>
+        </div>
+    </div>
+}
+
+@code {
+    private bool ShowPrompt { get; set; } = false;
+    private bool IsSubscribing { get; set; } = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("pushNotifications.registerServiceWorker");
+            await CheckPermissionAndShowPrompt();
+        }
+    }
+
+    private async Task CheckPermissionAndShowPrompt()
+    {
+        try 
+        {
+            var permission = await JSRuntime.InvokeAsync<string>("pushNotifications.getPermissionState");
+            var dismissedTimeStr = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "push_dismissed_time");
+
+            bool recentlyDismissed = false;
+            if (!string.IsNullOrEmpty(dismissedTimeStr) && long.TryParse(dismissedTimeStr, out long ticks))
+            {
+                 var date = new DateTime(ticks);
+                 if ((DateTime.UtcNow - date).TotalDays < 3) 
+                 {
+                     recentlyDismissed = true;
+                 }
+            }
+
+            if (permission == "default" && !recentlyDismissed)
+            {
+                ShowPrompt = true;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PushPrompt] Error checking permission: {ex.Message}");
+        }
+    }
+
+    private async Task Dismiss()
+    {
+        ShowPrompt = false;
+        await Task.CompletedTask;
+    }
+
+    private async Task EnablePush()
+    {
+        IsSubscribing = true;
+        StateHasChanged();
+
+        try
+        {
+            var permission = await JSRuntime.InvokeAsync<string>("pushNotifications.askPermission");
+            if (permission == "granted")
+            {
+                // Get VAPID Key from API
+                var publicKey = await ApiService.GetVapidPublicKeyAsync();
+                
+                if (!string.IsNullOrEmpty(publicKey))
+                {
+                    // Subscribe via JS
+                    var subscription = await JSRuntime.InvokeAsync<JsonElement>("pushNotifications.subscribe", publicKey);
+                    
+                    if (subscription.ValueKind != JsonValueKind.Undefined && subscription.ValueKind != JsonValueKind.Null)
+                    {
+                        // Send subscription to API
+                        var json = subscription.GetRawText();
+                        await ApiService.SubscribeToPushAsync(json);
+                        
+                        ShowPrompt = false;
+                        // Notifie success (optional toast)
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PushPrompt] Error subscribing: {ex.Message}");
+        }
+        finally
+        {
+            IsSubscribing = false;
+            ShowPrompt = false;
+            StateHasChanged();
+        }
+    }
+}

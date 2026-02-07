@@ -97,6 +97,7 @@
                         <i class="bi bi-cash-coin me-2"></i>Paiements
                     </button>
                 }
+                
                 <button class="btn btn-primary shadow-sm" @onclick="CheckInventoryAndSave" disabled="@(!CanEditGlobal)">
                     <i class="bi bi-save me-2"></i>Enregistrer
                 </button>
@@ -370,8 +371,14 @@
                         </div>
 
                         <!-- Finances -->
-                        <div class="card shadow-sm border-0 border-top border-3 border-success">
-                            <div class="card-header bg-white py-3"><h5 class="mb-0 text-success"><i class="bi bi-currency-euro me-2"></i>Finances</h5></div>
+                        <!-- Inventaire -->
+                        <div class="card shadow-sm border-0 border-top border-3 border-primary mb-4">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-primary"><i class="bi bi-clipboard-list me-2"></i>Inventaire</h5>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="ShowInventory">
+                                    <i class="bi bi-pencil me-1"></i>Inventaire
+                                </button>
+                            </div>
                             <div class="card-body">
                                 <div class="mb-3" style="cursor: pointer;" @onclick="ShowComputedFieldInfo">
                                     <label class="form-label">Nombre de pièces</label>
@@ -396,7 +403,21 @@
                                     <div class="form-text text-muted small">Mettre le volume total pour obtenir le prix total.</div>
                                 </div>
                                 
-                                <hr class="text-muted" />
+                            </div>
+                        </div>
+
+                        <!-- Finances -->
+                        <div class="card shadow-sm border-0 border-top border-3 border-success">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-success"><i class="bi bi-currency-euro me-2"></i>Finances</h5>
+                                @if (!IsNew)
+                                {
+                                    <button class="btn btn-sm btn-outline-success" @onclick="ShowPayments">
+                                        <i class="bi bi-cash-coin me-1"></i>Gérer
+                                    </button>
+                                }
+                            </div>
+                            <div class="card-body">
                                 
 
                                 

@@ -80,8 +80,28 @@
                         </div>
                     </div>
 
-                    <!-- Client -->
-                    <div class="row mb-5 justify-content-end">
+                    <!-- Stamp & Client Info Grid -->
+                    <div class="row mb-5">
+                        <!-- Left Column: Stamp -->
+                        <div class="col-md-6 d-flex align-items-center justify-content-center">
+                            @if(Invoice.AmountPaid >= Invoice.TotalTTC && Invoice.TotalTTC > 0)
+                            {
+                                <div style="border: 4px solid #198754; color: #198754; font-size: 2.5rem; font-weight: bold; text-transform: uppercase; padding: 10px 20px; transform: rotate(-15deg); opacity: 0.8; border-radius: 8px;">
+                                    PAYÉ
+                                    <div style="font-size: 0.8rem; text-align: center; border-top: 1px solid #198754; margin-top: 5px; padding-top: 2px;">
+                                        @Invoice.AmountPaid.ToString("C2")
+                                    </div>
+                                </div>
+                            }
+                            else if(Invoice.DueDate < DateTime.Today && Invoice.AmountPaid < Invoice.TotalTTC)
+                            {
+                                 <div style="border: 4px solid #dc3545; color: #dc3545; font-size: 2.5rem; font-weight: bold; text-transform: uppercase; padding: 10px 20px; transform: rotate(-15deg); opacity: 0.8; border-radius: 8px;">
+                                    EN RETARD
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Right Column: Recipient -->
                         <div class="col-md-6">
                             <div class="p-4 bg-light rounded-3 border">
                                 <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
@@ -179,6 +199,16 @@
                                 <tr class="border-top border-dark">
                                     <td class="text-end fs-4 fw-bold pt-3">Total TTC</td>
                                     <td class="text-end fs-4 fw-bold pt-3 text-primary">@Invoice.TotalTTC.ToString("C2")</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-end text-muted pt-2">Payé</td>
+                                    <td class="text-end text-success pt-2 fw-bold">@Invoice.AmountPaid.ToString("C2")</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-end text-muted pt-1">Reste à payer</td>
+                                    <td class="text-end pt-1 fw-bold @(Invoice.TotalTTC - Invoice.AmountPaid > 0.01m ? "text-danger" : "text-muted")">
+                                        @((Invoice.TotalTTC - Invoice.AmountPaid).ToString("C2"))
+                                    </td>
                                 </tr>
                             </table>
                         </div>

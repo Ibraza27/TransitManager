@@ -3,20 +3,24 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TransitManager.Infrastructure.Services
 {
     public class MaintenanceService : BackgroundService
     {
         private readonly ILogger<MaintenanceService> _logger;
+        private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
         // Exécuter toutes les 24 heures
         private readonly TimeSpan _period = TimeSpan.FromHours(24);
         private readonly string _tempPath;
 
-        public MaintenanceService(ILogger<MaintenanceService> logger)
+        public MaintenanceService(ILogger<MaintenanceService> logger, Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
+            _scopeFactory = scopeFactory;
             _tempPath = Path.GetTempPath(); // Ou un dossier spécifique de l'app
         }
 
@@ -28,11 +32,29 @@ namespace TransitManager.Infrastructure.Services
             
             // Exécution immédiate ou attente ? Ici on attend le prochain tick (ou on pourrait lancer tout de suite)
             // On peut faire une première passe :
-            CleanupTemporaryFiles();
+            await PerformMaintenanceAsync();
 
             while (await timer.WaitForNextTickAsync(stoppingToken) && !stoppingToken.IsCancellationRequested)
             {
-                CleanupTemporaryFiles();
+                await PerformMaintenanceAsync();
+            }
+        }
+
+        private async Task PerformMaintenanceAsync()
+        {
+            CleanupTemporaryFiles();
+            
+            try
+            {
+                using (var scope = _scopeFactory.CreateScope())
+                {
+                    var commerceService = scope.ServiceProvider.GetRequiredService<TransitManager.Core.Interfaces.ICommerceService>();
+                    await commerceService.CheckOverdueInvoicesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la vérification des factures en retard.");
             }
         }
 

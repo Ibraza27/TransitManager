@@ -934,8 +934,13 @@ namespace TransitManager.Infrastructure.Services
                 DiscountBase = dto.DiscountBase,
                 DiscountScope = dto.DiscountScope,
                 Status = InvoiceStatus.Draft,
-                PublicToken = Guid.NewGuid()
+                PublicToken = Guid.NewGuid(),
+                AmountPaid = dto.AmountPaid // Step 1: Map AmountPaid
             };
+
+            // Auto-Paid Logic
+            // Note: TotalTTC isn't calculated yet. We must calc first.
+
 
             // Add Lines
             decimal grossHT = 0;
@@ -982,6 +987,14 @@ namespace TransitManager.Infrastructure.Services
             decimal discountRatio = grossHT == 0 ? 0 : (discountAmount / grossHT);
             invoice.TotalTVA = grossTVA * (1 - discountRatio);
             invoice.TotalTTC = invoice.TotalHT + invoice.TotalTVA;
+
+            // Auto-Paid Check (Create)
+            if (invoice.AmountPaid >= invoice.TotalTTC && invoice.TotalTTC > 0)
+            {
+                invoice.Status = InvoiceStatus.Paid;
+                invoice.DatePaid = DateTime.UtcNow;
+            }
+
 
             _context.Invoices.Add(invoice);
             
@@ -1145,7 +1158,18 @@ namespace TransitManager.Infrastructure.Services
                         .SetProperty(i => i.TotalHT, finalTotalHT)
                         .SetProperty(i => i.TotalTVA, finalTotalTVA)
                         .SetProperty(i => i.TotalTTC, finalTotalTTC)
+                        .SetProperty(i => i.AmountPaid, dto.AmountPaid) // Update AmountPaid
                     );
+                
+                // Auto-Paid Check (Update)
+                // We need to re-fetch or use calculated values.
+                // Logic: If (FinalTotalTTC - dto.AmountPaid) <= 0 -> Set Status Paid.
+                if (finalTotalTTC > 0 && dto.AmountPaid >= finalTotalTTC)
+                {
+                     // Force status update if not already Paid or if logic requires it
+                     await UpdateInvoiceStatusAsync(id, InvoiceStatus.Paid);
+                }
+
 
                 try { System.IO.File.AppendAllText("commerce_debug_update.txt", $"[{DateTime.Now}] Invoice header updated via ExecuteUpdateAsync.\n"); } catch {}
 
@@ -1368,8 +1392,16 @@ namespace TransitManager.Infrastructure.Services
                  <td style='padding: 5px 0; font-weight: bold; text-align: right;'>{recipientName}</td>
              </tr>
             <tr style='border-top: 1px solid #dee2e6;'>
-                <td style='padding: 15px 0 5px 0; font-size: 1.1em;'>Total TTC :</td>
-                <td style='padding: 15px 0 5px 0; font-weight: bold; font-size: 1.2em; color: #0d6efd; text-align: right;'>{invoice.TotalTTC:N2} €</td>
+                 <td style='padding: 15px 0 5px 0; font-size: 1.1em;'>Total TTC :</td>
+                 <td style='padding: 15px 0 5px 0; font-weight: bold; font-size: 1.2em; color: #0d6efd; text-align: right;'>{invoice.TotalTTC:N2} €</td>
+            </tr>
+            <tr>
+                 <td style='padding: 5px 0; color: #198754;'>Déjà réglé :</td>
+                 <td style='padding: 5px 0; font-weight: bold; color: #198754; text-align: right;'>{invoice.AmountPaid:N2} €</td>
+            </tr>
+            <tr>
+                 <td style='padding: 5px 0; color: #dc3545;'>Reste à payer :</td>
+                 <td style='padding: 5px 0; font-weight: bold; color: #dc3545; text-align: right;'>{(invoice.TotalTTC - invoice.AmountPaid):N2} €</td>
             </tr>
         </table>
         
@@ -1485,8 +1517,16 @@ namespace TransitManager.Infrastructure.Services
                 <td style='padding: 5px 0; font-weight: bold; text-align: right; color: #dc3545;'>{invoice.DueDate:dd.MM.yyyy}</td>
             </tr>
             <tr style='border-top: 1px solid #c9a927;'>
-                <td style='padding: 15px 0 5px 0; font-size: 1.1em;'>Montant dû :</td>
-                <td style='padding: 15px 0 5px 0; font-weight: bold; font-size: 1.2em; color: #dc3545; text-align: right;'>{invoice.TotalTTC:N2} €</td>
+                 <td style='padding: 15px 0 5px 0; font-size: 1.1em;'>Total Facture :</td>
+                 <td style='padding: 15px 0 5px 0; font-weight: bold; font-size: 1.2em; text-align: right;'>{invoice.TotalTTC:N2} €</td>
+            </tr>
+            <tr>
+                 <td style='padding: 5px 0; color: #198754;'>Déjà réglé :</td>
+                 <td style='padding: 5px 0; font-weight: bold; color: #198754; text-align: right;'>{invoice.AmountPaid:N2} €</td>
+            </tr>
+             <tr>
+                 <td style='padding: 15px 0 5px 0; font-size: 1.1em; color: #dc3545;'>Reste à payer :</td>
+                 <td style='padding: 15px 0 5px 0; font-weight: bold; font-size: 1.2em; color: #dc3545; text-align: right;'>{(invoice.TotalTTC - invoice.AmountPaid):N2} €</td>
             </tr>
         </table>
         
@@ -1656,6 +1696,46 @@ namespace TransitManager.Infrastructure.Services
             _context.Invoices.Add(newInvoice);
             await _context.SaveChangesAsync();
             return MapInvoiceToDto(newInvoice);
+        }
+
+        public async Task CheckOverdueInvoicesAsync()
+        {
+            try
+            {
+                // Find invoices that are Sent or PartiallyPaid and past due date
+                // Exclude Drafts, Paid, Cancelled, Overdue
+                // Find invoices that are Sent and past due date
+                // Exclude Drafts, Paid, Cancelled, Overdue
+                var overdueIds = await _context.Invoices
+                    .Where(i => i.Status == InvoiceStatus.Sent
+                                && i.DueDate < DateTime.Today)
+                    .Select(i => i.Id)
+                    .ToListAsync();
+
+                foreach(var id in overdueIds)
+                {
+                     // Update Status to Overdue
+                     // We use UpdateInvoiceStatusAsync logic to ensure consistency? 
+                     // Or direct DB update? UpdateInvoiceStatusAsync might send emails or do other things? 
+                     // Check existing: UpdateInvoiceStatusAsync just sets status and history. Safe.
+                     await UpdateInvoiceStatusAsync(id, InvoiceStatus.Overdue);
+                     
+                     // Send Automated Reminder
+                     try 
+                     {
+                         await SendPaymentReminderAsync(id); // Use defaults
+                     }
+                     catch(Exception ex)
+                     {
+                         try { System.IO.File.AppendAllText("maintenance_errors.txt", $"[{DateTime.Now}] Error sending reminder for {id}: {ex.Message}\n"); } catch {}
+                     }
+                }
+            }
+            catch(Exception ex)
+            {
+                try { System.IO.File.AppendAllText("maintenance_errors.txt", $"[{DateTime.Now}] CheckOverdueInvoicesAsync FATAL: {ex}\n"); } catch {}
+                throw;
+            }
         }
 
         private async Task SyncQuoteToInvoiceAsync(Quote quote)

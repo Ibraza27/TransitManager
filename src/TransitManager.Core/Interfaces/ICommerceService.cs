@@ -38,5 +38,8 @@ namespace TransitManager.Core.Interfaces
         Task SendInvoiceByEmailAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null, List<string>? ccEmails = null, List<string>? recipients = null);
         Task SendPaymentReminderAsync(Guid id, string? subject = null, string? body = null, List<Guid>? attachmentIds = null, List<string>? ccEmails = null, List<string>? recipients = null);
         Task<byte[]> GenerateInvoicePdfAsync(InvoiceDto invoice);
+        
+        // Maintenance
+        Task CheckOverdueInvoicesAsync();
     }
 }

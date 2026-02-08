@@ -82,9 +82,15 @@
                                 @if(!string.IsNullOrEmpty(invoice.DisplayPhone)) { <div class="small text-muted"><i class="bi bi-telephone me-1"></i>@invoice.DisplayPhone</div> }
                                 @if(!string.IsNullOrEmpty(invoice.ClientAddress)) { <div class="small text-muted text-truncate"><i class="bi bi-geo-alt me-1"></i>@invoice.ClientAddress</div> }
                             </div>
-                            <div class="d-flex w-100 justify-content-between align-items-center mt-2 border-top pt-2">
-                                <small class="text-muted">@invoice.DateCreated.ToString("dd/MM/yyyy")</small>
-                                <span class="fw-bold text-primary">@invoice.TotalTTC.ToString("C2")</span>
+                            <div class="mt-2 border-top pt-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">@invoice.DateCreated.ToString("dd/MM/yyyy")</small>
+                                    <span class="fw-bold text-primary">@invoice.TotalTTC.ToString("C2")</span>
+                                </div>
+                                <div class="d-flex justify-content-between text-muted small" style="font-size: 0.75rem;">
+                                    <span class="text-success" title="Payé">Payé: @invoice.AmountPaid.ToString("C2")</span>
+                                    <span class="@(invoice.TotalTTC - invoice.AmountPaid > 0 ? "text-danger fw-bold" : "text-muted")" title="Restant">Reste: @((invoice.TotalTTC - invoice.AmountPaid).ToString("C2"))</span>
+                                </div>
                             </div>
                         </div>
                     }
@@ -271,6 +277,22 @@
                          <span class="badge rounded-pill @GetStatusClass(invoice.Status)">@GetStatusName(invoice.Status)</span>
                      </div>
                      <div class="small text-muted">Échéance: @invoice.DueDate.ToString("dd/MM/yyyy")</div>
+                     
+                     <!-- Finanical Summary -->
+                     <div class="row g-2 mt-2" style="max-width: 600px;">
+                        <div class="col-auto border-end pe-3">
+                            <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Total TTC</small>
+                            <span class="fw-bold fs-5 text-primary">@invoice.TotalTTC.ToString("C2")</span>
+                        </div>
+                        <div class="col-auto border-end pe-3 ps-3">
+                             <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Payé</small>
+                             <span class="fw-bold fs-5 text-success">@invoice.AmountPaid.ToString("C2")</span>
+                        </div>
+                        <div class="col-auto ps-3">
+                             <small class="text-muted d-block text-uppercase" style="font-size: 0.7rem;">Reste à payer</small>
+                             <span class="fw-bold fs-5 @(invoice.TotalTTC - invoice.AmountPaid > 0.01m ? "text-danger" : "text-muted")">@((invoice.TotalTTC - invoice.AmountPaid).ToString("C2"))</span>
+                        </div>
+                     </div>
                 </div>
                  <div class="d-flex gap-2">
                      <div class="dropdown">
@@ -551,15 +573,18 @@
             <div class="row mb-5 border-bottom pb-4">
                 <div class="col-12 col-md-7 mb-3 mb-md-0">
                     <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
-                    
                     <div class="small text-muted">
                         <strong>@_companyProfile.CompanyName</strong><br/>
                         @_companyProfile.Address<br/>
-                        @_companyProfile.City<br/>
+                        @_companyProfile.ZipCode @_companyProfile.City<br/>
                         @_companyProfile.Country<br/>
                         <br/>
                         Tél: @_companyProfile.Phone<br/>
-                        Email: @_companyProfile.Email
+                        Email: @_companyProfile.Email <br/>
+                        @if(!string.IsNullOrEmpty(_companyProfile.Website))
+                        {
+                            <span>Site: @_companyProfile.Website</span>
+                        }
                     </div>
                 </div>
                 <div class="col-12 col-md-5 text-md-end">
@@ -570,8 +595,28 @@
                 </div>
             </div>
 
-            <!-- Client Info Box -->
-            <div class="row mb-5 justify-content-end">
+            <!-- Stamp & Client Info Grid -->
+            <div class="row mb-5">
+                <!-- Left Column: Stamp -->
+                <div class="col-md-6 d-flex align-items-center justify-content-center">
+                    @if(invoice.AmountPaid >= invoice.TotalTTC && invoice.TotalTTC > 0)
+                    {
+                        <div style="border: 4px solid #198754; color: #198754; font-size: 2.5rem; font-weight: bold; text-transform: uppercase; padding: 10px 20px; transform: rotate(-15deg); opacity: 0.8; border-radius: 8px;">
+                            PAYÉ
+                            <div style="font-size: 0.8rem; text-align: center; border-top: 1px solid #198754; margin-top: 5px; padding-top: 2px;">
+                                @invoice.AmountPaid.ToString("C2")
+                            </div>
+                        </div>
+                    }
+                    else if(invoice.DueDate < DateTime.Today && invoice.AmountPaid < invoice.TotalTTC)
+                    {
+                         <div style="border: 4px solid #dc3545; color: #dc3545; font-size: 2.5rem; font-weight: bold; text-transform: uppercase; padding: 10px 20px; transform: rotate(-15deg); opacity: 0.8; border-radius: 8px;">
+                            EN RETARD
+                        </div>
+                    }
+                </div>
+
+                <!-- Right Column: Recipient -->
                 <div class="col-md-6">
                     <div class="p-4 bg-light rounded-3 border">
                         <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
@@ -670,6 +715,16 @@
                         <tr class="border-top border-dark">
                             <td class="text-end fs-4 fw-bold pt-3">Total TTC</td>
                             <td class="text-end fs-4 fw-bold pt-3 text-primary">@invoice.TotalTTC.ToString("C2")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-end text-muted pt-2">Payé</td>
+                            <td class="text-end text-success pt-2 fw-bold">@invoice.AmountPaid.ToString("C2")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-end text-muted pt-1">Reste à payer</td>
+                            <td class="text-end pt-1 fw-bold @(invoice.TotalTTC - invoice.AmountPaid > 0.01m ? "text-danger" : "text-muted")">
+                                @((invoice.TotalTTC - invoice.AmountPaid).ToString("C2"))
+                            </td>
                         </tr>
                     </table>
                 </div>

@@ -12,6 +12,9 @@
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
 @inject TransitManager.Core.Interfaces.ISettingsService SettingsService
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+@using TransitManager.Web.ViewModels
 @attribute [Authorize(Roles = "Administrateur")]
 
 <div class="d-flex flex-column h-100">
@@ -28,7 +31,19 @@
                     </div>
                  }
                  <div class="d-flex align-items-center gap-2 small mt-1">
-                     <span class="badge rounded-pill @GetStatusClass(CurrentStatus)">@GetStatusName(CurrentStatus)</span>
+                     <div class="dropdown d-inline-block">
+                        <button class="btn btn-sm p-0 border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="badge rounded-pill @GetStatusClass(CurrentStatus)">
+                                @GetStatusName(CurrentStatus) <i class="bi bi-caret-down-fill ms-1" style="font-size: 0.7em;"></i>
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu shadow-sm">
+                            @foreach(var s in Enum.GetValues<InvoiceStatus>())
+                            {
+                                <li><button class="dropdown-item" @onclick="() => SetStatus((InvoiceStatus)s)">@GetStatusName((InvoiceStatus)s)</button></li>
+                            }
+                        </ul>
+                     </div>
                      @if(IsSaving) { <span class="text-warning ms-2"><span class="spinner-border spinner-border-sm me-1"></span>Enregistrement...</span> }
                      else if (IsDirty()) { <span class="text-muted fst-italic ms-2">modifié</span> }
                  </div>
@@ -98,10 +113,11 @@
 
              <!-- PDF Viewer (HTML Preview) -->
              <div class="bg-white shadow-sm mx-auto flex-grow-1 border w-100 overflow-auto" style="max-width: 900px;">
-                 @RenderAdminPreview(Model)
+                 @RenderAdminPreview
              </div>
          </div>
     }
+
     else
     {
         <!-- EDITOR MODE -->
@@ -373,6 +389,18 @@
                   <hr />
                   <div class="d-flex justify-content-between mb-2"><span class="fw-bold fs-5">Total TTC</span><span class="fw-bold fs-5 text-success">@TotalTTC.ToString("N2") €</span></div>
                   
+                   <div class="mb-3 mt-3">
+                       <label class="small text-muted fw-bold">Montant Payé</label>
+                       <div class="input-group input-group-sm">
+                           <input type="number" class="form-control text-end fw-bold text-success" @bind="Model.AmountPaid" step="0.01" />
+                           <span class="input-group-text">€</span>
+                       </div>
+                   </div>
+                   <div class="d-flex justify-content-between mb-2 p-2 rounded bg-white border">
+                       <span class="fw-bold text-danger">Reste à payer</span>
+                       <span class="fw-bold text-danger">@((TotalTTC - Model.AmountPaid).ToString("N2")) €</span>
+                   </div>
+                  
                   <div class="mt-4 d-grid gap-2">
                       <button class="btn btn-primary" @onclick="() => Save(false)">Enregistrer</button>
                       <button class="btn btn-success" @onclick="FinalizeInvoice">Finaliser (Envoyer)</button>
@@ -383,7 +411,8 @@
 </div>
 
 <ProductDialog @ref="_productDialog" OnProductCreated="HandleNewProductCreated" />
-<ConfirmationModal IsVisible="@_showUnsavedModal" Title="Quitter ?" Message="Sauvegarder les modifications ?" OnConfirm="ConfirmSaveAndExit" OnCancel="ConfirmExitWithoutSave" OnClose="@(() => _showUnsavedModal = false)" />
+<NavigationLock OnBeforeInternalNavigation="OnBeforeInternalNavigation" ConfirmExternalNavigation="true" />
+<ConfirmationModal IsVisible="@_showUnsavedModal" Title="Modifications non enregistrées" Message="Voulez-vous enregistrer le brouillon avant de quitter ?" ConfirmText="Enregistrer et Quitter" CancelText="Supprimer / Ignorer" OnConfirm="ConfirmSaveAndExit" OnCancel="ConfirmExitWithoutSave" OnClose="@(() => _showUnsavedModal = false)" />
 <SendInvoiceModal @ref="_sendModal" OnSend="SendInvoiceEmail" InvoiceReference="@ExistingRef" RecipientEmail="@(SelectedClient?.Email ?? Model.GuestEmail ?? "")" />
 <SendReminderModal @ref="_sendReminderModal" OnSend="SendReminderCallback" InvoiceReference="@ExistingRef" RecipientEmail="@(SelectedClient?.Email ?? Model.GuestEmail ?? "")" />
 <AddClientModal @ref="_addClientModal" OnClientCreated="HandleNewClientCreated" />
@@ -486,7 +515,8 @@
                          UnitPrice=l.UnitPrice, VATRate=l.VATRate, Type=l.Type, Date=l.Date, Unit=l.Unit,
                          TotalHT = l.TotalHT, Position = l.Position
                      }).ToList(),
-                     PublicToken = invoice.PublicToken
+                     PublicToken = invoice.PublicToken,
+                     AmountPaid = invoice.AmountPaid
                  };
                   
                   // Initialize Guest State
@@ -503,6 +533,7 @@
              // New Invoice
              Model = new InvoiceViewModel 
              {
+                 Id = Guid.NewGuid(),
                  DateCreated = DateTime.Today,
                  DueDate = DateTime.Today.AddDays(30),
                  PaymentTerms = _invoiceSettings.DefaultPaymentTerms,
@@ -513,6 +544,36 @@
          
          OriginalModelJson = JsonSerializer.Serialize(Model);
          IsLoading = false;
+         
+         SetupAutoSaveTimer();
+    }
+
+    private System.Timers.Timer _autoSaveTimer;
+
+    private void SetupAutoSaveTimer()
+    {
+        _autoSaveTimer = new System.Timers.Timer(30000); // 30 seconds
+        _autoSaveTimer.Elapsed += async (sender, e) => await InvokeAsync(AutoSave);
+        _autoSaveTimer.AutoReset = true;
+        _autoSaveTimer.Start();
+    }
+
+    private async Task AutoSave()
+    {
+        // Only auto-save if dirty AND valid enough AND Draft
+        if (IsDirty() && !IsSaving && CurrentStatus == InvoiceStatus.Draft) 
+        {
+             if ((!_isGuestClient && Model.ClientId != Guid.Empty) || (_isGuestClient && !string.IsNullOrWhiteSpace(Model.GuestEmail)))
+             {
+                 await Save(false);
+             }
+        }
+    }
+
+    public void Dispose()
+    {
+        _autoSaveTimer?.Stop();
+        _autoSaveTimer?.Dispose();
     }
 
     private void AddLine(QuoteLineType type = QuoteLineType.Product)
@@ -739,8 +800,9 @@
                     Lines = Model.Lines.Select(l => new UpdateInvoiceLineDto { 
                         Id = l.Id != Guid.Empty ? (Guid?)l.Id : null,
                         Description = l.Description, Quantity = l.Quantity, UnitPrice = l.UnitPrice, 
-                        VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit, Position = l.Position }).ToList()
-                };
+                    VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit, Position = l.Position }).ToList(),
+                        AmountPaid = Model.AmountPaid // Fix: AmountPaid
+                 };
                 result = await ApiService.UpdateInvoiceAsync(updateDto);
             }
             else
@@ -758,7 +820,8 @@
                     FooterNote = Model.FooterNote,
                     Lines = Model.Lines.Select(l => new UpdateInvoiceLineDto { 
                         Description = l.Description, Quantity = l.Quantity, UnitPrice = l.UnitPrice, 
-                        VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit, Position = l.Position }).ToList()
+                        VATRate = l.VATRate, Type = l.Type, Date = l.Date, Unit = l.Unit, Position = l.Position }).ToList(),
+                        AmountPaid = Model.AmountPaid // Fix: AmountPaid
                 };
                 result = await ApiService.CreateInvoiceAsync(createDto);
             }
@@ -856,6 +919,18 @@
         }
     }
 
+
+
+    private void SetStatus(InvoiceStatus status)
+    {
+        CurrentStatus = status;
+        if(status == InvoiceStatus.Paid)
+        {
+            // Auto-Fill Amount
+            Model.AmountPaid = TotalTTC;
+        }
+    }
+
     private string GetStatusClass(InvoiceStatus s) => s switch { InvoiceStatus.Draft => "bg-secondary", InvoiceStatus.Sent => "bg-info", InvoiceStatus.Paid => "bg-success", InvoiceStatus.Overdue => "bg-danger", InvoiceStatus.Cancelled => "bg-dark", _ => "bg-dark" };
     
     private string GetStatusName(InvoiceStatus status) => status switch
@@ -868,60 +943,20 @@
         _ => status.ToString()
     };
     
-    // --- View Models ---
-    public class InvoiceViewModel
-    {
-        public Guid Id { get; set; }
-        public Guid ClientId { get; set; }
-        public DateTime DateCreated { get; set; } = DateTime.Today;
-        public DateTime DueDate { get; set; } = DateTime.Today.AddDays(30);
-        public string Message { get; set; } = "";
-        public string PaymentTerms { get; set; } = "";
-        public string FooterNote { get; set; } = "";
-        public DiscountType DiscountType { get; set; }
-        public decimal DiscountValue { get; set; }
-        public DiscountBase DiscountBase { get; set; }
-        public DiscountScope DiscountScope { get; set; }
-        public Guid PublicToken { get; set; }
-        public List<InvoiceLineVM> Lines { get; set; } = new();
-        
-        // Guest Client Fields
-        public string? GuestName { get; set; }
-        public string? GuestEmail { get; set; }
-        public string? GuestPhone { get; set; }
-        
-        // Link
-        public Guid? QuoteId { get; set; }
-        public string? QuoteReference { get; set; }
-    }
 
-    public class InvoiceLineVM 
-    {
-        public Guid Id { get; set; }
-        public QuoteLineType Type { get; set; } = QuoteLineType.Product;
-        public string Description { get; set; } = "";
-        public decimal Quantity { get; set; }
-        public string Unit { get; set; } = "";
-        public decimal UnitPrice { get; set; }
-        public decimal VATRate { get; set; }
-        public DateTime? Date { get; set; }
-        public decimal TotalHT { get; set; } // For display
-        public int Position { get; set; } // For ordering
-    }
-    
     // --- Admin Preview Logic ---
-    private RenderFragment RenderAdminPreview(InvoiceViewModel invoice) => __builder =>
+    // --- Admin Preview Logic ---
+    private RenderFragment RenderAdminPreview => __builder =>
     {
-        <div class="p-4 bg-white" style="min-height: 800px; font-size: 0.85rem;">
+        <div class="p-4 bg-white position-relative" style="min-height: 800px; font-size: 0.85rem;">
             <!-- Header with Company Info & Logo -->
             <div class="row mb-5 border-bottom pb-4">
                 <div class="col-12 col-md-7 mb-3 mb-md-0">
                     <img src="/images/logo.jpg" alt="HIPPOCAMPE" style="max-height: 80px;" class="mb-3" />
-                    
                     <div class="small text-muted">
                         <strong>@_companyProfile.CompanyName</strong><br/>
                         @_companyProfile.Address<br/>
-                        @_companyProfile.City<br/>
+                        @_companyProfile.ZipCode @_companyProfile.City<br/>
                         @_companyProfile.Country<br/>
                         <br/>
                         Tél: @_companyProfile.Phone<br/>
@@ -934,14 +969,35 @@
                 </div>
                 <div class="col-12 col-md-5 text-md-end">
                     <h2 class="fw-bold text-uppercase text-secondary mb-3">Facture</h2>
-                    <h4 class="fw-bold fs-3">@(string.IsNullOrEmpty(ExistingRef) ? "BROUILLON" : ExistingRef)</h4>
-                    <div class="text-muted mt-2">Date: @invoice.DateCreated.ToString("dd/MM/yyyy")</div>
-                    <div class="text-danger fw-bold">Échéance: @invoice.DueDate.ToString("dd/MM/yyyy")</div>
+                    <h4 class="fw-bold fs-3">@ExistingRef</h4>
+                    <div class="text-muted mt-2">Date: @Model.DateCreated.ToString("dd/MM/yyyy")</div>
+                    <div class="text-danger fw-bold">Échéance: @Model.DueDate.ToString("dd/MM/yyyy")</div>
                 </div>
             </div>
 
-            <!-- Client Info Box -->
-            <div class="row mb-5 justify-content-end">
+            <!-- Stamps -->
+            <!-- Stamp & Client Info Grid -->
+            <div class="row mb-5">
+                <!-- Left Column: Stamp -->
+                <div class="col-md-6 d-flex align-items-center justify-content-center">
+                    @if(Model.AmountPaid >= TotalTTC && TotalTTC > 0)
+                    {
+                        <div style="border: 4px solid #198754; color: #198754; font-size: 2.5rem; font-weight: bold; text-transform: uppercase; padding: 10px 20px; transform: rotate(-15deg); opacity: 0.8; border-radius: 8px;">
+                            PAYÉ
+                            <div style="font-size: 0.8rem; text-align: center; border-top: 1px solid #198754; margin-top: 5px; padding-top: 2px;">
+                                @Model.AmountPaid.ToString("C2")
+                            </div>
+                        </div>
+                    }
+                    else if(Model.DueDate < DateTime.Today && Model.AmountPaid < TotalTTC)
+                    {
+                         <div style="border: 4px solid #dc3545; color: #dc3545; font-size: 2.5rem; font-weight: bold; text-transform: uppercase; padding: 10px 20px; transform: rotate(-15deg); opacity: 0.8; border-radius: 8px;">
+                            EN RETARD
+                        </div>
+                    }
+                </div>
+
+                <!-- Right Column: Recipient -->
                 <div class="col-md-6">
                     <div class="p-4 bg-light rounded-3 border">
                         <h6 class="text-uppercase text-secondary small fw-bold mb-3">Destinataire</h6>
@@ -973,20 +1029,20 @@
             </div>
 
             <!-- Message -->
-            @if (!string.IsNullOrEmpty(invoice.Message))
+            @if (!string.IsNullOrEmpty(Model.Message))
             {
                 <div class="mb-4">
                     <h6 class="fw-bold text-secondary text-uppercase small mb-2">Message</h6>
-                    <p class="text-pre-wrap small text-muted">@invoice.Message</p>
+                    <p class="text-pre-wrap small text-muted">@Model.Message</p>
                 </div>
             }
 
             <!-- Payment Terms -->
-            @if (!string.IsNullOrEmpty(invoice.PaymentTerms))
+            @if (!string.IsNullOrEmpty(Model.PaymentTerms))
             {
                     <div class="mb-4">
                     <h6 class="fw-bold text-secondary text-uppercase small mb-2">Modalités de Paiement</h6>
-                    <p class="small text-muted">@invoice.PaymentTerms</p>
+                    <p class="small text-muted">@Model.PaymentTerms</p>
                 </div>
             }
 
@@ -1004,7 +1060,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var line in invoice.Lines)
+                        @foreach (var line in Model.Lines)
                         {
                             @if(line.Type == QuoteLineType.Title)
                             {
@@ -1060,15 +1116,25 @@
                             <td class="text-end fs-4 fw-bold pt-3">Total TTC</td>
                             <td class="text-end fs-4 fw-bold pt-3 text-primary">@TotalTTC.ToString("C2")</td>
                         </tr>
+                        <tr>
+                            <td class="text-end text-muted pt-2">Payé</td>
+                            <td class="text-end text-success pt-2 fw-bold">@Model.AmountPaid.ToString("C2")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-end text-muted pt-1">Reste à payer</td>
+                            <td class="text-end pt-1 fw-bold @(TotalTTC - Model.AmountPaid > 0.01m ? "text-danger" : "text-muted")">
+                                @((TotalTTC - Model.AmountPaid).ToString("C2"))
+                            </td>
+                        </tr>
                     </table>
                 </div>
             </div>
 
-            @if (!string.IsNullOrEmpty(invoice.FooterNote))
+            @if (!string.IsNullOrEmpty(Model.FooterNote))
             {
                 <div class="mt-4 text-center border-top pt-3">
                         <h6 class="fw-bold text-secondary text-uppercase small mb-2">Note de bas de page</h6>
-                        <p class="small text-muted mb-0">@invoice.FooterNote</p>
+                        <p class="small text-muted mb-0">@Model.FooterNote</p>
                 </div>
             }
 
@@ -1080,7 +1146,43 @@
         </div>
     };
     
-    // Stub implementations for Unsaved Modal
-     private void ConfirmSaveAndExit() { Save(true); _showUnsavedModal = false; }
-     private void ConfirmExitWithoutSave() { _showUnsavedModal = false; GoBack(); }
+    // Navigation Intercept
+    private string? _pendingUrl;
+    
+    private void OnBeforeInternalNavigation(LocationChangingContext context)
+    {
+         if (IsDirty() && CurrentStatus == InvoiceStatus.Draft)
+         {
+             context.PreventNavigation();
+             _pendingUrl = context.TargetLocation;
+             _showUnsavedModal = true;
+         }
+    }
+
+    // Modal Callback: Save Draft
+    private async Task ConfirmSaveAndExit() 
+    { 
+        await Save(false); // Save Draft
+        _showUnsavedModal = false; 
+        if(_pendingUrl != null) NavManager.NavigateTo(_pendingUrl);
+    }
+    
+    // Modal Callback: Discard (Delete if Draft?)
+    // User requirement: "partir sans enregistrer qui doit suprimer le devis ou facture dans ce dernier cas"
+    // Interpretation: Delete the Draft from DB if it exists.
+    private async Task ConfirmExitWithoutSave() 
+    { 
+        _showUnsavedModal = false;
+        
+        // If it's a Draft and we are discarding, we might want to delete it if it was "just created" or effectively implied by "Discard Draft".
+        // HOWEVER, destroying data is dangerous. 
+        // If the ID exists (it does if auto-saved), we delete it?
+        // Let's implement Delete if CurrentStatus is Draft.
+        if (Id.HasValue && CurrentStatus == InvoiceStatus.Draft)
+        {
+            await ApiService.DeleteInvoiceAsync(Id.Value); 
+        }
+        
+        if(_pendingUrl != null) NavManager.NavigateTo(_pendingUrl); 
+    }
 }

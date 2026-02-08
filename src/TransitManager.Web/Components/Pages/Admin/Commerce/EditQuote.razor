@@ -16,6 +16,9 @@
 @using TransitManager.Core.Interfaces
 @inject ISettingsService SettingsService
 @using TransitManager.Core.DTOs.Settings
+@using TransitManager.Core.DTOs.Settings
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
 @attribute [Authorize(Roles = "Administrateur")]
 
 <div class="d-flex h-100 flex-column ps-md-4">
@@ -627,6 +630,7 @@
 </div>
 
 <ProductDialog @ref="_productDialog" OnProductCreated="HandleNewProductCreated" />
+<NavigationLock OnBeforeInternalNavigation="OnBeforeInternalNavigation" ConfirmExternalNavigation="true" />
 
 <!-- MODALS -->
 <ConfirmationModal 
@@ -824,6 +828,8 @@
                     
                     // Force subtotal recalculation for UI
                     UpdateSubtotals();
+                    
+                    SetupAutoSaveTimer();
                 }
             }
             else
@@ -853,6 +859,8 @@
 
                      // SNAPSHOT (After auto-draft creation)
                      OriginalModelJson = JsonSerializer.Serialize(Model);
+                     
+                     SetupAutoSaveTimer();
                 }
                 catch (Exception ex)
                 {
@@ -1008,6 +1016,52 @@
         }
     }
 
+    // --- TIMER & NAVIGATION LOCK ---
+    
+    private System.Timers.Timer _autoSaveTimer;
+
+    private void SetupAutoSaveTimer()
+    {
+        _autoSaveTimer = new System.Timers.Timer(30000); // 30 seconds
+        _autoSaveTimer.Elapsed += async (sender, e) => await InvokeAsync(AutoSave);
+        _autoSaveTimer.AutoReset = true;
+        _autoSaveTimer.Start();
+    }
+
+    private async Task AutoSave()
+    {
+        // Only auto-save if dirty AND not already saving
+        if (IsDirty() && !IsSaving && CurrentStatus == QuoteStatus.Draft) 
+        {
+             // Basic validation (only if we have minimal data)
+             if (Model.Lines.Any())
+             {
+                 await Save(true); // silent save
+             }
+        }
+    }
+
+    public void Dispose()
+    {
+        _autoSaveTimer?.Stop();
+        _autoSaveTimer?.Dispose();
+    }
+
+    // Navigation Intercept
+    private string? _pendingUrl;
+    
+    private void OnBeforeInternalNavigation(LocationChangingContext context)
+    {
+         if (IsDirty()) // If dirty, prompt.
+         {
+             context.PreventNavigation();
+             _pendingUrl = context.TargetLocation;
+             _showUnsavedModal = true;
+         }
+    }
+    
+    // -----------------------------------
+    
     // --- DIRTY CHECKING & EXIT LOGIC ---
 
     private bool IsDirty()
@@ -1033,7 +1087,8 @@
         if (await Save())
         {
             _showUnsavedModal = false;
-            NavManager.NavigateTo("/admin/commerce/quotes");
+            if(_pendingUrl != null) NavManager.NavigateTo(_pendingUrl);
+            else NavManager.NavigateTo("/admin/commerce/quotes");
         }
     }
 
@@ -1056,7 +1111,9 @@
                 Console.WriteLine($"Error deleting auto-draft: {ex.Message}");
             }
         }
-        NavManager.NavigateTo("/admin/commerce/quotes");
+        
+        if(_pendingUrl != null) NavManager.NavigateTo(_pendingUrl);
+        else NavManager.NavigateTo("/admin/commerce/quotes");
     }
 
     // -----------------------------------
@@ -1096,7 +1153,7 @@
         }
     }
 
-    private async Task<bool> Save()
+    private async Task<bool> Save(bool silent = false)
     {
         // Allowed to save without Client (Draft mode)
         
@@ -1151,10 +1208,13 @@
             // Update Snapshot
             OriginalModelJson = JsonSerializer.Serialize(Model);
 
-            // Show success notification
-            _successMessage = "Devis enregistré avec succès !";
-            StateHasChanged();
-            _ = Task.Delay(3000).ContinueWith(_ => { _successMessage = ""; InvokeAsync(StateHasChanged); });
+            if(!silent) 
+            {
+                // Show success notification
+                _successMessage = "Devis enregistré avec succès !";
+                StateHasChanged();
+                _ = Task.Delay(3000).ContinueWith(_ => { _successMessage = ""; InvokeAsync(StateHasChanged); });
+            }
 
             return true;
         }

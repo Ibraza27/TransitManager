@@ -20,6 +20,7 @@ namespace TransitManager.Core.DTOs.Commerce
         public DiscountType DiscountType { get; set; }
         public DiscountBase DiscountBase { get; set; }
         public DiscountScope DiscountScope { get; set; }
+        public decimal AmountPaid { get; set; }
         public List<UpdateInvoiceLineDto> Lines { get; set; } = new();
     }
 
@@ -41,6 +42,8 @@ namespace TransitManager.Core.DTOs.Commerce
         public DiscountType DiscountType { get; set; }
         public DiscountBase DiscountBase { get; set; }
         public DiscountScope DiscountScope { get; set; }
+        
+        public decimal AmountPaid { get; set; }
 
         public InvoiceStatus Status { get; set; }
         

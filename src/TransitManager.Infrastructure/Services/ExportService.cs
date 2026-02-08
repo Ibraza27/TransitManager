@@ -562,6 +562,17 @@ namespace TransitManager.Infrastructure.Services
                                     col.Item().Row(row => { row.RelativeItem().Text("Total HT").FontSize(10); row.ConstantItem(100).AlignRight().Text($"{invoice.TotalHT:N2}{EUR}").FontSize(10); });
                                     col.Item().PaddingTop(4).BorderBottom(1).BorderColor("#CBD5E1").PaddingBottom(8).Row(row => { row.RelativeItem().Text("TVA").FontSize(10); row.ConstantItem(100).AlignRight().Text($"{invoice.TotalTVA:N2}{EUR}").FontSize(10); });
                                     col.Item().PaddingTop(12).Row(row => { row.RelativeItem().Text("Total TTC").SemiBold().FontSize(13); row.ConstantItem(120).AlignRight().Text($"{invoice.TotalTTC:N2}{EUR}").SemiBold().FontSize(13); });
+                                    
+                                    col.Item().PaddingTop(4).Row(row => { 
+                                        row.RelativeItem().Text("Payé").FontSize(10).FontColor("#198754"); // Success Green
+                                        row.ConstantItem(100).AlignRight().Text($"{invoice.AmountPaid:N2}{EUR}").FontSize(10).FontColor("#198754").Bold(); 
+                                    });
+
+                                    col.Item().PaddingTop(4).Row(row => { 
+                                        var remaining = invoice.TotalTTC - invoice.AmountPaid;
+                                        row.RelativeItem().Text("Reste à payer").FontSize(10).FontColor(remaining > 0.01m ? "#DC3545" : "#6c757d"); 
+                                        row.ConstantItem(100).AlignRight().Text($"{remaining:N2}{EUR}").FontSize(10).FontColor(remaining > 0.01m ? "#DC3545" : "#6c757d").Bold(); 
+                                    });
                                 });
                                 
                                 // Footer Notes

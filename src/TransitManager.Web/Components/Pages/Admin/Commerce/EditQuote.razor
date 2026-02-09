@@ -26,23 +26,39 @@
     <!-- Action Bar -->
     <div class="d-flex flex-wrap justify-content-between align-items-center p-3 border-bottom bg-white gap-3">
         <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-outline-secondary rounded-circle p-2" @onclick="Cancel" title="Retour">
-                <i class="bi bi-x-lg"></i>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="Cancel" title="Annuler">
+                <i class="bi bi-x-lg"></i> Annuler
             </button>
-            <h4 class="mb-0 fw-bold text-truncate" style="max-width: 200px;">@(Id == null ? "Nouveau" : $"{ExistingRef}")</h4>
-             @if(LinkedInvoiceId.HasValue)
-             {
-                <div class="small text-muted ms-3 border-start ps-3">
-                    <i class="bi bi-link-45deg"></i> Facture: <a href="/admin/commerce/invoices/edit/@LinkedInvoiceId" class="text-decoration-none fw-bold">@LinkedInvoiceRef</a>
-                </div>
-             }
+            <div>
+                 <h4 class="mb-0 fw-bold text-truncate" style="max-width: 200px;">@(Id == null ? "Nouveau Devis" : $"{ExistingRef}")</h4>
+                 @if(LinkedInvoiceId.HasValue)
+                 {
+                    <div class="small text-muted mt-1">
+                        <i class="bi bi-link-45deg"></i> Facture: <a href="/admin/commerce/invoices/edit/@LinkedInvoiceId" class="text-decoration-none fw-bold">@LinkedInvoiceRef</a>
+                    </div>
+                 }
+                 <div class="d-flex align-items-center gap-2 small mt-1">
+                     <div class="dropdown d-inline-block">
+                        <button class="btn btn-sm p-0 border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="badge rounded-pill @GetStatusClass(CurrentStatus)">
+                                @GetStatusName(CurrentStatus) <i class="bi bi-caret-down-fill ms-1" style="font-size: 0.7em;"></i>
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu shadow-sm">
+                            @foreach(var s in Enum.GetValues<QuoteStatus>())
+                            {
+                                <li><button class="dropdown-item" @onclick="() => SetStatus((QuoteStatus)s)">@GetStatusName((QuoteStatus)s)</button></li>
+                            }
+                        </ul>
+                     </div>
+                     @if(IsSaving) { <span class="text-warning ms-2"><span class="spinner-border spinner-border-sm me-1"></span>Enregistrement...</span> }
+                     else if (IsDirty()) { <span class="text-muted fst-italic ms-2">modifié</span> }
+                 </div>
+            </div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             @if (IsPreviewMode)
             {
-                <button class="btn btn-secondary btn-sm" @onclick="SaveDraft">
-                    <i class="bi bi-save me-2"></i>Enregistrer le brouillon
-                </button>
                 <button class="btn btn-secondary btn-sm" @onclick="TogglePreview">
                     <i class="bi bi-arrow-left me-2"></i>Éditer
                 </button>
@@ -56,12 +72,11 @@
             }
             else
             {
-                 <button class="btn btn-outline-secondary btn-sm d-none d-md-inline-block" @onclick="Cancel">Annuler</button>
-                 <button class="btn btn-info text-white btn-sm" @onclick="TogglePreview">
+                 <button class="btn btn-outline-primary btn-sm" @onclick="TogglePreview">
                     <i class="bi bi-eye me-2"></i>Aperçu
                 </button>
-                 <button class="btn btn-secondary btn-sm" @onclick="SaveDraft">
-                    <i class="bi bi-save me-2"></i>@(Id.HasValue && !IsAutoDraft ? "Enregistrer" : "Brouillon")
+                 <button class="btn btn-primary btn-sm" @onclick="() => Save(false)">
+                    <i class="bi bi-save me-2"></i>@(Id.HasValue && !IsAutoDraft ? "Enregistrer" : "Enregistrer")
                 </button>
             }
     </div>
@@ -289,7 +304,7 @@
                              <input type="radio" class="btn-check" name="clientType" id="clientPermanent" checked="@(!_isGuestClient)" @onchange="() => SetGuestClient(false)">
                              <label class="btn btn-outline-primary" for="clientPermanent"><i class="bi bi-person me-1"></i>Client</label>
                              <input type="radio" class="btn-check" name="clientType" id="clientPassage" checked="@_isGuestClient" @onchange="() => SetGuestClient(true)">
-                             <label class="btn btn-outline-secondary" for="clientPassage"><i class="bi bi-person-dash me-1"></i>Passage</label>
+                             <label class="btn btn-outline-secondary" for="clientPassage"><i class="bi bi-person-dash me-1"></i>Invité</label>
                          </div>
                          
                          @if(!_isGuestClient)
@@ -830,6 +845,7 @@
                     UpdateSubtotals();
                     
                     SetupDebounceTimer();
+                    await LoadLocalDraft();
                 }
             }
             else
@@ -861,6 +877,7 @@
                      OriginalModelJson = JsonSerializer.Serialize(Model);
                      
                      SetupDebounceTimer();
+                     await LoadLocalDraft();
                 }
                 catch (Exception ex)
                 {
@@ -951,7 +968,7 @@
     private void HandleClientSelected(Client client)
     {
         SelectedClient = client;
-        Model.ClientId = client?.Id ?? Guid.Empty;
+        Model.ClientId = client?.Id;
     }
 
 
@@ -976,8 +993,11 @@
 
         if (!IsPreviewMode)
         {
-            // Enter Preview -> Save to ensure PDF generation works
-            if (!await Save()) return;
+            // Enter Preview -> Save if dirty
+            if (IsDirty()) 
+            {
+               await Save(true);
+            }
         }
 
         IsPreviewMode = !IsPreviewMode;
@@ -1021,6 +1041,49 @@
         }
     }
 
+    // --- LOCAL STORAGE AUTO-SAVE ---
+    private string DraftKey => $"draft_quote_{Model.Id}";
+
+    private async Task LoadLocalDraft()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", DraftKey);
+            if (!string.IsNullOrEmpty(json))
+            {
+                var savedModel = JsonSerializer.Deserialize<UpsertQuoteDto>(json);
+                if (savedModel != null)
+                {
+                    Model = savedModel;
+                    // Re-sync UI state
+                    RenumberLines();
+                    UpdateSubtotals();
+                    if(!string.IsNullOrEmpty(Model.GuestEmail)) _isGuestClient = true;
+                    else if (Model.ClientId.HasValue) 
+                    {
+                         SelectedClient = await ApiService.GetClientByIdAsync(Model.ClientId.Value);
+                         _isGuestClient = false;
+                    }
+                    
+                    _successMessage = "Brouillon récupéré automatiquement.";
+                    StateHasChanged();
+                    await Task.Delay(3000);
+                    _successMessage = "";
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading draft: {ex.Message}");
+        }
+    }
+
+    private async Task ClearLocalDraft()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", DraftKey);
+    }
+    
     // --- TIMER & NAVIGATION LOCK ---
     
     // --- DEBOUNCE SAVE ---
@@ -1029,18 +1092,26 @@
 
     private void SetupDebounceTimer()
     {
-        _debounceTimer = new System.Timers.Timer(2000); // 2 seconds delay
-        _debounceTimer.AutoReset = false; // Run once per trigger
+        _debounceTimer = new System.Timers.Timer(1000); // 1 second delay for local save
+        _debounceTimer.AutoReset = false; 
         _debounceTimer.Elapsed += async (sender, e) => 
         {
-            await InvokeAsync(async () => 
+            try
             {
-                 // Check draft status and dirtiness inside the callback
-                 if (IsDirty() && !IsSaving && CurrentStatus == QuoteStatus.Draft)
-                 {
-                     if (Model.Lines.Any()) await Save(true);
-                 }
-            });
+                await InvokeAsync(async () => 
+                {
+                     // Save to LocalStorage
+                     if (Model.Lines.Any())
+                     {
+                         var json = JsonSerializer.Serialize(Model);
+                         await JS.InvokeVoidAsync("localStorage.setItem", DraftKey, json);
+                     }
+                });
+            }
+            catch(Exception)
+            {
+                // Component likely disposed, ignore
+            }
         };
     }
 
@@ -1052,10 +1123,18 @@
         _debounceTimer.Start();
     }
 
+
     public void Dispose()
     {
         _debounceTimer?.Stop();
         _debounceTimer?.Dispose();
+    }
+    
+    private bool IsDirty()
+    {
+        if (string.IsNullOrEmpty(OriginalModelJson)) return false;
+        var currentJson = JsonSerializer.Serialize(Model);
+        return currentJson != OriginalModelJson;
     }
 
     // Navigation Intercept
@@ -1063,7 +1142,11 @@
     
     private void OnBeforeInternalNavigation(LocationChangingContext context)
     {
-         if (IsDirty()) // If dirty, prompt.
+         // If dirty OR we have a local draft (which implies dirty/unsaved work)
+         // Actually IsDirty check deals with "diff vs original".
+         // But if we crash-recovered, Original might be DB state, and Current is Draft state.
+         // So IsDirty should be true.
+         if (IsDirty()) 
          {
              context.PreventNavigation();
              _pendingUrl = context.TargetLocation;
@@ -1071,51 +1154,56 @@
          }
     }
     
-    // -----------------------------------
-    
-    // --- DIRTY CHECKING & EXIT LOGIC ---
-
-    private bool IsDirty()
+    private async Task ConfirmSaveAndExit()
     {
-         var currentJson = JsonSerializer.Serialize(Model);
-         return currentJson != OriginalModelJson;
+        if (await Save())
+        {
+            // Save clears local draft inside Save method logic (we need to add that)
+            _showUnsavedModal = false;
+            
+            // Clean LocalStorage explicitly just in case
+            await ClearLocalDraft();
+            
+            if(_pendingUrl != null) NavManager.NavigateTo(_pendingUrl);
+            else NavManager.NavigateTo("/admin/commerce/quotes");
+        }
     }
-
+    private async Task ConfirmExitWithoutSave()
+    {
+        _showUnsavedModal = false;
+        await ClearLocalDraft();
+        
+        // Critical Fix: Reset snapshot to bypass IsDirty() check during exit navigation
+        if(Model != null) OriginalModelJson = JsonSerializer.Serialize(Model);
+        
+        await ExitAndCleanup();
+    }
+    
     private async Task Cancel()
     {
-        if (IsDirty() && !IsAutoDraft)
+        // Cancel action triggers strict exit logic
+        if(IsDirty()) 
         {
             _showUnsavedModal = true;
+            // No need to set pendingUrl if we just want to go back, logic handles it?
+            // OnBeforeInternalNavigation handles navigation. 
+            // If we manually call NavigateTo, OnBefore... will catch it.
+            // But here we want to trigger the "Cancel" flow.
+            // Simple navigation to list is enough, the Intercept will handle the prompt.
+            NavManager.NavigateTo("/admin/commerce/quotes");
         }
         else
         {
             await ExitAndCleanup();
         }
     }
-
-    private async Task ConfirmSaveAndExit()
-    {
-        if (await Save())
-        {
-            _showUnsavedModal = false;
-            if(_pendingUrl != null) NavManager.NavigateTo(_pendingUrl);
-            else NavManager.NavigateTo("/admin/commerce/quotes");
-        }
-    }
-
-    private async Task ConfirmExitWithoutSave()
-    {
-        _showUnsavedModal = false;
-        await ExitAndCleanup();
-    }
-
     private async Task ExitAndCleanup()
     {
-        if (IsAutoDraft && Model.Id.HasValue)
+        if (IsAutoDraft && Model.Id != Guid.Empty)
         {
             try 
             {
-                await ApiService.DeleteQuoteAsync(Model.Id.Value);
+                await ApiService.DeleteQuoteAsync((Guid)Model.Id);
             }
             catch(Exception ex)
             {
@@ -1134,7 +1222,7 @@
         if (await Save())
         {
              // Model.Id is guaranteed by Save()
-             await ApiService.UpdateQuoteStatusAsync(Model.Id!.Value, QuoteStatus.Draft);
+             await ApiService.UpdateQuoteStatusAsync((Guid)Model.Id, QuoteStatus.Draft);
              await JS.InvokeVoidAsync("alert", "Brouillon enregistré avec succès.");
              NavManager.NavigateTo("/admin/commerce/quotes");
         }
@@ -1154,7 +1242,7 @@
         {
             try 
             {
-                await ApiService.UpdateQuoteStatusAsync(Model.Id!.Value, status);
+                await ApiService.UpdateQuoteStatusAsync((Guid)Model.Id, status);
                 NavManager.NavigateTo("/admin/commerce/quotes");
             }
              catch (Exception ex)
@@ -1192,6 +1280,9 @@
                 Model.GuestName = null;
                 Model.GuestEmail = null;
                 Model.GuestPhone = null;
+                
+                // Ensure ClientId is null if Empty (fixes 400 Bad Request)
+                if (Model.ClientId == Guid.Empty) Model.ClientId = null;
             }
             
             Console.WriteLine($"[EditQuote] Saving: GuestMode={_isGuestClient}, ClientId={Model.ClientId}, GuestEmail={Model.GuestEmail}");
@@ -1218,6 +1309,9 @@
             
             // Update Snapshot
             OriginalModelJson = JsonSerializer.Serialize(Model);
+            
+            // Clear Local Draft on successful save
+            await ClearLocalDraft();
 
             if(!silent) 
             {
@@ -1336,6 +1430,23 @@
 
 
     
+    private void SetStatus(QuoteStatus status)
+    {
+        CurrentStatus = status;
+        // Optional: Trigger save or just update UI?
+        // For now, just update UI state. User must click Save.
+    }
+
+    private string GetStatusClass(QuoteStatus s) => s switch { 
+        QuoteStatus.Draft => "bg-secondary", 
+        QuoteStatus.Sent => "bg-primary", 
+        QuoteStatus.Viewed => "bg-info text-dark",
+        QuoteStatus.Accepted => "bg-success", 
+        QuoteStatus.Rejected => "bg-danger", 
+        QuoteStatus.Converted => "bg-dark", 
+        _ => "bg-dark" 
+    };
+
     private string GetStatusName(QuoteStatus status) => status switch
     {
         QuoteStatus.Draft => "Brouillon",
@@ -1393,7 +1504,7 @@
                 : dto.Cc.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(e => e.Trim()).ToList();
             
-            await ApiService.SendQuoteByEmailAsync(Id.Value, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds, cc, recipients);
+            await ApiService.SendQuoteByEmailAsync(Model.Id.Value, dto.Subject, dto.Body, dto.CopyToSender, dto.TempAttachmentIds, cc, recipients);
             
             await JS.InvokeVoidAsync("alert", "Email envoyé avec succès !");
             
@@ -1441,6 +1552,8 @@
         Model.ClientId = client.Id;
         StateHasChanged();
     }
+
+
 }
 <SendEmailModal @ref="_emailModal" RecipientEmail="@(SelectedClient?.Email ?? Model.GuestEmail ?? "")" QuoteReference="@(Model.Reference ?? "")" OnSend="SendQuoteEmailConfirmed" />
 <AddClientModal @ref="_addClientModal" OnClientCreated="HandleNewClientCreated" />

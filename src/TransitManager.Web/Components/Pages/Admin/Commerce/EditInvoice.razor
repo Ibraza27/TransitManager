@@ -21,7 +21,7 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack"><i class="bi bi-arrow-left"></i> Retour</button>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack"><i class="bi bi-x-lg"></i> Annuler</button>
             <div>
                  <h4 class="mb-0 fw-bold">@(Id.HasValue ? $"Facture {ExistingRef}" : "Nouvelle Facture")</h4>
                  @if(Model.QuoteId.HasValue)
@@ -134,7 +134,7 @@
                              <input type="radio" class="btn-check" name="invoiceClientType" id="invoiceClientPermanent" checked="@(!_isGuestClient)" @onchange="() => SetGuestClient(false)">
                              <label class="btn btn-outline-primary" for="invoiceClientPermanent"><i class="bi bi-person me-1"></i>Client</label>
                              <input type="radio" class="btn-check" name="invoiceClientType" id="invoiceClientPassage" checked="@_isGuestClient" @onchange="() => SetGuestClient(true)">
-                             <label class="btn btn-outline-secondary" for="invoiceClientPassage"><i class="bi bi-person-dash me-1"></i>Passage</label>
+                             <label class="btn btn-outline-secondary" for="invoiceClientPassage"><i class="bi bi-person-dash me-1"></i>Invité</label>
                          </div>
                          
                          @if(!_isGuestClient)
@@ -545,45 +545,108 @@
          OriginalModelJson = JsonSerializer.Serialize(Model);
          IsLoading = false;
          
-         SetupAutoSaveTimer();
+         SetupDebounceTimer();
+         await LoadLocalDraft();
     }
 
-    private System.Timers.Timer _autoSaveTimer;
+    // --- LOCAL STORAGE AUTO-SAVE ---
+    private string DraftKey => $"draft_invoice_{(Model.Id == Guid.Empty ? "new" : Model.Id.ToString())}";
 
-    private void SetupAutoSaveTimer()
+    private async Task LoadLocalDraft()
     {
-        _autoSaveTimer = new System.Timers.Timer(30000); // 30 seconds
-        _autoSaveTimer.Elapsed += async (sender, e) => await InvokeAsync(AutoSave);
-        _autoSaveTimer.AutoReset = true;
-        _autoSaveTimer.Start();
-    }
-
-    private async Task AutoSave()
-    {
-        // Only auto-save if dirty AND valid enough AND Draft
-        if (IsDirty() && !IsSaving && CurrentStatus == InvoiceStatus.Draft) 
+        try
         {
-             if ((!_isGuestClient && Model.ClientId != Guid.Empty) || (_isGuestClient && !string.IsNullOrWhiteSpace(Model.GuestEmail)))
-             {
-                 await Save(false);
-             }
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", DraftKey);
+            if (!string.IsNullOrEmpty(json))
+            {
+                var savedModel = JsonSerializer.Deserialize<InvoiceViewModel>(json);
+                if (savedModel != null)
+                {
+                    Model = savedModel;
+                    // Re-sync UI
+                    if(Model.Lines != null) 
+                    {
+                        foreach(var l in Model.Lines) l.Date ??= DateTime.Today; 
+                    }
+                    UpdateSubtotals();
+                    
+                    if(!string.IsNullOrEmpty(Model.GuestEmail)) _isGuestClient = true;
+                    else if (Model.ClientId != Guid.Empty) 
+                    {
+                         SelectedClient = await ApiService.GetClientByIdAsync(Model.ClientId);
+                         _isGuestClient = false;
+                    }
+
+                    _successMessage = "Brouillon récupéré automatiquement.";
+                    StateHasChanged();
+                    await Task.Delay(3000);
+                    _successMessage = "";
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading draft: {ex.Message}");
         }
     }
 
+    private async Task ClearLocalDraft()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", DraftKey);
+    }
+
+    // --- DEBOUNCE SAVE ---
+    
+    private System.Timers.Timer _debounceTimer;
+
+    private void SetupDebounceTimer()
+    {
+        _debounceTimer = new System.Timers.Timer(1000); 
+        _debounceTimer.AutoReset = false; 
+        _debounceTimer.Elapsed += async (sender, e) => 
+        {
+            try
+            {
+                await InvokeAsync(async () => 
+                {
+                     if (Model.Lines.Any())
+                     {
+                         var json = JsonSerializer.Serialize(Model);
+                         await JS.InvokeVoidAsync("localStorage.setItem", DraftKey, json);
+                     }
+                });
+            }
+            catch(Exception ex) 
+            {
+                // Suppress timer errors to prevent crashing the process
+                Console.WriteLine($"DebounceTimer Error: {ex.Message}");
+            }
+        };
+    }
+
+    private void DebounceSave()
+    {
+        if (_debounceTimer == null) SetupDebounceTimer();
+        _debounceTimer.Stop();
+        _debounceTimer.Start();
+    }
+    
     public void Dispose()
     {
-        _autoSaveTimer?.Stop();
-        _autoSaveTimer?.Dispose();
+        _debounceTimer?.Stop();
+        _debounceTimer?.Dispose();
     }
 
     private void AddLine(QuoteLineType type = QuoteLineType.Product)
     {
         Model.Lines.Add(new InvoiceLineVM { Type = type, Quantity = 1, UnitPrice = 0, VATRate = 0, Date = DateTime.Today });
         UpdateSubtotals();
+        DebounceSave();
     }
     
     // ... MoveLine, RemoveLine, HandleProduct, etc (Similar to Quote) ...
-    private void RemoveLine(InvoiceLineVM line) { Model.Lines.Remove(line); UpdateSubtotals(); if(!Model.Lines.Any()) AddLine(); }
+    private void RemoveLine(InvoiceLineVM line) { Model.Lines.Remove(line); UpdateSubtotals(); if(!Model.Lines.Any()) AddLine(); DebounceSave(); }
      private void MoveLine(InvoiceLineVM line, int dir) {
         var idx = Model.Lines.IndexOf(line);
         var newIdx = idx + dir;
@@ -591,6 +654,7 @@
              var other = Model.Lines[newIdx];
              Model.Lines[newIdx] = line;
              Model.Lines[idx] = other;
+             DebounceSave();
         }
     }
     private void UpdateSubtotals() 
@@ -618,6 +682,7 @@
     }
     private void HandleProductSelected(InvoiceLineVM line, ProductDto p) {
         line.Description = p.Name; line.UnitPrice = p.UnitPrice; line.Unit = p.Unit; line.VATRate = p.VATRate;
+        DebounceSave();
     }
     private void OpenNewProductDialog(InvoiceLineVM line) { /* ... */ }
     private void HandleNewProductCreated(ProductDto p) { /* ... */ }
@@ -628,8 +693,13 @@
     private SendReminderModal _sendReminderModal;
     private string PdfBlobUrl = "";
 
-    private void TogglePreview() 
+    private async Task TogglePreview() 
     { 
+        if (!IsPreviewMode)
+        {
+            // Enter Preview: Save Changes
+            if (IsDirty()) await Save(false); 
+        }
         IsPreviewMode = !IsPreviewMode;
     }
 
@@ -849,6 +919,12 @@
                 UpdateSubtotals();
                 
                 OriginalModelJson = JsonSerializer.Serialize(Model);
+                
+                // Clear Local Draft
+                await ClearLocalDraft();
+                
+                // Show success notificationl Draft
+                await ClearLocalDraft();
                 
                 // Show success notification
                 _successMessage = "Facture enregistrée avec succès !";
@@ -1151,7 +1227,8 @@
     
     private void OnBeforeInternalNavigation(LocationChangingContext context)
     {
-         if (IsDirty() && CurrentStatus == InvoiceStatus.Draft)
+         // If dirty, prompt.
+         if (IsDirty())
          {
              context.PreventNavigation();
              _pendingUrl = context.TargetLocation;
@@ -1162,27 +1239,23 @@
     // Modal Callback: Save Draft
     private async Task ConfirmSaveAndExit() 
     { 
-        await Save(false); // Save Draft
+        await Save(false); // Save Draft (and clear local)
         _showUnsavedModal = false; 
         if(_pendingUrl != null) NavManager.NavigateTo(_pendingUrl);
+        else NavManager.NavigateTo("/admin/commerce/invoices");
     }
     
-    // Modal Callback: Discard (Delete if Draft?)
-    // User requirement: "partir sans enregistrer qui doit suprimer le devis ou facture dans ce dernier cas"
-    // Interpretation: Delete the Draft from DB if it exists.
+    // Modal Callback: Discard 
     private async Task ConfirmExitWithoutSave() 
     { 
         _showUnsavedModal = false;
         
-        // If it's a Draft and we are discarding, we might want to delete it if it was "just created" or effectively implied by "Discard Draft".
-        // HOWEVER, destroying data is dangerous. 
-        // If the ID exists (it does if auto-saved), we delete it?
-        // Let's implement Delete if CurrentStatus is Draft.
-        if (Id.HasValue && CurrentStatus == InvoiceStatus.Draft)
-        {
-            await ApiService.DeleteInvoiceAsync(Id.Value); 
-        }
+        await ClearLocalDraft();
+        
+        // Critical Fix: Reset snapshot to bypass IsDirty() check during exit navigation
+        if(Model != null) OriginalModelJson = JsonSerializer.Serialize(Model);
         
         if(_pendingUrl != null) NavManager.NavigateTo(_pendingUrl); 
+        else NavManager.NavigateTo("/admin/commerce/invoices");
     }
 }

@@ -1712,7 +1712,12 @@ namespace TransitManager.Web.Services
         public async Task<QuoteDto> CreateOrUpdateQuoteAsync(UpsertQuoteDto dto)
         {
              var response = await _httpClient.PostAsJsonAsync("api/commerce/quotes", dto, _jsonOptions);
-             response.EnsureSuccessStatusCode();
+             if (!response.IsSuccessStatusCode)
+             {
+                 var error = await response.Content.ReadAsStringAsync();
+                 Console.WriteLine($"[ApiService] CreateOrUpdateQuote Error {response.StatusCode}: {error}");
+                 throw new Exception($"Erreur API ({response.StatusCode}): {error}");
+             }
              return await response.Content.ReadFromJsonAsync<QuoteDto>(_jsonOptions);
         }
 

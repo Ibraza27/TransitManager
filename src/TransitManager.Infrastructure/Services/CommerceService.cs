@@ -438,14 +438,21 @@ namespace TransitManager.Infrastructure.Services
                     
                     needSave = true;
 
-                    // 2. Recover Lines if missing
-                    if ((savedQuote.Lines == null || savedQuote.Lines.Count == 0) && dto.Lines != null && dto.Lines.Count > 0)
+                    // 2. Recover Lines - ALWAYS rebuild from DTO to ensure state matches user intent
+                    // Remove existing lines (if any) to avoid duplication or stale data
+                    if (savedQuote.Lines != null && savedQuote.Lines.Count > 0)
                     {
-                        try { System.IO.File.AppendAllText("commerce_debug.txt", $"[{DateTime.Now}] RECOVERING LINES for {quote.Id}\n"); } catch {}
+                        _context.QuoteLines.RemoveRange(savedQuote.Lines);
+                    }
+
+                    // Re-add lines from DTO
+                    if (dto.Lines != null && dto.Lines.Count > 0)
+                    {
+                        try { System.IO.File.AppendAllText("commerce_debug.txt", $"[{DateTime.Now}] RECOVERING LINES for {quote.Id} (Overwriting existing)\n"); } catch {}
                         
-                        // IMPORTANT: Must re-calculate runningSubtotal here too!
-                        decimal recoverRunningSubtotal = 0;
+                        var recoveredLines = new List<QuoteLine>();
                         int recoverIndex = 0;
+                        decimal recoverRunningSubtotal = 0;
 
                         foreach (var lineDto in dto.Lines)
                         {
@@ -461,8 +468,8 @@ namespace TransitManager.Infrastructure.Services
                                 lineTotalHT = lineDto.Quantity * lineDto.UnitPrice;
                                 recoverRunningSubtotal += lineTotalHT;
                             }
-
-                            // DEFENSIVE: consistency for Subtotals
+                            
+                             // Fix for Subtotal UnitPrice/Quantity consistency
                             decimal finalUnitPrice = lineDto.UnitPrice;
                             decimal finalQuantity = lineDto.Quantity;
 
@@ -472,9 +479,9 @@ namespace TransitManager.Infrastructure.Services
                                 finalQuantity = 1;
                             }
 
-                            var line = new QuoteLine
+                            recoveredLines.Add(new QuoteLine
                             {
-                                QuoteId = savedQuote.Id,
+                                QuoteId = quote.Id, // Link to the recovered quote
                                 ProductId = lineDto.ProductId,
                                 Description = lineDto.Description,
                                 Date = lineDto.Date,
@@ -485,10 +492,17 @@ namespace TransitManager.Infrastructure.Services
                                 TotalHT = lineTotalHT,
                                 Type = lineDto.Type,
                                 Position = recoverIndex++
-                            };
-                            _context.QuoteLines.Add(line);
+                            });
                         }
+                        
+                        // We must add them to the context explicitly or via the collection
+                        // Since we cleared the collection, we can just add them.
+                        _context.QuoteLines.AddRange(recoveredLines);
                     }
+
+
+
+
                     
                     if (needSave)
                     {

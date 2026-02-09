@@ -448,6 +448,25 @@ namespace TransitManager.Infrastructure.Services
                                     column.Item().AlignRight().Text("FACTURE").FontSize(28).SemiBold().FontColor(Colors.Grey.Darken3);
                                     column.Item().AlignRight().PaddingTop(4).Text($"{invoice.Reference}").FontSize(13).Bold();
                                     column.Item().AlignRight().PaddingTop(12).Text($"Date: {invoice.DateCreated:dd/MM/yyyy}").FontSize(10);
+                                    
+                                    // STAMPS
+                                    bool isPaid = invoice.AmountPaid >= invoice.TotalTTC && invoice.TotalTTC > 0;
+                                    bool isLate = invoice.DueDate < DateTime.Today && invoice.AmountPaid < invoice.TotalTTC;
+
+                                    if(isPaid)
+                                    {
+                                        column.Item().PaddingTop(10).AlignRight().Element(c => 
+                                        {
+                                            c.Rotate(-15).Border(2).BorderColor(Colors.Green.Medium).Padding(5).Text("PAYÉ").FontSize(20).FontColor(Colors.Green.Medium).Bold();
+                                        });
+                                    }
+                                    else if(isLate)
+                                    {
+                                        column.Item().PaddingTop(10).AlignRight().Element(c => 
+                                        {
+                                            c.Rotate(-15).Border(2).BorderColor(Colors.Red.Medium).Padding(5).Text("EN RETARD").FontSize(20).FontColor(Colors.Red.Medium).Bold();
+                                        });
+                                    }
                                     column.Item().AlignRight().Text($"Echéance: {invoice.DueDate:dd/MM/yyyy}").FontSize(10).FontColor(Colors.Red.Medium);
                                 });
                             });

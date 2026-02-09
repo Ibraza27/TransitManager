@@ -829,7 +829,7 @@
                     // Force subtotal recalculation for UI
                     UpdateSubtotals();
                     
-                    SetupAutoSaveTimer();
+                    SetupDebounceTimer();
                 }
             }
             else
@@ -860,7 +860,7 @@
                      // SNAPSHOT (After auto-draft creation)
                      OriginalModelJson = JsonSerializer.Serialize(Model);
                      
-                     SetupAutoSaveTimer();
+                     SetupDebounceTimer();
                 }
                 catch (Exception ex)
                 {
@@ -896,6 +896,7 @@
 
         Model.Lines.Add(newLine);
         UpdateSubtotals();
+        DebounceSave();
     }
 
     private void RemoveLine(QuoteLineDto line)
@@ -903,6 +904,7 @@
         Model.Lines.Remove(line);
         UpdateSubtotals();
         if (!Model.Lines.Any()) AddLine();
+        DebounceSave();
     }
     
     private void MoveLine(QuoteLineDto line, int direction) // -1 up, +1 down
@@ -922,6 +924,7 @@
         Model.Lines[newIndex] = line;
         
         UpdateSubtotals();
+        DebounceSave();
     }
     
     private void UpdateSubtotals()
@@ -960,6 +963,7 @@
         line.UnitPrice = product.UnitPrice;
         line.VATRate = product.VATRate;
         // Optionally update description with more details if needed
+        DebounceSave();
     }
 
     private async Task TogglePreview()
@@ -1006,6 +1010,7 @@
         RenumberLines();
         UpdateSubtotals();
         _draggedIndex = -1;
+        DebounceSave();
     }
 
     private void RenumberLines()
@@ -1018,33 +1023,39 @@
 
     // --- TIMER & NAVIGATION LOCK ---
     
-    private System.Timers.Timer _autoSaveTimer;
+    // --- DEBOUNCE SAVE ---
+    
+    private System.Timers.Timer _debounceTimer;
 
-    private void SetupAutoSaveTimer()
+    private void SetupDebounceTimer()
     {
-        _autoSaveTimer = new System.Timers.Timer(30000); // 30 seconds
-        _autoSaveTimer.Elapsed += async (sender, e) => await InvokeAsync(AutoSave);
-        _autoSaveTimer.AutoReset = true;
-        _autoSaveTimer.Start();
+        _debounceTimer = new System.Timers.Timer(2000); // 2 seconds delay
+        _debounceTimer.AutoReset = false; // Run once per trigger
+        _debounceTimer.Elapsed += async (sender, e) => 
+        {
+            await InvokeAsync(async () => 
+            {
+                 // Check draft status and dirtiness inside the callback
+                 if (IsDirty() && !IsSaving && CurrentStatus == QuoteStatus.Draft)
+                 {
+                     if (Model.Lines.Any()) await Save(true);
+                 }
+            });
+        };
     }
 
-    private async Task AutoSave()
+    private void DebounceSave()
     {
-        // Only auto-save if dirty AND not already saving
-        if (IsDirty() && !IsSaving && CurrentStatus == QuoteStatus.Draft) 
-        {
-             // Basic validation (only if we have minimal data)
-             if (Model.Lines.Any())
-             {
-                 await Save(true); // silent save
-             }
-        }
+        // Reset timer on every change
+        if (_debounceTimer == null) SetupDebounceTimer();
+        _debounceTimer.Stop();
+        _debounceTimer.Start();
     }
 
     public void Dispose()
     {
-        _autoSaveTimer?.Stop();
-        _autoSaveTimer?.Dispose();
+        _debounceTimer?.Stop();
+        _debounceTimer?.Dispose();
     }
 
     // Navigation Intercept

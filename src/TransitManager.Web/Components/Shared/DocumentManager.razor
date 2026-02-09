@@ -31,8 +31,8 @@
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-bold">Type de document</label>
-                    <select class="form-select form-select-sm" @bind="_selectedType">
-                        @foreach (var t in Enum.GetValues<TypeDocument>())
+                    <select class="form-select form-select-sm" value="@_selectedType" @onchange="HandleTypeChange">
+                        @foreach (var t in _orderedTypes)
                         {
                             <option value="@t">@t</option>
                         }
@@ -65,7 +65,7 @@
             <div class="col-md-4">
                 <select class="form-select form-select-sm" @bind="_filterType">
                     <option value="">Tous les types</option>
-                    @foreach (var t in Enum.GetValues<TypeDocument>())
+                    @foreach (var t in _orderedTypes)
                     {
                         <option value="@t">@t</option>
                     }
@@ -279,6 +279,16 @@
     private bool _isUploading = false;
     private IBrowserFile? _selectedFile;
     private TypeDocument _selectedType = TypeDocument.Autre;
+    private List<TypeDocument> _orderedTypes = new();
+
+    private async Task HandleTypeChange(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<TypeDocument>(e.Value?.ToString(), out var result))
+        {
+            _selectedType = result;
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_document_type", _selectedType.ToString());
+        }
+    }
     
     // Filtres
     private string _searchTerm = "";
@@ -313,10 +323,48 @@
         IsAdmin = user.IsInRole("Administrateur");
         
         var profile = await ApiService.GetUserProfileAsync();
-        if(profile != null && profile.ClientId != Guid.Empty) CurrentClientId = profile.ClientId;
+        if (profile != null && profile.ClientId != Guid.Empty) CurrentClientId = profile.ClientId;
         // Fallback si admin pour pas planter, mais admin n'upload pas en tant que client normalement
         
+        // Define Custom Sort Order
+        var preferred = new List<TypeDocument> 
+        { 
+            TypeDocument.PieceIdentite, 
+            TypeDocument.CertificatCession, 
+            TypeDocument.CarteGrise, 
+            TypeDocument.ActeVente, 
+            TypeDocument.CertificatNonGage, 
+            TypeDocument.PhotoVehicule, 
+            TypeDocument.PhotoColis, 
+            TypeDocument.Facture, 
+            TypeDocument.JustificatifDomicile 
+        };
+
+        _orderedTypes = preferred
+            .Concat(Enum.GetValues<TypeDocument>().Except(preferred))
+            .ToList();
+
         if (EntityId != Guid.Empty) await LoadDocuments();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try 
+            {
+                var saved = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "last_document_type");
+                if (!string.IsNullOrEmpty(saved) && Enum.TryParse<TypeDocument>(saved, out var result))
+                {
+                    _selectedType = result;
+                    StateHasChanged();
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"Error loading last_document_type: {ex.Message}");
+            }
+        }
     }
 
     private async Task LoadDocuments()

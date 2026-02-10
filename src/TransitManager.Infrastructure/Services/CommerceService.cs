@@ -25,6 +25,7 @@ namespace TransitManager.Infrastructure.Services
         private readonly IDocumentService _documentService;
         private readonly IConfiguration _config;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly INotificationService _notificationService;
 
         public CommerceService(
             TransitContext context,
@@ -33,7 +34,8 @@ namespace TransitManager.Infrastructure.Services
             ISettingsService settingsService,
             IDocumentService documentService,
             IConfiguration config,
-            IServiceScopeFactory scopeFactory)
+            IServiceScopeFactory scopeFactory,
+            INotificationService notificationService)
         {
             _context = context;
             _emailService = emailService;
@@ -42,6 +44,7 @@ namespace TransitManager.Infrastructure.Services
             _documentService = documentService;
             _config = config;
             _scopeFactory = scopeFactory;
+            _notificationService = notificationService;
         }
 
         // --- Products ---
@@ -917,6 +920,17 @@ namespace TransitManager.Infrastructure.Services
                     Details = "Facture visionnée via le lien public" 
                 });
                 
+                // NOTIFICATION ADMIN
+                await _notificationService.CreateAndSendAsync(
+                    "📄 Facture Consultée",
+                    $"La facture {invoice.Reference} a été visionnée par le client.",
+                    null, // Admins
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/invoices?id={invoice.Id}",
+                    relatedEntityId: invoice.Id,
+                    relatedEntityType: "Invoice"
+                );
+                
                 await _context.SaveChangesAsync();
             }
 
@@ -1058,6 +1072,21 @@ namespace TransitManager.Infrastructure.Services
                Action = "Changement statut", 
                Details = $"Statut passé de {oldStatus} à {status}" 
             });
+
+            // NOTIFICATION ADMIN (si changement important)
+            if (status == InvoiceStatus.Paid)
+            {
+                await _notificationService.CreateAndSendAsync(
+                    "💰 Facture Payée",
+                    $"La facture {invoice.Reference} est désormais PAYÉE.",
+                    null, // Admins
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/invoices?id={invoice.Id}",
+                    relatedEntityId: invoice.Id,
+                    relatedEntityType: "Invoice",
+                    priorite: PrioriteNotification.Haute
+                );
+            }
 
             await _context.SaveChangesAsync();
             return true;

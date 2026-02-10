@@ -19,18 +19,18 @@ namespace TransitManager.Infrastructure.Services
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly IHubContext<NotificationHub> _hubContext;
-        private readonly IAuthenticationService _authService;
+        private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
         private readonly IWebPushService? _webPushService;
 
         public NotificationService(
             IDbContextFactory<TransitContext> contextFactory,
             IHubContext<NotificationHub> hubContext,
-            IAuthenticationService authService,
+            Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
             IWebPushService? webPushService = null)
         {
             _contextFactory = contextFactory;
             _hubContext = hubContext;
-            _authService = authService;
+            _httpContextAccessor = httpContextAccessor;
             _webPushService = webPushService;
         }
 
@@ -43,7 +43,9 @@ namespace TransitManager.Infrastructure.Services
 			await using var context = await _contextFactory.CreateDbContextAsync();
 
 			// 1. Identifier l'expéditeur (celui qui fait l'action) pour éviter l'auto-notification
-			var currentUserId = _authService.CurrentUser?.Id;
+			Guid? currentUserId = null;
+			var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+			if (Guid.TryParse(userIdClaim, out var parsedId)) currentUserId = parsedId;
 
 			// 2. Déterminer les destinataires
 			var recipients = new List<Guid>();
@@ -170,7 +172,10 @@ namespace TransitManager.Infrastructure.Services
 
             await using var context = await _contextFactory.CreateDbContextAsync();
             var notifsToSend = new List<Notification>();
-            var currentUserId = _authService.CurrentUser?.Id;
+            
+            Guid? currentUserId = null;
+            var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(userIdClaim, out var parsedId)) currentUserId = parsedId;
 
             // Pré-chargement des admins si nécessaire
             List<Guid>? adminIds = null;

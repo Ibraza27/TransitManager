@@ -213,6 +213,9 @@
     private bool IsLoading = true;
     private bool ShowMobileModal = false;
 
+    [SupplyParameterFromQuery]
+    public Guid? Id { get; set; }
+
     // Helper to render Detail view (shared between Desktop Right Pane and Mobile Modal)
     private RenderFragment RenderQuoteDetail(QuoteDto quote, bool isMobile = false) => __builder =>
     {
@@ -593,8 +596,19 @@
             TotalCount = result.TotalCount;
             TotalPages = result.TotalPages;
 
+            // Auto-select by ID if provided
+            if (Id.HasValue)
+            {
+                var target = QuoteList.FirstOrDefault(q => q.Id == Id.Value);
+                if (target != null) SelectedQuote = target;
+                else 
+                {
+                    // If not in first page, we might need to fetch it specifically or just fallback
+                    // For now, let's assume it's in the first page or we don't auto-select if missing
+                }
+            }
             // Auto-select first if none selected
-            if (!append && SelectedQuote == null && QuoteList.Any())
+            else if (!append && SelectedQuote == null && QuoteList.Any())
             {
                 SelectedQuote = QuoteList.First();
             }

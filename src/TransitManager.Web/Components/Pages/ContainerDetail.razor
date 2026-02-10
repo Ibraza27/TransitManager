@@ -450,6 +450,17 @@
 @code {
     [Parameter] public Guid? Id { get; set; }
 
+    [SupplyParameterFromQuery]
+    public string? Tab { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Tab))
+        {
+            _activeTab = Tab.ToLower();
+        }
+    }
+
     private ConteneurDetailDto _dto = new();
     private Conteneur _conteneur = new() { DateReception = DateTime.Now };
     

@@ -600,11 +600,10 @@
 
         if (!string.IsNullOrEmpty(Action))
         {
-            if (Action.ToLower() == "inspection") _showInspection = true;
             if (Action.ToLower() == "payment") _showPayments = true;
-            if (Action.ToLower() == "priceproposal") _showPriceProposal = true;
         }
     }
+    
     private Vehicule _vehicule = new() { Statut = StatutVehicule.EnAttente };
 
     private bool _isLoading = true;

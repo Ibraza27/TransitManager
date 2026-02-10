@@ -200,9 +200,9 @@ namespace TransitManager.Infrastructure.Services
             }
             else
             {
-                if (colisId.HasValue) actionUrl = $"/colis/edit/{colisId}?tab=docs";
-                else if (vehiculeId.HasValue) actionUrl = $"/vehicule/edit/{vehiculeId}?tab=docs";
-                else if (conteneurId.HasValue) actionUrl = $"/conteneur/detail/{conteneurId}?tab=docs";
+                if (colisId.HasValue) actionUrl = $"/colis/edit/{colisId}?tab=documents";
+                else if (vehiculeId.HasValue) actionUrl = $"/vehicule/edit/{vehiculeId}?tab=documents";
+                else if (conteneurId.HasValue) actionUrl = $"/conteneur/detail/{conteneurId}?tab=documents";
             }
 
             // Notifier Admin

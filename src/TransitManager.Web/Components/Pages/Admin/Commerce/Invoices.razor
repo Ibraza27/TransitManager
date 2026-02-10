@@ -209,6 +209,9 @@
     private SendInvoiceModal _sendInvoiceModal;
     private SendReminderModal _sendReminderModal;
 
+    [SupplyParameterFromQuery]
+    public Guid? Id { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         _companyProfile = await SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
@@ -228,7 +231,12 @@
             
             TotalPages = result.TotalPages;
 
-            if (!append && SelectedInvoice == null && InvoiceList.Any())
+            if (Id.HasValue)
+            {
+                var target = InvoiceList.FirstOrDefault(i => i.Id == Id.Value);
+                if (target != null) SelectedInvoice = target;
+            }
+            else if (!append && SelectedInvoice == null && InvoiceList.Any())
                 SelectedInvoice = InvoiceList.First();
             else if (SelectedInvoice != null)
             {

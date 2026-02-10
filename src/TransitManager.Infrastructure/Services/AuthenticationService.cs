@@ -18,17 +18,20 @@ namespace TransitManager.Infrastructure.Services
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly INotificationService _notificationService;
         private Utilisateur? _currentUser;
         public Utilisateur? CurrentUser => _currentUser;
 
         public AuthenticationService(
             IDbContextFactory<TransitContext> contextFactory,
             IEmailService emailService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            INotificationService notificationService)
         {
             _contextFactory = contextFactory;
             _emailService = emailService;
             _configuration = configuration;
+            _notificationService = notificationService;
         }
 
         public async Task<AuthenticationResult> LoginAsync(string identifier, string password)
@@ -352,6 +355,18 @@ namespace TransitManager.Infrastructure.Services
 
                 // On lance l'envoi sans attendre pour ne pas bloquer l'UI (Fire and Forget ou background job idéalement)
                 _ = _emailService.SendEmailAsync(request.Email, "Confirmation de compte", message);
+
+                // NOTIF ADMIN
+                await _notificationService.CreateAndSendAsync(
+                    "👤 Nouveau Compte Client",
+                    $"Nouveau client inscrit : {user.NomComplet} ({user.Email})",
+                    null, // Admins
+                    CategorieNotification.NouveauClient,
+                    actionUrl: $"/clients/detail/{client.Id}",
+                    relatedEntityId: client.Id,
+                    relatedEntityType: "Client",
+                    priorite: PrioriteNotification.Haute
+                );
 
                 return new AuthenticationResult { Success = true, User = user, ErrorMessage = "Compte créé. Veuillez vérifier vos emails." };
             }

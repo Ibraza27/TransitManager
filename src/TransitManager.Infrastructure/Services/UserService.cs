@@ -19,11 +19,16 @@ namespace TransitManager.Infrastructure.Services
     {
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly IAuthenticationService _authenticationService;
+        private readonly INotificationService _notificationService;
 
-        public UserService(IDbContextFactory<TransitContext> contextFactory, IAuthenticationService authenticationService)
+        public UserService(
+            IDbContextFactory<TransitContext> contextFactory, 
+            IAuthenticationService authenticationService,
+            INotificationService notificationService)
         {
             _contextFactory = contextFactory;
             _authenticationService = authenticationService;
+            _notificationService = notificationService;
         }
 
         public async Task<Utilisateur?> GetByIdAsync(Guid id)
@@ -81,6 +86,21 @@ namespace TransitManager.Infrastructure.Services
             
             await context.Utilisateurs.AddAsync(user);
             await context.SaveChangesAsync();
+
+            // NOTIF ADMIN
+            if (user.Role == RoleUtilisateur.Client)
+            {
+                await _notificationService.CreateAndSendAsync(
+                    "👤 Nouveau Compte Client",
+                    $"Compte crée pour : {user.NomComplet} ({user.Email})",
+                    null, // Admins
+                    CategorieNotification.NouveauClient,
+                    actionUrl: user.ClientId.HasValue ? $"/clients/detail/{user.ClientId}" : "/users",
+                    relatedEntityId: user.ClientId,
+                    relatedEntityType: "Client"
+                );
+            }
+
             return user;
         }
 

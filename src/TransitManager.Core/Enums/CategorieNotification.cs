@@ -14,6 +14,7 @@ namespace TransitManager.Core.Enums
         
         // --- CEUX QUI MANQUAIENT ---
         AlerteDouane,      // 🛃 Douane
-        NouveauMessage     // 💬 Chat
+        NouveauMessage,    // 💬 Chat
+        Commerce           // 💰 Devis / Facture (Accepté, Refusé, etc.)
     }
 }

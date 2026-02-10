@@ -464,9 +464,9 @@ namespace TransitManager.Infrastructure.Services
 		
 		private string GetPaiementActionUrl(Paiement p)
 		{
-			if (p.ColisId.HasValue) return $"/colis/edit/{p.ColisId}";
-			if (p.VehiculeId.HasValue) return $"/vehicule/edit/{p.VehiculeId}";
-			if (p.ConteneurId.HasValue) return $"/conteneur/detail/{p.ConteneurId}";
+			if (p.ColisId.HasValue) return $"/colis/edit/{p.ColisId}?action=payment";
+			if (p.VehiculeId.HasValue) return $"/vehicule/edit/{p.VehiculeId}?action=payment";
+			if (p.ConteneurId.HasValue) return $"/conteneur/detail/{p.ConteneurId}?tab=infos"; // Conteneur n'a pas encote de paiement direct ?
 			return "/finance"; // Fallback
 		}
 		

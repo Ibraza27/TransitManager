@@ -1,0 +1,2 @@
+Unhandled exception. System.InvalidOperationException: ApiBaseUrl is not configured in appsettings.json
+   at Program.<Main>$(String[] args) in S:\PROGRAMATION\TransitManager\src\TransitManager.Web\Program.cs:line 95

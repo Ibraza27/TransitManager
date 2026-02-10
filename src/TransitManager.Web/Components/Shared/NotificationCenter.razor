@@ -130,8 +130,19 @@
     private bool _isLoading = false;
     private bool _isOpen = false;
     private HubConnection? _hubConnection;
+    private System.Timers.Timer? _pollingTimer;
     private List<Notification> _activeToasts = new();
     private bool _isConnected = false;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pollingTimer != null)
+        {
+            _pollingTimer.Stop();
+            _pollingTimer.Dispose();
+        }
+        if (_hubConnection != null) await _hubConnection.DisposeAsync();
+    }
 
     // On évite le SSR (Server Side Rendering) pour SignalR
     protected override void OnInitialized() { }
@@ -142,6 +153,7 @@
         {
             await LoadUnreadCount();
             await ConnectSignalR();
+            StartPollingFallback();
         }
     }
 
@@ -208,7 +220,7 @@
                 });
             ");
             // Exposer la connexion globalement pour le script ci-dessus
-             await JSRuntime.InvokeVoidAsync("eval", "window.signalRConnection = null;"); 
+            await JSRuntime.InvokeVoidAsync("eval", "window.signalRConnection = null;"); 
 
             // Timeouts étendus
             _hubConnection.ServerTimeout = TimeSpan.FromMinutes(4);
@@ -263,15 +275,30 @@
             Console.WriteLine($"🚀 [Notif] Tentative connexion SignalR vers {hubUrl}...");
             await _hubConnection.StartAsync();
             // Exposer pour le script de visibilité
-             await JSRuntime.InvokeVoidAsync("eval", "window.signalRConnection = arguments[0];", _hubConnection);
+            await JSRuntime.InvokeVoidAsync("eval", "window.signalRConnection = arguments[0];", _hubConnection);
             _isConnected = true;
             Console.WriteLine($"✅ [Notif] Connecté !");
         }
         catch (Exception ex)
         {
-            _isConnected = false;
             Console.WriteLine($"❌ [Notif] Erreur Connexion : {ex.Message}");
+            _isConnected = false;
         }
+    }
+
+    private void StartPollingFallback()
+    {
+        _pollingTimer = new System.Timers.Timer(15000); // 15s
+        _pollingTimer.Elapsed += async (s, e) => 
+        {
+            if (!_isConnected) 
+            {
+                Console.WriteLine("🔄 [Notif] Polling Fallback...");
+                await LoadUnreadCount();
+                 // Optionally load list if open, but UnreadCount is key
+            }
+        };
+        _pollingTimer.Start();
     }
 	
     private async Task LoadUnreadCount()
@@ -357,11 +384,6 @@
         CategorieNotification.NouveauMessage => "bg-warning",
         _ => "bg-secondary"
     };
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_hubConnection != null) await _hubConnection.DisposeAsync();
-    }
 
     public class InfiniteRetryPolicy : IRetryPolicy
     {

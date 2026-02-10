@@ -233,6 +233,17 @@ namespace TransitManager.Infrastructure.Services
                     Details = "Devis visionné via le lien public" 
                 });
                 
+                // NOTIFICATION ADMIN
+                await _notificationService.CreateAndSendAsync(
+                    "📄 Devis Consulté",
+                    $"Le devis {quote.Reference} a été consulté par le client.",
+                    null, // Admins
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/quotes?id={quote.Id}",
+                    relatedEntityId: quote.Id,
+                    relatedEntityType: "Quote"
+                );
+                
                 await _context.SaveChangesAsync();
             }
 
@@ -570,6 +581,48 @@ namespace TransitManager.Infrastructure.Services
                 Action = "Changement de statut", 
                 Details = historyDetails
             });
+
+            // NOTIFICATION ADMIN
+            if (status == QuoteStatus.Accepted)
+            {
+                await _notificationService.CreateAndSendAsync(
+                    "✅ Devis Accepté",
+                    $"Le devis {quote?.Reference} a été ACCEPTÉ par le client !",
+                    null,
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/quotes?id={id}",
+                    relatedEntityId: id,
+                    relatedEntityType: "Quote",
+                    priorite: PrioriteNotification.Haute
+                );
+            }
+            else if (status == QuoteStatus.Rejected)
+            {
+                await _notificationService.CreateAndSendAsync(
+                    "❌ Devis Refusé",
+                    $"Le devis {quote?.Reference} a été REFUSÉ. Motif: {rejectionReason}",
+                    null,
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/quotes?id={id}",
+                    relatedEntityId: id,
+                    relatedEntityType: "Quote",
+                    priorite: PrioriteNotification.Haute
+                );
+            }
+            else if (status == QuoteStatus.ChangeRequested)
+            {
+                await _notificationService.CreateAndSendAsync(
+                    "✏️ Modification Demandée",
+                    $"Le client demande une modification sur le devis {quote?.Reference}. Détails: {rejectionReason}",
+                    null,
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/quotes?id={id}",
+                    relatedEntityId: id,
+                    relatedEntityType: "Quote",
+                    priorite: PrioriteNotification.Normale
+                );
+            }
+            // "Viewed" is handled in GetQuoteByTokenAsync, "Sent" via Email method.
 
             await _context.SaveChangesAsync();
             return true;
@@ -1600,6 +1653,18 @@ namespace TransitManager.Infrastructure.Services
              invoice.LastReminderSent = DateTime.UtcNow;
              
              _context.InvoiceHistories.Add(new InvoiceHistory { InvoiceId = id, Action = "Rappel envoyé", Details = $"Rappel #{invoice.ReminderCount} envoyé à {toAddress}" });
+             
+             // NOTIFICATION ADMIN
+             await _notificationService.CreateAndSendAsync(
+                 "⏰ Rappel Envoyé",
+                 $"Un rappel de paiement automatique a été envoyé pour la facture {invoice.Reference}.",
+                 null,
+                 CategorieNotification.Commerce,
+                 actionUrl: $"/admin/commerce/invoices?id={id}",
+                 relatedEntityId: id,
+                 relatedEntityType: "Invoice"
+             );
+             
              await _context.SaveChangesAsync();
         }
 
@@ -1757,6 +1822,17 @@ namespace TransitManager.Infrastructure.Services
 
                 foreach(var id in overdueIds)
                 {
+                     // Check Spam Prevention (7 Days)
+                     var invoice = await _context.Invoices.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id);
+                     if (invoice != null && invoice.LastReminderSent.HasValue)
+                     {
+                         if ((DateTime.UtcNow - invoice.LastReminderSent.Value).TotalDays < 7)
+                         {
+                             // Skip if last reminder was less than 7 days ago
+                             continue;
+                         }
+                     }
+
                      // Update Status to Overdue
                      // We use UpdateInvoiceStatusAsync logic to ensure consistency? 
                      // Or direct DB update? UpdateInvoiceStatusAsync might send emails or do other things? 

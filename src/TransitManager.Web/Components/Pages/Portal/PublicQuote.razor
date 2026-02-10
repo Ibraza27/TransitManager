@@ -8,11 +8,11 @@
 @inject IApiService ApiService
 @inject IJSRuntime JS
 @inject TransitManager.Core.Interfaces.ISettingsService SettingsService
+@inject TransitManager.Core.Interfaces.INotificationService NotificationService
 @using TransitManager.Web.Components.Shared
 
 <div class="d-flex flex-column min-vh-100" style="background-color: #0a0f1a;">
-    <!-- Navbar simplified for Public View - FULL WIDTH - STICKY -->
-    <!-- Navbar simplified for Public View - FULL WIDTH - FIXED -->
+    <!-- ... (Navbar remains the same) -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm px-2 px-md-4 fixed-top" style="z-index: 1030;">
         <a class="navbar-brand fw-bold" href="#">HIPPOCAMPE</a>
         <div class="ms-auto d-flex gap-2">
@@ -38,7 +38,8 @@
         }
         else
         {
-            <!-- Action Bar (Séparée du document A4) - Padding Top ajouté pour compenser fixed-top -->
+            <!-- ... (Keep existing UI code unchanged until @code block) ... -->
+            <!-- Action Bar -->
             <div class="d-flex justify-content-between align-items-center py-3 px-3 px-md-4 d-print-none" style="background-color: #0a0f1a; margin-top: 56px;">
                 <h5 class="mb-0 text-light">Aperçu du devis</h5>
                 <div class="d-flex gap-2">
@@ -58,7 +59,6 @@
             <!-- Document A4 -->
             <div class="d-flex justify-content-center px-3 px-md-4 pb-4" id="printableArea">
                 <div class="a4-paper bg-white shadow-lg rounded-3">
-                    <!-- Page Content avec vraies marges -->
                     <div class="page-content">
                     <!-- Header with Company Info & Logo -->
                     <div class="row mb-5 border-bottom pb-4">
@@ -100,7 +100,7 @@
                         </div>
                     </div>
 
-                    <!-- Message (Moved Up) -->
+                    <!-- Message -->
                     @if (!string.IsNullOrEmpty(Quote.Message))
                     {
                         <div class="mb-4">
@@ -109,7 +109,7 @@
                         </div>
                     }
 
-                    <!-- Payment Terms (Moved Down) -->
+                    <!-- Payment Terms -->
                     @if (!string.IsNullOrEmpty(Quote.PaymentTerms))
                     {
                             <div class="mb-4">
@@ -193,7 +193,6 @@
                     </div>
 
                     <!-- RIB Section -->
-                    <!-- RIB Section - Police augmentée -->
                     <div class="mt-4 p-3 border rounded bg-light">
                         <h6 class="fw-bold text-secondary text-uppercase mb-2">
                             <i class="bi bi-bank me-2"></i>Coordonnées Bancaires
@@ -218,7 +217,7 @@
                         </div>
                     }
                     
-                    <!-- Added Status Banners for Public View Context -->
+                    <!-- Status Banners -->
                      @if(Quote.Status == QuoteStatus.Accepted)
                     {
                         <div class="alert alert-success mt-5 d-flex align-items-center justify-content-center gap-3 py-4">
@@ -258,10 +257,11 @@
                     <div class="mt-5 text-center text-muted small pt-5 border-top">
                             @_companyProfile.CompanyName - @_companyProfile.LegalStatus - @_companyProfile.Address @_companyProfile.ZipCode @_companyProfile.City<br/>
                             Numéro de SIRET: @_companyProfile.Siret - Numéro de TVA: @_companyProfile.TvaNumber - @_companyProfile.Rcs
-                    </div> <!-- Fin legal footer -->
-                    </div> <!-- Fin page-content -->
-                </div> <!-- Fin a4-paper -->
-            </div> <!-- Fin printableArea -->
+                    </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Sticky Bottom Actions -->
             @if (Quote.Status != QuoteStatus.Accepted && Quote.Status != QuoteStatus.Rejected)
             {
@@ -380,11 +380,27 @@
             Quote = await ApiService.GetPublicQuoteAsync(Token);
             _bankDetails = await SettingsService.GetSettingAsync<BankDetailsDto>("BankDetails", new());
             _companyProfile = await SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
+
+            // Notification: Devis Consulté
+            if (Quote != null)
+            {
+                await NotificationService.CreateAndSendAsync(
+                    "📄 Devis Consulté",
+                    $"Le devis {Quote.Reference} a été consulté par le client.",
+                    null, // Admins
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/quotes?id={Quote.Id}",
+                    relatedEntityId: Quote.Id,
+                    relatedEntityType: "Quote"
+                );
+            }
         }
         catch { Quote = null; }
         finally { IsLoading = false; }
     }
     
+    // ... DownloadPdf and Print methods unchanged ...
+
     private async Task DownloadPdf()
     {
         if (Quote == null) return;
@@ -450,6 +466,19 @@
              {
                 await ApiService.AcceptPublicQuoteAsync(Token);
                 Quote.Status = QuoteStatus.Accepted;
+                
+                // Notification: Devis Accepté
+                await NotificationService.CreateAndSendAsync(
+                    "✅ Devis Accepté",
+                    $"Le devis {Quote?.Reference} a été ACCEPTÉ par le client !",
+                    null,
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/quotes?id={Quote?.Id}",
+                    relatedEntityId: Quote?.Id,
+                    relatedEntityType: "Quote",
+                    priorite: PrioriteNotification.Normale
+                );
+
                 await JS.InvokeVoidAsync("scroll", 0, 0); // Scroll to top to see success message
                 await JS.InvokeVoidAsync("alert", "Merci ! Le devis a été accepté.");
              }
@@ -513,6 +542,19 @@
              await ApiService.RejectPublicQuoteAsync(Token, reason ?? "");
              Quote.Status = QuoteStatus.Rejected;
              Quote.RejectionReason = reason;
+
+             // Notification: Devis Refusé
+             await NotificationService.CreateAndSendAsync(
+                    "❌ Devis Refusé",
+                    $"Le devis {Quote?.Reference} a été REFUSÉ. Motif: {reason}",
+                    null,
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/quotes?id={Quote?.Id}",
+                    relatedEntityId: Quote?.Id,
+                    relatedEntityType: "Quote",
+                    priorite: PrioriteNotification.Normale
+             );
+
              await JS.InvokeVoidAsync("scroll", 0, 0);
          }
          catch(Exception ex)
@@ -546,6 +588,18 @@
              await ApiService.RequestChangesPublicQuoteAsync(Token, comment);
              Quote.Status = QuoteStatus.ChangeRequested;
              
+             // Notification: Modification Demandée
+             await NotificationService.CreateAndSendAsync(
+                "✏️ Modification Demandée",
+                $"Le client demande une modification sur le devis {Quote?.Reference}. Détails: {comment}",
+                null,
+                CategorieNotification.Commerce,
+                actionUrl: $"/admin/commerce/quotes?id={Quote?.Id}",
+                relatedEntityId: Quote?.Id,
+                relatedEntityType: "Quote",
+                priorite: PrioriteNotification.Normale
+             );
+
              // Reload to get fresh history
              Quote = await ApiService.GetPublicQuoteAsync(Token);
              

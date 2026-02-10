@@ -8,6 +8,7 @@
 @inject IApiService ApiService
 @inject IJSRuntime JS
 @inject TransitManager.Core.Interfaces.ISettingsService SettingsService
+@inject TransitManager.Core.Interfaces.INotificationService NotificationService
 @using TransitManager.Web.Components.Shared
 
 <div class="d-flex flex-column min-vh-100" style="background-color: #0a0f1a;">
@@ -317,6 +318,20 @@
             Invoice = await ApiService.GetPublicInvoiceAsync(Token);
             _bankDetails = await SettingsService.GetSettingAsync<BankDetailsDto>("BankDetails", new());
             _companyProfile = await SettingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
+
+            // Notification: Facture Consultée
+            if (Invoice != null)
+            {
+                await NotificationService.CreateAndSendAsync(
+                    "📄 Facture Consultée",
+                    $"La facture {Invoice.Reference} a été consultée par le client.",
+                    null, // Admins
+                    CategorieNotification.Commerce,
+                    actionUrl: $"/admin/commerce/invoices?id={Invoice.Id}",
+                    relatedEntityId: Invoice.Id,
+                    relatedEntityType: "Invoice"
+                );
+            }
         }
         catch { Invoice = null; }
         finally { IsLoading = false; }

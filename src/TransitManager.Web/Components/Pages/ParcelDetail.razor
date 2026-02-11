@@ -46,13 +46,8 @@
                     <ul class="dropdown-menu @(_isExportMenuOpen ? "show" : "")" 
                         style="right: auto; left: 0; margin-top: 5px;">
                         <li>
-                            <button class="dropdown-item" @onclick="() => ExportPdf(false, false)">
-                                📄 Fiche Colis (Simple)
-                            </button>
-                        </li>
-                        <li>
-                            <button class="dropdown-item" @onclick="() => ExportPdf(true, false)">
-                                💰 Reçu Financier (+ Prix)
+                            <button class="dropdown-item" @onclick="() => ExportPdf(true, true)">
+                                💰 Fiche + Prix + Douane
                             </button>
                         </li>
                         <li>
@@ -483,6 +478,21 @@
                      <div class="row">
                         <div class="col-12">
                             <!-- On passe _activeTab == "discussion" pour dire au chat s'il est affiché -->
+                            <!-- Ajout Bouton Notifier -->
+                            <div class="d-flex justify-content-end mb-2">
+                                <button class="btn btn-warning btn-sm shadow-sm" @onclick="NotifyClientByEmail" disabled="@IsSendingEmail">
+                                    @if (IsSendingEmail)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-bell-fill me-1"></i>
+                                    }
+                                    Notifier le client (Nouveau message)
+                                </button>
+                            </div>
+
 							<ChatBox EntityId="@_colis.Id" 
 									 EntityType="Colis" 
 									 OnUnreadCountChanged="UpdateUnreadBadge" 
@@ -1291,6 +1301,51 @@
         return 0; 
     }
 
+    private bool IsSendingEmail = false;
+
+    private async Task NotifyClientByEmail()
+    {
+        if (_colis.Client == null || string.IsNullOrEmpty(_colis.Client.Email))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Le client n'a pas d'adresse email valide.");
+            return;
+        }
+
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Voulez-vous envoyer une notification par email à {_colis.Client.NomComplet} ({_colis.Client.Email}) ?");
+        if (!confirmed) return;
+
+        IsSendingEmail = true;
+        StateHasChanged();
+
+        try
+        {
+            // Récupérer le profil entreprise
+            var companyProfile = await SettingsService.GetSettingAsync<TransitManager.Core.DTOs.Settings.CompanyProfileDto>("CompanyProfile", new());
+            var portalLink = "https://hippocampetransitmanager.com/login"; // URL en dur ou via config
+
+            await ApiService.SendManualNotificationAsync(new TransitManager.Core.DTOs.ManualNotificationDto
+            {
+                ClientEmail = _colis.Client.Email,
+                ClientName = _colis.Client.NomComplet,
+                PortalLink = portalLink,
+                CompanyName = companyProfile?.CompanyName ?? "Hippocampe Transit",
+                CompanyAddress = $"{companyProfile?.Address}, {companyProfile?.ZipCode} {companyProfile?.City}",
+                CompanyPhone = companyProfile?.Phone ?? "",
+                CompanyLogoUrl = "https://hippocampetransitmanager.com/images/logo.jpg"
+            });
+
+            await JSRuntime.InvokeVoidAsync("alert", "Notification envoyée avec succès !");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Erreur lors de l'envoi : {ex.Message}");
+        }
+        finally
+        {
+            IsSendingEmail = false;
+            StateHasChanged();
+        }
+    }
 }
 
 

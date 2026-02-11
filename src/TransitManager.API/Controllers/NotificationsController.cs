@@ -12,10 +12,12 @@ namespace TransitManager.API.Controllers
     public class NotificationsController : ControllerBase
     {
         private readonly INotificationService _notificationService;
+        private readonly IEmailService _emailService;
 
-        public NotificationsController(INotificationService notificationService)
+        public NotificationsController(INotificationService notificationService, IEmailService emailService)
         {
             _notificationService = notificationService;
+            _emailService = emailService;
         }
 
         [HttpGet]
@@ -62,6 +64,22 @@ namespace TransitManager.API.Controllers
                 dto.RelatedEntityId,
                 dto.RelatedEntityType,
                 dto.Priority
+            );
+            return Ok();
+        }
+
+        [HttpPost("manual-email")]
+        [Authorize(Roles = "Administrateur,Gestionnaire")]
+        public async Task<IActionResult> SendManualNotification([FromBody] ManualNotificationDto dto)
+        {
+            await _emailService.SendNewMessageNotificationAsync(
+                dto.ClientEmail,
+                dto.ClientName,
+                dto.PortalLink,
+                dto.CompanyName,
+                dto.CompanyAddress,
+                dto.CompanyPhone,
+                dto.CompanyLogoUrl
             );
             return Ok();
         }

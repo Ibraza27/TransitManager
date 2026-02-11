@@ -10,6 +10,7 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
+@inject TransitManager.Core.Interfaces.ISettingsService SettingsService
 
 <PageTitle>@(IsNew ? "Nouveau Véhicule" : "Détail Véhicule") - Hippocampe</PageTitle>
 
@@ -403,6 +404,21 @@
                 <div class="tab-pane fade @(_activeTab == "discussion" ? "show active" : "")">
                      <div class="row">
                         <div class="col-12">
+                             <!-- Ajout Bouton Notifier -->
+                            <div class="d-flex justify-content-end mb-2">
+                                <button class="btn btn-warning btn-sm shadow-sm" @onclick="NotifyClientByEmail" disabled="@IsSendingEmail">
+                                    @if (IsSendingEmail)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-bell-fill me-1"></i>
+                                    }
+                                    Notifier le client (Nouveau message)
+                                </button>
+                            </div>
+
                             <ChatBox EntityId="@_vehicule.Id" 
                                      EntityType="Vehicule" 
                                      OnUnreadCountChanged="UpdateUnreadBadge" 
@@ -1017,5 +1033,50 @@
             IssueType.Other => "Autre",
             _ => type.ToString()
         };
+    }
+
+    private bool IsSendingEmail = false;
+
+    private async Task NotifyClientByEmail()
+    {
+        if (_vehicule.Client == null || string.IsNullOrEmpty(_vehicule.Client.Email))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Le client n'a pas d'adresse email valide.");
+            return;
+        }
+
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Voulez-vous envoyer une notification par email à {_vehicule.Client.NomComplet} ({_vehicule.Client.Email}) ?");
+        if (!confirmed) return;
+
+        IsSendingEmail = true;
+        StateHasChanged();
+
+        try
+        {
+            var companyProfile = await SettingsService.GetSettingAsync<TransitManager.Core.DTOs.Settings.CompanyProfileDto>("CompanyProfile", new());
+            var portalLink = "https://hippocampetransitmanager.com/login";
+
+            await ApiService.SendManualNotificationAsync(new TransitManager.Core.DTOs.ManualNotificationDto
+            {
+                ClientEmail = _vehicule.Client.Email,
+                ClientName = _vehicule.Client.NomComplet,
+                PortalLink = portalLink,
+                CompanyName = companyProfile?.CompanyName ?? "Hippocampe Transit",
+                CompanyAddress = $"{companyProfile?.Address}, {companyProfile?.ZipCode} {companyProfile?.City}",
+                CompanyPhone = companyProfile?.Phone ?? "",
+                CompanyLogoUrl = "https://hippocampetransitmanager.com/images/logo.jpg"
+            });
+
+            await JSRuntime.InvokeVoidAsync("alert", "Notification envoyée avec succès !");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Erreur lors de l'envoi : {ex.Message}");
+        }
+        finally
+        {
+            IsSendingEmail = false;
+            StateHasChanged();
+        }
     }
 }

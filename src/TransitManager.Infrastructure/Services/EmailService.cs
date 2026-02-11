@@ -95,5 +95,61 @@ namespace TransitManager.Infrastructure.Services
                 throw;
             }
         }
+        public async Task SendNewMessageNotificationAsync(string to, string clientName, string portalLink, string companyName, string companyAddress, string companyPhone, string companyLogoUrl)
+        {
+            var subject = "Nouveau message dans votre espace client";
+            var htmlMessage = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+        .header {{ background-color: #333333; color: #ffffff; padding: 20px; text-align: center; }}
+        .header h1 {{ margin: 0; font-size: 20px; font-weight: 600; }}
+        .logo {{ max-width: 150px; height: auto; margin-bottom: 10px; }}
+        .content {{ padding: 30px; color: #333333; line-height: 1.6; }}
+        .btn {{ display: inline-block; background-color: #dc3545; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 20px; }}
+        .footer {{ background-color: #f8f9fa; padding: 20px; font-size: 12px; color: #6c757d; text-align: center; border-top: 1px solid #dee2e6; }}
+        .footer strong {{ color: #333333; }}
+        .footer a {{ color: #6c757d; text-decoration: none; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <!-- Logo if available -->
+            <img src='{companyLogoUrl}' alt='{companyName}' class='logo' onerror=""this.style.display='none'""/>
+        </div>
+        
+        <div class='content'>
+            <p>Bonjour,</p>
+            <p>Vous venez de recevoir un nouveau message dans votre espace client.</p>
+            <p>Pour le consulter, rendez-vous dans le centre de notification de votre site pour y accèder rapidement.</p>
+            
+            <div style='text-align: center;'>
+                <a href='{portalLink}' class='btn'>Accéder à mon espace</a>
+            </div>
+
+            <p style='margin-top: 30px;'>Merci de votre confiance,</p>
+            <p><strong>A très bientôt</strong></p>
+            
+            <p style='font-style: italic; font-size: 13px; color: #888; margin-top: 20px;'>Ce message règlementaire vous a été envoyé de manière automatique. Merci de ne pas y répondre.</p>
+        </div>
+
+        <div class='footer'>
+            <p>
+                <strong>{companyName}</strong><br/>
+                {companyAddress}<br/>
+                Tél: {companyPhone}
+            </p>
+        </div>
+    </div>
+</body>
+</html>";
+
+            await SendEmailAsync(to, subject, htmlMessage);
+        }
     }
 }

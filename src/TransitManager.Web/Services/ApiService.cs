@@ -1888,5 +1888,18 @@ namespace TransitManager.Web.Services
                 Console.WriteLine($"[ApiService] Error sending notification: {ex.Message}");
             }
         }
+
+        public async Task SendManualNotificationAsync(ManualNotificationDto dto)
+        {
+            try
+            {
+                await _httpClient.PostAsJsonAsync("api/notifications/manual-email", dto);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Error sending manual notification: {ex.Message}");
+                throw; // Rethrow to let UI handle the error or display it
+            }
+        }
     }
 }

@@ -1877,5 +1877,16 @@ namespace TransitManager.Web.Services
         }
 
 
+        public async Task CreateNotificationAsync(CreateNotificationDto notification)
+        {
+            try
+            {
+                await _httpClient.PostAsJsonAsync("api/notifications/create", notification);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ApiService] Error sending notification: {ex.Message}");
+            }
+        }
     }
 }

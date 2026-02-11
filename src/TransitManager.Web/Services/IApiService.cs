@@ -17,6 +17,7 @@ namespace TransitManager.Web.Services
         Task<IEnumerable<Client>?> SearchClientsAsync(string term);
         Task<IEnumerable<SelectionItemDto>> GetAllEntitiesAsync(string type); // <-- NEW
         Task<UserProfileDto?> GetUserProfileAsync();
+        Task CreateNotificationAsync(CreateNotificationDto notification);
         Task<bool> UpdateUserProfileAsync(UserProfileDto profile);
         
         // --- Gestion des Colis ---

@@ -362,7 +362,7 @@ namespace TransitManager.Infrastructure.Services
                     $"Nouveau client inscrit : {user.NomComplet} ({user.Email})",
                     null, // Admins
                     CategorieNotification.NouveauClient,
-                    actionUrl: $"/clients/detail/{client.Id}",
+                    actionUrl: $"/client/edit/{client.Id}",
                     relatedEntityId: client.Id,
                     relatedEntityType: "Client",
                     priorite: PrioriteNotification.Haute

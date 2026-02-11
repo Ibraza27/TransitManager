@@ -8,7 +8,6 @@
 @inject IApiService ApiService
 @inject IJSRuntime JS
 @inject TransitManager.Core.Interfaces.ISettingsService SettingsService
-@inject TransitManager.Core.Interfaces.INotificationService NotificationService
 @using TransitManager.Web.Components.Shared
 
 <div class="d-flex flex-column min-vh-100" style="background-color: #0a0f1a;">
@@ -384,15 +383,15 @@
             // Notification: Devis Consulté
             if (Quote != null)
             {
-                await NotificationService.CreateAndSendAsync(
-                    "📄 Devis Consulté",
-                    $"Le devis {Quote.Reference} a été consulté par le client.",
-                    null, // Admins
-                    CategorieNotification.Commerce,
-                    actionUrl: $"/admin/commerce/quotes?id={Quote.Id}",
-                    relatedEntityId: Quote.Id,
-                    relatedEntityType: "Quote"
-                );
+                await ApiService.CreateNotificationAsync(new CreateNotificationDto
+                {
+                    Title = "📄 Devis Consulté",
+                    Message = $"Le devis {Quote.Reference} a été consulté par le client.",
+                    Category = CategorieNotification.Commerce,
+                    ActionUrl = $"/admin/commerce/quotes/edit/{Quote.Id}",
+                    RelatedEntityId = Quote.Id,
+                    RelatedEntityType = "Quote"
+                });
             }
         }
         catch { Quote = null; }
@@ -468,16 +467,17 @@
                 Quote.Status = QuoteStatus.Accepted;
                 
                 // Notification: Devis Accepté
-                await NotificationService.CreateAndSendAsync(
-                    "✅ Devis Accepté",
-                    $"Le devis {Quote?.Reference} a été ACCEPTÉ par le client !",
-                    null,
-                    CategorieNotification.Commerce,
-                    actionUrl: $"/admin/commerce/quotes?id={Quote?.Id}",
-                    relatedEntityId: Quote?.Id,
-                    relatedEntityType: "Quote",
-                    priorite: PrioriteNotification.Normale
-                );
+                // Notification: Devis Accepté
+                await ApiService.CreateNotificationAsync(new CreateNotificationDto
+                {
+                    Title = "✅ Devis Accepté",
+                    Message = $"Le devis {Quote?.Reference} a été ACCEPTÉ par le client !",
+                    Category = CategorieNotification.Commerce,
+                    ActionUrl = $"/admin/commerce/quotes/edit/{Quote?.Id}",
+                    RelatedEntityId = Quote?.Id,
+                    RelatedEntityType = "Quote",
+                    Priority = PrioriteNotification.Haute
+                });
 
                 await JS.InvokeVoidAsync("scroll", 0, 0); // Scroll to top to see success message
                 await JS.InvokeVoidAsync("alert", "Merci ! Le devis a été accepté.");
@@ -543,17 +543,17 @@
              Quote.Status = QuoteStatus.Rejected;
              Quote.RejectionReason = reason;
 
-             // Notification: Devis Refusé
-             await NotificationService.CreateAndSendAsync(
-                    "❌ Devis Refusé",
-                    $"Le devis {Quote?.Reference} a été REFUSÉ. Motif: {reason}",
-                    null,
-                    CategorieNotification.Commerce,
-                    actionUrl: $"/admin/commerce/quotes?id={Quote?.Id}",
-                    relatedEntityId: Quote?.Id,
-                    relatedEntityType: "Quote",
-                    priorite: PrioriteNotification.Normale
-             );
+              // Notification: Devis Refusé
+              await ApiService.CreateNotificationAsync(new CreateNotificationDto
+              {
+                    Title = "❌ Devis Refusé",
+                    Message = $"Le devis {Quote?.Reference} a été REFUSÉ. Motif: {reason}",
+                    Category = CategorieNotification.Commerce,
+                    ActionUrl = $"/admin/commerce/quotes/edit/{Quote?.Id}",
+                    RelatedEntityId = Quote?.Id,
+                    RelatedEntityType = "Quote",
+                    Priority = PrioriteNotification.Normale
+              });
 
              await JS.InvokeVoidAsync("scroll", 0, 0);
          }
@@ -589,16 +589,16 @@
              Quote.Status = QuoteStatus.ChangeRequested;
              
              // Notification: Modification Demandée
-             await NotificationService.CreateAndSendAsync(
-                "✏️ Modification Demandée",
-                $"Le client demande une modification sur le devis {Quote?.Reference}. Détails: {comment}",
-                null,
-                CategorieNotification.Commerce,
-                actionUrl: $"/admin/commerce/quotes?id={Quote?.Id}",
-                relatedEntityId: Quote?.Id,
-                relatedEntityType: "Quote",
-                priorite: PrioriteNotification.Normale
-             );
+             await ApiService.CreateNotificationAsync(new CreateNotificationDto
+             {
+                Title = "✏️ Modification Demandée",
+                Message = $"Le client demande une modification sur le devis {Quote?.Reference}. Détails: {comment}",
+                Category = CategorieNotification.Commerce,
+                ActionUrl = $"/admin/commerce/quotes/edit/{Quote?.Id}",
+                RelatedEntityId = Quote?.Id,
+                RelatedEntityType = "Quote",
+                Priority = PrioriteNotification.Normale
+             });
 
              // Reload to get fresh history
              Quote = await ApiService.GetPublicQuoteAsync(Token);

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TransitManager.Core.Interfaces;
+using TransitManager.Core.DTOs;
 
 namespace TransitManager.API.Controllers
 {
@@ -45,6 +46,23 @@ namespace TransitManager.API.Controllers
         {
             var userId = GetCurrentUserId();
             await _notificationService.MarkAllAsReadAsync(userId);
+            return Ok();
+        }
+
+        [HttpPost("create")]
+        [Authorize(Roles = "Administrateur,Gestionnaire,Client")] // Allow clients to trigger specific notifications (like "Consulted")
+        public async Task<IActionResult> CreateNotification([FromBody] CreateNotificationDto dto)
+        {
+            await _notificationService.CreateAndSendAsync(
+                dto.Title,
+                dto.Message,
+                null, // Recipients handled by service or usually null for this context
+                dto.Category,
+                dto.ActionUrl,
+                dto.RelatedEntityId,
+                dto.RelatedEntityType,
+                dto.Priority
+            );
             return Ok();
         }
 

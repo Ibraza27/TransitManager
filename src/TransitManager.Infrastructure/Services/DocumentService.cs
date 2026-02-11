@@ -10,6 +10,7 @@ using TransitManager.Core.Enums;
 using TransitManager.Core.Interfaces;
 using TransitManager.Infrastructure.Data;
 using TransitManager.Core.DTOs;
+using TransitManager.Core.DTOs.Settings;
 
 namespace TransitManager.Infrastructure.Services
 {
@@ -18,17 +19,23 @@ namespace TransitManager.Infrastructure.Services
         private readonly IDbContextFactory<TransitContext> _contextFactory;
         private readonly string _storageRootPath;
         private readonly ITimelineService _timelineService;
-        private readonly INotificationService _notificationService; // AJOUT
+        private readonly INotificationService _notificationService;
+        private readonly IEmailService _emailService;
+        private readonly ISettingsService _settingsService;
 
         public DocumentService(
             IDbContextFactory<TransitContext> contextFactory,
             IConfiguration configuration,
             ITimelineService timelineService,
-            INotificationService notificationService) // AJOUT
+            INotificationService notificationService,
+            IEmailService emailService,
+            ISettingsService settingsService)
         {
             _contextFactory = contextFactory;
             _timelineService = timelineService;
-            _notificationService = notificationService; // AJOUT
+            _notificationService = notificationService;
+            _emailService = emailService;
+            _settingsService = settingsService;
 
             _storageRootPath = configuration["FileStorage:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Storage");
             if (!Directory.Exists(_storageRootPath))
@@ -481,6 +488,7 @@ namespace TransitManager.Infrastructure.Services
                 if (colisId.HasValue) actionUrl = $"/colis/detail/{colisId}?tab=docs"; // Vue détail côté client (supposé)
                 else if (vehiculeId.HasValue) actionUrl = $"/vehicule/detail/{vehiculeId}?tab=docs";
 
+                // 1. Notification Interne (SignalR)
                 await _notificationService.CreateAndSendAsync(
                     "Document Manquant",
                     $"Un document ({type}) est requis pour votre dossier.",
@@ -491,6 +499,46 @@ namespace TransitManager.Infrastructure.Services
                     relatedEntityId: doc.Id,
                     relatedEntityType: "Document"
                 );
+
+                // 2. Notification Email (Nouvelle Fonctionnalité)
+                try
+                {
+                    if (!string.IsNullOrEmpty(clientUser.Email))
+                    {
+                        var companyProfile = await _settingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
+                        var clientName = $"{clientUser.Prenom} {clientUser.Nom}".Trim();
+                        // Lien direct vers le portail (base URL hardcodée ou via config - ici on improvise un peu pour le portail client)
+                        // Idéalement récupérer BaseUrl via IConfiguration ou Settings.
+                        // On assume "https://hippocampetransitmanager.com" pour la prod.
+                        var portalBaseUrl = "https://hippocampetransitmanager.com"; 
+                        var fullLink = $"{portalBaseUrl}{actionUrl}";
+                        
+                        // Fallback Logo URL si vide dans le profil
+                        var logoUrl = !string.IsNullOrEmpty(companyProfile.LogoUrl) 
+                            ? (companyProfile.LogoUrl.StartsWith("http") ? companyProfile.LogoUrl : $"{portalBaseUrl}/{companyProfile.LogoUrl}")
+                            : "https://hippocampetransitmanager.com/images/logo.jpg";
+                            
+                         // Ensure logo ends with .jpg if it was .png (fix legacy config)
+                        if(logoUrl.EndsWith(".png")) logoUrl = logoUrl.Replace(".png", ".jpg");
+
+                        await _emailService.SendMissingDocumentNotificationAsync(
+                            clientUser.Email,
+                            clientName,
+                            type.ToString(),
+                            commentaire,
+                            fullLink,
+                            companyProfile.CompanyName,
+                            $"{companyProfile.Address}, {companyProfile.ZipCode} {companyProfile.City}",
+                            companyProfile.Phone,
+                            logoUrl
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // On ne veut pas faire échouer la demande si l'email plante
+                    Console.WriteLine($"[DocumentService] Erreur envoi email: {ex.Message}");
+                }
             }
 
             return doc;

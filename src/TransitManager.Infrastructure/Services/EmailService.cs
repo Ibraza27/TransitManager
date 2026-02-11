@@ -151,5 +151,66 @@ namespace TransitManager.Infrastructure.Services
 
             await SendEmailAsync(to, subject, htmlMessage);
         }
+
+        public async Task SendMissingDocumentNotificationAsync(string to, string clientName, string documentType, string? note, string portalLink, string companyName, string companyAddress, string companyPhone, string companyLogoUrl)
+        {
+            var subject = $"Document manquant : {documentType}";
+            var noteHtml = !string.IsNullOrEmpty(note) ? $"<div style='background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; margin-top: 10px; border: 1px solid #ffeeba;'><strong>Note :</strong> {note}</div>" : "";
+
+            var htmlMessage = $@"\
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+        .header {{ background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 2px solid #f0f0f0; }}
+        .logo {{ max-width: 150px; height: auto; }}
+        .content {{ padding: 30px; color: #333333; line-height: 1.6; }}
+        .btn-container {{ text-align: center; margin-top: 20px; margin-bottom: 20px; }}
+        .btn {{ display: inline-block; background-color: #dc3545; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; }}
+        .footer {{ background-color: #f8f9fa; padding: 20px; font-size: 12px; color: #6c757d; text-align: center; border-top: 1px solid #dee2e6; }}
+        .footer strong {{ color: #333333; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+             <img src='{companyLogoUrl}' alt='{companyName}' class='logo' onerror=""this.style.display='none'"" />
+        </div>
+        
+        <div class='content'>
+            <p>Bonjour {clientName},</p>
+            <p>Nous avons besoin d'un document complémentaire pour votre dossier.</p>
+            <p><strong>Document requis :</strong> <span style='color: #dc3545; font-weight: bold;'>{documentType}</span></p>
+            
+            {noteHtml}
+
+            <p>Merci de le téléverser dès que possible via votre espace client.</p>
+            
+            <div class='btn-container'>
+                <a href='{portalLink}' class='btn'>Accéder à mon espace</a>
+            </div>
+
+            <p style='margin-top: 30px;'>Merci de votre confiance,</p>
+            <p><strong>{companyName}</strong></p>
+            
+            <p style='font-style: italic; font-size: 13px; color: #888;'>Ce message automatique ne nécessite pas de réponse.</p>
+        </div>
+
+        <div class='footer'>
+            <p>
+                <strong>{companyName}</strong><br/>
+                {companyAddress}<br/>
+                Tél: {companyPhone}
+            </p>
+        </div>
+    </div>
+</body>
+</html>";
+
+            await SendEmailAsync(to, subject, htmlMessage);
+        }
     }
 }

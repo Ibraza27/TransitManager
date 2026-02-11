@@ -347,11 +347,11 @@
                                          </div>
                                          <div class="d-flex justify-content-between small text-warning-emphasis">
                                              <span>Assurance :</span>
-                                             <span>+@CalculateAssurance(_vehicule.ValeurDeclaree, _vehicule.PrixTotal).ToString("C2")</span>
+                                             <span>+@_vehicule.MontantAssurance.ToString("C2")</span>
                                          </div>
                                          <div class="border-top mt-2 pt-2 d-flex justify-content-between fw-bold text-primary">
                                              <span>TOTAL + ASSURANCE :</span>
-                                             <span>@((_vehicule.PrixTotal + CalculateAssurance(_vehicule.ValeurDeclaree, _vehicule.PrixTotal)).ToString("C2"))</span>
+                                             <span>@_vehicule.TotalFinal.ToString("C2")</span>
                                          </div>
                                      </div>
                                 }
@@ -549,7 +549,7 @@
                   ColisId="@Guid.Empty"
                   VehiculeId="@_vehicule.Id"
                   ClientId="@_vehicule.ClientId"
-                  TotalAmount="@_vehicule.PrixTotal"
+                  TotalAmount="@_vehicule.TotalFinal"
                   OnPaymentsChanged="UpdatePaidAmount"
                   OnClose="() => _showPayments = false" />
     <PriceProposalModal IsVisible="_showPriceProposal"
@@ -571,15 +571,7 @@
     <!-- Loading Modal pour génération PDF -->
     <LoadingModal IsVisible="_isLoadingPdf" Title="GÉNÉRATION DU PDF..." Message="Votre document est en cours de préparation. Veuillez patienter quelques instants." />
     
-    <!-- Payment Modal -->
-    <PaymentModal IsVisible="_showPayments" 
-                  IsAdmin="@CanEditGlobal"
-                  ColisId="Guid.Empty"
-                  VehiculeId="@_vehicule.Id"
-                  ClientId="@_vehicule.ClientId"
-                  TotalAmount="@_vehicule.PrixTotal"
-                  OnPaymentsChanged="@((total) => { _vehicule.SommePayee = total; StateHasChanged(); })"
-                  OnClose="@(() => _showPayments = false)" />
+
 </div>
 
 @code {
@@ -623,23 +615,7 @@
 
     private int _unreadMessagesCount = 0;
 
-    // --- ASSURANCE LOGIC ---
-    private decimal CalculateAssurance(decimal valeurDeclaree, decimal prixTotal)
-    {
-        var baseAmount = (valeurDeclaree + prixTotal) * 1.2m; // +20%
-        var assurance = (baseAmount * 0.007m) + 50m; // 0.7% + 50€
-        return assurance < 250m ? 250m : assurance;
-    }
 
-    private decimal GetResteAPayer()
-    {
-        decimal total = _vehicule.PrixTotal;
-        if (_vehicule.HasAssurance)
-        {
-            total += CalculateAssurance(_vehicule.ValeurDeclaree, _vehicule.PrixTotal);
-        }
-        return total - _vehicule.SommePayee;
-    }
 
     private void OnAssuranceToggle(ChangeEventArgs e)
     {

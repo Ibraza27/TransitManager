@@ -27,7 +27,23 @@ namespace TransitManager.Core.DTOs
         public decimal PrixTotal { get; set; }
         public decimal SommePayee { get; set; }
         
-        // Propriété calculée
-        public decimal RestantAPayer => PrixTotal - SommePayee;
+        // --- AJOUT : Champs assurance ---
+        public bool HasAssurance { get; set; }
+        public decimal ValeurDeclaree { get; set; }
+        
+        public decimal MontantAssurance
+        {
+            get
+            {
+                if (!HasAssurance) return 0;
+                var baseAmount = (ValeurDeclaree + PrixTotal) * 1.2m; // +20%
+                var assurance = (baseAmount * 0.007m) + 50m; // 0.7% + 50€
+                return assurance < 250m ? 250m : assurance;
+            }
+        }
+
+        public decimal TotalFinal => PrixTotal + MontantAssurance;
+
+        public decimal RestantAPayer => Math.Max(0, TotalFinal - SommePayee);
     }
 }

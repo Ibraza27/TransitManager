@@ -31,6 +31,6 @@ namespace TransitManager.Core.DTOs
         
         // Propriété calculée simple (le calcul réel se fera lors du mapping)
         public decimal TotalFinal => TypeEnvoi == TypeEnvoi.AvecDedouanement ? PrixTotal + FraisDouane : PrixTotal;
-        public decimal RestantAPayer => TotalFinal - SommePayee;
+        public decimal RestantAPayer => Math.Max(0, TotalFinal - SommePayee);
     }
 }

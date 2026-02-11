@@ -144,8 +144,8 @@ namespace TransitManager.Core.Entities
         
         public decimal SommePayee { get => _sommePayee; set { if (SetProperty(ref _sommePayee, value)) OnPropertyChanged(nameof(RestantAPayer)); } }
         
-        public decimal TotalFinal => TypeEnvoi == TypeEnvoi.AvecDedouanement ? PrixTotal + FraisDouane : PrixTotal;
-        public decimal RestantAPayer => TotalFinal - SommePayee;
+        public decimal TotalFinal => TypeEnvoi == TypeEnvoi.AvecDedouanement ? PrixTotal + ValeurDouane : PrixTotal;
+        public decimal RestantAPayer => Math.Max(0, TotalFinal - SommePayee);
 
         // --- NOUVELLE PROPRIÉTÉ ---
         [StringLength(50)]

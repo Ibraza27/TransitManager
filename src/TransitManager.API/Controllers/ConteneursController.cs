@@ -229,8 +229,8 @@ namespace TransitManager.API.Controllers
                     DateArrivee = c.DateArrivee,
                     NombrePieces = c.NombrePieces,
                     PrixTotal = c.PrixTotal,
-                    FraisDouane = c.FraisDouane, // AJOUT
-                    TypeEnvoi = c.TypeEnvoi,     // AJOUT
+                    FraisDouane = c.ValeurDouane, // Utiliser la valeur calculée (20%)
+                    TypeEnvoi = c.TypeEnvoi,     
                     SommePayee = c.SommePayee,
                     IsExcludedFromExport = c.IsExcludedFromExport
                 });
@@ -252,15 +252,17 @@ namespace TransitManager.API.Controllers
                     Commentaires = v.Commentaires,
                     DateCreation = v.DateCreation,
                     DestinationFinale = v.DestinationFinale,
-                    PrixTotal = v.HasAssurance 
-                        ? v.PrixTotal + _vehiculeService.CalculateAssuranceCost(v.ValeurDeclaree, v.PrixTotal)
-                        : v.PrixTotal,
+                    
+                    // NOUVEAU MAPPING
+                    PrixTotal = v.PrixTotal, // Prix de base
+                    HasAssurance = v.HasAssurance,
+                    ValeurDeclaree = v.ValeurDeclaree,
                     SommePayee = v.SommePayee
                 });
             }
 
             // Calculs Globaux
-            dto.PrixTotalGlobal = dto.Colis.Sum(c => c.PrixTotal) + dto.Vehicules.Sum(v => v.PrixTotal);
+            dto.PrixTotalGlobal = dto.Colis.Sum(c => c.TotalFinal) + dto.Vehicules.Sum(v => v.TotalFinal);
             dto.TotalPayeGlobal = dto.Colis.Sum(c => c.SommePayee) + dto.Vehicules.Sum(v => v.SommePayee);
 
             // Calculs par Client
@@ -281,7 +283,7 @@ namespace TransitManager.API.Controllers
 					Telephone = client.TelephonePrincipal,
                     NombreColis = colisClient.Count,
                     NombreVehicules = vehiculesClient.Count,
-                    TotalPrix = colisClient.Sum(x => x.PrixTotal) + vehiculesClient.Sum(x => x.PrixTotal),
+                    TotalPrix = colisClient.Sum(x => x.TotalFinal) + vehiculesClient.Sum(x => x.TotalFinal),
                     TotalPaye = colisClient.Sum(x => x.SommePayee) + vehiculesClient.Sum(x => x.SommePayee)
                 });
             }

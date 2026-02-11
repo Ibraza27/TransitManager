@@ -92,21 +92,20 @@ namespace TransitManager.Core.Entities
             set { if (SetProperty(ref _sommePayee, value)) { OnPropertyChanged(nameof(RestantAPayer)); } }
         }
 
-        public decimal RestantAPayer 
+        public decimal MontantAssurance
         {
             get
             {
-                var total = PrixTotal;
-                if (HasAssurance)
-                {
-                    var baseAmount = (ValeurDeclaree + PrixTotal) * 1.2m; // +20%
-                    var assurance = (baseAmount * 0.007m) + 50m; // 0.7% + 50€
-                    if (assurance < 250m) assurance = 250m;
-                    total += assurance;
-                }
-                return total - SommePayee;
+                if (!HasAssurance) return 0;
+                var baseAmount = (ValeurDeclaree + PrixTotal) * 1.2m; // +20%
+                var assurance = (baseAmount * 0.007m) + 50m; // 0.7% + 50€
+                return assurance < 250m ? 250m : assurance;
             }
         }
+
+        public decimal TotalFinal => PrixTotal + MontantAssurance;
+
+        public decimal RestantAPayer => Math.Max(0, TotalFinal - SommePayee);
         
         // Dimensions pour calcul de prix
         public int? DimensionsLongueurCm { get; set; }

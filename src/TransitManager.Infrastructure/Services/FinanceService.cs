@@ -58,6 +58,7 @@ namespace TransitManager.Infrastructure.Services
                 var totalEncaisse = await query.SumAsync(p => p.Montant);
 
                 // 2. Reste à Payer (Filter by Client if selected)
+                // 2. Reste à Payer (Filter by Client if selected)
                 var colisQuery = context.Colis.Where(c => c.Actif);
                 var vehiculeQuery = context.Vehicules.Where(v => v.Actif);
 
@@ -67,16 +68,16 @@ namespace TransitManager.Infrastructure.Services
                     vehiculeQuery = vehiculeQuery.Where(v => v.ClientId == clientId.Value);
                 }
 
-                var colisDette = await colisQuery.SumAsync(c => (c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal) - c.SommePayee);
+                // Updated to use ValeurDouane (20% of ValeurDeclaree) and Clamp to 0
+                var colisDette = await colisQuery.SumAsync(c => Math.Max(0, 
+                    (c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + (c.ValeurDeclaree * 0.20m) : c.PrixTotal) - c.SommePayee));
                 
-                // Logic Assurance inlined for SQL
-                // Formula: Cost = HasAssurance ? (Price + AssuranceCost) : Price
-                // AssuranceCost = (Base * 0.007) + 50, Min 250. Base = (Val + Price) * 1.2
-                var vehiculeDette = await vehiculeQuery.SumAsync(v => 
+                // Updated to Clamp to 0
+                var vehiculeDette = await vehiculeQuery.SumAsync(v => Math.Max(0,
                     (v.HasAssurance 
                         ? v.PrixTotal + ((((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m) < 250m ? 250m : (((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m))
                         : v.PrixTotal) 
-                    - v.SommePayee);
+                    - v.SommePayee));
 
                 // 3. Articles sans prix (Cotation Requise)
                 // Remplace "Paiements en retard" par "Articles sans prix"
@@ -186,15 +187,15 @@ namespace TransitManager.Infrastructure.Services
 
                 var colisImpayes = await context.Colis
                     .Where(c => c.ClientId == clientId && c.Actif && 
-                        ((c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal) - c.SommePayee) > 0.01m)
+                        ((c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + (c.ValeurDeclaree * 0.20m) : c.PrixTotal) - c.SommePayee) > 0.01m)
                     .Select(c => new UnpaidItemDto
                     {
                         EntityId = c.Id,
                         EntityType = "Colis",
                         Reference = c.NumeroReference,
                         Description = c.Designation,
-                        MontantTotal = c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal,
-                        RestantAPayer = (c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + c.FraisDouane : c.PrixTotal) - c.SommePayee,
+                        MontantTotal = c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + (c.ValeurDeclaree * 0.20m) : c.PrixTotal,
+                        RestantAPayer = Math.Max(0, (c.TypeEnvoi == TypeEnvoi.AvecDedouanement ? c.PrixTotal + (c.ValeurDeclaree * 0.20m) : c.PrixTotal) - c.SommePayee),
                         DateCreation = c.DateCreation
                     })
                     .ToListAsync();
@@ -213,9 +214,9 @@ namespace TransitManager.Infrastructure.Services
                         MontantTotal = v.HasAssurance 
                             ? v.PrixTotal + ((((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m) < 250m ? 250m : (((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m))
                             : v.PrixTotal,
-                        RestantAPayer = (v.HasAssurance 
+                        RestantAPayer = Math.Max(0, (v.HasAssurance 
                             ? v.PrixTotal + ((((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m) < 250m ? 250m : (((v.ValeurDeclaree + v.PrixTotal) * 1.2m * 0.007m) + 50m))
-                            : v.PrixTotal) - v.SommePayee,
+                            : v.PrixTotal) - v.SommePayee),
                         DateCreation = v.DateCreation
                     })
                     .ToListAsync();

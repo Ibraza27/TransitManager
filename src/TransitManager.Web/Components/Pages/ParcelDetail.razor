@@ -431,7 +431,7 @@
                                 {
                                      <div class="mb-3 bg-primary p-2 rounded text-white">
                                         <label class="form-label fw-bold mb-0">TOTAL + DOUANE (€)</label>
-                                        <div class="fs-4 fw-bold">@((_colis.PrixTotal + _colis.ValeurDouane).ToString("C2"))</div>
+                                        <div class="fs-4 fw-bold">@_colis.TotalFinal.ToString("C2")</div>
                                         <div class="small fst-italic">Prix total (@_colis.PrixTotal.ToString("C0")) + Douane (@_colis.ValeurDouane.ToString("C0"))</div>
                                     </div>
                                 }
@@ -605,7 +605,7 @@
                   IsAdmin="@IsAdmin"
                   ColisId="@_colis.Id"
                   ClientId="@_colis.ClientId"
-                  TotalAmount="@_colis.PrixTotal"
+                  TotalAmount="@_colis.TotalFinal"
                   OnPaymentsChanged="UpdatePaidAmount"
                   OnClose="() => _showPayments = false" />
                   

@@ -1901,5 +1901,9 @@ namespace TransitManager.Web.Services
                 throw; // Rethrow to let UI handle the error or display it
             }
         }
+        public async Task SendDocumentReminderAsync(Guid documentId)
+        {
+            await _httpClient.PostAsync($"api/documents/{documentId}/remind", null);
+        }
     }
 }

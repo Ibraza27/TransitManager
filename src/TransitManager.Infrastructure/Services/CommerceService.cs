@@ -170,7 +170,9 @@ namespace TransitManager.Infrastructure.Services
                 }
             }
 
-            return new PagedResult<QuoteDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+            var totalPages = (int)Math.Ceiling((double)total / pageSize);
+
+            return new PagedResult<QuoteDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize, TotalPages = totalPages };
         }
 
         public async Task<QuoteDto?> GetQuoteByIdAsync(Guid id)

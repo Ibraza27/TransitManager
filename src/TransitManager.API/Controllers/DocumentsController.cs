@@ -274,17 +274,28 @@ namespace TransitManager.API.Controllers
                 return Ok(new List<Document>());
             }
         }
-        [HttpGet("debug-paths")]
-        [AllowAnonymous]
-        public async Task<IActionResult> DebugPaths()
+        [HttpPost("{id:guid}/remind")]
+        [Authorize(Roles = "Administrateur,Gestionnaire")]
+        public async Task<ActionResult> RemindDocument(Guid id)
         {
-             var docs = await _documentService.GetAllMissingDocumentsAsync(); // Just to get context, actually let's use a raw query or similar via service
-             // We can't access DbContext directly here easily.
-             // Let's rely on DocumentService to have a Debug method or hack it.
-             // Since I can't easily add method to interface without rebuilding everything cleanly...
-             // I'll add the logic In DocumentService and expose it, OR
-             // Just instantiate context here? No, better to add to Service.
-             return Ok("Check service logs for details.");
+            try
+            {
+                await _documentService.RemindDocumentAsync(id);
+                return Ok(new { Message = "Relance envoyée avec succès" });
+            }
+            catch (ArgumentException)
+            {
+                return NotFound("Document introuvable");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur relance doc");
+                return StatusCode(500, "Erreur interne");
+            }
         }
     }
 }

@@ -672,5 +672,45 @@ namespace TransitManager.Infrastructure.Services
             var invalidChars = Path.GetInvalidFileNameChars();
             return new string(name.Where(ch => !invalidChars.Contains(ch)).ToArray()).Replace(" ", "_");
         }
+
+        public async Task RemindDocumentAsync(Guid documentId)
+        {
+            using var context = _contextFactory.CreateDbContext();
+            var doc = await context.Documents
+                .Include(d => d.Client)
+                .FirstOrDefaultAsync(d => d.Id == documentId);
+
+            if (doc == null) throw new ArgumentException("Document introuvable");
+            if (doc.Client == null || string.IsNullOrEmpty(doc.Client.Email)) throw new InvalidOperationException("Client ou email introuvable");
+
+            var companyProfile = await _settingsService.GetSettingAsync<CompanyProfileDto>("CompanyProfile", new());
+                
+            // Construire le lien
+            string actionUrl = "/";
+            if (doc.ColisId.HasValue) actionUrl = $"/colis/detail/{doc.ColisId}?tab=documents";
+            else if (doc.VehiculeId.HasValue) actionUrl = $"/vehicule/detail/{doc.VehiculeId}?tab=documents";
+                
+            // Hack: base URL should be in config
+            var portalBaseUrl = "https://hippocampetransitmanager.com"; 
+            var fullLink = $"{portalBaseUrl}{actionUrl}";
+
+            var logoUrl = !string.IsNullOrEmpty(companyProfile.LogoUrl) 
+                        ? (companyProfile.LogoUrl.StartsWith("http") ? companyProfile.LogoUrl : $"{portalBaseUrl}/{companyProfile.LogoUrl}")
+                        : "https://hippocampetransitmanager.com/images/logo.jpg";
+            
+            if(logoUrl.EndsWith(".png")) logoUrl = logoUrl.Replace(".png", ".jpg");
+
+            await _emailService.SendMissingDocumentNotificationAsync(
+                doc.Client.Email,
+                $"{doc.Client.Prenom} {doc.Client.Nom}",
+                doc.Type.ToString(),
+                doc.CommentaireAdmin, 
+                fullLink,
+                companyProfile.CompanyName,
+                $"{companyProfile.Address}, {companyProfile.ZipCode} {companyProfile.City}",
+                companyProfile.Phone,
+                logoUrl
+            );
+        }
     }
 }

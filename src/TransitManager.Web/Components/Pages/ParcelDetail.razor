@@ -479,19 +479,22 @@
                         <div class="col-12">
                             <!-- On passe _activeTab == "discussion" pour dire au chat s'il est affiché -->
                             <!-- Ajout Bouton Notifier -->
-                            <div class="d-flex justify-content-end mb-2">
-                                <button class="btn btn-warning btn-sm shadow-sm" @onclick="NotifyClientByEmail" disabled="@IsSendingEmail">
-                                    @if (IsSendingEmail)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-1"></span>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-bell-fill me-1"></i>
-                                    }
-                                    Notifier le client (Nouveau message)
-                                </button>
-                            </div>
+                            @if(IsAdmin)
+                            {
+                                <div class="d-flex justify-content-end mb-2">
+                                    <button class="btn btn-warning btn-sm shadow-sm" @onclick="NotifyClientByEmail" disabled="@IsSendingEmail">
+                                        @if (IsSendingEmail)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-bell-fill me-1"></i>
+                                        }
+                                        Notifier le client (Nouveau message)
+                                    </button>
+                                </div>
+                            }
 
 							<ChatBox EntityId="@_colis.Id" 
 									 EntityType="Colis" 
@@ -700,7 +703,19 @@
     {
         if (!string.IsNullOrEmpty(Tab))
         {
-            _activeTab = Tab.ToLower();
+             var tabLower = Tab.ToLower();
+             if(tabLower == "docs" || tabLower == "documents")
+             {
+                 _activeTab = "documents";
+             }
+             else if(tabLower == "discussion" || tabLower == "chat")
+             {
+                 _activeTab = "discussion";
+             }
+             else
+             {
+                 _activeTab = tabLower;
+             }
         }
 
         if (!string.IsNullOrEmpty(Action))
@@ -1302,6 +1317,7 @@
     }
 
     private bool IsSendingEmail = false;
+
 
     private async Task NotifyClientByEmail()
     {

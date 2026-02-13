@@ -157,8 +157,7 @@ namespace TransitManager.Infrastructure.Services
             var subject = $"Document manquant : {documentType}";
             var noteHtml = !string.IsNullOrEmpty(note) ? $"<div style='background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; margin-top: 10px; border: 1px solid #ffeeba;'><strong>Note :</strong> {note}</div>" : "";
 
-            var htmlMessage = $@"\
-<!DOCTYPE html>
+            var htmlMessage = $@"<!DOCTYPE html>
 <html>
 <head>
     <meta charset='utf-8'>

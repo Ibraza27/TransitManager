@@ -192,7 +192,12 @@
                                                         <h6 class="mb-1 fw-bold text-danger">@doc.Type</h6>
                                                         <small class="text-muted"><i class="bi bi-person me-1"></i>Client: <strong>@doc.Client?.NomComplet</strong></small>
                                                     </div>
-                                                    <small class="text-danger fw-bold">Manquant</small>
+                                                    <div class="d-flex flex-column align-items-end gap-2">
+                                                        <small class="text-danger fw-bold">Manquant</small>
+                                                        <button class="btn btn-sm btn-outline-danger" @onclick:preventDefault @onclick="@(() => SendReminder(doc))" title="Relancer le client">
+                                                            <i class="bi bi-envelope-exclamation"></i> Relancer
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <p class="mb-1 text-muted small mt-1">@doc.CommentaireAdmin</p>
                                                 <div class="d-flex justify-content-between align-items-center mt-2">
@@ -609,6 +614,26 @@
         else
         {
             showMissingDocsModal = true;
+        }
+    }
+
+    private async Task SendReminder(Document doc)
+    {
+        if(doc == null) return;
+        
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Relancer {doc.Client?.NomComplet} pour le document {doc.Type} ?");
+        if(confirmed)
+        {
+            try
+            {
+                await ApiService.SendDocumentReminderAsync(doc.Id);
+                await JS.InvokeVoidAsync("alert", "Relance envoyée par email.");
+            }
+            catch(Exception ex)
+            {
+                 await JS.InvokeVoidAsync("alert", "Erreur lors de l'envoi de la relance.");
+                 Console.WriteLine(ex.Message);
+            }
         }
     }
     

@@ -1304,6 +1304,9 @@
             Model.TotalTVA = result.TotalTVA;
             Model.TotalTTC = result.TotalTTC;
             
+            // CRITICAL FIX: Quote is no longer an AutoDraft once explicitly saved
+            IsAutoDraft = false;
+
             // Recalculate subtotals after reloading lines
             UpdateSubtotals();
             

@@ -121,6 +121,7 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 });
 // === FIN DE LA MODIFICATION HTTPCLIENT ===
 builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
+builder.Services.AddScoped<ContactEmailService>();
 var app = builder.Build();
 // --- PIPELINE ---
 

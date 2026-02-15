@@ -1,0 +1,215 @@
+@page "/contact-devis"
+@layout TransitManager.Web.Components.Layout.EmptyLayout
+@inject TransitManager.Web.Services.ContactEmailService EmailService
+@inject IJSRuntime JS
+
+<PageTitle>Demander un devis - Hippocampe Import-Export</PageTitle>
+
+<div class="cd-page">
+    <!-- NAVIGATION -->
+    <nav class="cd-navbar">
+        <a href="/" class="cd-nav-logo">
+            <div class="cd-logo-icon">H</div>
+            <div>
+                <span class="cd-logo-name">Hippocampe</span><br>
+                <span class="cd-logo-sub">Transit Manager</span>
+            </div>
+        </a>
+        <a href="/" class="cd-back-link">← Retour à l'accueil</a>
+    </nav>
+
+    <div class="cd-container">
+        <!-- FORM SECTION -->
+        <div class="cd-form-panel">
+            <h1>Mon devis <span class="cd-hl">gratuit</span></h1>
+            <p class="cd-intro">Merci de renseigner ici le plus d'informations possibles, afin de vous garantir une réponse rapide et adaptée. <em>Le nom exact et le type de marchandise (primordial pour les Douanes).</em></p>
+
+            @if (showSuccess)
+            {
+                <div class="cd-success">
+                    <span>✅</span>
+                    <div>
+                        <strong>Votre demande a été envoyée avec succès !</strong><br>
+                        Nous vous répondrons dans les plus brefs délais.
+                    </div>
+                </div>
+            }
+            @if (showError)
+            {
+                <div class="cd-error">
+                    <span>❌</span>
+                    <div>
+                        <strong>Erreur lors de l'envoi.</strong><br>
+                        Veuillez réessayer ou nous contacter directement par téléphone.
+                    </div>
+                </div>
+            }
+
+            <EditForm Model="formModel" OnValidSubmit="HandleSubmit" FormName="contactDevis">
+                <DataAnnotationsValidator />
+
+                <div class="cd-field">
+                    <label>Types de marchandises</label>
+                    <InputSelect @bind-Value="formModel.TypeMarchandise" class="cd-select">
+                        <option value="">— Sélectionner —</option>
+                        <option value="Véhicule et matériel roulant">Véhicule et matériel roulant</option>
+                        <option value="Colis">Colis</option>
+                        <option value="Voiture et Colis">Voiture et Colis</option>
+                        <option value="Conteneur personnalisé">Conteneur personnalisé</option>
+                        <option value="Pour les professionnels">Pour les professionnels</option>
+                        <option value="Marchandises">Marchandises</option>
+                        <option value="Déménagement">Déménagement</option>
+                        <option value="Autre">Autre</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => formModel.TypeMarchandise)" />
+                </div>
+
+                <div class="cd-row">
+                    <div class="cd-field">
+                        <label>Prénom</label>
+                        <InputText @bind-Value="formModel.Prenom" class="cd-input" placeholder="Prénom" />
+                        <ValidationMessage For="@(() => formModel.Prenom)" />
+                    </div>
+                    <div class="cd-field">
+                        <label>Nom de famille</label>
+                        <InputText @bind-Value="formModel.Nom" class="cd-input" placeholder="Nom de famille" />
+                        <ValidationMessage For="@(() => formModel.Nom)" />
+                    </div>
+                </div>
+
+                <div class="cd-row">
+                    <div class="cd-field">
+                        <label>E-mail</label>
+                        <InputText @bind-Value="formModel.Email" class="cd-input" placeholder="E-mail" type="email" />
+                        <ValidationMessage For="@(() => formModel.Email)" />
+                    </div>
+                    <div class="cd-field">
+                        <label>Téléphone</label>
+                        <InputText @bind-Value="formModel.Telephone" class="cd-input" placeholder="Téléphone" />
+                        <ValidationMessage For="@(() => formModel.Telephone)" />
+                    </div>
+                </div>
+
+                <div class="cd-field cd-field-full">
+                    <label>Précisez votre besoin *</label>
+                    <InputTextArea @bind-Value="formModel.Message" class="cd-textarea" id="cd-message-textarea" rows="5" placeholder="Précisez votre besoin" @oninput="AutoResizeTextarea" />
+                    <ValidationMessage For="@(() => formModel.Message)" />
+                </div>
+
+                <button type="submit" class="cd-submit" disabled="@isSending">
+                    @if (isSending)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        <span>Envoi en cours...</span>
+                    }
+                    else
+                    {
+                        <span>Envoyer</span>
+                    }
+                </button>
+            </EditForm>
+        </div>
+
+        <!-- TRANSPORT TYPES PANEL -->
+        <div class="cd-transport-panel">
+            <h2>Les transports</h2>
+            <div class="cd-transport-grid">
+                <div class="cd-transport-item">
+                    <div class="cd-transport-icon">🚗</div>
+                    <span>Véhicule et<br>matériel roulant</span>
+                </div>
+                <div class="cd-transport-item">
+                    <div class="cd-transport-icon">🏢</div>
+                    <span>Pour les<br>professionnels</span>
+                </div>
+                <div class="cd-transport-item">
+                    <div class="cd-transport-icon">🛒</div>
+                    <span>Marchandises</span>
+                </div>
+                <div class="cd-transport-item">
+                    <div class="cd-transport-icon">📦</div>
+                    <span>Déménagement</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ContactFormModel formModel = new();
+    private bool isSending = false;
+    private bool showSuccess = false;
+    private bool showError = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                var ta = document.getElementById('cd-message-textarea');
+                if (ta) {
+                    ta.addEventListener('input', function() {
+                        this.style.height = 'auto';
+                        this.style.height = this.scrollHeight + 'px';
+                    });
+                }
+            ");
+        }
+    }
+
+    private async Task AutoResizeTextarea()
+    {
+        await JS.InvokeVoidAsync("eval", "var ta = document.getElementById('cd-message-textarea'); if(ta) { ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; }");
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSending = true;
+        showSuccess = false;
+        showError = false;
+        StateHasChanged();
+
+        var result = await EmailService.SendContactEmailAsync(
+            formModel.TypeMarchandise,
+            formModel.Prenom,
+            formModel.Nom,
+            formModel.Email,
+            formModel.Telephone,
+            formModel.Message
+        );
+
+        if (result)
+        {
+            showSuccess = true;
+            formModel = new(); // Reset form
+        }
+        else
+        {
+            showError = true;
+        }
+
+        isSending = false;
+    }
+
+    public class ContactFormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Veuillez sélectionner un type")]
+        public string TypeMarchandise { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Prénom requis")]
+        public string Prenom { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Nom requis")]
+        public string Nom { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email requis")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Email invalide")]
+        public string Email { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Téléphone requis")]
+        public string Telephone { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Message requis")]
+        public string Message { get; set; } = "";
+    }
+}

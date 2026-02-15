@@ -1,0 +1,249 @@
+@inject IJSRuntime JS
+@* Public Homepage - Hippocampe Transit Manager *@
+
+<div class="public-home">
+    <!-- ANIMATED BACKGROUND -->
+    <canvas id="particles-canvas"></canvas>
+
+
+
+    <!-- HERO WITH VIDEO -->
+    <section class="ph-hero" id="ph-accueil">
+        <div class="ph-hero-video-bg">
+            <video autoplay muted loop playsinline webkit-playsinline poster="images/destinations/MONDE.jpg">
+                <source src="video/Génération_Vidéo_Logo_Site_Web.mp4" type="video/mp4">
+            </video>
+            <div class="ph-hero-video-overlay"></div>
+        </div>
+        <div class="ph-hero-content">
+            <div class="ph-hero-badge-text">
+                <span class="ph-dot"></span>
+                Transport maritime international
+            </div>
+            <h1>Envoi <span class="ph-highlight">partout</span><br>dans le monde</h1>
+            <p class="ph-subtitle">
+                Votre partenaire logistique international. Nous envoyons vos marchandises
+                depuis la métropole vers tous les continents en toute sécurité.
+            </p>
+            <div class="ph-hero-buttons">
+                <a href="contact-devis" class="ph-btn-primary">
+                    Demander un devis
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+                <a href="login" class="ph-btn-secondary">Espace Client</a>
+            </div>
+            <div class="ph-hero-stats">
+                <div class="ph-stat">
+                    <div class="ph-number" data-target="1000">0</div>
+                    <div class="ph-label">Clients</div>
+                </div>
+                <div class="ph-stat">
+                    <div class="ph-number" data-target="4">0</div>
+                    <div class="ph-label">Conteneurs / semaine</div>
+                </div>
+                <div class="ph-stat">
+                    <div class="ph-number" data-target="15">0</div>
+                    <div class="ph-label">Destinations</div>
+                </div>
+            </div>
+        </div>
+        <div class="ph-scroll-indicator">
+            <div class="ph-mouse"></div>
+            <span>Défiler</span>
+        </div>
+    </section>
+
+    <!-- ENGAGEMENT -->
+    <section class="ph-engagement" id="ph-engagement">
+        <div class="ph-engagement-grid">
+            <div class="ph-engagement-visual ph-reveal">
+                <div class="ph-globe">
+                    <div class="ph-globe-grid">
+                        <div class="ph-globe-line" style="top:20%"></div>
+                        <div class="ph-globe-line" style="top:40%"></div>
+                        <div class="ph-globe-line" style="top:60%"></div>
+                        <div class="ph-globe-line" style="top:80%"></div>
+                    </div>
+                </div>
+                <div class="ph-floating-tag" style="top:10%;right:-10%">
+                    <div class="ph-ftag-icon" style="background:rgba(232,117,42,0.2)">🚢</div>
+                    Maritime
+                </div>
+                <div class="ph-floating-tag" style="bottom:20%;left:-10%">
+                    <div class="ph-ftag-icon" style="background:rgba(59,130,246,0.2)">📦</div>
+                    Groupage
+                </div>
+                <div class="ph-floating-tag" style="bottom:5%;right:5%">
+                    <div class="ph-ftag-icon" style="background:rgba(16,185,129,0.2)">✅</div>
+                    Suivi en temps réel
+                </div>
+            </div>
+            <div>
+                <div class="ph-section-label ph-reveal"><span class="ph-line"></span>Notre engagement</div>
+                <h2 class="ph-section-title ph-reveal ph-reveal-delay-1">Votre satisfaction<br>est notre <span class="ph-highlight">priorité</span></h2>
+                <p class="ph-section-desc ph-reveal ph-reveal-delay-2">
+                    Société de transport maritime qui va au-delà de la gestion des commandes
+                    de logistique et de transport. Dans un souci constant d'amélioration de la
+                    qualité de nos prestations, nous nous engageons à vous fournir un service
+                    sur mesure, de qualité et en perpétuelle évolution.
+                </p>
+                <p class="ph-section-desc ph-reveal ph-reveal-delay-3" style="margin-top:16px">
+                    Pour répondre à des exigences logistiques strictes et à une gestion des
+                    flux optimale, Hippocampe Import-Export est votre allié de confiance.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section class="ph-services" id="ph-services">
+        <div class="ph-services-container">
+            <div class="ph-services-header">
+                <div class="ph-section-label ph-reveal"><span class="ph-line"></span>Nos services</div>
+                <h2 class="ph-section-title ph-reveal ph-reveal-delay-1">Une expertise <span class="ph-highlight">complète</span></h2>
+                <p class="ph-section-desc ph-reveal ph-reveal-delay-2" style="margin:0 auto">
+                    Du transport terrestre à l'entreposage, nous couvrons l'ensemble de la chaîne logistique.
+                </p>
+            </div>
+            <div class="ph-services-grid">
+                <div class="ph-service-card ph-reveal"><div class="ph-service-icon">🚛</div><h3>Transport Terrestre</h3><p>Acheminement de vos marchandises par voie terrestre vers nos entrepôts et ports d'embarquement.</p></div>
+                <div class="ph-service-card ph-reveal ph-reveal-delay-1"><div class="ph-service-icon">🚢</div><h3>Transport Maritime</h3><p>Expédition par conteneur vers toutes les destinations internationales. Groupage ou conteneur complet.</p></div>
+                <div class="ph-service-card ph-reveal ph-reveal-delay-2"><div class="ph-service-icon">🏭</div><h3>Entreposage</h3><p>Stockage sécurisé de vos marchandises dans notre entrepôt au 7 rue Pascal, 33370 Tresses.</p></div>
+                <div class="ph-service-card ph-reveal ph-reveal-delay-3"><div class="ph-service-icon">📋</div><h3>Logistique</h3><p>Gestion complète de la chaîne logistique, de la douane à la livraison au dernier kilomètre.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AVANTAGES -->
+    <section class="ph-avantages">
+        <div class="ph-avantages-container">
+            <div class="ph-avantages-header">
+                <div class="ph-section-label ph-reveal"><span class="ph-line"></span>Pourquoi nous choisir</div>
+                <h2 class="ph-section-title ph-reveal ph-reveal-delay-1">Le transport le plus <span class="ph-highlight">avantageux</span></h2>
+                <p class="ph-section-desc ph-reveal ph-reveal-delay-2" style="margin:0 auto">
+                    Avec plus de 90 000 navires, le fret maritime est le mode de transport le plus économique pour l'international.
+                </p>
+            </div>
+            <div class="ph-avantages-grid">
+                <div class="ph-avantage-card ph-reveal"><div class="ph-avantage-icon">📦</div><div><h3>Tout type de marchandises</h3><p>Véhicules ou colis sans matières dangereuses, nous transportons tout type de biens.</p></div></div>
+                <div class="ph-avantage-card ph-reveal ph-reveal-delay-1"><div class="ph-avantage-icon">🔗</div><div><h3>Groupage</h3><p>Adapté aux petits volumes avec suivi du conteneur en temps réel.</p></div></div>
+                <div class="ph-avantage-card ph-reveal ph-reveal-delay-2"><div class="ph-avantage-icon">📐</div><div><h3>Conteneur personnalisé</h3><p>Optimisation de vos expéditions et acheminements sur mesure.</p></div></div>
+                <div class="ph-avantage-card ph-reveal ph-reveal-delay-3"><div class="ph-avantage-icon">💳</div><div><h3>Facilité de paiement</h3><p>Paiement en plusieurs fois ou à la réception : carte, espèce, virement, chèque.</p></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DESTINATIONS -->
+    <section class="ph-destinations" id="ph-destinations">
+        <div class="ph-destinations-container">
+            <div class="ph-section-label ph-reveal"><span class="ph-line"></span>Nos destinations</div>
+            <h2 class="ph-section-title ph-reveal ph-reveal-delay-1">Envoi partout dans <span class="ph-highlight">le monde</span></h2>
+            <p class="ph-section-desc ph-reveal ph-reveal-delay-2" style="margin:0 auto">
+                Hippocampe propose d'envoyer vos effets partout dans le monde, sur tous les continents.
+            </p>
+            <div class="ph-world-map ph-reveal ph-reveal-delay-3">
+                <img src="images/destinations/MONDE.jpg" alt="Carte du monde - Destinations Hippocampe" class="ph-monde-img" />
+            </div>
+        </div>
+    </section>
+
+    <!-- DOM-TOM -->
+    <section class="ph-domtom" id="ph-domtom">
+        <div class="ph-domtom-container">
+            <div class="ph-domtom-header">
+                <div class="ph-section-label ph-reveal"><span class="ph-line"></span>Outre-mer</div>
+                <h2 class="ph-section-title ph-reveal ph-reveal-delay-1">Envoi dans les <span class="ph-highlight">DOM-TOM</span> et Comores</h2>
+                <p class="ph-section-desc ph-reveal ph-reveal-delay-2" style="margin:0 auto">
+                    Pour un déménagement en Outre-mer ou tout autre besoin, faites-nous confiance.
+                </p>
+            </div>
+            <div class="ph-domtom-grid">
+                <div class="ph-domtom-card ph-reveal"><img src="images/destinations/MAYOTTE.jpg" alt="Mayotte" class="ph-domtom-photo" /><h3>MAYOTTE</h3><p>Destination principale</p></div>
+                <div class="ph-domtom-card ph-reveal ph-reveal-delay-1"><img src="images/destinations/LA REUNION.jpg" alt="La Réunion" class="ph-domtom-photo" /><h3>LA RÉUNION</h3><p>Océan Indien</p></div>
+                <div class="ph-domtom-card ph-reveal ph-reveal-delay-2"><img src="images/destinations/MARTINIQUE.jpg" alt="Martinique" class="ph-domtom-photo" /><h3>MARTINIQUE</h3><p>Caraïbes</p></div>
+                <div class="ph-domtom-card ph-reveal ph-reveal-delay-3"><img src="images/destinations/GUYANE.jpg" alt="Guyane" class="ph-domtom-photo" /><h3>GUYANE</h3><p>Amérique du Sud</p></div>
+                <div class="ph-domtom-card ph-reveal"><img src="images/destinations/GUADELOUPE.jpg" alt="Guadeloupe" class="ph-domtom-photo" /><h3>GUADELOUPE</h3><p>Caraïbes</p></div>
+                <div class="ph-domtom-card ph-reveal ph-reveal-delay-1"><img src="images/destinations/COMORES.jpg" alt="Comores" class="ph-domtom-photo" /><h3>COMORES</h3><p>Océan Indien</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TRANSPORT TYPES -->
+    <section class="ph-transport-types">
+        <div class="ph-transport-container">
+            <div class="ph-transport-header">
+                <div class="ph-section-label ph-reveal"><span class="ph-line"></span>Types de transport</div>
+                <h2 class="ph-section-title ph-reveal ph-reveal-delay-1">Nous transportons <span class="ph-highlight">tout</span></h2>
+            </div>
+            <div class="ph-transport-grid">
+                <div class="ph-transport-card ph-reveal"><span class="ph-transport-emoji">🚗</span><h3>Véhicules</h3><p>Voitures, motos et matériel roulant</p></div>
+                <div class="ph-transport-card ph-reveal ph-reveal-delay-1"><span class="ph-transport-emoji">🛒</span><h3>Marchandises</h3><p>Tous types de biens et colis</p></div>
+                <div class="ph-transport-card ph-reveal ph-reveal-delay-2"><span class="ph-transport-emoji">🏢</span><h3>Professionnels</h3><p>Solutions pour les entreprises</p></div>
+                <div class="ph-transport-card ph-reveal ph-reveal-delay-3"><span class="ph-transport-emoji">📦</span><h3>Déménagement</h3><p>Service complet de déménagement</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="ph-cta-section">
+        <div class="ph-cta-box ph-reveal">
+            <h2>Prêt à <span class="ph-highlight">expédier</span> ?</h2>
+            <p>Obtenez votre devis gratuit en quelques minutes. Nous vous répondons sous 24h.</p>
+            <a href="contact-devis" class="ph-btn-primary">
+                Demander mon devis gratuit
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="ph-contact-section" id="ph-contact">
+        <div class="ph-contact-container">
+            <div class="ph-contact-block ph-reveal">
+                <h3><span class="ph-accent"></span>Entrepôt</h3>
+                <div class="ph-contact-info">
+                    <div class="ph-ci-item"><span class="ph-ci-icon">📍</span>7 Rue Pascal<br>33370 Tresses, France</div>
+                    <div class="ph-ci-item"><span class="ph-ci-icon">🕐</span>Lun - Ven : 9h - 18h</div>
+                </div>
+            </div>
+            <div class="ph-contact-block ph-reveal ph-reveal-delay-1">
+                <h3><span class="ph-accent"></span>Contact</h3>
+                <div class="ph-contact-info">
+                    <div class="ph-ci-item"><span class="ph-ci-icon">📧</span>contact@hippocampeimportexport.com</div>
+                    <div class="ph-ci-item"><span class="ph-ci-icon">📱</span>06 99 56 93 58</div>
+                    <div class="ph-ci-item"><span class="ph-ci-icon">📞</span>09.81.72.45.40</div>
+                    <div class="ph-ci-item"><span class="ph-ci-icon">📱</span>06 99 79 16 98</div>
+                </div>
+            </div>
+            <div class="ph-contact-block ph-reveal ph-reveal-delay-2">
+                <h3><span class="ph-accent"></span>Suivez-nous</h3>
+                <p style="font-size:14px;color:#94A3B8;line-height:1.6;margin-bottom:10px">
+                    Retrouvez-nous sur les réseaux sociaux pour suivre nos activités.
+                </p>
+                <div class="ph-social-links">
+                    <a href="https://www.facebook.com/Hippocampe-Import-Export-105373931404633" class="ph-social-link" target="_blank">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                    </a>
+                    <a href="#" class="ph-social-link">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="white" stroke-width="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="white" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.5" fill="white"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="ph-footer">
+        <p>© 2025 Hippocampe Import-Export — <a href="#">Mentions légales</a> — <a href="#">Conditions générales</a></p>
+    </footer>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initPublicHomepage");
+        }
+    }
+}

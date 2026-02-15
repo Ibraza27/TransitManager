@@ -9,6 +9,50 @@
         </div>
 
         <AuthorizeView>
+            <NotAuthorized>
+                <div class="nav-item mt-2 mb-1">
+                    <span class="text-uppercase small fw-bold text-muted px-3" style="font-size: 0.7rem;">Navigation</span>
+                </div>
+                <div class="nav-item">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <i class="bi bi-house-fill nav-icon"></i> <span>Accueil</span>
+                    </NavLink>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link" href="/#ph-engagement">
+                        <i class="bi bi-building nav-icon"></i> <span>La société</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link" href="/#ph-services">
+                        <i class="bi bi-gear-wide-connected nav-icon"></i> <span>Services</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link" href="/#ph-destinations">
+                        <i class="bi bi-globe-americas nav-icon"></i> <span>Nos envois</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="nav-link" href="/#ph-domtom">
+                        <i class="bi bi-geo-alt-fill nav-icon"></i> <span>DOM-TOM</span>
+                    </a>
+                </div>
+
+                <div class="nav-item mt-2 mb-1">
+                    <span class="text-uppercase small fw-bold text-muted px-3" style="font-size: 0.7rem;">Informations</span>
+                </div>
+                <div class="nav-item">
+                    <NavLink class="nav-link" href="nos-tarifs">
+                        <i class="bi bi-currency-euro nav-icon"></i> <span>Nos tarifs</span>
+                    </NavLink>
+                </div>
+                <div class="nav-item">
+                    <NavLink class="nav-link" href="contact-devis">
+                        <i class="bi bi-envelope-paper nav-icon"></i> <span>Contact / Devis</span>
+                    </NavLink>
+                </div>
+            </NotAuthorized>
             <Authorized>
                 <AuthorizeView Roles="Client">
                     <Authorized Context="ClientAuth">
